@@ -94,7 +94,7 @@ final class OpenAIProvider: LLMProviderProtocol, Loggable {
         imageBase64: String,
         model: String?,
         maxTokens: Int,
-        userNotes: String? = nil
+        scanContext: ScorecardScanContext = .init()
     ) async throws -> CourseScorecardDTO {
         guard apiKey.isPopulated else {
             addBreadcrumb(level: .error, message: "OPENAI_API_KEY missing")
@@ -118,7 +118,7 @@ final class OpenAIProvider: LLMProviderProtocol, Loggable {
             "messages": [
                 [
                     "role": "system",
-                    "content": CourseScorecardOCRPrompt.systemPrompt()
+                    "content": CourseScorecardOCRPrompt.systemPrompt(scanContext: scanContext)
                 ],
                 [
                     "role": "user",
@@ -129,7 +129,7 @@ final class OpenAIProvider: LLMProviderProtocol, Loggable {
                         ],
                         [
                             "type": "text",
-                            "text": CourseScorecardOCRPrompt.userPrompt(userNotes: userNotes)
+                            "text": CourseScorecardOCRPrompt.userPrompt(scanContext: scanContext)
                         ]
                     ]
                 ]

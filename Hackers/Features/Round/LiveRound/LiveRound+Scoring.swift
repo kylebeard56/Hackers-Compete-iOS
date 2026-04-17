@@ -149,7 +149,7 @@ extension LiveRound {
             }
             .padding(16)
             .frame(maxWidth: .infinity)
-            .glassCardEffect(interactive: false, forceMaterial: true)
+            .glassCardEffect(interactive: false, forceMaterial: true, tint: palette.cardColor)
         }
     }
 
@@ -419,7 +419,7 @@ struct HoleDetailTilesView: View {
             .padding(.vertical, 8)
             .padding(.horizontal, 12)
             .frame(height: 72)
-            .glassCardEffect(cornerRadius: 12, interactive: false, forceMaterial: true, shadowOpacity: 0)
+            .glassCardEffect(cornerRadius: 12, interactive: false, forceMaterial: true, tint: palette.cardColor, shadowOpacity: 0)
     }
 
     private func teeButton(_ option: LiveRoundViewModel.TeeSelectionOption) -> some View {
@@ -573,7 +573,7 @@ extension LiveRound {
         }
         .padding(16)
         .frame(maxWidth: .infinity)
-        .glassCardEffect(interactive: false, forceMaterial: true)
+        .glassCardEffect(interactive: false, forceMaterial: true, tint: palette.cardColor)
     }
     
     private var leaderboardFooter: some View {
@@ -998,7 +998,7 @@ private struct VegasSummaryTileView: View {
         }
         .padding(16)
         .frame(maxWidth: .infinity)
-        .glassCardEffect(interactive: false, forceMaterial: true)
+        .glassCardEffect(interactive: false, forceMaterial: true, tint: palette.cardColor)
     }
 }
 

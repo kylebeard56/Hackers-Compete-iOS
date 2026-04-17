@@ -14,9 +14,19 @@ enum MaxScoreOverPar: String, CaseIterable, Codable {
     case double                 // par + 2
     case triple                 // par + 3
     case quad                   // par + 4
+    case quint                  // par + 5
+    case sext                   // par + 6
     case twoTimesPar            // par * 2
     case twoTimesParPlusOne     // par * 2 + 1
     case none                   // no limit
+
+    static var allCases: [MaxScoreOverPar] {
+        selectableCases
+    }
+
+    static var selectableCases: [MaxScoreOverPar] {
+        [.bogey, .double, .triple, .quad, .quint, .sext, .none]
+    }
     
     var displayName: String {
         switch self {
@@ -24,6 +34,8 @@ enum MaxScoreOverPar: String, CaseIterable, Codable {
         case .double:            return "Double"
         case .triple:            return "Triple"
         case .quad:              return "Quad"
+        case .quint:             return "Quint"
+        case .sext:              return "Sext"
         case .twoTimesPar:       return "2x Par"
         case .twoTimesParPlusOne: return "2x Par + 1"
         case .none:              return "None"
@@ -36,9 +48,20 @@ enum MaxScoreOverPar: String, CaseIterable, Codable {
         case .double:               return par + 2
         case .triple:               return par + 3
         case .quad:                 return par + 4
+        case .quint:                return par + 5
+        case .sext:                 return par + 6
         case .twoTimesPar:          return par * 2
         case .twoTimesParPlusOne:   return par * 2 + 1
         case .none:                 return 99  // effectively no limit for scoring UI
+        }
+    }
+
+    func friendlyMaxRelativeValue(for par: Int) -> Int {
+        switch self {
+        case .none:
+            return 12
+        default:
+            return maxScore(for: par) - par
         }
     }
 }

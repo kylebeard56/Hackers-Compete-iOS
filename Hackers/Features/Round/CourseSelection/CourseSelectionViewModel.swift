@@ -33,8 +33,64 @@ enum CourseSelectionError: Error {
     }
 }
 
+struct SimpleRoundSetup: Equatable {
+    var courseName: String
+    var holeCount: Int
+    var startingHole: Int
+
+    init(
+        courseName: String = "",
+        holeCount: Int = 9,
+        startingHole: Int = 1
+    ) {
+        self.courseName = courseName.trimmingCharacters(in: .whitespacesAndNewlines)
+        self.holeCount = min(max(holeCount, 1), 18)
+        self.startingHole = min(max(startingHole, 1), min(max(holeCount, 1), 18))
+    }
+
+    var resolvedCourseName: String {
+        courseName.isPopulated ? courseName : "Simple Round"
+    }
+
+    /// Synthetic simple-round course (friendly net scoring); used by course selection and history fallbacks.
+    func makeCourse() -> Course {
+        let holes = (1...holeCount).map { holeNumber in
+            Hole(number: holeNumber, par: 4, yardage: 0, handicap: nil)
+        }
+
+        let tee = Tee(
+            id: "simple_round_default_tee",
+            name: "Simple",
+            gender: Gender.unknown.rawValue,
+            totalHoles: holeCount,
+            holes: holes,
+            ratingFull: 72.0,
+            slopeFull: 113,
+            ratingFront: nil,
+            slopeFront: nil,
+            ratingBack: nil,
+            slopeBack: nil
+        )
+
+        return Course(
+            golfCourseApiID: nil,
+            origin: .simple,
+            clubName: resolvedCourseName,
+            courseName: resolvedCourseName,
+            location: nil,
+            venueDetails: nil,
+            locationGeohash: nil,
+            tees: [tee]
+        )
+    }
+}
+
 @MainActor
 final class CourseSelectionViewModel: ObservableObject, Loggable {
+    private let ocrService: CourseScorecardOCRService
+    private let enrichmentService: CourseScorecardEnrichmentService
+    private let askAIService: CourseTextLookupService
+
     @Published var selectedChip: CourseSelectionChip = .recent
     @Published var currentError: CourseSelectionError?
     
@@ -61,6 +117,7 @@ final class CourseSelectionViewModel: ObservableObject, Loggable {
     @Published var showConfirmation = false
     @Published var holeSegment: HoleSegment = .full18
     @Published var selectedTee: Tee?
+    @Published private(set) var simpleRoundSetup: SimpleRoundSetup?
     @Published private(set) var lastSelectionSource: CourseSelectionSource?
     
     /// Game Lobby
@@ -71,6 +128,11 @@ final class CourseSelectionViewModel: ObservableObject, Loggable {
     /// Scorecard OCR
     @Published var isScanningScorecard = false
     @Published var scorecardScanError: String?
+
+    /// Ask AI
+    @Published var askAIMessages: [AskAICourseChatMessage] = []
+    @Published var isSendingAskAIMessage = false
+    @Published var askAIError: String?
 
     /// Modify/Change
     @Published var modifyingCourse: Course?
@@ -98,8 +160,18 @@ final class CourseSelectionViewModel: ObservableObject, Loggable {
         !isSetHomeCourseMode && !isSetSeriesDefaultCourseMode
     }
     
-    init(course: Course? = nil, tee: Tee? = nil, holeSegment: HoleSegment = .full18) {
+    init(
+        course: Course? = nil,
+        tee: Tee? = nil,
+        holeSegment: HoleSegment = .full18,
+        ocrService: CourseScorecardOCRService? = nil,
+        enrichmentService: CourseScorecardEnrichmentService? = nil,
+        askAIService: CourseTextLookupService? = nil
+    ) {
         print("init CourseSelectionViewModel")
+        self.ocrService = ocrService ?? .shared
+        self.enrichmentService = enrichmentService ?? .shared
+        self.askAIService = askAIService ?? .shared
         modifyingCourse = course
         modifyingTee = tee
         selectedTee = tee
@@ -171,8 +243,15 @@ extension CourseSelectionViewModel {
             case .success(let c): course = c
             case .failure(let error):
                 addBreadcrumb(level: .error, message: "Failed to fetch manual course \(entry.courseID)", error: error)
-                showCourseFetchError = true
-                Haptics.fire(.error)
+                // Simple rounds are stored as manual + course id; if the course doc is missing, rebuild locally.
+                let fallback = SimpleRoundSetup(courseName: entry.name, holeCount: 9, startingHole: 1)
+                simpleRoundSetup = fallback
+                holeSegment = fallback.holeCount == 18
+                    ? .full18
+                    : .custom(count: fallback.holeCount)
+                let rebuilt = fallback.makeCourse()
+                selectedTee = rebuilt.tees.first
+                select(course: rebuilt, source: .recent, retainSimpleRoundSetup: true)
                 return
             }
         }
@@ -294,7 +373,7 @@ extension CourseSelectionViewModel {
 extension CourseSelectionViewModel {
     func scanScorecard(
         image: UIImage,
-        userNotes: String? = nil,
+        scanContext: ScorecardScanContext = .init(),
         vision: ScorecardScanVisionModel = .defaultSelection,
         scanSource: ScorecardScanSource
     ) async {
@@ -309,13 +388,18 @@ extension CourseSelectionViewModel {
                 eventProps: scorecardScanTelemetryProps(
                     scanSource: scanSource,
                     vision: vision,
-                    userNotes: userNotes
+                    scanContext: scanContext
                 )
             )
         }
 
         do {
-            let course = try await CourseScorecardOCRService.shared.extractCourse(from: image, userNotes: userNotes, vision: vision)
+            let ocrCourse = try await ocrService.extractCourse(
+                from: image,
+                scanContext: scanContext,
+                vision: vision
+            )
+            let course = await enrichmentService.enrich(course: ocrCourse, scanContext: scanContext)
             printPretty(course)
             if shouldTrackRoundSetup {
                 addEvent(
@@ -328,7 +412,7 @@ extension CourseSelectionViewModel {
                         extra: scorecardScanTelemetryProps(
                             scanSource: scanSource,
                             vision: vision,
-                            userNotes: userNotes
+                            scanContext: scanContext
                         )
                     )
                 )
@@ -343,7 +427,7 @@ extension CourseSelectionViewModel {
                 reason: "api_key_missing",
                 scanSource: scanSource,
                 vision: vision,
-                userNotes: userNotes
+                scanContext: scanContext
             )
         } catch CourseScorecardOCRError.decodingFailed {
             addBreadcrumb(level: .error, message: "Failed to read scorecard")
@@ -352,7 +436,7 @@ extension CourseSelectionViewModel {
                 reason: "decoding_failed",
                 scanSource: scanSource,
                 vision: vision,
-                userNotes: userNotes
+                scanContext: scanContext
             )
         } catch CourseScorecardOCRError.requestTooLarge {
             addBreadcrumb(level: .error, message: "Scorecard image too large")
@@ -361,7 +445,7 @@ extension CourseSelectionViewModel {
                 reason: "request_too_large",
                 scanSource: scanSource,
                 vision: vision,
-                userNotes: userNotes
+                scanContext: scanContext
             )
         } catch CourseScorecardOCRError.rateLimitExceeded {
             addBreadcrumb(level: .error, message: "AI rate limit exceeded")
@@ -370,7 +454,7 @@ extension CourseSelectionViewModel {
                 reason: "rate_limit_exceeded",
                 scanSource: scanSource,
                 vision: vision,
-                userNotes: userNotes
+                scanContext: scanContext
             )
         } catch CourseScorecardOCRError.overloaded {
             addBreadcrumb(level: .error, message: "AI service overloaded")
@@ -379,7 +463,7 @@ extension CourseSelectionViewModel {
                 reason: "service_overloaded",
                 scanSource: scanSource,
                 vision: vision,
-                userNotes: userNotes
+                scanContext: scanContext
             )
         } catch {
             addBreadcrumb(level: .error, message: "Failed to scan scorecard", error: error)
@@ -388,7 +472,7 @@ extension CourseSelectionViewModel {
                 reason: "unknown",
                 scanSource: scanSource,
                 vision: vision,
-                userNotes: userNotes
+                scanContext: scanContext
             )
         }
     }
@@ -396,6 +480,24 @@ extension CourseSelectionViewModel {
 
 // MARK: - Selection
 extension CourseSelectionViewModel {
+    func configureSimpleRound(_ setup: SimpleRoundSetup) {
+        addBreadcrumb(message: "\(#function) [\(setup.holeCount) holes, start \(setup.startingHole)]")
+
+        let normalizedSetup = SimpleRoundSetup(
+            courseName: setup.courseName,
+            holeCount: setup.holeCount,
+            startingHole: setup.startingHole
+        )
+
+        simpleRoundSetup = normalizedSetup
+        holeSegment = normalizedSetup.holeCount == 18
+            ? .full18
+            : .custom(count: normalizedSetup.holeCount)
+        let course = normalizedSetup.makeCourse()
+        selectedTee = course.tees.first
+        select(course: course, source: .simpleRound)
+    }
+
     func fetchFromNearby(using query: String, and location: CLLocation?) {
         addBreadcrumb(message: "\(#function) [\(query)]")
         
@@ -410,12 +512,149 @@ extension CourseSelectionViewModel {
             }
         }
     }
-    
-    func select(course: Course, source: CourseSelectionSource, trackEvent: Bool = true) {
+
+    func resetAskAIConversation() {
+        askAIMessages = []
+        askAIError = nil
+    }
+
+    func sendAskAIMessage(
+        _ text: String,
+        context: AskAICourseLookupContext = .init()
+    ) async {
+        let trimmed = text.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard trimmed.isPopulated else { return }
+
+        addBreadcrumb(message: "\(#function) [\(trimmed)]")
+        askAIError = nil
+        isSendingAskAIMessage = true
+        let userMessage = AskAICourseChatMessage(role: .user, text: trimmed)
+        askAIMessages.append(userMessage)
+
+        if shouldTrackRoundSetup {
+            addEvent(
+                "round_setup.course_ask_ai_prompt_sent",
+                eventProps: askAITelemetryProps(
+                    context: context,
+                    extra: [
+                        "prompt_length": trimmed.count,
+                        "message_count": askAIMessages.count,
+                        "is_existing_round_change": isModifying
+                    ]
+                )
+            )
+        }
+
+        defer { isSendingAskAIMessage = false }
+
+        do {
+            let result = try await askAIService.resolveCourse(
+                from: askAIMessages,
+                context: context
+            )
+            askAIMessages.append(
+                AskAICourseChatMessage(
+                    role: .assistant,
+                    text: result.assistantMessage,
+                    candidate: result.candidate
+                )
+            )
+
+            if shouldTrackRoundSetup {
+                addEvent(
+                    "round_setup.course_ask_ai_result_received",
+                    eventProps: askAITelemetryProps(
+                        context: context,
+                        extra: [
+                            "has_candidate": result.candidate != nil,
+                            "requires_review": result.candidate?.requiresReview ?? false,
+                            "is_canonical_match": result.candidate?.isCanonicalMatch ?? false,
+                            "message_count": askAIMessages.count,
+                            "is_existing_round_change": isModifying
+                        ]
+                    )
+                )
+            }
+        } catch CourseTextLookupError.apiKeyMissing {
+            addBreadcrumb(level: .error, message: "Ask AI failed: API key missing")
+            askAIError = "API key missing. Add your AI provider key to continue."
+            trackAskAIFailure(reason: "api_key_missing", context: context)
+        } catch CourseTextLookupError.decodingFailed {
+            addBreadcrumb(level: .error, message: "Ask AI failed to decode structured response")
+            askAIError = "I couldn't understand that result. Try rephrasing the course details."
+            trackAskAIFailure(reason: "decoding_failed", context: context)
+        } catch CourseTextLookupError.requestTooLarge {
+            addBreadcrumb(level: .error, message: "Ask AI request too large")
+            askAIError = "That message was too large. Try a shorter description."
+            trackAskAIFailure(reason: "request_too_large", context: context)
+        } catch CourseTextLookupError.rateLimitExceeded {
+            addBreadcrumb(level: .error, message: "Ask AI rate limit exceeded")
+            askAIError = "AI rate limit exceeded. Try again in a moment."
+            trackAskAIFailure(reason: "rate_limit_exceeded", context: context)
+        } catch CourseTextLookupError.overloaded {
+            addBreadcrumb(level: .error, message: "Ask AI overloaded")
+            askAIError = "AI is busy right now. Try again in a moment."
+            trackAskAIFailure(reason: "service_overloaded", context: context)
+        } catch {
+            addBreadcrumb(level: .error, message: "Ask AI failed", error: error)
+            askAIError = "Ask AI failed. Please try again."
+            trackAskAIFailure(reason: "unknown", context: context)
+        }
+    }
+
+    func selectAskAICandidate(_ candidate: AskAICourseCandidate) {
+        selectedTee = candidate.course.tees.count == 1 ? candidate.course.tees.first : nil
+        select(
+            course: candidate.course,
+            source: .askAI,
+            forceCourseEdit: candidate.requiresReview
+        )
+    }
+
+    func prepareAskAIDraftReview(_ course: Course, trackEvent: Bool = true) {
         addBreadcrumb(message: "\(#function) [\(course.id)]")
         UIApplication.shared.endEditing()
+        simpleRoundSetup = nil
+        selectedCourse = course
+        lastSelectionSource = .askAI
+        selectedTee = course.tees.count == 1 ? course.tees.first : nil
+        showCourseEdit = false
+        showConfirmation = false
+
+        guard trackEvent, shouldTrackRoundSetup else { return }
+        addEvent(
+            "round_setup.course_selected",
+            eventProps: telemetryCourseProperties(
+                course: course,
+                holeSegment: course.defaultSegment,
+                selectedTee: selectedTee,
+                selectionSource: .askAI,
+                isModifying: isModifying,
+                extra: [
+                    "requires_review": true,
+                    "is_canonical_match": false
+                ]
+            )
+        )
+    }
+    
+    func select(
+        course: Course,
+        source: CourseSelectionSource,
+        trackEvent: Bool = true,
+        retainSimpleRoundSetup: Bool = false,
+        forceCourseEdit: Bool = false
+    ) {
+        addBreadcrumb(message: "\(#function) [\(course.id)]")
+        UIApplication.shared.endEditing()
+        if source != .simpleRound && !retainSimpleRoundSetup {
+            simpleRoundSetup = nil
+        }
         selectedCourse = course
         lastSelectionSource = source
+        if selectedTee == nil, course.tees.count == 1 {
+            selectedTee = course.tees.first
+        }
 
         if trackEvent, shouldTrackRoundSetup {
             if source == .manual {
@@ -446,7 +685,7 @@ extension CourseSelectionViewModel {
             && course.courseName.isEmpty
             && course.tees.isEmpty
         let isOCRNeedsReview = course.origin == CourseOrigin.ocr.rawValue
-        if isManualAndNeedsEntry || isOCRNeedsReview {
+        if forceCourseEdit || isManualAndNeedsEntry || isOCRNeedsReview {
             showCourseEdit = true
             showConfirmation = false
         } else {
@@ -498,7 +737,8 @@ extension CourseSelectionViewModel {
         let configuration = RoundConfiguration(
             primaryFormat: .strokePlay,
             formatSummary: RoundFormatSummary(from: template),
-            courses: [ buildCourseSegment() ]
+            courses: [ buildCourseSegment() ],
+            scoreInputMode: selectedCourse.isSimpleRoundCourse ? .friendlyRelativeToPar : .strokes
         )
         
         let shareCode = await FirebaseService.shared.getUniqueShareCode()
@@ -530,7 +770,7 @@ extension CourseSelectionViewModel {
             id: HackersID.string(),
             index: 0,
             teeTime: nil,
-            startingHole: holeSegment.holeRange.startHole,
+            startingHole: selectedStartingHole,
             lastCompletedHole: nil,
             createdAt: .init(),
             lastUpdatedAt: .init(),
@@ -657,6 +897,14 @@ extension CourseSelectionViewModel {
             defaultTee: selectedTee?.id ?? nil
         )
     }
+
+    private var selectedStartingHole: Int {
+        guard selectedCourse.isSimpleRoundCourse else {
+            return holeSegment.holeRange.startHole
+        }
+        return simpleRoundSetup?.startingHole ?? 1
+    }
+
 }
 
 // MARK: - Update lobby course
@@ -673,15 +921,17 @@ private extension CourseSelectionViewModel {
     func scorecardScanTelemetryProps(
         scanSource: ScorecardScanSource,
         vision: ScorecardScanVisionModel,
-        userNotes: String?
+        scanContext: ScorecardScanContext
     ) -> [String: Any] {
         [
             "scan_source": scanSource.rawValue,
             "vision_tier": vision.rawValue,
             "ai_provider": vision.config.provider.rawValue,
             "ai_model_id": vision.config.model,
-            "has_notes": userNotes?.isPopulated == true,
-            "notes_length": userNotes?.count ?? 0,
+            "has_notes": scanContext.notes?.isPopulated == true,
+            "notes_length": scanContext.notes?.count ?? 0,
+            "location_assist_enabled": scanContext.isLocationAssistEnabled,
+            "has_approximate_location": scanContext.approximateLocation != nil,
             "is_existing_round_change": isModifying
         ]
     }
@@ -690,7 +940,7 @@ private extension CourseSelectionViewModel {
         reason: String,
         scanSource: ScorecardScanSource,
         vision: ScorecardScanVisionModel,
-        userNotes: String?
+        scanContext: ScorecardScanContext
     ) {
         guard shouldTrackRoundSetup else { return }
         addEvent(
@@ -698,8 +948,37 @@ private extension CourseSelectionViewModel {
             eventProps: scorecardScanTelemetryProps(
                 scanSource: scanSource,
                 vision: vision,
-                userNotes: userNotes
+                scanContext: scanContext
             ).merging(["failure_reason": reason]) { _, new in new }
+        )
+    }
+
+    func askAITelemetryProps(
+        context: AskAICourseLookupContext,
+        extra: [String: Any] = [:]
+    ) -> [String: Any] {
+        [
+            "location_assist_enabled": context.isLocationAssistEnabled,
+            "has_approximate_location": context.approximateLocation != nil
+        ]
+        .merging(extra) { _, new in new }
+    }
+
+    func trackAskAIFailure(
+        reason: String,
+        context: AskAICourseLookupContext
+    ) {
+        guard shouldTrackRoundSetup else { return }
+        addEvent(
+            "round_setup.course_ask_ai_failed",
+            eventProps: askAITelemetryProps(
+                context: context,
+                extra: [
+                    "failure_reason": reason,
+                    "message_count": askAIMessages.count,
+                    "is_existing_round_change": isModifying
+                ]
+            )
         )
     }
 }

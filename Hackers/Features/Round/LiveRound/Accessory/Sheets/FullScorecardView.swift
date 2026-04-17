@@ -439,32 +439,26 @@ private extension FullScorecardView {
         holeNumber: Int, par: Int,
         currentGross: Int?
     ) -> some View {
+        let currentValue = viewModel.scoreInputValue(for: participant.id, holeNumber: holeNumber)
         let (primary, more) = viewModel.scoreMenuOptions(for: holeNumber)
         
-        Section(header: Text("Enter gross score")) {
+        Section(header: Text(viewModel.isFriendlyScoreInputMode ? "Enter score relative to par" : "Enter gross score")) {
             ForEach(primary, id: \.self) { strokes in
                 Button {
                     Haptics.fire(.light)
                     Task {
-                        if currentGross == strokes {
+                        if currentValue == strokes {
                             await viewModel.clearScore(participant: participant, holeNumber: holeNumber)
                         } else {
-                            await viewModel.setScore(participant: participant, holeNumber: holeNumber, strokes: strokes)
+                            await viewModel.setScoreInputValue(participant: participant, holeNumber: holeNumber, value: strokes)
                         }
                     }
                 } label: {
                     HStack {
-                        Text(
-                            viewModel
-                                .friendlyScoreLabel(
-                                    strokes: strokes,
-                                    par: par,
-                                    format: .fullWithStrokes
-                                )
-                        )
-                        .foregroundStyle(currentGross == strokes ? effectiveAccent : palette.foregroundColor)
+                        Text(menuScoreLabel(value: strokes, par: par))
+                            .foregroundStyle(currentValue == strokes ? effectiveAccent : palette.foregroundColor)
                         Spacer(minLength: 0)
-                        if currentGross == strokes {
+                        if currentValue == strokes {
                             Icon(name: "checkmark", size: 16, weight: .semibold)
                                 .foregroundStyle(effectiveAccent)
                         }
@@ -479,28 +473,18 @@ private extension FullScorecardView {
                     Button {
                         Haptics.fire(.light)
                         Task {
-                            if currentGross == strokes {
+                            if currentValue == strokes {
                                 await viewModel.clearScore(participant: participant, holeNumber: holeNumber)
                             } else {
-                                await viewModel.setScore(
-                                    participant: participant,
-                                    holeNumber: holeNumber,
-                                    strokes: strokes
-                                )
+                                await viewModel.setScoreInputValue(participant: participant, holeNumber: holeNumber, value: strokes)
                             }
                         }
                     } label: {
                         HStack {
-                            Text(
-                                viewModel.friendlyScoreLabel(
-                                    strokes: strokes,
-                                    par: par,
-                                    format: .fullWithStrokes
-                                )
-                            )
-                            .foregroundStyle(currentGross == strokes ? effectiveAccent : palette.foregroundColor)
+                            Text(menuScoreLabel(value: strokes, par: par))
+                                .foregroundStyle(currentValue == strokes ? effectiveAccent : palette.foregroundColor)
                             Spacer(minLength: 0)
-                            if currentGross == strokes {
+                            if currentValue == strokes {
                                 Icon(name: "checkmark", size: 16, weight: .semibold)
                                     .foregroundStyle(effectiveAccent)
                             }
@@ -510,7 +494,7 @@ private extension FullScorecardView {
             }
         }
         
-        if currentGross != nil {
+        if currentValue != nil {
             Section {
                 Button("Clear", role: .destructive) {
                     Haptics.fire(.light)
@@ -904,11 +888,11 @@ private extension FullScorecardView {
             scoreEditShowCustomPrompt = false
             return
         }
-        let currentGross = viewModel.grossStrokes(for: anchor.participant.id, holeNumber: anchor.holeNumber)
-        if currentGross == value {
+        let currentValue = viewModel.scoreInputValue(for: anchor.participant.id, holeNumber: anchor.holeNumber)
+        if currentValue == value {
             await viewModel.clearScore(participant: anchor.participant, holeNumber: anchor.holeNumber)
         } else {
-            await viewModel.setScore(participant: anchor.participant, holeNumber: anchor.holeNumber, strokes: value)
+            await viewModel.setScoreInputValue(participant: anchor.participant, holeNumber: anchor.holeNumber, value: value)
         }
         scoreEditAnchor = nil
         scoreEditCustomText = ""
@@ -1197,9 +1181,15 @@ private extension FullScorecardView {
     
     func scoreTileView(anchor: ScoreEditAnchor) -> some View {
         let par = viewModel.hole(for: anchor.holeNumber)?.par ?? 4
-        let currentGross = viewModel.grossStrokes(for: anchor.participant.id, holeNumber: anchor.holeNumber)
-        let configMax = viewModel.snapshot.gameFormat.configuration.maxScoreOverPar.maxScore(for: par)
-        let scoreValues = Array(1...configMax)
+        let currentValue = viewModel.scoreInputValue(for: anchor.participant.id, holeNumber: anchor.holeNumber)
+        let scoreValues: [Int]
+        if viewModel.isFriendlyScoreInputMode {
+            let configMax = viewModel.snapshot.gameFormat.configuration.maxScoreOverPar.friendlyMaxRelativeValue(for: par)
+            scoreValues = Array(-4...configMax)
+        } else {
+            let configMax = viewModel.snapshot.gameFormat.configuration.maxScoreOverPar.maxScore(for: par)
+            scoreValues = Array(1...configMax)
+        }
         let participantColor = participantHighlightColor(for: anchor.participant)
         
         return ScrollView {
@@ -1209,7 +1199,7 @@ private extension FullScorecardView {
                     .foregroundStyle(palette.foregroundColor)
                     //.foregroundStyle(participantHighlightColor(for: anchor.participant))
                 
-                Text("Enter gross score")
+                Text(viewModel.isFriendlyScoreInputMode ? "Enter score relative to par" : "Enter gross score")
                     .fontStyle(kFontName, size: 12, weight: .semibold)
                     .foregroundStyle(Color.neutral2)
                     //.foregroundStyle(participantHighlightColor(for: anchor.participant))
@@ -1220,21 +1210,21 @@ private extension FullScorecardView {
                     Button {
                         Haptics.fire(.light)
                         Task {
-                            if currentGross == strokes {
+                            if currentValue == strokes {
                                 await viewModel.clearScore(participant: anchor.participant, holeNumber: anchor.holeNumber)
                             } else {
-                                await viewModel.setScore(participant: anchor.participant, holeNumber: anchor.holeNumber, strokes: strokes)
+                                await viewModel.setScoreInputValue(participant: anchor.participant, holeNumber: anchor.holeNumber, value: strokes)
                             }
                         }
                         //withAnimation(.easeInOut(duration: 0.2)) { rightPanelContent = nil }
                     } label: {
                         HStack {
-                            Text(viewModel.friendlyScoreLabel(strokes: strokes, par: par, format: .fullWithStrokes))
+                            Text(menuScoreLabel(value: strokes, par: par))
                                 .fontStyle(kFontName, size: 15, weight: .medium)
-                                .foregroundStyle(currentGross == strokes ? participantColor : Color.neutral2)
+                                .foregroundStyle(currentValue == strokes ? participantColor : Color.neutral2)
                                 //.foregroundStyle(currentGross == strokes ? effectiveAccent : palette.foregroundColor)
                             Spacer(minLength: 0)
-                            if currentGross == strokes {
+                            if currentValue == strokes {
                                 Icon(name: "checkmark", size: 16, weight: .semibold)
                                     .foregroundStyle(palette.foregroundColor)//effectiveAccent)
                             }
@@ -1245,7 +1235,7 @@ private extension FullScorecardView {
                 
                 Divider()
                 
-                if currentGross != nil {
+                if currentValue != nil {
                     Button("Clear (-)") {
                         Haptics.fire(.light)
                         Task {
@@ -1364,6 +1354,13 @@ private extension FullScorecardView {
     func participantHighlightColor(for participant: RoundParticipant) -> Color {
         let c = viewModel.teamColor(for: participant) ?? effectiveAccent
         return c.opacity(0.8)
+    }
+
+    func menuScoreLabel(value: Int, par: Int) -> String {
+        if viewModel.isFriendlyScoreInputMode {
+            return viewModel.friendlyScoreLabel(relativeToPar: value, par: par, format: .fullWithStrokes)
+        }
+        return viewModel.friendlyScoreLabel(strokes: value, par: par, format: .fullWithStrokes)
     }
     
     func parLabel(for holeNumber: Int) -> String {

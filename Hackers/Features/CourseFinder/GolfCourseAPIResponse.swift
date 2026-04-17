@@ -44,6 +44,8 @@ struct GolfCourseAPIModel: Codable, Identifiable {
     let clubName: String
     let courseName: String
     let location: GolfCourseAPILocation
+    let websiteURL: String?
+    let phoneNumber: String?
     var tees: GolfCourseAPITees
 
     enum CodingKeys: String, CodingKey {
@@ -52,6 +54,58 @@ struct GolfCourseAPIModel: Codable, Identifiable {
         case courseName = "course_name"
         case location
         case tees
+        case website
+        case websiteURL = "website_url"
+        case url
+        case phone
+        case phoneNumber = "phone_number"
+        case telephone
+    }
+
+    init(
+        id: Int,
+        clubName: String,
+        courseName: String,
+        location: GolfCourseAPILocation,
+        websiteURL: String? = nil,
+        phoneNumber: String? = nil,
+        tees: GolfCourseAPITees
+    ) {
+        self.id = id
+        self.clubName = clubName
+        self.courseName = courseName
+        self.location = location
+        self.websiteURL = websiteURL
+        self.phoneNumber = phoneNumber
+        self.tees = tees
+    }
+
+    init(from decoder: Decoder) throws {
+        let c = try decoder.container(keyedBy: CodingKeys.self)
+        id = try c.decode(Int.self, forKey: .id)
+        clubName = try c.decode(String.self, forKey: .clubName)
+        courseName = try c.decode(String.self, forKey: .courseName)
+        location = try c.decode(GolfCourseAPILocation.self, forKey: .location)
+        tees = try c.decode(GolfCourseAPITees.self, forKey: .tees)
+        websiteURL =
+            try c.decodeIfPresent(String.self, forKey: .websiteURL)
+            ?? c.decodeIfPresent(String.self, forKey: .website)
+            ?? c.decodeIfPresent(String.self, forKey: .url)
+        phoneNumber =
+            try c.decodeIfPresent(String.self, forKey: .phoneNumber)
+            ?? c.decodeIfPresent(String.self, forKey: .phone)
+            ?? c.decodeIfPresent(String.self, forKey: .telephone)
+    }
+
+    func encode(to encoder: Encoder) throws {
+        var c = encoder.container(keyedBy: CodingKeys.self)
+        try c.encode(id, forKey: .id)
+        try c.encode(clubName, forKey: .clubName)
+        try c.encode(courseName, forKey: .courseName)
+        try c.encode(location, forKey: .location)
+        try c.encode(tees, forKey: .tees)
+        try c.encodeIfPresent(websiteURL, forKey: .websiteURL)
+        try c.encodeIfPresent(phoneNumber, forKey: .phoneNumber)
     }
 }
 

@@ -26,7 +26,7 @@ extension LiveRound {
             .mapStyle(.imagery(elevation: .realistic))
             .cornerRadius(radius: 12)
             .padding(12)
-            .glassCardEffect(cornerRadius: 24, forceMaterial: true)
+            .glassCardEffect(cornerRadius: 24, forceMaterial: true, tint: palette.cardColor)
             //.frame(height: UIScreen.main.bounds.height * 0.6)
             .padding(.horizontal, 16)
             
@@ -35,7 +35,7 @@ extension LiveRound {
                 .multilineTextAlignment(.center)
                 .padding(.vertical, 4)
                 .alignCenter()
-                .glassCardEffect(cornerRadius: 24, forceMaterial: true)
+                .glassCardEffect(cornerRadius: 24, forceMaterial: true, tint: palette.cardColor)
                 .padding(.horizontal, 16)
                 
             

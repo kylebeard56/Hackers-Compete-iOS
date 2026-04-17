@@ -35,7 +35,9 @@ struct CourseSelectionConfirmation: View, Loggable {
         return "Scanned course"
     }
     private var disableRoundCreation: Bool { viewModel.selectedTee == nil && course.tees.isPopulated }
+    private var isSimpleRound: Bool { course.isSimpleRoundCourse }
     private var hasMapLocation: Bool {
+        guard !isSimpleRound else { return false }
         guard let loc = course.location else { return false }
         return loc.latitude != 0 || loc.longitude != 0
     }
@@ -168,7 +170,7 @@ struct CourseSelectionConfirmation: View, Loggable {
                         .minimumScaleFactor(0.75)
                         .alignLeading()
                     
-                    if let location = course.location {
+                    if !isSimpleRound, let location = course.location {
                         HStack {
                             Text(location.trimmedAddress)
                                 .fontStyle(kFontName, size: 14, weight: .regular)
@@ -185,60 +187,85 @@ struct CourseSelectionConfirmation: View, Loggable {
                             Spacer(minLength: 0)
                         }
                     }
+
+                    if !isSimpleRound, let phoneNumber = course.venueDetails?.phoneNumber, phoneNumber.isPopulated {
+                        Text(phoneNumber)
+                            .fontStyle(kFontName, size: 13, weight: .medium)
+                            .foregroundStyle(Color.neutral2)
+                            .alignLeading()
+                    }
+
+                    if !isSimpleRound, let website = course.venueDetails?.websiteURL, website.isPopulated {
+                        Text(website)
+                            .fontStyle(kFontName, size: 13, weight: .medium)
+                            .foregroundStyle(Color.accentGreen)
+                            .lineLimit(1)
+                            .alignLeading()
+                    }
                 }
                 .frame(maxWidth: .infinity, alignment: .leading)
 
-                Button {
-                    Haptics.fire(.light)
-                    showCourseEdit = true
-                } label: {
-                    ZStack {
-                        Circle()
-                            .fill(Color.neutral6)
-                            .frame(width: 40, height: 40)
-                        Icon(name: "f044", size: 18, weight: .regular)
-                            .foregroundStyle(Color.foregroundPrimary)
+                if !isSimpleRound {
+                    Button {
+                        Haptics.fire(.light)
+                        showCourseEdit = true
+                    } label: {
+                        ZStack {
+                            Circle()
+                                .fill(Color.neutral6)
+                                .frame(width: 40, height: 40)
+                            Icon(name: "f044", size: 18, weight: .regular)
+                                .foregroundStyle(Color.foregroundPrimary)
+                        }
                     }
+                    .buttonStyle(.plain)
                 }
-                .buttonStyle(.plain)
             }
 
             Line()
-            
-            Picker("Holes", selection: $viewModel.holeSegment) {
-                ForEach(course.availableSegments, id: \.self) { segment in
-                    Text(segment.title)
+
+            if isSimpleRound {
+                VStack(spacing: 12) {
+                    infoRow(title: "Number of holes", value: "\(viewModel.holeSegment.holeCount)")
+                    infoRow(title: "Starting hole", value: "\(viewModel.simpleRoundSetup?.startingHole ?? 1)")
+                    infoRow(title: "Score entry", value: "Friendly")
+                }
+            } else {
+                Picker("Holes", selection: $viewModel.holeSegment) {
+                    ForEach(course.availableSegments, id: \.self) { segment in
+                        Text(segment.title)
+                            .foregroundStyle(Color.foregroundPrimary)
+                            .tag(segment)
+                    }
+                }
+                .pickerStyle(.segmented)
+
+                Line()
+
+                HStack {
+                    Text("Tees")
+                        .fontStyle(kFontName, size: 15, weight: .semibold)
                         .foregroundStyle(Color.foregroundPrimary)
-                        .tag(segment)
+
+                    Spacer(minLength: 0)
+
+                    if disableRoundCreation {
+                        Chip.required
+                    }
                 }
+
+                TeeDropdown(
+                    tee: viewModel.selectedTee,
+                    segment: viewModel.holeSegment,
+                    onTap: { showTeeSelection = true }
+                )
+
+                Text("You can choose different tees for each player in the game lobby before your round.")
+                    .fontStyle(kFontName, size: 14, weight: .regular)
+                    .foregroundStyle(Color.neutral)
+                    .multilineTextAlignment(.leading)
+                    .alignLeading()
             }
-            .pickerStyle(.segmented)
-            
-            Line()
-            
-            HStack {
-                Text("Tees")
-                    .fontStyle(kFontName, size: 15, weight: .semibold)
-                    .foregroundStyle(Color.foregroundPrimary)
-                
-                Spacer(minLength: 0)
-                
-                if disableRoundCreation {
-                    Chip.required
-                }
-            }
-            
-            TeeDropdown(
-                tee: viewModel.selectedTee,
-                segment: viewModel.holeSegment,
-                onTap: { showTeeSelection = true }
-            )
-            
-            Text("You can choose different tees for each player in the game lobby before your round.")
-                .fontStyle(kFontName, size: 14, weight: .regular)
-                .foregroundStyle(Color.neutral)
-                .multilineTextAlignment(.leading)
-                .alignLeading()
             
             Spacer(minLength: 0)
             
@@ -304,6 +331,20 @@ struct CourseSelectionConfirmation: View, Loggable {
                 )
             }
 
+        }
+    }
+
+    private func infoRow(title: String, value: String) -> some View {
+        HStack {
+            Text(title)
+                .fontStyle(kFontName, size: 15, weight: .semibold)
+                .foregroundStyle(Color.foregroundPrimary)
+
+            Spacer(minLength: 0)
+
+            Text(value)
+                .fontStyle(kFontName, size: 15, weight: .medium)
+                .foregroundStyle(Color.neutral)
         }
     }
     

@@ -53,6 +53,27 @@ final class ScoringEngineTests: XCTestCase {
         )
     }
 
+    private func makeRelativeScoreEntry(
+        participantID: String,
+        holeNumber: Int,
+        relativeToPar: Int,
+        segmentID: String = "seg1"
+    ) -> ScoreEntry {
+        ScoreEntry(
+            id: ScoreEntry.makeID(hole: holeNumber, segment: segmentID, scoringUnit: participantID),
+            holeNumber: holeNumber,
+            segmentID: segmentID,
+            scoringUnitID: participantID,
+            participantIDs: [participantID],
+            strokes: nil,
+            relativeToPar: relativeToPar,
+            entryMode: .relativeToPar,
+            pickedUp: false,
+            entryID: participantID,
+            parentID: "round1"
+        )
+    }
+
     private func makePartnership(id: String, teamID: String, memberIDs: [String]) -> RoundScoringGroup {
         RoundScoringGroup(
             id: id,
@@ -185,6 +206,37 @@ final class ScoringEngineTests: XCTestCase {
         XCTAssertEqual(row.total, 0, "36 handicap receiving 2 strokes per hole should net to even")
     }
 
+    func testStrokePlayFriendlyRelativeToPar_SumsRelativeValuesAndDerivesGrossStrokes() {
+        let holes = makeHoles(count: 3)
+        let participants = [
+            makeParticipant(id: "p1", name: "Alice"),
+        ]
+        let segment = makeSegment(holeRange: HoleRange(startHole: 1, endHole: 3))
+        let template = FormatTemplateRegistry.strokePlayGross
+        let scores = [
+            makeRelativeScoreEntry(participantID: "p1", holeNumber: 1, relativeToPar: 0),
+            makeRelativeScoreEntry(participantID: "p1", holeNumber: 2, relativeToPar: -1),
+            makeRelativeScoreEntry(participantID: "p1", holeNumber: 3, relativeToPar: 2),
+        ]
+
+        let result = ScoringEngine.computeStrokePlay(
+            scores: scores,
+            participants: participants,
+            segment: segment,
+            holes: holes,
+            basis: .gross,
+            scoreInputMode: .friendlyRelativeToPar,
+            template: template
+        )
+
+        let row = result.rows[0]
+        XCTAssertEqual(row.total, 1, accuracy: 0.01)
+        XCTAssertEqual(row.holesPlayed, 3)
+        XCTAssertEqual(row.holeValues[1]?.rawStrokes, 4)
+        XCTAssertEqual(row.holeValues[2]?.rawStrokes, 3)
+        XCTAssertEqual(row.holeValues[3]?.rawStrokes, 5)
+    }
+
     // MARK: - Stableford via Pipeline
 
     func testStableford_PointsComputation() {
@@ -218,6 +270,33 @@ final class ScoringEngineTests: XCTestCase {
         XCTAssertEqual(result.rows.count, 1)
         let row = result.rows[0]
         XCTAssertEqual(row.total, totalExpected, accuracy: 0.01, "Stableford total should be \(totalExpected)")
+    }
+
+    func testStableford_FriendlyRelativeToParUsesResolvedValues() {
+        let holes = makeHoles(count: 5)
+        let participants = [
+            makeParticipant(id: "p1", name: "Alice"),
+        ]
+        let segment = makeSegment(holeRange: HoleRange(startHole: 1, endHole: 5))
+        let template = FormatTemplateRegistry.stableford
+        let offsets = [-2, -1, 0, 1, 2]
+        let scores = offsets.enumerated().map { index, relative in
+            makeRelativeScoreEntry(participantID: "p1", holeNumber: index + 1, relativeToPar: relative)
+        }
+
+        let result = ScoringEngine.computeWithPipeline(
+            scores: scores,
+            participants: participants,
+            teams: [],
+            segment: segment,
+            holes: holes,
+            basis: .gross,
+            scoreInputMode: .friendlyRelativeToPar,
+            template: template
+        )
+
+        XCTAssertEqual(result.rows.count, 1)
+        XCTAssertEqual(result.rows[0].total, 10, accuracy: 0.01)
     }
 
     // MARK: - Vegas
@@ -308,6 +387,49 @@ final class ScoringEngineTests: XCTestCase {
         let rowMap = Dictionary(uniqueKeysWithValues: result.rows.map { ($0.scoringUnitID, $0) })
         XCTAssertEqual(rowMap["t1"]?.total ?? 0, 45, accuracy: 0.01)
         XCTAssertEqual(rowMap["t2"]?.total ?? 0, 56, accuracy: 0.01)
+    }
+
+    func testVegas_FriendlyRelativeToParUsesResolvedRelativeValues() {
+        let holes = makeHoles(count: 1)
+        let participants = [
+            makeParticipant(id: "p1", name: "Alice", teamID: "t1"),
+            makeParticipant(id: "p2", name: "Bob", teamID: "t1"),
+            makeParticipant(id: "p3", name: "Charlie", teamID: "t2"),
+            makeParticipant(id: "p4", name: "Dave", teamID: "t2"),
+        ]
+        let teams = [
+            RoundTeam(id: "t1", name: "Team 1", color: "red", index: 0, createdAt: .init()),
+            RoundTeam(id: "t2", name: "Team 2", color: "blue", index: 1, createdAt: .init()),
+        ]
+        let segment = makeSegment(holeRange: HoleRange(startHole: 1, endHole: 1))
+        let template = FormatTemplateRegistry.vegas
+        let scores = [
+            makeRelativeScoreEntry(participantID: "p1", holeNumber: 1, relativeToPar: -1),
+            makeRelativeScoreEntry(participantID: "p2", holeNumber: 1, relativeToPar: 0),
+            makeRelativeScoreEntry(participantID: "p3", holeNumber: 1, relativeToPar: 0),
+            makeRelativeScoreEntry(participantID: "p4", holeNumber: 1, relativeToPar: 1),
+        ]
+
+        let result = ScoringEngine.computeVegas(
+            scores: scores,
+            participants: participants,
+            teams: teams,
+            scoringGroups: [],
+            segment: segment,
+            holes: holes,
+            basis: .gross,
+            scoreInputMode: .friendlyRelativeToPar,
+            template: template,
+            vegasMode: .exactPair,
+            selectionRule: .best2,
+            selectionScope: .perHole
+        )
+
+        let rowMap = Dictionary(uniqueKeysWithValues: result.rows.map { ($0.scoringUnitID, $0) })
+        XCTAssertEqual(rowMap["t1"]?.total ?? 0, -10, accuracy: 0.01)
+        XCTAssertEqual(rowMap["t2"]?.total ?? 0, 1, accuracy: 0.01)
+        XCTAssertEqual(rowMap["t1"]?.holeValues[1]?.vegasPairs?.first?.lowStroke, -1)
+        XCTAssertEqual(rowMap["t1"]?.holeValues[1]?.vegasPairs?.first?.highStroke, 0)
     }
 
     func testVegas_PartnershipAggregate_SumsPairTotals() {
@@ -679,5 +801,61 @@ final class ScoringEngineTests: XCTestCase {
     func testStrokesReceived_HandicapsDisabled() {
         let received = ScoringEngine.strokesReceived(handicap: 18, holeHandicap: 1, useHandicaps: false)
         XCTAssertEqual(received, 0, "Should return 0 when handicaps disabled")
+    }
+
+    func testStrokesReceived_SequentialFallbackWithoutHoleIndexes_15Handicap() {
+        let holes = (1...18).map { Hole(number: $0, par: 4, yardage: 360, handicap: nil) }
+        let playedHoleNumbers = Array(1...18)
+
+        for holeNumber in 1...18 {
+            let received = ScoringEngine.strokesReceived(
+                handicap: 15,
+                holeNumber: holeNumber,
+                holes: holes,
+                playedHoleNumbers: playedHoleNumbers,
+                useHandicaps: true
+            )
+            let expected = holeNumber <= 15 ? 1 : 0
+            XCTAssertEqual(received, expected, "15 handicap should receive \(expected) on hole \(holeNumber)")
+        }
+    }
+
+    func testStrokesReceived_SequentialFallbackWithoutHoleIndexes_21Handicap() {
+        let holes = (1...18).map { Hole(number: $0, par: 4, yardage: 360, handicap: nil) }
+        let playedHoleNumbers = Array(1...18)
+
+        for holeNumber in 1...18 {
+            let received = ScoringEngine.strokesReceived(
+                handicap: 21,
+                holeNumber: holeNumber,
+                holes: holes,
+                playedHoleNumbers: playedHoleNumbers,
+                useHandicaps: true
+            )
+            let expected = holeNumber <= 3 ? 2 : 1
+            XCTAssertEqual(received, expected, "21 handicap should receive \(expected) on hole \(holeNumber)")
+        }
+    }
+
+    func testMaxScoreOverParSelectableCasesIncludeQuintAndSext() {
+        XCTAssertEqual(
+            MaxScoreOverPar.allCases,
+            [.bogey, .double, .triple, .quad, .quint, .sext, .none]
+        )
+        XCTAssertEqual(MaxScoreOverPar.quint.friendlyMaxRelativeValue(for: 4), 5)
+        XCTAssertEqual(MaxScoreOverPar.sext.friendlyMaxRelativeValue(for: 4), 6)
+    }
+
+    func testMaxScoreOverParLegacyCasesRemainDecodable() throws {
+        let decoder = JSONDecoder()
+
+        XCTAssertEqual(
+            try decoder.decode(MaxScoreOverPar.self, from: Data(#""twoTimesPar""#.utf8)),
+            .twoTimesPar
+        )
+        XCTAssertEqual(
+            try decoder.decode(MaxScoreOverPar.self, from: Data(#""twoTimesParPlusOne""#.utf8)),
+            .twoTimesParPlusOne
+        )
     }
 }

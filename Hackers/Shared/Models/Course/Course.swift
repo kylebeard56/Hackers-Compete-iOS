@@ -12,8 +12,22 @@ enum CourseOrigin: String {
     case golfCourseAPI
     case hackers
     case manual
+    case simple
     case ocr
     case unknown
+}
+
+struct CourseVenueDetails: Hashable, Codable {
+    let websiteURL: String?
+    let phoneNumber: String?
+
+    init(
+        websiteURL: String? = nil,
+        phoneNumber: String? = nil
+    ) {
+        self.websiteURL = websiteURL
+        self.phoneNumber = phoneNumber
+    }
 }
 
 enum Gender: String, CaseIterable, Identifiable {
@@ -38,6 +52,7 @@ struct Course: FirebaseIdentifiable {
     let clubName: String
     let courseName: String
     let location: CourseLocation?
+    let venueDetails: CourseVenueDetails?
     /// Top-level geohash for Firestore queries (e.g. fetchCourses near location)
     let locationGeohash: String?
     let tees: [Tee]
@@ -56,6 +71,7 @@ struct Course: FirebaseIdentifiable {
         clubName: String = "",
         courseName: String = "",
         location: CourseLocation? = nil,
+        venueDetails: CourseVenueDetails? = nil,
         locationGeohash: String? = nil,
         tees: [Tee] = [],
         createdAt: Time = Time(),
@@ -67,6 +83,7 @@ struct Course: FirebaseIdentifiable {
         self.clubName = clubName
         self.courseName = courseName
         self.location = location
+        self.venueDetails = venueDetails
         self.locationGeohash = locationGeohash ?? location?.geohash
         self.tees = tees
         self.createdAt = createdAt
@@ -93,6 +110,10 @@ struct Course: FirebaseIdentifiable {
             clubName: model.clubName,
             courseName: model.courseName,
             location: loc,
+            venueDetails: CourseVenueDetails(
+                websiteURL: model.websiteURL,
+                phoneNumber: model.phoneNumber
+            ),
             locationGeohash: loc.geohash,
             tees: female + male,
             createdAt: Time(),
@@ -111,6 +132,7 @@ struct Course: FirebaseIdentifiable {
             clubName: info.name,
             courseName: info.name,
             location: info.location,
+            venueDetails: info.venueDetails,
             locationGeohash: info.location?.geohash,
             tees: info.tees,
             createdAt: .init(),
@@ -123,6 +145,7 @@ struct Course: FirebaseIdentifiable {
         case golfCourseApiID = "golf_course_api_id"
         case clubName = "club_name"
         case courseName = "course_name"
+        case venueDetails = "venue_details"
         case locationGeohash = "location_geohash"
         case createdAt = "created_at"
         case lastUpdatedAt = "last_updated_at"
@@ -147,6 +170,7 @@ extension Course {
         clubName = try c.decode(String.self, forKey: .clubName)
         courseName = try c.decode(String.self, forKey: .courseName)
         location = try c.decodeIfPresent(CourseLocation.self, forKey: .location)
+        venueDetails = try c.decodeIfPresent(CourseVenueDetails.self, forKey: .venueDetails)
         locationGeohash = try c.decodeIfPresent(String.self, forKey: .locationGeohash)
         tees = try c.decode([Tee].self, forKey: .tees)
         createdAt = try c.decode(Time.self, forKey: .createdAt)
@@ -164,6 +188,7 @@ extension Course {
         try c.encode(clubName, forKey: .clubName)
         try c.encode(courseName, forKey: .courseName)
         try c.encodeIfPresent(location, forKey: .location)
+        try c.encodeIfPresent(venueDetails, forKey: .venueDetails)
         try c.encodeIfPresent(locationGeohash ?? location?.geohash, forKey: .locationGeohash)
         try c.encode(tees, forKey: .tees)
         try c.encode(createdAt, forKey: .createdAt)
@@ -175,6 +200,10 @@ extension Course {
 }
 
 extension Course {
+    var isSimpleRoundCourse: Bool {
+        origin == CourseOrigin.simple.rawValue
+    }
+
     private static func stableTeeID(teeName: String, gender: Gender) -> String {
         let base = teeName.lowercased()
             .replacingOccurrences(of: " ", with: "_")
@@ -269,6 +298,7 @@ extension Course {
     var defaultSegment: HoleSegment {
         if hasEighteen { return .full18 }
         let maxCount = tees.map(\.totalHoles).max() ?? 0
+        if maxCount <= 0 { return .full18 }
         return .custom(lower: 1, upper: maxCount)
     }
 }

@@ -114,7 +114,7 @@ final class AnthropicProvider: LLMProviderProtocol, Loggable {
         imageBase64: String,
         model: String?,
         maxTokens: Int,
-        userNotes: String? = nil
+        scanContext: ScorecardScanContext = .init()
     ) async throws -> CourseScorecardDTO {
         guard apiKey.isPopulated else {
             addBreadcrumb(level: .error, message: "ANTHROPIC_API_KEY missing")
@@ -130,7 +130,7 @@ final class AnthropicProvider: LLMProviderProtocol, Loggable {
         let body: [String: Any] = [
             "model": modelToUse,
             "max_tokens": maxTokens,
-            "system": CourseScorecardOCRPrompt.systemPrompt(),
+            "system": CourseScorecardOCRPrompt.systemPrompt(scanContext: scanContext),
             "messages": [
                 [
                     "role": "user",
@@ -145,7 +145,7 @@ final class AnthropicProvider: LLMProviderProtocol, Loggable {
                         ],
                         [
                             "type": "text",
-                            "text": CourseScorecardOCRPrompt.userPrompt(userNotes: userNotes)
+                            "text": CourseScorecardOCRPrompt.userPrompt(scanContext: scanContext)
                         ]
                     ]
                 ]

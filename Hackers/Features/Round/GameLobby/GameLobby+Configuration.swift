@@ -106,7 +106,7 @@ extension GameLobby {
             maxScoreRow
         }
         .padding(16)
-        .glassCardEffect(forceMaterial: true)
+        .glassCardEffect(forceMaterial: true, tint: palette.cardColor)
     }
 
     @ViewBuilder

@@ -24,6 +24,7 @@ struct CourseEditView: View, Loggable {
     let course: Course
     let initialMode: CourseEditMode
     let shouldTrackRoundSetup: Bool
+    let draftNotice: String?
     let onSave: (Course, String, Bool) -> Void
 
     @StateObject private var viewModel: CourseEditViewModel
@@ -50,11 +51,13 @@ struct CourseEditView: View, Loggable {
         course: Course,
         mode: CourseEditMode = .view,
         shouldTrackRoundSetup: Bool = true,
+        draftNotice: String? = nil,
         onSave: @escaping (Course, String, Bool) -> Void
     ) {
         self.course = course
         self.initialMode = mode
         self.shouldTrackRoundSetup = shouldTrackRoundSetup
+        self.draftNotice = draftNotice
         self.onSave = onSave
         _viewModel = StateObject(wrappedValue: CourseEditViewModel(course: course))
         _isEditMode = State(initialValue: mode == .edit)
@@ -72,7 +75,10 @@ struct CourseEditView: View, Loggable {
         NavigationStack {
             ScrollView(showsIndicators: false) {
                 VStack(spacing: 16) {
-                    //courseDetailsCard
+                    if let draftNotice, draftNotice.isPopulated {
+                        draftNoticeCard(message: draftNotice)
+                    }
+
                     courseNameSection
                     addressSection
                     
@@ -182,6 +188,22 @@ struct CourseEditView: View, Loggable {
                 )
             }
         }
+    }
+
+    private func draftNoticeCard(message: String) -> some View {
+        VStack(alignment: .leading, spacing: 8) {
+            Text("Unconfirmed draft")
+                .fontStyle(kFontName, size: 13, weight: .semibold)
+                .foregroundStyle(Color.systemOrange)
+
+            Text(message)
+                .fontStyle(kFontName, size: 14, weight: .medium)
+                .foregroundStyle(Color.foregroundPrimary)
+                .fixedSize(horizontal: false, vertical: true)
+        }
+        .padding(16)
+        .background(Color.neutral6)
+        .cornerRadius(radius: 16)
     }
 
     private var courseDetailsCard: some View {

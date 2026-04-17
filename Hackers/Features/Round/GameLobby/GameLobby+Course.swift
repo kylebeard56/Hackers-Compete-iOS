@@ -12,6 +12,7 @@ extension GameLobby {
     @ViewBuilder
     var courseSection: some View {
         if let courseSegment = snapshot.courseSegment {
+            let isSimpleRound = snapshot.configuration.scoreInputMode == .friendlyRelativeToPar
             VStack(spacing: 12) {
                 VStack(spacing: 14) {
                     Text("Course".uppercased())
@@ -27,11 +28,26 @@ extension GameLobby {
                             .minimumScaleFactor(0.6)
                             .multilineTextAlignment(.center)
                         
-                        if let street = courseSegment.courseInfo.location?.streetName {
+                        if !isSimpleRound, let street = courseSegment.courseInfo.location?.streetName {
                             // TODO: Open GPS for directions in Apple/Google Maps
                             Text(street)
                                 .fontStyle(kFontName, size: 14, weight: .regular)
                                 .foregroundStyle(Color.neutral)
+                                .multilineTextAlignment(.center)
+                        }
+
+                        if !isSimpleRound, let phoneNumber = courseSegment.courseInfo.venueDetails?.phoneNumber, phoneNumber.isPopulated {
+                            Text(phoneNumber)
+                                .fontStyle(kFontName, size: 13, weight: .medium)
+                                .foregroundStyle(Color.neutral2)
+                                .multilineTextAlignment(.center)
+                        }
+
+                        if !isSimpleRound, let website = courseSegment.courseInfo.venueDetails?.websiteURL, website.isPopulated {
+                            Text(website)
+                                .fontStyle(kFontName, size: 13, weight: .medium)
+                                .foregroundStyle(Color.accentGreen)
+                                .lineLimit(1)
                                 .multilineTextAlignment(.center)
                         }
                     }
@@ -40,8 +56,11 @@ extension GameLobby {
                         Spacer(minLength: 0)
                         
                         StackedSubtitle(value: numberOfHolesLabel(for: courseSegment), label: "holes")
-                        
-                        if let defaultTee = snapshot.defaultTee {
+
+                        if isSimpleRound {
+                            StackedSubtitle(value: "\(snapshot.teeGroups.first?.startingHole ?? 1)", label: "start")
+                            StackedSubtitle(value: "Friendly", label: "entry")
+                        } else if let defaultTee = snapshot.defaultTee {
                             StackedSubtitle(value: "\(courseSegment.par(for: defaultTee))", label: "par")
                             StackedSubtitle(value: "\(defaultTee.name)", label: "tee")
                             StackedSubtitle(value: "\(defaultTee.yardage(for: snapshot.holeSegment))", label: "yards")
@@ -70,7 +89,7 @@ extension GameLobby {
                     .padding(.top, 16)
                 }
                 .padding(16)
-                .glassCardEffect(forceMaterial: true)
+                .glassCardEffect(forceMaterial: true, tint: palette.cardColor)
 //                .background(.ultraThinMaterial)
 //                .cornerRadius(radius: 16)
                 
@@ -117,7 +136,7 @@ extension GameLobby {
                     .padding(.top, 8)
                 }
                 .padding(16)
-                .glassCardEffect(forceMaterial: true)
+                .glassCardEffect(forceMaterial: true, tint: palette.cardColor)
             }
         }
     }

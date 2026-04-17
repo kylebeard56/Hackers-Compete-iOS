@@ -1031,7 +1031,7 @@ struct SeriesRosterView: View {
         }
         .padding(12)
         .frame(maxWidth: .infinity, alignment: .leading)
-        .glassCardEffect(cornerRadius: 12, interactive: false, forceMaterial: true)
+        .glassCardEffect(cornerRadius: 12, interactive: false, forceMaterial: true, tint: palette.cardColor)
     }
 
     @ViewBuilder

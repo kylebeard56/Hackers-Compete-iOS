@@ -765,6 +765,10 @@ final class LiveRoundViewModel: ObservableObject, Loggable {
         let par = hole(for: holeNumber)?.par ?? 4
         return [par - 1, par, par + 1, par + 2, par + 3]
     }
+
+    var isFriendlyScoreInputMode: Bool {
+        snapshot.configuration.scoreInputMode == .friendlyRelativeToPar
+    }
     
     // MARK: - Scoring lookups
     
@@ -791,7 +795,20 @@ final class LiveRoundViewModel: ObservableObject, Loggable {
     }
     
     func grossStrokes(for participantID: String, holeNumber: Int) -> Int? {
-        scoreEntry(for: participantID, holeNumber: holeNumber)?.strokes
+        guard let entry = scoreEntry(for: participantID, holeNumber: holeNumber) else { return nil }
+        return resolvedGrossStrokes(from: entry, holeNumber: holeNumber)
+    }
+
+    func grossRelativeToPar(for participantID: String, holeNumber: Int) -> Int? {
+        guard let entry = scoreEntry(for: participantID, holeNumber: holeNumber) else { return nil }
+        return resolvedRelativeToPar(from: entry, holeNumber: holeNumber)
+    }
+
+    func scoreInputValue(for participantID: String, holeNumber: Int) -> Int? {
+        if isFriendlyScoreInputMode {
+            return grossRelativeToPar(for: participantID, holeNumber: holeNumber)
+        }
+        return grossStrokes(for: participantID, holeNumber: holeNumber)
     }
     
     func pickedUp(for participantID: String, holeNumber: Int) -> Bool {
@@ -847,7 +864,7 @@ final class LiveRoundViewModel: ObservableObject, Loggable {
             guard let entry = scoreEntry(in: snapshot, participantID: participantID, holeNumber: holeNumber) else {
                 return false
             }
-            return entry.strokes != nil || entry.pickedUp
+            return entry.hasRecordedScore
         }.count
     }
 
@@ -870,10 +887,28 @@ final class LiveRoundViewModel: ObservableObject, Loggable {
             guard let entry = scoreEntry(in: snapshot, participantID: participant.id, holeNumber: holeNumber) else {
                 return false
             }
-            return entry.strokes != nil || entry.pickedUp
+            return entry.hasRecordedScore
         }.count
 
         return Double(completed) / Double(players.count)
+    }
+
+    private func resolvedGrossStrokes(from entry: ScoreEntry, holeNumber: Int) -> Int? {
+        if let strokes = entry.strokes {
+            return strokes
+        }
+        guard let relative = entry.relativeToPar else { return nil }
+        let par = hole(for: holeNumber)?.par ?? 4
+        return max(1, par + relative)
+    }
+
+    private func resolvedRelativeToPar(from entry: ScoreEntry, holeNumber: Int) -> Int? {
+        if let relative = entry.relativeToPar {
+            return relative
+        }
+        guard let gross = entry.strokes else { return nil }
+        let par = hole(for: holeNumber)?.par ?? 4
+        return gross - par
     }
 
     private func scoringUnit(
@@ -919,20 +954,54 @@ final class LiveRoundViewModel: ObservableObject, Loggable {
         let received = strokesReceivedOnHole(participant: participant, holeNumber: holeNumber)
         return max(0, gross - received)
     }
+
+    func netRelativeToParOnHole(participant: RoundParticipant, holeNumber: Int) -> Int? {
+        guard let relative = grossRelativeToPar(for: participant.id, holeNumber: holeNumber) else { return nil }
+        let received = strokesReceivedOnHole(participant: participant, holeNumber: holeNumber)
+        return relative - received
+    }
     
     // MARK: - Team scoring helpers (shared-score formats)
 
     func scoringUnitGrossStrokes(scoringUnitID: String, holeNumber: Int) -> Int? {
-        scoreIndex[Self.scoreIndexKey(participantID: scoringUnitID, holeNumber: holeNumber)]?.strokes
+        guard let entry = scoreIndex[Self.scoreIndexKey(participantID: scoringUnitID, holeNumber: holeNumber)] else {
+            return nil
+        }
+        return resolvedGrossStrokes(from: entry, holeNumber: holeNumber)
+    }
+
+    func scoringUnitScoreInputValue(scoringUnitID: String, holeNumber: Int) -> Int? {
+        guard let entry = scoreIndex[Self.scoreIndexKey(participantID: scoringUnitID, holeNumber: holeNumber)] else {
+            return nil
+        }
+        if isFriendlyScoreInputMode {
+            return resolvedRelativeToPar(from: entry, holeNumber: holeNumber)
+        }
+        return resolvedGrossStrokes(from: entry, holeNumber: holeNumber)
     }
 
     func scoringUnitScoreToPar(scoringUnitID: String, basis: ScoreBasis) -> Int {
+        if let row = engineResult.rows.first(where: { $0.scoringUnitID == scoringUnitID }) {
+            return Int(row.total.rounded())
+        }
+
         let holes = holeNumbers
         var sum = 0
         for holeNumber in holes {
-            guard let par = hole(for: holeNumber)?.par else { continue }
-            guard let gross = scoringUnitGrossStrokes(scoringUnitID: scoringUnitID, holeNumber: holeNumber) else { continue }
-            sum += (gross - par)
+            if basis == .gross {
+                guard let grossRelative = scoreIndex[Self.scoreIndexKey(participantID: scoringUnitID, holeNumber: holeNumber)]
+                    .flatMap({ resolvedRelativeToPar(from: $0, holeNumber: holeNumber) }) else {
+                    continue
+                }
+                sum += grossRelative
+            } else {
+                guard let participantID = snapshot.participants.first(where: { $0.id == scoringUnitID })?.id,
+                      let participant = snapshot.participants.first(where: { $0.id == participantID }),
+                      let netRelative = netRelativeToParOnHole(participant: participant, holeNumber: holeNumber) else {
+                    continue
+                }
+                sum += netRelative
+            }
         }
         return sum
     }
@@ -953,15 +1022,17 @@ final class LiveRoundViewModel: ObservableObject, Loggable {
         var sum = 0
         
         for holeNumber in holes {
-            guard let par = hole(for: holeNumber)?.par else { continue }
-            guard let gross = grossStrokes(for: participant.id, holeNumber: holeNumber) else { continue }
-            
             switch basis {
             case .gross:
-                sum += (gross - par)
+                guard let grossRelative = grossRelativeToPar(for: participant.id, holeNumber: holeNumber) else {
+                    continue
+                }
+                sum += grossRelative
             case .net:
-                let received = strokesReceivedOnHole(participant: participant, holeNumber: holeNumber)
-                sum += ((gross - received) - par)
+                guard let netRelative = netRelativeToParOnHole(participant: participant, holeNumber: holeNumber) else {
+                    continue
+                }
+                sum += netRelative
             }
         }
         
@@ -1033,12 +1104,12 @@ final class LiveRoundViewModel: ObservableObject, Loggable {
         case fullWithStrokes
     }
 
-    func friendlyScoreLabel(strokes: Int, par: Int, format: FriendlyScoreFormat = .short) -> String {
-        let diff = strokes - par
+    func friendlyScoreLabel(relativeToPar value: Int, par: Int = 4, format: FriendlyScoreFormat = .short) -> String {
         let useFull = (format == .full || format == .fullWithStrokes)
         let base: String
-        switch diff {
-        case ...(-3): base = "Albatross"
+        switch value {
+        case ...(-4): base = value == -4 ? "Condor" : "Albatross"
+        case -3: base = "Albatross"
         case -2: base = par == 3 ? (useFull ? "Hole-in-one" : "HIO") : "Eagle"
         case -1: base = "Birdie"
         case 0: base = "Par"
@@ -1049,15 +1120,28 @@ final class LiveRoundViewModel: ObservableObject, Loggable {
         case 5: base = useFull ? "Quint Bogey" : "5x Bogey"
         case 6: base = useFull ? "Sext Bogey" : "6x Bogey"
         default:
-            base = diff > 0 ? "\(diff)x Bogey" : "\(abs(diff)) Under"
+            base = value > 0 ? "\(value)x Bogey" : "\(abs(value)) Under"
         }
         let withStrokes = (format == .shortWithStrokes || format == .fullWithStrokes)
-        return withStrokes ? "\(base) (\(strokes))" : base
+        let grossStrokes = max(1, par + value)
+        return withStrokes ? "\(base) (\(grossStrokes))" : base
+    }
+
+    func friendlyScoreLabel(strokes: Int, par: Int, format: FriendlyScoreFormat = .short) -> String {
+        friendlyScoreLabel(relativeToPar: strokes - par, par: par, format: format)
     }
 
     /// Primary options: birdie through triple. More options: albatross, eagle, quad, quint, etc. up to hole max.
     func scoreMenuOptions(for holeNumber: Int) -> (primary: [Int], more: [Int]) {
         let par = hole(for: holeNumber)?.par ?? 4
+        if isFriendlyScoreInputMode {
+            let configMax = snapshot.gameFormat.configuration.maxScoreOverPar.friendlyMaxRelativeValue(for: par)
+            let primary = [-1, 0, 1, 2, 3]
+            let allScores = Array(-4...configMax)
+            let primarySet = Set(primary)
+            let more = allScores.filter { !primarySet.contains($0) }
+            return (primary, more)
+        }
         let configMax = snapshot.gameFormat.configuration.maxScoreOverPar.maxScore(for: par)
         let minScore: Int
         if par == 4 {
@@ -2014,6 +2098,7 @@ final class LiveRoundViewModel: ObservableObject, Loggable {
                 segment: segment,
                 holes: holes,
                 basis: scoreBasis,
+                scoreInputMode: snapshot.configuration.scoreInputMode,
                 template: template,
                 vegasMode: snapshot.configuration.resolvedVegasMode,
                 selectionRule: snapshot.configuration.resolvedVegasSelectionRule,
@@ -2028,6 +2113,7 @@ final class LiveRoundViewModel: ObservableObject, Loggable {
                 segment: segment,
                 holes: holes,
                 basis: scoreBasis,
+                scoreInputMode: snapshot.configuration.scoreInputMode,
                 template: template,
                 teamScoring: snapshot.configuration.teamScoring,
                 matchupResolutionStyle: snapshot.configuration.matchupResolutionStyle,
@@ -2042,6 +2128,7 @@ final class LiveRoundViewModel: ObservableObject, Loggable {
                 segment: segment,
                 holes: holes,
                 basis: scoreBasis,
+                scoreInputMode: snapshot.configuration.scoreInputMode,
                 template: template,
                 scoreLookupSegmentIDs: scoreLookupIDs.isEmpty ? nil : scoreLookupIDs,
                 resolvedCompetitionScope: snapshot.configuration.resolvedCompetitionScope,
@@ -2056,6 +2143,7 @@ final class LiveRoundViewModel: ObservableObject, Loggable {
                 segment: segment,
                 holes: holes,
                 basis: scoreBasis,
+                scoreInputMode: snapshot.configuration.scoreInputMode,
                 template: template,
                 scoreLookupSegmentIDs: scoreLookupIDs.isEmpty ? nil : scoreLookupIDs
             )
@@ -2215,31 +2303,58 @@ final class LiveRoundViewModel: ObservableObject, Loggable {
         guard let holeNumber = customScoreHoleNumber else { return }
         guard let value = Int(customScoreText.trimmingCharacters(in: .whitespacesAndNewlines)) else { return }
         
-        if grossStrokes(for: participant.id, holeNumber: holeNumber) == value {
+        if scoreInputValue(for: participant.id, holeNumber: holeNumber) == value {
             await clearScore(participant: participant, holeNumber: holeNumber, entryMethod: .clear)
             showCustomScorePrompt = false
             return
         }
-        
-        let quick = quickScores(for: holeNumber)
-        if quick.contains(value) {
-            await setQuickScore(
+
+        await setScoreInputValue(
+            participant: participant,
+            holeNumber: holeNumber,
+            value: value,
+            entryMethod: .customPrompt
+        )
+        showCustomScorePrompt = false
+    }
+    
+    func setQuickScoreValue(
+        participant: RoundParticipant,
+        value: Int,
+        holeNumber: Int,
+        entryMethod: LiveRoundEntryMethod = .quickPicker
+    ) async {
+        await setScoreInputValue(
+            participant: participant,
+            holeNumber: holeNumber,
+            value: value,
+            entryMethod: entryMethod
+        )
+    }
+
+    func setScoreInputValue(
+        participant: RoundParticipant,
+        holeNumber: Int,
+        value: Int,
+        entryMethod: LiveRoundEntryMethod = .quickPicker
+    ) async {
+        if isFriendlyScoreInputMode {
+            await setRelativeScore(
                 participant: participant,
-                strokes: value,
                 holeNumber: holeNumber,
-                entryMethod: .customPrompt
+                relativeToPar: value,
+                entryMethod: entryMethod
             )
         } else {
             await setScore(
                 participant: participant,
                 holeNumber: holeNumber,
                 strokes: value,
-                entryMethod: .customPrompt
+                entryMethod: entryMethod
             )
         }
-        showCustomScorePrompt = false
     }
-    
+
     func setQuickScore(
         participant: RoundParticipant,
         strokes: Int,
@@ -2276,6 +2391,8 @@ final class LiveRoundViewModel: ObservableObject, Loggable {
         entry.pickedUp = false
         entry.value = nil
         entry.strokes = nil
+        entry.relativeToPar = nil
+        entry.entryMode = nil
         
         var updatedSnapshot = roundSession.snapshot
         updatedSnapshot.scoring.upsert(entry)
@@ -2366,9 +2483,13 @@ final class LiveRoundViewModel: ObservableObject, Loggable {
         entry.pickedUp = false
         entry.value = nil
         entry.strokes = strokes
+        entry.relativeToPar = nil
+        entry.entryMode = .strokes
         
         let previousEntry = scoreEntry(for: lookupKey, holeNumber: holeNumber)
-        if previousEntry?.strokes == strokes, previousEntry?.pickedUp == false {
+        if previousEntry?.strokes == strokes,
+           previousEntry?.relativeToPar == nil,
+           previousEntry?.pickedUp == false {
             return
         }
         
@@ -2389,6 +2510,109 @@ final class LiveRoundViewModel: ObservableObject, Loggable {
             )
         } catch {
             addBreadcrumb(level: .error, message: "Failed to set score for participant \(participant.id)", error: error)
+            var rollbackSnapshot = roundSession.snapshot
+            if let prev = previousEntry {
+                rollbackSnapshot.scoring.upsert(prev)
+            } else {
+                rollbackSnapshot.scoring.removeAll { $0.id == entry.id }
+            }
+            roundSession.snapshot = rollbackSnapshot
+        }
+    }
+
+    func setRelativeScore(
+        participant: RoundParticipant,
+        holeNumber: Int,
+        relativeToPar: Int,
+        entryMethod: LiveRoundEntryMethod = .quickPicker
+    ) async {
+        addBreadcrumb()
+
+        guard participant.isPresenceActive else { return }
+        guard let roundSession else { return }
+
+        let beforeSnapshot = roundSession.snapshot
+        let beforeProgress = holeCompletionProgress(
+            holeNumber: holeNumber,
+            in: beforeSnapshot,
+            groupID: participant.groupID
+        )
+
+        let roundID = snapshot.round.id
+        let resolved = snapshot.segment(forHole: holeNumber)
+        let segmentID = resolved?.id.isPopulated == true ? resolved!.id : snapshot.roundSegment?.id ?? "seg0"
+        let resolvedScoringUnit = scoringUnit(for: participant.id, holeNumber: holeNumber)
+
+        let isShared = snapshot.isSharedScoreSource
+        let teamID = participant.teamID
+        let scoringUnitID = resolvedScoringUnit?.id
+            ?? ((isShared && teamID != nil) ? teamID! : participant.id)
+        let participantIDs: [String] = {
+            if let resolvedScoringUnit {
+                return scoringParticipantIDs(for: resolvedScoringUnit)
+            }
+            if isShared, let teamID {
+                return snapshot.participants.filter { $0.teamID == teamID }.map(\.id)
+            }
+            return [participant.id]
+        }()
+
+        let id = ScoreEntry.makeID(hole: holeNumber, segment: segmentID, scoringUnit: scoringUnitID)
+        let lookupKey = resolvedScoringUnit?.id ?? ((isShared && teamID != nil) ? teamID! : participant.id)
+
+        var entry = scoreEntry(for: lookupKey, holeNumber: holeNumber) ?? ScoreEntry(
+            id: id,
+            holeNumber: holeNumber,
+            segmentID: segmentID,
+            groupID: participant.groupID ?? "",
+            scoringUnitID: scoringUnitID,
+            participantIDs: participantIDs,
+            strokes: nil,
+            value: nil,
+            pickedUp: false,
+            entryID: actualParticipant?.id ?? participant.id,
+            createdAt: .init(),
+            lastUpdatedAt: .init(),
+            parentID: roundID
+        )
+
+        entry.id = id
+        entry.parentID = roundID
+        entry.segmentID = segmentID
+        entry.groupID = participant.groupID ?? entry.groupID
+        entry.scoringUnitID = scoringUnitID
+        entry.participantIDs = participantIDs
+        entry.entryID = actualParticipant?.id ?? entry.entryID
+        entry.pickedUp = false
+        entry.value = nil
+        entry.strokes = nil
+        entry.relativeToPar = relativeToPar
+        entry.entryMode = .relativeToPar
+
+        let previousEntry = scoreEntry(for: lookupKey, holeNumber: holeNumber)
+        if previousEntry?.relativeToPar == relativeToPar,
+           previousEntry?.resolvedEntryMode == .relativeToPar,
+           previousEntry?.pickedUp == false {
+            return
+        }
+
+        var updatedSnapshot = roundSession.snapshot
+        updatedSnapshot.scoring.upsert(entry)
+        roundSession.snapshot = updatedSnapshot
+
+        do {
+            _ = try await entry.put().get()
+            lastLocalScoreAt = Date()
+            emitScoreSavedTelemetry(
+                participant: participant,
+                holeNumber: holeNumber,
+                strokes: max(1, (hole(for: holeNumber)?.par ?? 4) + relativeToPar),
+                entryMethod: entryMethod,
+                beforeProgress: beforeProgress,
+                afterSnapshot: updatedSnapshot
+            )
+        } catch {
+            addBreadcrumb(level: .error, message: "Failed to set relative score for participant \(participant.id)", error: error)
             var rollbackSnapshot = roundSession.snapshot
             if let prev = previousEntry {
                 rollbackSnapshot.scoring.upsert(prev)
@@ -2716,9 +2940,10 @@ final class LiveRoundViewModel: ObservableObject, Loggable {
         for holeNumber in unscoredHoleNumbers {
             let par = hole(for: holeNumber)?.par ?? 4
             let max = maxScoreRule.maxScore(for: par)
+            let maxRelative = maxScoreRule.friendlyMaxRelativeValue(for: par)
             for participant in players {
                 let isScored = scoreEntry(for: participant.id, holeNumber: holeNumber).map {
-                    $0.strokes != nil || $0.pickedUp
+                    $0.hasRecordedScore
                 } ?? false
                 guard !isScored else { continue }
 
@@ -2751,7 +2976,15 @@ final class LiveRoundViewModel: ObservableObject, Loggable {
                 entry.entryID = actualParticipant?.id ?? participant.id
                 entry.pickedUp = false
                 entry.value = nil
-                entry.strokes = max
+                if isFriendlyScoreInputMode {
+                    entry.strokes = nil
+                    entry.relativeToPar = maxRelative
+                    entry.entryMode = .relativeToPar
+                } else {
+                    entry.strokes = max
+                    entry.relativeToPar = nil
+                    entry.entryMode = .strokes
+                }
 
                 entriesToWrite.append(entry)
                 filledRecords.append((participant, entry))

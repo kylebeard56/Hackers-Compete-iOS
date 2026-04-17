@@ -29,6 +29,10 @@ struct TeamScoringRow: View {
         viewModel.teamGrossStrokes(teamID: team.id, holeNumber: holeNumber)
     }
 
+    private var scoreInputValue: Int? {
+        viewModel.scoringUnitScoreInputValue(scoringUnitID: team.id, holeNumber: holeNumber)
+    }
+
     private var teamScoreToPar: Int {
         viewModel.teamScoreToPar(teamID: team.id, basis: viewModel.scoreBasis)
     }
@@ -116,7 +120,9 @@ struct TeamScoringRow: View {
         let isScored = gross != nil
         let color = team.displaySwatchColor ?? effectiveAccent
         let label = isScored
-            ? viewModel.friendlyScoreLabel(strokes: gross ?? 6, par: holePar, format: .shortWithStrokes)
+            ? (viewModel.isFriendlyScoreInputMode
+                ? viewModel.friendlyScoreLabel(relativeToPar: scoreInputValue ?? 0, par: holePar, format: .short)
+                : viewModel.friendlyScoreLabel(strokes: gross ?? 6, par: holePar, format: .shortWithStrokes))
             : "Enter score"
         let tint = isScored ? color.opacity(colorScheme.translucent(0.10, 0.14)) : palette.whiteGlassButtonColor
         let foreground: Color = isScored ? color : palette.foregroundColor
@@ -155,6 +161,10 @@ struct SharedScoreOwnerRow: View {
 
     private var gross: Int? {
         viewModel.scoringUnitGrossStrokes(scoringUnitID: scoringUnitID, holeNumber: holeNumber)
+    }
+
+    private var scoreInputValue: Int? {
+        viewModel.scoringUnitScoreInputValue(scoringUnitID: scoringUnitID, holeNumber: holeNumber)
     }
 
     private var ownerScoreToPar: Int {
@@ -278,7 +288,9 @@ struct SharedScoreOwnerRow: View {
     private var enterScoreContent: some View {
         let isScored = gross != nil
         let label = isScored
-            ? viewModel.friendlyScoreLabel(strokes: gross ?? 6, par: holePar, format: .shortWithStrokes)
+            ? (viewModel.isFriendlyScoreInputMode
+                ? viewModel.friendlyScoreLabel(relativeToPar: scoreInputValue ?? 0, par: holePar, format: .short)
+                : viewModel.friendlyScoreLabel(strokes: gross ?? 6, par: holePar, format: .shortWithStrokes))
             : "Enter score"
         let tint = isScored ? effectiveAccent.opacity(colorScheme.translucent(0.10, 0.14)) : palette.whiteGlassButtonColor
         let foreground: Color = isScored ? effectiveAccent : palette.foregroundColor

@@ -13,7 +13,10 @@ struct CourseScorecardToolOutput: Decodable {
 }
 
 enum CourseScorecardOCRPrompt {
-    static func systemPrompt(includeJSONSchema: Bool = false) -> String {
+    static func systemPrompt(
+        includeJSONSchema: Bool = false,
+        scanContext: ScorecardScanContext = .init()
+    ) -> String {
         var prompt = """
         You are an expert at reading golf scorecards and extracting structured course data from a single scorecard image.
         You understand that scorecards are all different by design, so use your golf intelligence to extract sensible
@@ -30,8 +33,20 @@ enum CourseScorecardOCRPrompt {
         - If course and slope ratings are shown for full, front, or back, extract each visible value and leave missing ones null.
         - If the scorecard labels tees by men, women, ladies, or similar, map that to male or female. If gender is not stated, use unknown.
         - Prefer exact visible text for club name, course name, and location. Leave any missing text null.
+        - This is OCR phase one only. Extract only what is visible on the scorecard image.
+        - Do not infer or hallucinate website URLs, phone numbers, nearby venues, or coordinates that are not visibly printed on the scorecard.
         - User notes are hints, not ground truth. If a user note conflicts with the image, trust the image.
         """
+
+        if scanContext.isLocationAssistEnabled, scanContext.approximateLocation != nil {
+            prompt += """
+
+            Location-assist rule:
+            - Approximate user location may be provided only to help a later course-matching step break ties between otherwise plausible OCR matches.
+            - Never use approximate location alone to identify the course.
+            - Never fill address, coordinates, website, or phone from approximate location unless those details are visible on the scorecard image itself.
+            """
+        }
 
         if includeJSONSchema {
             prompt += "\n\n\(jsonSchemaDescription)\nReturn ONLY the JSON object, no markdown or explanation."
@@ -40,11 +55,16 @@ enum CourseScorecardOCRPrompt {
         return prompt
     }
 
-    static func userPrompt(userNotes: String? = nil) -> String {
+    static func userPrompt(scanContext: ScorecardScanContext = .init()) -> String {
         var prompt = "Extract the golf course data from this scorecard image."
 
-        if let userNotes = normalized(userNotes) {
+        if let userNotes = normalized(scanContext.notes) {
             prompt += "\nUser notes: \(userNotes)"
+        }
+
+        if scanContext.isLocationAssistEnabled,
+           let approximateLocation = scanContext.approximateLocation {
+            prompt += "\nApproximate location for later matching only: \(approximateLocation.promptDescription)"
         }
 
         return prompt

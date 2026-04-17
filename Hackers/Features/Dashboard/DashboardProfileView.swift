@@ -103,7 +103,7 @@ struct DashboardProfileView: View, Loggable {
             Spacer(minLength: 0)
         }
         .padding(16)
-        .glassCardEffect(forceMaterial: true)
+        .glassCardEffect(forceMaterial: true, tint: palette.cardColor)
     }
 
     private var profileDisplayName: String {

@@ -33,6 +33,10 @@ struct PlayerScoringRow: View {
     private var gross: Int? {
         viewModel.grossStrokes(for: participant.id, holeNumber: holeNumber)
     }
+
+    private var scoreInputValue: Int? {
+        viewModel.scoreInputValue(for: participant.id, holeNumber: holeNumber)
+    }
     
     private var strokesReceived: Int {
         viewModel.strokesReceivedOnHole(participant: participant, holeNumber: holeNumber)
@@ -191,7 +195,9 @@ struct PlayerScoringRow: View {
         let isScored = gross.exists
         let color = (viewModel.teamColor(for: participant) ?? effectiveAccent)
         let label = isScored
-        ? viewModel.friendlyScoreLabel(strokes: gross ?? 6, par: holePar, format: LiveRoundViewModel.FriendlyScoreFormat.shortWithStrokes)
+        ? (viewModel.isFriendlyScoreInputMode
+            ? viewModel.friendlyScoreLabel(relativeToPar: scoreInputValue ?? 0, par: holePar, format: .short)
+            : viewModel.friendlyScoreLabel(strokes: gross ?? 6, par: holePar, format: .shortWithStrokes))
         : "Enter score"
         let tint = isScored ? color.opacity(colorScheme.translucent(0.10, 0.14)) : palette.whiteGlassButtonColor
         let foreground: Color = isScored ? color : palette.foregroundColor

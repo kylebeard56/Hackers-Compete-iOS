@@ -241,7 +241,7 @@ struct DashboardRoundHistoryView: View {
                                             .padding(16)
                                         }
                                         .buttonStyle(.plain)
-                                        .glassCardEffect(cornerRadius: 14, forceMaterial: true)
+                                        .glassCardEffect(cornerRadius: 14, forceMaterial: true, tint: palette.cardColor)
                                         .contextMenu {
                                             Button {
                                                 Haptics.fire(.light)

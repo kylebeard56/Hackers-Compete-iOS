@@ -35,11 +35,11 @@ struct SeriesActiveAnnouncementsSection: View {
                         .foregroundStyle(Color.neutral2)
                 }
                 .padding(12)
-                .glassCardEffect(cornerRadius: 12, forceMaterial: true, tint: palette.whiteGlassButtonColor)
+                .glassCardEffect(cornerRadius: 12, forceMaterial: true, tint: palette.cardColor)
             }
         }
         .padding(16)
-        .glassCardEffect(forceMaterial: true)
+        .glassCardEffect(forceMaterial: true, tint: palette.cardColor)
         .padding(.horizontal, 16)
     }
 }

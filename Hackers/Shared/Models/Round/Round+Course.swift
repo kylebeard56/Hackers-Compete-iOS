@@ -81,6 +81,7 @@ struct CourseInfo: Hashable, Codable {
     var name: String
     var totalHoles: Int
     var location: CourseLocation?
+    var venueDetails: CourseVenueDetails?
     var tees: [Tee]
     
     var teeMap: [String: Tee] {
@@ -93,6 +94,7 @@ struct CourseInfo: Hashable, Codable {
         name: String = "",
         totalHoles: Int = 0,
         location: CourseLocation? = nil,
+        venueDetails: CourseVenueDetails? = nil,
         tees: [Tee] = []
     ) {
         self.id = id
@@ -100,6 +102,7 @@ struct CourseInfo: Hashable, Codable {
         self.name = name
         self.totalHoles = totalHoles
         self.location = location
+        self.venueDetails = venueDetails
         self.tees = tees
     }
     
@@ -109,12 +112,14 @@ struct CourseInfo: Hashable, Codable {
         self.totalHoles = segment.holeCount
         self.golfCourseApiID = course.golfCourseApiID
         self.location = course.location
+        self.venueDetails = course.venueDetails
         self.tees = course.tees
     }
-    
+
     enum CodingKeys: String, CodingKey {
         case id, name, tees, location
         case totalHoles = "total_holes"
         case golfCourseApiID = "golf_course_api_id"
+        case venueDetails = "venue_details"
     }
 }

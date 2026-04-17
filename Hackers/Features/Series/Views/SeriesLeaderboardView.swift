@@ -64,7 +64,7 @@ struct SeriesLeaderboardView: View {
             }
         }
         .padding(16)
-        .glassCardEffect(forceMaterial: true)
+        .glassCardEffect(forceMaterial: true, tint: palette.cardColor)
     }
 
     @ViewBuilder
@@ -87,7 +87,7 @@ struct SeriesLeaderboardView: View {
                 .frame(minHeight: 200)
             }
             .padding(16)
-            .glassCardEffect(forceMaterial: true)
+            .glassCardEffect(forceMaterial: true, tint: palette.cardColor)
         } else if useTeam && useIndividual {
             VStack(spacing: 12) {
                 Text("Standings".uppercased())
@@ -108,19 +108,19 @@ struct SeriesLeaderboardView: View {
                 }
             }
             .padding(16)
-            .glassCardEffect(forceMaterial: true)
+            .glassCardEffect(forceMaterial: true, tint: palette.cardColor)
         } else if useTeam {
             VStack(spacing: 12) {
                 standingsTableContent(sectionTitle: "Team Standings", standings: viewModel.teamStandings)
             }
             .padding(16)
-            .glassCardEffect(forceMaterial: true)
+            .glassCardEffect(forceMaterial: true, tint: palette.cardColor)
         } else {
             VStack(spacing: 12) {
                 standingsTableContent(sectionTitle: "Individual Standings", standings: viewModel.individualStandings)
             }
             .padding(16)
-            .glassCardEffect(forceMaterial: true)
+            .glassCardEffect(forceMaterial: true, tint: palette.cardColor)
         }
     }
 
@@ -166,7 +166,7 @@ struct SeriesLeaderboardView: View {
             }
         }
         .padding(16)
-        .glassCardEffect(forceMaterial: true)
+        .glassCardEffect(forceMaterial: true, tint: palette.cardColor)
     }
 
     private func settingsRow(label: String, value: String) -> some View {

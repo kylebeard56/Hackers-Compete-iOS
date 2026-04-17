@@ -19,6 +19,8 @@ struct CarouselNumberPicker: View {
     let values: [Int]
     let initialValue: Int
     let labelForValue: (Int) -> String
+    /// When set (e.g. `0.5`), a leading ASCII `+` or `-` with more than one character renders at this fraction of the main number size.
+    let leadingSignFontScale: CGFloat?
     let onChange: CallbackValue<Int>
     
     @State private var selectedValue: Int
@@ -30,11 +32,13 @@ struct CarouselNumberPicker: View {
         values: [Int],
         initialValue: Int,
         labelForValue: @escaping (Int) -> String = { "\($0)" },
+        leadingSignFontScale: CGFloat? = nil,
         onChange: @escaping CallbackValue<Int> = { _ in }
     ) {
         self.values = values
         self.initialValue = initialValue
         self.labelForValue = labelForValue
+        self.leadingSignFontScale = leadingSignFontScale
         self.onChange = onChange
         self._selectedValue = State(initialValue: initialValue)
     }
@@ -79,14 +83,35 @@ struct CarouselNumberPicker: View {
     @ViewBuilder
     private func numberItem(for value: Int) -> some View {
         let isSelected = value == selectedValue
-        Text(labelForValue(value))
-            .fontStyle(
-                .poppins,
-                size: isSelected ? majorFontSize : minorFontSize,
-                weight: isSelected ? .regular : .light
-            )
-            .foregroundColor(isSelected ? palette.foregroundColor : Color.neutral2)
+        let label = labelForValue(value)
+        let bodySize = isSelected ? majorFontSize : minorFontSize
+        let weight: FontModule.Weight = isSelected ? .regular : .light
+        let foreground = isSelected ? palette.foregroundColor : Color.neutral2
+
+        if let scale = leadingSignFontScale, let split = Self.splitLeadingSignForScaledTypography(label) {
+            HStack(alignment: .lastTextBaseline, spacing: 0) {
+                Text(split.prefix)
+                    .fontStyle(.poppins, size: bodySize * scale, weight: weight)
+                Text(split.rest)
+                    .fontStyle(.poppins, size: bodySize, weight: weight)
+            }
+            .foregroundColor(foreground)
             .frame(width: itemWidth, height: itemHeight)
+        } else {
+            Text(label)
+                .fontStyle(.poppins, size: bodySize, weight: weight)
+                .foregroundColor(foreground)
+                .frame(width: itemWidth, height: itemHeight)
+        }
+    }
+
+    /// Splits `+N` / `-N` (ASCII sign) so the sign can use a smaller font; single-glyph labels (e.g. clear `−`) are not split.
+    private static func splitLeadingSignForScaledTypography(_ label: String) -> (prefix: String, rest: String)? {
+        guard label.count > 1, let first = label.first else { return nil }
+        if first == "+" || first == "-" {
+            return (String(first), String(label.dropFirst()))
+        }
+        return nil
     }
 }
 

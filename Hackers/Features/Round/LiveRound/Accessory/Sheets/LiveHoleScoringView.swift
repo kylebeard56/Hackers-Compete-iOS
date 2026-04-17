@@ -81,18 +81,18 @@ struct LiveHoleScoringView: View, Loggable {
         }
         return scoringParticipants.isPopulated
             && scoringParticipants.allSatisfy {
-                viewModel.grossStrokes(for: $0.id, holeNumber: holeNumber) != nil
+                viewModel.scoreInputValue(for: $0.id, holeNumber: holeNumber) != nil
             }
     }
 
     private var savedScoreForCurrent: Int? {
         if isSharedEntry {
-            return viewModel.scoringUnitGrossStrokes(
+            return viewModel.scoringUnitScoreInputValue(
                 scoringUnitID: scoringSession.scoringUnitID,
                 holeNumber: holeNumber
             )
         }
-        return viewModel.grossStrokes(for: currentGolfer.id, holeNumber: holeNumber)
+        return viewModel.scoreInputValue(for: currentGolfer.id, holeNumber: holeNumber)
     }
 
     private var isDraftChanged: Bool {
@@ -100,14 +100,21 @@ struct LiveHoleScoringView: View, Loggable {
         return savedScore != draftScore
     }
 
-    /// Sentinel value for "clear score" option in the carousel.
-    private static let clearScoreSentinel: Int = -1
+    /// Sentinel value for "clear score" option in the carousel (must not collide with friendly relative values like -1 birdie).
+    private static let clearScoreSentinel: Int = Int.min
 
     private var scoreOptions: [Int] {
-        let minScore = holePar == 4 ? 1 : max(1, holePar - 2)
-        let configMax = viewModel.snapshot.gameFormat.configuration.maxScoreOverPar.maxScore(for: holePar)
-        let maxScore = max(configMax, savedScoreForCurrent ?? 0)
-        let scores = Array(minScore...maxScore)
+        let scores: [Int]
+        if viewModel.isFriendlyScoreInputMode {
+            let configMax = viewModel.snapshot.gameFormat.configuration.maxScoreOverPar.friendlyMaxRelativeValue(for: holePar)
+            let maxScore = max(configMax, savedScoreForCurrent ?? 0)
+            scores = Array(-4...maxScore)
+        } else {
+            let minScore = holePar == 4 ? 1 : max(1, holePar - 2)
+            let configMax = viewModel.snapshot.gameFormat.configuration.maxScoreOverPar.maxScore(for: holePar)
+            let maxScore = max(configMax, savedScoreForCurrent ?? 0)
+            scores = Array(minScore...maxScore)
+        }
         return [Self.clearScoreSentinel] + scores
     }
 
@@ -116,7 +123,7 @@ struct LiveHoleScoringView: View, Loggable {
     }
     
     private var isScored: Bool {
-        viewModel.grossStrokes(for: currentGolfer.id, holeNumber: holeNumber).exists
+        viewModel.scoreInputValue(for: currentGolfer.id, holeNumber: holeNumber).exists
     }
 
     private var netScoreLabel: String? {
@@ -128,6 +135,10 @@ struct LiveHoleScoringView: View, Loggable {
             holeNumber: holeNumber
         )
         guard strokesReceived > 0 else { return nil }
+        if viewModel.isFriendlyScoreInputMode {
+            let netRelative = draftScore - strokesReceived
+            return "Net \(viewModel.friendlyScoreLabel(relativeToPar: netRelative, par: holePar, format: .full))"
+        }
         let net = max(0, draftScore - strokesReceived)
         return "Net \(net)"
     }
@@ -252,7 +263,7 @@ private extension LiveHoleScoringView {
         let ratio: CGFloat = 1.2
         let isCurrent = player.id == currentGolfer.id
         let scale: CGFloat = isCurrent ? ratio : 1.0
-        let isScored = viewModel.grossStrokes(for: player.id, holeNumber: holeNumber).exists
+        let isScored = viewModel.scoreInputValue(for: player.id, holeNumber: holeNumber).exists
         let teamColor = viewModel.teamColor(for: player)
         let hasTeams = viewModel.snapshot.requiresTeams
         let useHandicaps = viewModel.snapshot.configuration.useHandicaps
@@ -387,7 +398,7 @@ private extension LiveHoleScoringView {
     }
 
     var scoreInput: some View {
-        let initialScore = savedScoreForCurrent ?? holePar
+        let initialScore = savedScoreForCurrent ?? (viewModel.isFriendlyScoreInputMode ? 0 : holePar)
         
         return VStack(spacing: 16) {
             ZStack {
@@ -398,7 +409,14 @@ private extension LiveHoleScoringView {
                 CarouselNumberPicker(
                     values: scoreOptions,
                     initialValue: initialScore,
-                    labelForValue: { $0 == Self.clearScoreSentinel ? "−" : "\($0)" }
+                    labelForValue: { value in
+                        if value == Self.clearScoreSentinel { return "−" }
+                        if viewModel.isFriendlyScoreInputMode {
+                            return value == 0 ? "0" : (value > 0 ? "+\(value)" : "\(value)")
+                        }
+                        return "\(value)"
+                    },
+                    leadingSignFontScale: viewModel.isFriendlyScoreInputMode ? 0.5 : nil
                 ) { newValue in
                     if newValue == Self.clearScoreSentinel {
                         draftScore = Self.clearScoreSentinel
@@ -417,7 +435,11 @@ private extension LiveHoleScoringView {
             .frame(height: scoreInputHeight)
 
             VStack(spacing: 4) {
-                Text(draftScore == Self.clearScoreSentinel ? "No score" : viewModel.friendlyScoreLabel(strokes: draftScore, par: holePar, format: LiveRoundViewModel.FriendlyScoreFormat.full))
+                Text(draftScore == Self.clearScoreSentinel
+                     ? "No score"
+                     : (viewModel.isFriendlyScoreInputMode
+                        ? viewModel.friendlyScoreLabel(relativeToPar: draftScore, par: holePar, format: .full)
+                        : viewModel.friendlyScoreLabel(strokes: draftScore, par: holePar, format: .full)))
                     .fontStyle(kFontName, size: 28, weight: .semibold)
                     .foregroundStyle(palette.foregroundColor)
 
@@ -437,7 +459,7 @@ private extension LiveHoleScoringView {
     @ViewBuilder
     func scoreSelectionDecoration(strokes: Int) -> some View {
         if strokes != Self.clearScoreSentinel {
-            let diff = strokes - holePar
+            let diff = viewModel.isFriendlyScoreInputMode ? strokes : (strokes - holePar)
             let strokeColor = Color.neutral3.opacity(0.45)
             let fillColor = Color.neutral3.opacity(0.2)
             let circle: CGFloat = 120
@@ -552,7 +574,7 @@ private extension LiveHoleScoringView {
         } else {
             let tappedIndex = scoringParticipants.firstIndex(where: { $0.id == scoringSession.participant.id })
             let firstUnscoredIndex = scoringParticipants.firstIndex { p in
-                viewModel.grossStrokes(for: p.id, holeNumber: holeNumber) == nil
+                viewModel.scoreInputValue(for: p.id, holeNumber: holeNumber) == nil
             }
             // Open on whoever was tapped (e.g. last in tee order). CTA/footer/route use
             // `holeWillCompleteAfterThisCTA` and `nextIndexAfterCTA()` so unscored players
@@ -596,7 +618,7 @@ private extension LiveHoleScoringView {
 
         if needsSave {
             Task {
-                await viewModel.setQuickScore(participant: golfer, strokes: score, holeNumber: holeNumber)
+                await viewModel.setQuickScoreValue(participant: golfer, value: score, holeNumber: holeNumber)
             }
         }
 
@@ -611,15 +633,16 @@ private extension LiveHoleScoringView {
         let saved = savedScoreForCurrent
         savedScore = saved
         if resetDraft {
-            let target = saved ?? holePar
+            let target = saved ?? (viewModel.isFriendlyScoreInputMode ? 0 : holePar)
             draftScore = target
         }
     }
 
     func syncSavedScore(_ newValue: Int?) {
         guard savedScore != newValue else { return }
-        if draftScore == (savedScore ?? holePar) {
-            draftScore = newValue ?? holePar
+        let defaultValue = viewModel.isFriendlyScoreInputMode ? 0 : holePar
+        if draftScore == (savedScore ?? defaultValue) {
+            draftScore = newValue ?? defaultValue
         }
         savedScore = newValue
     }
@@ -636,7 +659,7 @@ private extension LiveHoleScoringView {
         let needsSave = shouldCommitScore()
         if needsSave {
             Task {
-                await viewModel.setQuickScore(participant: golfer, strokes: score, holeNumber: holeNumber)
+                await viewModel.setQuickScoreValue(participant: golfer, value: score, holeNumber: holeNumber)
                 await MainActor.run { dismiss() }
             }
         } else {
@@ -659,9 +682,9 @@ private extension LiveHoleScoringView {
 
             if needsSave {
                 Task.detached(priority: .background) {
-                    await viewModel.setQuickScore(
+                    await viewModel.setQuickScoreValue(
                         participant: golfer,
-                        strokes: score,
+                        value: score,
                         holeNumber: hole
                     )
                 }
@@ -674,9 +697,9 @@ private extension LiveHoleScoringView {
 
             if needsSave {
                 Task.detached(priority: .background) {
-                    await viewModel.setQuickScore(
+                    await viewModel.setQuickScoreValue(
                         participant: golfer,
-                        strokes: score,
+                        value: score,
                         holeNumber: hole
                     )
 
@@ -694,9 +717,9 @@ private extension LiveHoleScoringView {
         }
 
         if needsSave && !simpleForward {
-            await viewModel.setQuickScore(
+            await viewModel.setQuickScoreValue(
                 participant: golfer,
-                strokes: score,
+                value: score,
                 holeNumber: hole
             )
         }
@@ -712,9 +735,9 @@ private extension LiveHoleScoringView {
 
         if simpleForward {
             Task.detached(priority: .background) {
-                await viewModel.setQuickScore(
+                await viewModel.setQuickScoreValue(
                     participant: golfer,
-                    strokes: score,
+                    value: score,
                     holeNumber: hole
                 )
             }
@@ -729,12 +752,12 @@ private extension LiveHoleScoringView {
 
     private func currentSavedScore(for participant: RoundParticipant) -> Int? {
         if isSharedEntry {
-            return viewModel.scoringUnitGrossStrokes(
+            return viewModel.scoringUnitScoreInputValue(
                 scoringUnitID: scoringSession.scoringUnitID,
                 holeNumber: holeNumber
             )
         }
-        return viewModel.grossStrokes(for: participant.id, holeNumber: holeNumber)
+        return viewModel.scoreInputValue(for: participant.id, holeNumber: holeNumber)
     }
 }
 

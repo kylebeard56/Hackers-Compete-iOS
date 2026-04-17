@@ -11,6 +11,11 @@ enum ScoreBasis: String, Codable {
     case gross, net
 }
 
+enum ScoreEntryMode: String, Codable {
+    case strokes
+    case relativeToPar = "relative_to_par"
+}
+
 // MARK: - ScoreEntry (idempotent subcollection under Round)
 struct ScoreEntry: FirebaseSubcollectable {
     var id: String                  // Deterministic: h{number}_s{segment}_u{unit}
@@ -23,6 +28,8 @@ struct ScoreEntry: FirebaseSubcollectable {
     var participantIDs: [String]    // Denormalization for who this score belongs to
 
     var strokes: Int?               // Gross strokes where nil == unscored
+    var relativeToPar: Int?         // Gross score relative to par, e.g. par = 0, bogey = +1
+    var entryMode: ScoreEntryMode?
     var value: String?              // Non-stroke scoring value (if it applies)
     var pickedUp: Bool              // Skipped hole, opted to not score
 
@@ -49,6 +56,8 @@ struct ScoreEntry: FirebaseSubcollectable {
         scoringUnitID: String = "",
         participantIDs: [String] = [],
         strokes: Int? = nil,
+        relativeToPar: Int? = nil,
+        entryMode: ScoreEntryMode? = nil,
         value: String? = nil,
         pickedUp: Bool = false,
         gameTemplateID: String? = nil,
@@ -66,6 +75,8 @@ struct ScoreEntry: FirebaseSubcollectable {
         self.scoringUnitID = scoringUnitID
         self.participantIDs = participantIDs
         self.strokes = strokes
+        self.relativeToPar = relativeToPar
+        self.entryMode = entryMode
         self.value = value
         self.pickedUp = pickedUp
         self.gameTemplateID = gameTemplateID
@@ -90,12 +101,28 @@ struct ScoreEntry: FirebaseSubcollectable {
         case createdAt = "created_at"
         case lastUpdatedAt = "last_updated_at"
         case parentID = "parent_id"
+        case relativeToPar = "relative_to_par"
+        case entryMode = "entry_mode"
     }
 }
 
 extension ScoreEntry {
     static func makeID(hole: Int, segment: String, scoringUnit: String) -> String {
         "h\(hole)_s\(segment)_u\(scoringUnit)"
+    }
+
+    var resolvedEntryMode: ScoreEntryMode {
+        if let entryMode {
+            return entryMode
+        }
+        if relativeToPar != nil {
+            return .relativeToPar
+        }
+        return .strokes
+    }
+
+    var hasRecordedScore: Bool {
+        strokes != nil || relativeToPar != nil || pickedUp
     }
 }
 

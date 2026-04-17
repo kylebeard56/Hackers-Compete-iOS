@@ -130,7 +130,7 @@ private struct MatchupTileView: View {
         .glassCardEffect(
             interactive: false,
             forceMaterial: true,
-            tint: nil,
+            tint: palette.cardColor,
             strokeOpacity: 0.38,
             shadowOpacity: 0.16
         )

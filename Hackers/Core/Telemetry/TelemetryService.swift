@@ -85,6 +85,8 @@ enum CourseSelectionSource: String {
     case recent
     case nearby
     case manual
+    case askAI = "ask_ai"
+    case simpleRound = "simple_round"
     case scorecardScan = "scorecard_scan"
     case existingRoundChange = "existing_round_change"
     case seriesRoundDefault = "series_round_default"

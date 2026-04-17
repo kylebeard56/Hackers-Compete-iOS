@@ -552,7 +552,7 @@ struct SeriesView: View {
         }
         .padding(.horizontal, 14)
         .padding(.vertical, 12)
-        .glassCardEffect(forceMaterial: true)
+        .glassCardEffect(forceMaterial: true, tint: palette.cardColor)
         .padding(.horizontal, 16)
     }
 
@@ -849,7 +849,7 @@ struct SeriesView: View {
             }
         }
         .padding(14)
-        .glassCardEffect(cornerRadius: 14, forceMaterial: true)
+        .glassCardEffect(cornerRadius: 14, forceMaterial: true, tint: palette.cardColor)
     }
 
     private func formattedScheduleCompact(for time: Time) -> String {
@@ -1013,7 +1013,7 @@ struct SeriesView: View {
                 }
             }
 
-            // ACTION BUTTONS
+            // ACTION BUTTONSUX Re
             if status == .planned {
                 HStack(alignment: .center, spacing: 10) {
                     if attendanceEnabled {
@@ -1151,7 +1151,7 @@ struct SeriesView: View {
             }
         }
         .padding(14)
-        .glassCardEffect(cornerRadius: 14, forceMaterial: true)
+        .glassCardEffect(cornerRadius: 14, forceMaterial: true, tint: palette.cardColor)
     }
 
     @ViewBuilder

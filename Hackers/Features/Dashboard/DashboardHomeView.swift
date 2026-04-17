@@ -317,7 +317,7 @@ struct DashboardHomeView: View {
             }
         }
         .padding(16)
-        .glassCardEffect(interactive: false, forceMaterial: true)
+        .glassCardEffect(interactive: false, forceMaterial: true, tint: palette.cardColor)
     }
 
     private var activeRoundsSkeleton: some View {
@@ -454,7 +454,7 @@ struct DashboardHomeView: View {
             }
         }
         .padding(16)
-        .glassCardEffect(interactive: false, forceMaterial: true)
+        .glassCardEffect(interactive: false, forceMaterial: true, tint: palette.cardColor)
     }
 
     @ViewBuilder
@@ -509,7 +509,7 @@ struct DashboardHomeView: View {
             }
         }
         .padding(16)
-        .glassCardEffect(interactive: false, forceMaterial: true)
+        .glassCardEffect(interactive: false, forceMaterial: true, tint: palette.cardColor)
     }
 
     private var playerHistorySkeleton: some View {
@@ -622,7 +622,7 @@ struct DashboardHomeView: View {
             }
         }
         .padding(16)
-        .glassCardEffect(interactive: false, forceMaterial: true)
+        .glassCardEffect(interactive: false, forceMaterial: true, tint: palette.cardColor)
     }
 
     private var courseHistorySkeleton: some View {
@@ -647,7 +647,10 @@ struct DashboardHomeView: View {
             case .manual:
                 switch await FirebaseService.shared.getCourseByID(entry.courseID) {
                 case .success(let c): course = c
-                case .failure: course = nil
+                case .failure:
+                    // Simple rounds are stored as manual + course id; rebuild if the course doc is missing.
+                    let setup = SimpleRoundSetup(courseName: entry.name, holeCount: 9, startingHole: 1)
+                    course = setup.makeCourse()
                 }
             }
             await MainActor.run {

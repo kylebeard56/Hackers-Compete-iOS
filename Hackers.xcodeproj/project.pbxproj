@@ -204,6 +204,7 @@
 		B4C50C012F6B0001007D8846 /* CourseScorecardDTO.swift in Sources */ = {isa = PBXBuildFile; fileRef = B4C50C022F6B0001007D8846 /* CourseScorecardDTO.swift */; };
 		B4C50C032F6B0002007D8846 /* CourseScorecardOCRService.swift in Sources */ = {isa = PBXBuildFile; fileRef = B4C50C042F6B0002007D8846 /* CourseScorecardOCRService.swift */; };
 		B4C50C072F6B0004007D8846 /* CourseScorecardSchema.swift in Sources */ = {isa = PBXBuildFile; fileRef = B4C50C082F6B0004007D8846 /* CourseScorecardSchema.swift */; };
+		B4C50C0D2F6B0007007D8846 /* CourseTextLookupService.swift in Sources */ = {isa = PBXBuildFile; fileRef = B4C50C0E2F6B0007007D8846 /* CourseTextLookupService.swift */; };
 		B4C50C092F6B0005007D8846 /* UIImage+Base64.swift in Sources */ = {isa = PBXBuildFile; fileRef = B4C50C0A2F6B0005007D8846 /* UIImage+Base64.swift */; };
 		B4C50C0B2F6B0006007D8846 /* ScorecardImagePickers.swift in Sources */ = {isa = PBXBuildFile; fileRef = B4C50C0C2F6B0006007D8846 /* ScorecardImagePickers.swift */; };
 		B4C50C112F6B0008007D8846 /* Color+Adjustments.swift in Sources */ = {isa = PBXBuildFile; fileRef = B4C50C122F6B0008007D8846 /* Color+Adjustments.swift */; };
@@ -573,6 +574,7 @@
 		B4C50C022F6B0001007D8846 /* CourseScorecardDTO.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CourseScorecardDTO.swift; sourceTree = "<group>"; };
 		B4C50C042F6B0002007D8846 /* CourseScorecardOCRService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CourseScorecardOCRService.swift; sourceTree = "<group>"; };
 		B4C50C082F6B0004007D8846 /* CourseScorecardSchema.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CourseScorecardSchema.swift; sourceTree = "<group>"; };
+		B4C50C0E2F6B0007007D8846 /* CourseTextLookupService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CourseTextLookupService.swift; sourceTree = "<group>"; };
 		B4C50C0A2F6B0005007D8846 /* UIImage+Base64.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "UIImage+Base64.swift"; sourceTree = "<group>"; };
 		B4C50C0C2F6B0006007D8846 /* ScorecardImagePickers.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ScorecardImagePickers.swift; sourceTree = "<group>"; };
 		B4C50C122F6B0008007D8846 /* Color+Adjustments.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "Color+Adjustments.swift"; sourceTree = "<group>"; };
@@ -1406,6 +1408,7 @@
 				B4C50C022F6B0001007D8846 /* CourseScorecardDTO.swift */,
 				B4C50C042F6B0002007D8846 /* CourseScorecardOCRService.swift */,
 				B4C50C082F6B0004007D8846 /* CourseScorecardSchema.swift */,
+				B4C50C0E2F6B0007007D8846 /* CourseTextLookupService.swift */,
 				B4C50C0C2F6B0006007D8846 /* ScorecardImagePickers.swift */,
 			);
 			path = CourseFinder;
@@ -2178,6 +2181,7 @@
 				B4C50C012F6B0001007D8846 /* CourseScorecardDTO.swift in Sources */,
 				B4C50C032F6B0002007D8846 /* CourseScorecardOCRService.swift in Sources */,
 				B4C50C072F6B0004007D8846 /* CourseScorecardSchema.swift in Sources */,
+				B4C50C0D2F6B0007007D8846 /* CourseTextLookupService.swift in Sources */,
 				B4C50C0B2F6B0006007D8846 /* ScorecardImagePickers.swift in Sources */,
 				B4AI00012F6C0001007D8846 /* AIModelConfig.swift in Sources */,
 				B4AI00032F6C0002007D8846 /* LLMProviderProtocol.swift in Sources */,

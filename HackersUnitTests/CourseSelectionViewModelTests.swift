@@ -38,8 +38,8 @@ struct CourseSelectionViewModelTests {
         let course = Course(origin: .manual)
 
         let viewModel = CourseSelectionViewModel()
-        // Empty manual courses have no tees, so `defaultSegment` is not valid for `holeCount` in telemetry.
-        // Assert navigation only; skip analytics for this fixture.
+        #expect(course.defaultSegment == .full18)
+
         viewModel.select(course: course, source: .manual, trackEvent: false)
 
         #expect(viewModel.showCourseEdit == true)
@@ -72,5 +72,111 @@ struct CourseSelectionViewModelTests {
 
         #expect(viewModel.showCourseEdit == false)
         #expect(viewModel.showConfirmation == true)
+    }
+
+    @Test("Configuring simple round builds a synthetic course and preserves setup state")
+    func configureSimpleRoundBuildsSyntheticCourse() {
+        let viewModel = CourseSelectionViewModel()
+
+        viewModel.configureSimpleRound(
+            .init(courseName: "Evening Nine", holeCount: 9, startingHole: 3)
+        )
+
+        #expect(viewModel.selectedCourse.isSimpleRoundCourse == true)
+        #expect(viewModel.selectedCourse.clubName == "Evening Nine")
+        #expect(viewModel.selectedCourse.courseName == "Evening Nine")
+        #expect(viewModel.showCourseEdit == false)
+        #expect(viewModel.showConfirmation == true)
+        #expect(viewModel.simpleRoundSetup == .init(courseName: "Evening Nine", holeCount: 9, startingHole: 3))
+        #expect(viewModel.holeSegment == .custom(count: 9))
+        #expect(viewModel.selectedTee?.name == "Simple")
+        #expect(viewModel.selectedCourse.tees.first?.holes.count == 9)
+        #expect(viewModel.selectedCourse.tees.first?.holes.first?.par == 4)
+        #expect(viewModel.selectedCourse.tees.first?.holes.last?.number == 9)
+    }
+
+    @Test("Configuring simple round clamps custom hole count and starting hole into range")
+    func configureSimpleRoundClampsInvalidValues() {
+        let viewModel = CourseSelectionViewModel()
+
+        viewModel.configureSimpleRound(
+            .init(courseName: "Test Round", holeCount: 12, startingHole: 17)
+        )
+
+        #expect(viewModel.simpleRoundSetup == .init(courseName: "Test Round", holeCount: 12, startingHole: 12))
+        #expect(viewModel.selectedCourse.clubName == "Test Round")
+        #expect(viewModel.selectedCourse.courseName == "Test Round")
+        #expect(viewModel.holeSegment == .custom(count: 12))
+        #expect(viewModel.selectedCourse.tees.first?.holes.count == 12)
+    }
+
+    @Test("Selecting Ask AI draft forces review flow")
+    func selectAskAIDraftForcesReviewFlow() {
+        let viewModel = CourseSelectionViewModel()
+        let course = Course(
+            origin: .manual,
+            clubName: "Oxmoor Valley",
+            courseName: "Ridge Course",
+            tees: []
+        )
+
+        viewModel.selectAskAICandidate(
+            .init(course: course, requiresReview: true, isCanonicalMatch: false)
+        )
+
+        #expect(viewModel.showCourseEdit == true)
+        #expect(viewModel.showConfirmation == false)
+        #expect(viewModel.lastSelectionSource == .askAI)
+    }
+
+    @Test("Preparing Ask AI draft review preserves selection without opening editor state")
+    func prepareAskAIDraftReviewKeepsDraftContext() {
+        let viewModel = CourseSelectionViewModel()
+        let course = Course(
+            origin: .manual,
+            clubName: "Oxmoor Valley",
+            courseName: "Ridge Course",
+            tees: []
+        )
+
+        viewModel.prepareAskAIDraftReview(course, trackEvent: false)
+
+        #expect(viewModel.selectedCourse.clubName == "Oxmoor Valley")
+        #expect(viewModel.selectedCourse.courseName == "Ridge Course")
+        #expect(viewModel.showCourseEdit == false)
+        #expect(viewModel.showConfirmation == false)
+        #expect(viewModel.lastSelectionSource == .askAI)
+    }
+
+    @Test("Selecting Ask AI canonical match goes to confirmation")
+    func selectAskAICanonicalMatchGoesToConfirmation() {
+        let viewModel = CourseSelectionViewModel()
+        let tee = Tee(
+            name: "Blue",
+            gender: Gender.male.rawValue,
+            totalHoles: 1,
+            holes: [Hole(number: 1, par: 4, yardage: 380, handicap: nil)],
+            ratingFull: 72.0,
+            slopeFull: 113,
+            ratingFront: nil,
+            slopeFront: nil,
+            ratingBack: nil,
+            slopeBack: nil
+        )
+        let course = Course(
+            golfCourseApiID: 101,
+            origin: .golfCourseAPI,
+            clubName: "Twin Lakes Golf Club",
+            courseName: "North Course",
+            tees: [tee]
+        )
+
+        viewModel.selectAskAICandidate(
+            .init(course: course, requiresReview: false, isCanonicalMatch: true)
+        )
+
+        #expect(viewModel.showCourseEdit == false)
+        #expect(viewModel.showConfirmation == true)
+        #expect(viewModel.lastSelectionSource == .askAI)
     }
 }

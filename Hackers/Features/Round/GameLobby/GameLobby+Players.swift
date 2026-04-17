@@ -253,7 +253,7 @@ extension GameLobby {
         if playerTab == .roster {
             rosterContent
                 .padding(16)
-                .glassCardEffect(forceMaterial: true)
+                .glassCardEffect(forceMaterial: true, tint: palette.cardColor)
         }
         
         if playerTab == .groups {
@@ -635,7 +635,7 @@ extension GameLobby {
         }
         .padding(12)
         .frame(maxWidth: .infinity, alignment: .leading)
-        .glassCardEffect(forceMaterial: true)
+        .glassCardEffect(forceMaterial: true, tint: palette.cardColor)
     }
 
     private var showTeamShortcuts: Bool {
@@ -721,7 +721,7 @@ extension GameLobby {
             }
         }
         .padding(16)
-        .glassCardEffect(forceMaterial: true)
+        .glassCardEffect(forceMaterial: true, tint: palette.cardColor)
     }
 
     @ViewBuilder
@@ -775,7 +775,7 @@ extension GameLobby {
                     .foregroundStyle(Color.neutral3)
             }
             .padding(16)
-            .glassCardEffect(forceMaterial: true)
+            .glassCardEffect(forceMaterial: true, tint: palette.cardColor)
         }
         .menuStyle(.borderlessButton)
     }
@@ -1242,7 +1242,7 @@ extension GameLobby {
             )
         }
         .padding(16)
-        .glassCardEffect(forceMaterial: true)
+        .glassCardEffect(forceMaterial: true, tint: palette.cardColor)
     }
 
     @ViewBuilder
@@ -1497,7 +1497,7 @@ extension GameLobby {
             }
         }
         .padding(16)
-        .glassCardEffect(forceMaterial: true)
+        .glassCardEffect(forceMaterial: true, tint: palette.cardColor)
     }
     
     private func assign(
@@ -1776,7 +1776,7 @@ extension GameLobby {
             }
         }
         .padding(16)
-        .glassCardEffect(forceMaterial: true)
+        .glassCardEffect(forceMaterial: true, tint: palette.cardColor)
     }
 
     private func teamPlayers(for team: RoundTeam) -> [RoundParticipant] {
@@ -1901,7 +1901,7 @@ extension GameLobby {
             }
         }
         .padding(16)
-        .glassCardEffect(forceMaterial: true)
+        .glassCardEffect(forceMaterial: true, tint: palette.cardColor)
     }
 
     private func assign(player: RoundParticipant, to team: RoundTeam) async {
