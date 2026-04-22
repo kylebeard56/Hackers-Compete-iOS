@@ -218,7 +218,19 @@ final class CourseScorecardEnrichmentService: Loggable {
         for draftCourse: Course,
         scanContext: ScorecardScanContext = .init()
     ) async -> Course? {
-        let queries = searchQueries(for: draftCourse)
+        await resolveCanonicalCourse(
+            for: draftCourse,
+            preferredQueries: [],
+            scanContext: scanContext
+        )
+    }
+
+    func resolveCanonicalCourse(
+        for draftCourse: Course,
+        preferredQueries: [String],
+        scanContext: ScorecardScanContext = .init()
+    ) async -> Course? {
+        let queries = orderedUniqueQueries(preferredQueries + searchQueries(for: draftCourse))
         guard queries.isPopulated else { return nil }
 
         var candidatesByID: [Int: GolfCourseAPIModel] = [:]
@@ -251,6 +263,16 @@ final class CourseScorecardEnrichmentService: Loggable {
             for: confirmed.model,
             venueDetails: venueDetails
         )
+    }
+
+    private func orderedUniqueQueries(_ queries: [String]) -> [String] {
+        var ordered: [String] = []
+        for query in queries {
+            let trimmed = query.trimmingCharacters(in: .whitespacesAndNewlines)
+            guard trimmed.isPopulated, !ordered.contains(trimmed) else { continue }
+            ordered.append(trimmed)
+        }
+        return ordered
     }
 
     private func searchQueries(for course: Course) -> [String] {
@@ -612,6 +634,21 @@ final class CourseScorecardOCRService: Loggable {
     }
 
     private func mapToCourse(_ dto: CourseScorecardDTO) -> Course {
+        CourseScorecardDTOMapper.mapToCourse(dto, origin: .ocr)
+    }
+}
+
+/// Maps a `CourseScorecardDTO` (returned by OCR or AskAI tool calls) into a `Course`.
+/// Keep this free of side effects so it can be reused from any service.
+enum CourseScorecardDTOMapper {
+    /// Maps a DTO to a Course. Pass `defaultTeeIfEmpty: false` (AskAI flow) to preserve an
+    /// empty tees array so callers can show an honest "we didn't find a scorecard" draft
+    /// instead of a fabricated 18-hole par-72 / 350-yard fallback.
+    static func mapToCourse(
+        _ dto: CourseScorecardDTO,
+        origin: CourseOrigin,
+        defaultTeeIfEmpty: Bool = true
+    ) -> Course {
         let clubName = dto.clubName ?? dto.courseName ?? ""
         let courseName = dto.courseName ?? dto.clubName ?? clubName
 
@@ -632,19 +669,25 @@ final class CourseScorecardOCRService: Loggable {
         }
 
         let tees: [Tee] = (dto.tees ?? []).compactMap { mapTee($0) }
+        let resolvedTees: [Tee]
+        if tees.isEmpty {
+            resolvedTees = defaultTeeIfEmpty ? [defaultTee()] : []
+        } else {
+            resolvedTees = tees
+        }
 
         return Course(
             golfCourseApiID: nil,
-            origin: .ocr,
+            origin: origin,
             clubName: clubName,
             courseName: courseName,
             location: location,
             locationGeohash: location?.geohash,
-            tees: tees.isEmpty ? [defaultTee()] : tees
+            tees: resolvedTees
         )
     }
 
-    private func mapTee(_ dto: CourseScorecardTeeDTO) -> Tee? {
+    static func mapTee(_ dto: CourseScorecardTeeDTO) -> Tee? {
         let holesDTO = dto.holes ?? []
         guard !holesDTO.isEmpty else { return nil }
 
@@ -675,7 +718,7 @@ final class CourseScorecardOCRService: Loggable {
         )
     }
 
-    private func mapGender(_ value: String?) -> String {
+    static func mapGender(_ value: String?) -> String {
         let normalized = value?
             .trimmingCharacters(in: .whitespacesAndNewlines)
             .lowercased()
@@ -690,7 +733,7 @@ final class CourseScorecardOCRService: Loggable {
         }
     }
 
-    private func defaultTee() -> Tee {
+    static func defaultTee() -> Tee {
         let holes = (1...18).map { n in
             Hole(number: n, par: n % 4 == 0 ? 5 : (n % 4 == 3 ? 3 : 4), yardage: 350, handicap: nil)
         }

@@ -569,6 +569,7 @@ extension CourseSelectionViewModel {
                             "has_candidate": result.candidate != nil,
                             "requires_review": result.candidate?.requiresReview ?? false,
                             "is_canonical_match": result.candidate?.isCanonicalMatch ?? false,
+                            "lookup_source": result.source.rawValue,
                             "message_count": askAIMessages.count,
                             "is_existing_round_change": isModifying
                         ]
@@ -959,7 +960,9 @@ private extension CourseSelectionViewModel {
     ) -> [String: Any] {
         [
             "location_assist_enabled": context.isLocationAssistEnabled,
-            "has_approximate_location": context.approximateLocation != nil
+            "has_approximate_location": context.approximateLocation != nil,
+            "ai_provider": context.model.config.provider.rawValue,
+            "ai_model_id": context.model.config.model
         ]
         .merging(extra) { _, new in new }
     }

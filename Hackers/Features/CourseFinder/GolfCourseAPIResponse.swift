@@ -24,12 +24,9 @@ struct GolfCourseAPIResponse: Decodable {
     init(from decoder: Decoder) throws {
         let c = try decoder.container(keyedBy: CodingKeys.self)
         self.courses = try c.decodeLossyArray(GolfCourseAPIModel.self, forKey: .courses)
-        do {
-            self.course = try c.decode(GolfCourseAPIModel.self, forKey: .course)
-        } catch let error {
-            printPretty(error)
-            self.course = nil
-        }
+        // The /search endpoint only returns `courses`; `course` (singular) is only present
+        // on the by-id endpoint. decodeIfPresent keeps the decode silent in both cases.
+        self.course = try? c.decodeIfPresent(GolfCourseAPIModel.self, forKey: .course)
     }
     
     enum CodingKeys: String, CodingKey {

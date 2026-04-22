@@ -185,4 +185,67 @@ enum CourseScorecardSchema {
             "required": ["scorecard"]
         ]
     }
+
+    static var askAICourseLookupObjectSchema: [String: Any] {
+        [
+            "type": "object",
+            "properties": [
+                "clubName": ["type": "string", "description": "Resolved club or facility name from the web"],
+                "courseName": ["type": "string", "description": "Resolved course name from the web"],
+                "location": [
+                    "type": "object",
+                    "description": "Resolved course location only when confidently supported by the web source",
+                    "properties": [
+                        "address": ["type": "string"],
+                        "city": ["type": "string"],
+                        "state": ["type": "string"],
+                        "country": ["type": "string"],
+                        "latitude": ["type": "number"],
+                        "longitude": ["type": "number"]
+                    ]
+                ],
+                "confidence": [
+                    "type": "string",
+                    "enum": ["high", "medium", "low"],
+                    "description": "Confidence in the resolved identity and public scorecard extraction"
+                ],
+                "officialWebsiteURL": [
+                    "type": "string",
+                    "description": "Official course or operator website URL when found"
+                ],
+                "apiSearchStrings": [
+                    "type": "array",
+                    "description": "Ordered Golf Course API backup search strings beginning with the most official resolved name",
+                    "items": ["type": "string"]
+                ],
+                "scorecard": [
+                    "type": "object",
+                    "description": "Structured public scorecard when confidently found on the web. Omit or leave tees empty when unavailable.",
+                    "properties": scorecardObjectSchema["properties"] as? [String: Any] ?? [:],
+                    "required": []
+                ]
+            ],
+            "required": []
+        ]
+    }
+
+    static func anthropicAskAIInputSchema() -> [String: Any] {
+        [
+            "type": "object",
+            "properties": [
+                "courseLookup": askAICourseLookupObjectSchema
+            ],
+            "required": ["courseLookup"]
+        ]
+    }
+
+    static func openAIAskAIParametersSchema() -> [String: Any] {
+        [
+            "type": "object",
+            "properties": [
+                "courseLookup": askAICourseLookupObjectSchema
+            ],
+            "required": ["courseLookup"]
+        ]
+    }
 }

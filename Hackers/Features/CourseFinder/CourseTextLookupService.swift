@@ -2,7 +2,9 @@
 //  CourseTextLookupService.swift
 //  Hackers
 //
-//  Natural-language course lookup using the app's text LLM provider.
+//  Natural-language course lookup using the app's text LLM provider with a server-side
+//  web_search tool. The provider is asked to identify the exact course AND return its
+//  current scorecard (par/yardage/HCP per hole) by browsing the web for the official card.
 //
 
 import Foundation
@@ -19,13 +21,16 @@ enum CourseTextLookupError: Error {
 struct AskAICourseLookupContext: Equatable {
     var isLocationAssistEnabled: Bool
     var approximateLocation: ScorecardScanApproximateLocation?
+    var model: AskAITextModel
 
     init(
         isLocationAssistEnabled: Bool = false,
-        approximateLocation: ScorecardScanApproximateLocation? = nil
+        approximateLocation: ScorecardScanApproximateLocation? = nil,
+        model: AskAITextModel = .defaultSelection
     ) {
         self.isLocationAssistEnabled = isLocationAssistEnabled
         self.approximateLocation = approximateLocation
+        self.model = model
     }
 }
 
@@ -63,72 +68,78 @@ struct AskAICourseChatMessage: Identifiable {
     }
 }
 
+enum AskAICourseLookupSource: String {
+    case webScorecard = "web_scorecard"
+    case apiFallback = "api_fallback"
+    case draftOnly = "draft_only"
+}
+
 struct AskAICourseLookupResult {
     let assistantMessage: String
     let candidate: AskAICourseCandidate?
-}
-
-private struct CourseTextLookupIntentDTO: Decodable {
-    let clubName: String?
-    let courseName: String?
-    let searchText: String?
-    let city: String?
-    let state: String?
-    let country: String?
-    let confidence: String?
-    let needsMoreDetail: Bool?
+    let source: AskAICourseLookupSource
 }
 
 private enum CourseTextLookupPrompt {
-    static func systemPrompt(context: AskAICourseLookupContext = .init()) -> String {
+    static func systemPrompt(context: AskAICourseLookupContext) -> String {
         var prompt = """
-        You help identify golf courses from natural-language conversation.
-        Your job is to extract the most likely course identity clues from the conversation so the app can search a golf course API.
+        Identify the exact golf course the user is about to play. Ask AI is web-first and deterministic.
 
-        Extraction rules:
-        - Use only clues the user actually provided or that are directly implied by the conversation.
-        - Focus on course identification clues such as club name, course name, city, state, country, resort or trail name, or a concise search phrase.
-        - Prefer precise names when they are supported, but do not invent names, tee data, yardage, phone numbers, websites, or coordinates.
-        - If the user is vague or ambiguous, set needsMoreDetail to true.
-        - searchText should be a concise, useful search phrase for a golf course API, not a sentence.
-        - clubName and courseName may both be null if the conversation does not support them.
-        - Return ONLY JSON.
+        Tools:
+        - web_search (max 2 uses) — resolve the exact course identity and look for public scorecard data.
+        - extract_course_lookup — call exactly once at the end with the structured result. No prose.
+
+        Process:
+        1. Resolve the exact course identity from the conversation.
+        2. Search the official course, club, resort, operator, or club-managed site first.
+        3. Only if the official site does not expose a reliable public scorecard, use other credible public sources.
+        4. Return structured public scorecard data only when you have high confidence.
+        5. If public scorecard extraction is not high confidence, do not invent data. Instead return ordered Golf Course API backup search strings.
+
+        Web search:
+        - Search official or operator-controlled pages first. Examples: the club website, resort site, trail/operator scorecard page, or official member/public scorecard PDF.
+        - Acceptable fallback sources only when official pages do not provide the scorecard: GHIN/USGA, GolfPass, GolfNow, respected booking/operator pages with clear structured scorecard data.
+        - Avoid blogs, Wikipedia, forums, or single-tee summaries.
+        - Two queries max. Keep the search budget fixed and intentional.
+        - Par, yardage, and handicap for a tee must come from one public source. Never stitch data across sources.
+
+        Scorecard extraction:
+        - Return every publicly listed tee row you can confidently verify. Do not collapse multiple tee rows into one.
+        - Tee names should stay verbatim as printed.
+        - Gender mapping: "ladies"/"women" => female; "men"/"championship" => male; otherwise unknown.
+        - Populate front/back course rating and slope only when explicitly shown.
+        - "High confidence" means you resolved the identity and found real public tee/hole data.
+        - If the scorecard is missing, partial, ambiguous, paywalled, or inconsistent, set confidence to medium or low and omit the scorecard or return it with empty tees.
+
+        Backup search strings:
+        - Always return ordered `apiSearchStrings` when confidence is not high or when the scorecard is absent.
+        - Put the most official resolved course or club name first, followed by other high-quality search variants that may help a strict API search.
+        - If you do return a high-confidence public scorecard, you may leave `apiSearchStrings` empty.
+
+        No invention:
+        - Never invent tees, holes, par, yardage, handicap, rating, slope, website, phone, or coordinates.
+        - Never use approximate user location to identify the course on its own or to fill location fields.
         """
 
         if context.isLocationAssistEnabled, context.approximateLocation != nil {
             prompt += """
 
+
             Location-assist rule:
-            - Approximate user location may be provided only to help a later course-matching step break ties between otherwise plausible text-supported candidates.
-            - Never use approximate location alone to identify the course.
-            - Never infer address, coordinates, website, or phone from approximate location.
+            - Approximate user location may be appended below only to break ties between otherwise plausible candidates.
+            - Never fill address, coordinates, website, or phone from approximate location.
             """
         }
-
-        prompt += """
-
-        Use this exact schema (camelCase):
-        {
-          "clubName": "string or null",
-          "courseName": "string or null",
-          "searchText": "string or null",
-          "city": "string or null",
-          "state": "string or null",
-          "country": "string or null",
-          "confidence": "low" or "medium" or "high" or null,
-          "needsMoreDetail": true or false or null
-        }
-        """
 
         return prompt
     }
 
-    static func finalInstruction(context: AskAICourseLookupContext = .init()) -> String {
-        var instruction = "Based on the full conversation above, extract the best-supported course lookup clues as JSON."
+    static func finalInstruction(context: AskAICourseLookupContext) -> String {
+        var instruction = "Use the conversation above to resolve the course. Search the web for the official/public scorecard first, then call extract_course_lookup exactly once with the resolved identity, confidence, optional scorecard, and ordered API backup search strings."
 
         if context.isLocationAssistEnabled,
            let approximateLocation = context.approximateLocation {
-            instruction += "\nApproximate location for later tie-break only: \(approximateLocation.promptDescription)"
+            instruction += "\nApproximate user location for tie-break only: \(approximateLocation.promptDescription)"
         }
 
         return instruction
@@ -154,22 +165,22 @@ final class CourseTextLookupService: Loggable {
         from transcript: [AskAICourseChatMessage],
         context: AskAICourseLookupContext = .init()
     ) async throws -> AskAICourseLookupResult {
-        guard let provider = injectedProvider ?? LLMProviderRegistry.defaultTextProvider else {
-            addBreadcrumb(level: .error, message: "LLM provider not available for Ask AI course lookup")
-            throw CourseTextLookupError.apiKeyMissing
-        }
+        let provider = injectedProvider ?? lookupProvider(for: context.model)
 
         let messages = buildMessages(from: transcript, context: context)
-        let maxTokens = 2_000
+        let scanContext = ScorecardScanContext(
+            isLocationAssistEnabled: context.isLocationAssistEnabled,
+            approximateLocation: context.approximateLocation
+        )
 
-        let intent: CourseTextLookupIntentDTO
+        let lookup: AskAICourseLookupDTO
         do {
-            let response = try await provider.complete(
+            lookup = try await callProvider(
+                provider,
                 messages: messages,
-                model: nil,
-                maxTokens: maxTokens
+                model: context.model.config.model,
+                scanContext: scanContext
             )
-            intent = try parseIntent(from: response)
         } catch OpenAIProviderError.apiKeyMissing, AnthropicProviderError.apiKeyMissing {
             throw CourseTextLookupError.apiKeyMissing
         } catch OpenAIProviderError.requestTooLarge, AnthropicProviderError.requestTooLarge {
@@ -182,44 +193,171 @@ final class CourseTextLookupService: Loggable {
             throw error
         }
 
-        let draft = mapToDraftCourse(intent)
-        let scanContext = ScorecardScanContext(
-            isLocationAssistEnabled: context.isLocationAssistEnabled,
-            approximateLocation: context.approximateLocation
-        )
+        let draft = draftCourse(from: lookup)
 
-        if let canonicalCourse = await enrichmentService.resolveCanonicalCourse(
-            for: draft,
-            scanContext: scanContext
-        ) {
+        if lookup.confidence == .high,
+           lookup.hasRealScorecard {
             return AskAICourseLookupResult(
-                assistantMessage: confirmedCourseMessage(for: canonicalCourse),
+                assistantMessage: webScorecardMessage(for: draft),
                 candidate: AskAICourseCandidate(
-                    course: canonicalCourse,
+                    course: draft,
                     requiresReview: false,
-                    isCanonicalMatch: true
-                )
+                    isCanonicalMatch: false
+                ),
+                source: .webScorecard
             )
         }
 
-        if draft.courseName.isPopulated || draft.clubName.isPopulated {
+        if hasResolvedIdentity(lookup) {
+            if let canonicalCourse = await enrichmentService.resolveCanonicalCourse(
+                for: draft,
+                preferredQueries: orderedFallbackQueries(from: lookup),
+                scanContext: scanContext
+            ) {
+                return AskAICourseLookupResult(
+                    assistantMessage: apiFallbackMessage(for: canonicalCourse),
+                    candidate: AskAICourseCandidate(
+                        course: canonicalCourse,
+                        requiresReview: false,
+                        isCanonicalMatch: true
+                    ),
+                    source: .apiFallback
+                )
+            }
+
             return AskAICourseLookupResult(
-                assistantMessage: draftCourseMessage(
-                    for: draft,
-                    needsMoreDetail: intent.needsMoreDetail == true
-                ),
+                assistantMessage: draftCourseMessage(for: draft),
                 candidate: AskAICourseCandidate(
                     course: draft,
                     requiresReview: true,
                     isCanonicalMatch: false
-                )
+                ),
+                source: .draftOnly
             )
         }
 
         return AskAICourseLookupResult(
             assistantMessage: "I need a bit more detail to pin it down. Try the course name, club name, city/state, resort or trail, or another identifying clue.",
-            candidate: nil
+            candidate: nil,
+            source: .draftOnly
         )
+    }
+
+    private func draftCourse(from lookup: AskAICourseLookupDTO) -> Course {
+        var draft = CourseScorecardDTOMapper.mapToCourse(
+            lookup.mergedScorecard,
+            origin: .manual,
+            defaultTeeIfEmpty: false
+        )
+
+        let websiteURL = normalizedWebsiteURL(lookup.officialWebsiteURL)
+        if websiteURL?.isPopulated == true {
+            draft = Course(
+                id: draft.id,
+                golfCourseApiID: draft.golfCourseApiID,
+                origin: .manual,
+                clubName: draft.clubName,
+                courseName: draft.courseName,
+                location: draft.location,
+                venueDetails: CourseVenueDetails(
+                    websiteURL: websiteURL,
+                    phoneNumber: draft.venueDetails?.phoneNumber
+                ),
+                locationGeohash: draft.locationGeohash,
+                tees: draft.tees,
+                createdAt: draft.createdAt,
+                lastUpdatedAt: draft.lastUpdatedAt
+            )
+        }
+
+        return draft
+    }
+
+    private func lookupProvider(for model: AskAITextModel) -> LLMProviderProtocol {
+        switch model.config.provider {
+        case .openAI:
+            return OpenAIProvider()
+        case .anthropic:
+            return AnthropicProvider()
+        }
+    }
+
+    private func normalizedWebsiteURL(_ raw: String?) -> String? {
+        guard let raw = raw?.trimmingCharacters(in: .whitespacesAndNewlines), raw.isPopulated else {
+            return nil
+        }
+        if raw.hasPrefix("http://") || raw.hasPrefix("https://") {
+            return raw
+        }
+        return "https://\(raw)"
+    }
+
+    private func hasResolvedIdentity(_ lookup: AskAICourseLookupDTO) -> Bool {
+        lookup.courseName.isPopulated || lookup.clubName.isPopulated
+    }
+
+    private func orderedFallbackQueries(from lookup: AskAICourseLookupDTO) -> [String] {
+        var queries: [String] = []
+
+        func append(_ value: String?) {
+            guard let value = value?.trimmingCharacters(in: .whitespacesAndNewlines), value.isPopulated else {
+                return
+            }
+            if !queries.contains(value) {
+                queries.append(value)
+            }
+        }
+
+        (lookup.apiSearchStrings ?? []).forEach(append)
+        append(lookup.courseName)
+        append(lookup.clubName)
+
+        if let clubName = lookup.clubName?.trimmingCharacters(in: .whitespacesAndNewlines),
+           let courseName = lookup.courseName?.trimmingCharacters(in: .whitespacesAndNewlines),
+           clubName.isPopulated,
+           courseName.isPopulated,
+           clubName != courseName {
+            append("\(clubName) \(courseName)")
+        }
+
+        return queries
+    }
+
+    private func callProvider(
+        _ provider: LLMProviderProtocol,
+        messages: [LLMMessage],
+        model: String,
+        scanContext: ScorecardScanContext
+    ) async throws -> AskAICourseLookupDTO {
+        if let anthropic = provider as? AnthropicProvider {
+            return try await anthropic.extractCourseFromConversation(
+                messages: messages,
+                model: model,
+                scanContext: scanContext
+            )
+        }
+        if let openai = provider as? OpenAIProvider {
+            return try await openai.extractCourseFromConversation(
+                messages: messages,
+                model: model,
+                scanContext: scanContext
+            )
+        }
+
+        do {
+            let content = try await provider.complete(
+                messages: messages,
+                model: model,
+                maxTokens: 4_096
+            )
+            return try AskAICourseLookupLLMDecoding.decode(from: content)
+        } catch let error as AskAICourseLookupLLMDecodingError {
+            throw CourseTextLookupError.decodingFailed(String(describing: error))
+        } catch let error as DecodingError {
+            throw CourseTextLookupError.decodingFailed(String(describing: error))
+        } catch {
+            throw error
+        }
     }
 
     private func buildMessages(
@@ -250,111 +388,31 @@ final class CourseTextLookupService: Loggable {
         return messages
     }
 
-    private func parseIntent(from content: String) throws -> CourseTextLookupIntentDTO {
-        do {
-            return try decodeIntent(from: content)
-        } catch {
-            let truncated = String(content.prefix(500))
-            throw CourseTextLookupError.decodingFailed("\(error.localizedDescription). Raw (truncated): \(truncated)")
-        }
-    }
-
-    private func decodeIntent(from content: String) throws -> CourseTextLookupIntentDTO {
-        let data = try jsonUTF8Data(from: content)
-        let decoder = JSONDecoder()
-
-        if let dto = try? decoder.decode(CourseTextLookupIntentDTO.self, from: data) {
-            return dto
-        }
-
-        let snakeDecoder = JSONDecoder()
-        snakeDecoder.keyDecodingStrategy = .convertFromSnakeCase
-        if let dto = try? snakeDecoder.decode(CourseTextLookupIntentDTO.self, from: data) {
-            return dto
-        }
-
-        return try decoder.decode(CourseTextLookupIntentDTO.self, from: data)
-    }
-
-    private func jsonUTF8Data(from content: String) throws -> Data {
-        var text = content.trimmingCharacters(in: .whitespacesAndNewlines)
-
-        if let match = text.firstMatch(of: /```(?:json|JSON)?\s*\n?([\s\S]*?)```/) {
-            text = String(match.1).trimmingCharacters(in: .whitespacesAndNewlines)
-        } else {
-            text = text
-                .replacingOccurrences(of: "```json", with: "")
-                .replacingOccurrences(of: "```JSON", with: "")
-                .replacingOccurrences(of: "```", with: "")
-                .trimmingCharacters(in: .whitespacesAndNewlines)
-        }
-
-        text = text
-            .replacingOccurrences(of: ",]", with: "]")
-            .replacingOccurrences(of: ",}", with: "}")
-
-        guard let data = text.data(using: .utf8) else {
-            throw CourseTextLookupError.invalidResponse
-        }
-
-        if (try? JSONSerialization.jsonObject(with: data)) != nil {
-            return data
-        }
-
-        guard let sliced = extractFirstJSONObjectSubstring(from: text),
-              let slicedData = sliced.data(using: .utf8),
-              (try? JSONSerialization.jsonObject(with: slicedData)) != nil else {
-            throw CourseTextLookupError.invalidResponse
-        }
-
-        return slicedData
-    }
-
-    private func extractFirstJSONObjectSubstring(from string: String) -> String? {
-        guard let start = string.firstIndex(of: "{") else { return nil }
-        var depth = 0
-        var index = start
-
-        while index < string.endIndex {
-            let character = string[index]
-            if character == "{" {
-                depth += 1
-            } else if character == "}" {
-                depth -= 1
-                if depth == 0 {
-                    return String(string[start...index])
-                }
-            }
-            index = string.index(after: index)
-        }
-
-        return nil
-    }
-
-    private func mapToDraftCourse(_ intent: CourseTextLookupIntentDTO) -> Course {
-        let trimmedClub = normalized(intent.clubName)
-        let trimmedCourse = normalized(intent.courseName)
-        let searchText = normalized(intent.searchText)
-
-        let resolvedCourseName = trimmedCourse ?? trimmedClub ?? searchText ?? ""
-        let resolvedClubName = trimmedClub ?? trimmedCourse ?? searchText ?? ""
-
-        return Course(
-            golfCourseApiID: nil,
-            origin: .manual,
-            clubName: resolvedClubName,
-            courseName: resolvedCourseName,
-            location: nil,
-            venueDetails: nil,
-            locationGeohash: nil,
-            tees: []
-        )
-    }
-
-    private func confirmedCourseMessage(for course: Course) -> String {
+    private func webScorecardMessage(for course: Course) -> String {
         let name = course.prettyCourseName.isPopulated ? course.prettyCourseName : course.prettyClubName
         let tee = preferredSummaryTee(for: course)
-        var parts = ["I think I found the course you're looking for: \(name)."]
+        var parts = ["I found an official or credible public scorecard for \(name)."]
+
+        if let location = course.location,
+           let city = location.city,
+           let state = location.state,
+           city.isPopulated,
+           state.isPopulated {
+            parts.append("\(city), \(state).")
+        }
+
+        if let tee {
+            let segment = course.defaultSegment
+            parts.append("\(tee.totalHoles) holes, par \(tee.par(for: segment)), \(tee.yardage(for: segment)) yards from the \(tee.name) tees.")
+        }
+
+        return parts.joined(separator: " ")
+    }
+
+    private func apiFallbackMessage(for course: Course) -> String {
+        let name = course.prettyCourseName.isPopulated ? course.prettyCourseName : course.prettyClubName
+        let tee = preferredSummaryTee(for: course)
+        var parts = ["I resolved the course identity and found a fallback Golf Course API match for \(name)."]
 
         if let location = course.location,
            let city = location.city,
@@ -374,16 +432,10 @@ final class CourseTextLookupService: Loggable {
         return parts.joined(separator: " ")
     }
 
-    private func draftCourseMessage(
-        for course: Course,
-        needsMoreDetail: Bool
-    ) -> String {
+    private func draftCourseMessage(for course: Course) -> String {
         let name = course.prettyCourseName.isPopulated ? course.prettyCourseName : course.prettyClubName
         if name.isPopulated {
-            if needsMoreDetail {
-                return "I have a possible course draft for \(name), but I’m not confident enough to lock it in yet. Review it and tweak anything that looks off, or keep chatting with a bit more detail."
-            }
-            return "I put together a draft for \(name). Review it before continuing, or keep chatting if you want me to refine the match."
+            return "I resolved the course identity for \(name), but I couldn't verify a high-confidence public scorecard and the fallback API search did not confirm a match. Review this draft before continuing, or share another detail and I'll try again."
         }
 
         return "I found a few hints, but not enough to build a reliable course yet. Try adding the course name, city/state, resort or trail, or another identifying detail."
@@ -397,13 +449,5 @@ final class CourseTextLookupService: Loggable {
             return other
         }
         return course.tees.first
-    }
-
-    private func normalized(_ value: String?) -> String? {
-        guard let value = value?.trimmingCharacters(in: .whitespacesAndNewlines),
-              value.isPopulated else {
-            return nil
-        }
-        return value
     }
 }

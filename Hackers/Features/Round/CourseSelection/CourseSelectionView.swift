@@ -48,11 +48,16 @@ struct CourseSelectionView: View, Loggable {
     @AppStorage("scorecard_scan_vision_model") private var scorecardVisionModelRaw: String = ScorecardScanVisionModel.defaultSelection.rawValue
     @AppStorage("scorecard_scan_location_assist_enabled") private var scorecardLocationAssistEnabled: Bool = true
     @AppStorage("course_ask_ai_location_assist_enabled") private var askAILocationAssistEnabled: Bool = true
+    @AppStorage("course_ask_ai_text_model") private var askAITextModelRaw: String = AskAITextModel.defaultSelection.rawValue
 
     private let kGreenville = CLLocation(latitude: 34.851, longitude: -82.394)
 
     private var courseSelectionPalette: DesignPalette {
         DesignPalette(theme: .primary, scheme: colorScheme)
+    }
+
+    private var askAITextModel: AskAITextModel {
+        AskAITextModel.fromStoredRawValue(askAITextModelRaw)
     }
     
     var body: some View {
@@ -144,11 +149,13 @@ struct CourseSelectionView: View, Loggable {
                     messages: viewModel.askAIMessages,
                     isSending: viewModel.isSendingAskAIMessage,
                     isLocationAssistEnabled: locationAssistBinding(for: .askAI),
+                    selectedModel: askAITextModel,
                     approximateLocation: locationService.location.map(ScorecardScanApproximateLocation.init),
                     examplePrompts: askAIExamplePrompts,
                     onCancel: {
                         showAskAI = false
                     },
+                    onSelectModel: { askAITextModelRaw = $0.rawValue },
                     onSend: { prompt in
                         let shouldUseLocationAssist = resolvedAskAILocationAssistEnabled()
                         let approximateLocation = shouldUseLocationAssist
@@ -158,7 +165,8 @@ struct CourseSelectionView: View, Loggable {
                             prompt,
                             context: AskAICourseLookupContext(
                                 isLocationAssistEnabled: shouldUseLocationAssist,
-                                approximateLocation: approximateLocation
+                                approximateLocation: approximateLocation,
+                                model: askAITextModel
                             )
                         )
                     },
@@ -1118,9 +1126,11 @@ private struct AskAICourseSheet: View {
     let messages: [AskAICourseChatMessage]
     let isSending: Bool
     @Binding var isLocationAssistEnabled: Bool
+    let selectedModel: AskAITextModel
     let approximateLocation: ScorecardScanApproximateLocation?
     let examplePrompts: [String]
     var onCancel: Callback? = nil
+    var onSelectModel: CallbackValue<AskAITextModel>? = nil
     var onSend: ((String) async -> Void)? = nil
     var onUseCandidate: CallbackValue<AskAICourseCandidate>? = nil
 
@@ -1131,19 +1141,23 @@ private struct AskAICourseSheet: View {
         messages: [AskAICourseChatMessage],
         isSending: Bool,
         isLocationAssistEnabled: Binding<Bool>,
+        selectedModel: AskAITextModel,
         approximateLocation: ScorecardScanApproximateLocation?,
         examplePrompts: [String],
         initialPrompt: String = "",
         onCancel: Callback? = nil,
+        onSelectModel: CallbackValue<AskAITextModel>? = nil,
         onSend: ((String) async -> Void)? = nil,
         onUseCandidate: CallbackValue<AskAICourseCandidate>? = nil
     ) {
         self.messages = messages
         self.isSending = isSending
         _isLocationAssistEnabled = isLocationAssistEnabled
+        self.selectedModel = selectedModel
         self.approximateLocation = approximateLocation
         self.examplePrompts = examplePrompts
         self.onCancel = onCancel
+        self.onSelectModel = onSelectModel
         self.onSend = onSend
         self.onUseCandidate = onUseCandidate
         _prompt = State(initialValue: initialPrompt)
@@ -1358,6 +1372,22 @@ private struct AskAICourseSheet: View {
                     isLocationAssistEnabled = true
                 } label: {
                     Label("Share location", systemImage: "location")
+                }
+            }
+
+            Section("Model") {
+                ForEach(AskAITextModel.allCases) { model in
+                    Button {
+                        onSelectModel?(model)
+                    } label: {
+                        HStack {
+                            Text(model.displayName)
+                            Spacer(minLength: 8)
+                            if model == selectedModel {
+                                Image(systemName: "checkmark")
+                            }
+                        }
+                    }
                 }
             }
         } label: {
@@ -2017,6 +2047,7 @@ private enum AskAICourseSheetPreviewData {
         messages: [],
         isSending: false,
         isLocationAssistEnabled: .constant(true),
+        selectedModel: .defaultSelection,
         approximateLocation: AskAICourseSheetPreviewData.approximateLocation,
         examplePrompts: AskAICourseSheetPreviewData.prompts
     )
@@ -2027,6 +2058,7 @@ private enum AskAICourseSheetPreviewData {
         messages: AskAICourseSheetPreviewData.messages,
         isSending: false,
         isLocationAssistEnabled: .constant(false),
+        selectedModel: .defaultSelection,
         approximateLocation: AskAICourseSheetPreviewData.approximateLocation,
         examplePrompts: AskAICourseSheetPreviewData.prompts
     )
@@ -2037,6 +2069,7 @@ private enum AskAICourseSheetPreviewData {
         messages: AskAICourseSheetPreviewData.messages,
         isSending: false,
         isLocationAssistEnabled: .constant(true),
+        selectedModel: .defaultSelection,
         approximateLocation: AskAICourseSheetPreviewData.approximateLocation,
         examplePrompts: AskAICourseSheetPreviewData.prompts,
         initialPrompt: "I’m pretty sure this is a municipal course in Greenville.\nThe scorecard is blue and gold.\nCan you help me narrow it down?"

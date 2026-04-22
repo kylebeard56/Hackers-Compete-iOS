@@ -33,3 +33,27 @@ struct AIModelConfig {
         AIModelConfig(provider: .openAI, model: openAIMiniModelID)
     }
 }
+
+enum AskAITextModel: String, CaseIterable, Identifiable {
+    case gpt41Mini = "gpt-4.1-mini"
+    case claudeSonnet46 = "claude-sonnet-4-6"
+
+    var id: String { rawValue }
+
+    static var defaultSelection: AskAITextModel { .gpt41Mini }
+
+    static func fromStoredRawValue(_ raw: String) -> AskAITextModel {
+        AskAITextModel(rawValue: raw) ?? .defaultSelection
+    }
+
+    var displayName: String { rawValue }
+
+    var config: AIModelConfig {
+        switch self {
+        case .gpt41Mini:
+            return AIModelConfig(provider: .openAI, model: AIModelConfig.openAIMiniModelID)
+        case .claudeSonnet46:
+            return AIModelConfig(provider: .anthropic, model: AIModelConfig.anthropicSonnet46ModelID)
+        }
+    }
+}

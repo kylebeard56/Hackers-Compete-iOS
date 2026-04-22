@@ -14,10 +14,12 @@ struct CourseTextLookupServiceTests {
         let provider = MockTextLookupLLMProvider(
             response: """
             {
-              "clubName": "Twin Lakes",
-              "courseName": "North",
-              "searchText": "Twin Lakes North Austin",
-              "needsMoreDetail": false
+              "courseLookup": {
+                "clubName": "Twin Lakes",
+                "courseName": "North",
+                "confidence": "low",
+                "apiSearchStrings": ["Twin Lakes North", "Twin Lakes Austin"]
+              }
             }
             """
         )
@@ -45,41 +47,107 @@ struct CourseTextLookupServiceTests {
             .map(Self.joinedText(from:))
         let finalUserText = provider.lastMessages.last.map(Self.joinedText(from:))
 
-        #expect(systemText?.contains("Approximate user location may be provided only to help a later course-matching step break ties") == true)
-        #expect(finalUserText?.contains("Approximate location for later tie-break only: 30.2672, -97.7431") == true)
+        #expect(systemText?.contains("Approximate user location may be appended below only to break ties") == true)
+        #expect(finalUserText?.contains("Approximate user location for tie-break only: 30.2672, -97.7431") == true)
+        #expect(provider.lastModel == AskAITextModel.defaultSelection.config.model)
     }
 
-    @Test("Confirmed canonical match returns API-backed course candidate")
-    func confirmedCanonicalMatchReturnsAPICandidate() async throws {
+    @Test("High-confidence web scorecard returns direct manual candidate without API fallback")
+    func highConfidenceWebScorecardReturnsDirectCandidate() async throws {
         let provider = MockTextLookupLLMProvider(
             response: """
             {
-              "clubName": "Twin Lakes Golf Club",
-              "courseName": "North Course",
-              "searchText": "Twin Lakes North Austin",
-              "city": "Austin",
-              "state": "TX",
-              "confidence": "high",
-              "needsMoreDetail": false
+              "courseLookup": {
+                "clubName": "Wade Hampton Golf Club",
+                "courseName": "Wade Hampton Golf Club",
+                "confidence": "high",
+                "officialWebsiteURL": "www.wadehampton.example",
+                "scorecard": {
+                  "clubName": "Wade Hampton Golf Club",
+                  "courseName": "Wade Hampton Golf Club",
+                  "tees": [
+                    {
+                      "name": "Blue",
+                      "gender": "male",
+                      "courseRating": 72.4,
+                      "slopeRating": 138,
+                      "holes": [
+                        { "number": 1, "par": 4, "yardage": 410, "handicap": 7 }
+                      ]
+                    }
+                  ]
+                }
+              }
             }
             """
         )
-        let candidate = Self.makeCandidate(
+        let searchProvider = MockTextLookupSearchProvider(results: [])
+        let service = CourseTextLookupService(
+            provider: provider,
+            enrichmentService: CourseScorecardEnrichmentService(
+                searchProvider: searchProvider,
+                venueLookupProvider: MockTextLookupVenueLookupProvider()
+            )
+        )
+
+        let result = try await service.resolveCourse(
+            from: [
+                .init(role: .user, text: "Wade Hampton golf course in Cashiers, NC")
+            ]
+        )
+
+        let candidateResult = try #require(result.candidate)
+        #expect(result.source == .webScorecard)
+        #expect(candidateResult.isCanonicalMatch == false)
+        #expect(candidateResult.requiresReview == false)
+        #expect(candidateResult.course.origin == CourseOrigin.manual.rawValue)
+        #expect(candidateResult.course.golfCourseApiID == nil)
+        #expect(candidateResult.course.tees.count == 1)
+        #expect(candidateResult.course.venueDetails?.websiteURL == "https://www.wadehampton.example")
+        #expect(searchProvider.queries.isEmpty)
+        #expect(result.assistantMessage.contains("public scorecard"))
+    }
+
+    @Test("Resolved identity falls back to Golf Course API using ordered search strings")
+    func resolvedIdentityFallsBackToAPIInOrder() async throws {
+        let provider = MockTextLookupLLMProvider(
+            response: """
+            {
+              "courseLookup": {
+                "clubName": "Wade Hampton Golf Club",
+                "courseName": "Wade Hampton Golf Club",
+                "location": {
+                  "city": "Cashiers",
+                  "state": "NC"
+                },
+                "confidence": "medium",
+                "apiSearchStrings": ["Wade Hampton", "Wade Hampton Golf Club"]
+              }
+            }
+            """
+        )
+        let apiCandidate = Self.makeCandidate(
             id: 101,
-            clubName: "Twin Lakes Golf Club",
-            courseName: "North Course",
-            city: "Austin",
-            state: "TX",
-            latitude: 30.2672,
-            longitude: -97.7431
+            clubName: "Wade Hampton Golf Club",
+            courseName: "Wade Hampton Golf Club",
+            city: "Cashiers",
+            state: "NC",
+            latitude: 35.0834,
+            longitude: -83.0879
+        )
+        let searchProvider = MockTextLookupSearchProvider(
+            resultsByQuery: [
+                "Wade Hampton": [],
+                "Wade Hampton Golf Club": [apiCandidate]
+            ]
         )
         let service = CourseTextLookupService(
             provider: provider,
             enrichmentService: CourseScorecardEnrichmentService(
-                searchProvider: MockTextLookupSearchProvider(results: [candidate]),
+                searchProvider: searchProvider,
                 venueLookupProvider: MockTextLookupVenueLookupProvider(
                     detailsByCourseID: [
-                        101: .init(websiteURL: "https://twinlakes.example", phoneNumber: "5125551111")
+                        101: .init(websiteURL: "https://wadehampton.example", phoneNumber: "8285551111")
                     ]
                 )
             )
@@ -87,41 +155,44 @@ struct CourseTextLookupServiceTests {
 
         let result = try await service.resolveCourse(
             from: [
-                .init(role: .user, text: "I'm playing Twin Lakes North in Austin.")
+                .init(role: .user, text: "Wade Hampton golf course in Cashiers, NC")
             ],
-            context: .init(
-                isLocationAssistEnabled: true,
-                approximateLocation: .init(latitude: 30.2672, longitude: -97.7431)
-            )
+            context: .init(model: .claudeSonnet46)
         )
 
-        let candidateResult = try #require(result.candidate)
-        #expect(candidateResult.isCanonicalMatch == true)
-        #expect(candidateResult.requiresReview == false)
-        #expect(candidateResult.course.origin == CourseOrigin.golfCourseAPI.rawValue)
-        #expect(candidateResult.course.golfCourseApiID == 101)
-        #expect(candidateResult.course.tees.count == 1)
-        #expect(candidateResult.course.venueDetails?.websiteURL == "https://twinlakes.example")
-        #expect(result.assistantMessage.contains("Twin Lakes"))
+        let candidate = try #require(result.candidate)
+        #expect(result.source == .apiFallback)
+        #expect(candidate.isCanonicalMatch == true)
+        #expect(candidate.requiresReview == false)
+        #expect(candidate.course.origin == CourseOrigin.golfCourseAPI.rawValue)
+        #expect(candidate.course.golfCourseApiID == 101)
+        #expect(searchProvider.queries == ["Wade Hampton", "Wade Hampton Golf Club"])
+        #expect(provider.lastModel == AskAITextModel.claudeSonnet46.config.model)
+        #expect(result.assistantMessage.contains("fallback Golf Course API match"))
     }
 
-    @Test("No canonical match returns a reviewable draft")
-    func unresolvedLookupReturnsDraftCandidate() async throws {
+    @Test("Resolved identity with failed API fallback returns reviewable draft")
+    func resolvedIdentityWithFailedAPIFallbackReturnsDraft() async throws {
         let provider = MockTextLookupLLMProvider(
             response: """
             {
-              "clubName": "Oxmoor Valley",
-              "courseName": "Ridge Course",
-              "searchText": "Oxmoor Valley RTJ Trail Alabama",
-              "confidence": "medium",
-              "needsMoreDetail": true
+              "courseLookup": {
+                "clubName": "Oxmoor Valley",
+                "courseName": "Ridge Course",
+                "confidence": "low",
+                "apiSearchStrings": ["Oxmoor Valley Ridge", "Oxmoor Valley"]
+              }
             }
             """
         )
+        let searchProvider = MockTextLookupSearchProvider(resultsByQuery: [
+            "Oxmoor Valley Ridge": [],
+            "Oxmoor Valley": []
+        ])
         let service = CourseTextLookupService(
             provider: provider,
             enrichmentService: CourseScorecardEnrichmentService(
-                searchProvider: MockTextLookupSearchProvider(results: []),
+                searchProvider: searchProvider,
                 venueLookupProvider: MockTextLookupVenueLookupProvider()
             )
         )
@@ -133,11 +204,14 @@ struct CourseTextLookupServiceTests {
         )
 
         let candidate = try #require(result.candidate)
+        #expect(result.source == .draftOnly)
         #expect(candidate.isCanonicalMatch == false)
         #expect(candidate.requiresReview == true)
         #expect(candidate.course.origin == CourseOrigin.manual.rawValue)
         #expect(candidate.course.prettyCourseName == "Ridge Course")
-        #expect(result.assistantMessage.contains("Review"))
+        #expect(candidate.course.tees.isEmpty)
+        #expect(searchProvider.queries == ["Oxmoor Valley Ridge", "Oxmoor Valley", "Ridge Course", "Oxmoor Valley Ridge Course"])
+        #expect(result.assistantMessage.contains("couldn't verify a high-confidence public scorecard"))
     }
 
     private static func joinedText(from message: LLMMessage) -> String {
@@ -203,6 +277,7 @@ struct CourseTextLookupServiceTests {
 private final class MockTextLookupLLMProvider: LLMProviderProtocol {
     let response: String
     var lastMessages: [LLMMessage] = []
+    var lastModel: String?
 
     init(response: String) {
         self.response = response
@@ -210,20 +285,28 @@ private final class MockTextLookupLLMProvider: LLMProviderProtocol {
 
     func complete(messages: [LLMMessage], model: String?, maxTokens: Int) async throws -> String {
         lastMessages = messages
+        lastModel = model
         return response
     }
 }
 
 @MainActor
 private final class MockTextLookupSearchProvider: CourseScorecardSearchProviding {
-    private let results: [GolfCourseAPIModel]
+    private let fallbackResults: [GolfCourseAPIModel]
+    private let resultsByQuery: [String: [GolfCourseAPIModel]]
+    private(set) var queries: [String] = []
 
-    init(results: [GolfCourseAPIModel]) {
-        self.results = results
+    init(
+        results: [GolfCourseAPIModel] = [],
+        resultsByQuery: [String: [GolfCourseAPIModel]] = [:]
+    ) {
+        self.fallbackResults = results
+        self.resultsByQuery = resultsByQuery
     }
 
     func searchCourses(query: String) async throws -> [GolfCourseAPIModel] {
-        results
+        queries.append(query)
+        return resultsByQuery[query] ?? fallbackResults
     }
 }
 
