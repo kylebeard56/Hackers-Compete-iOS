@@ -36,6 +36,7 @@ final class LiveRoundViewModel: ObservableObject, Loggable {
     @Published private(set) var visibleGroupSwitchRequest: VisibleGroupSwitchRequest?
     @Published private(set) var resolvedSeriesID: String?
     @Published private(set) var isSeriesCommissioner: Bool = false
+    @Published private(set) var seriesScoreboardSnapshot: SeriesScoreboardSnapshot?
     @Published var selectedTeeID: String?
     @Published var nameDisplayFormat: NameDisplayFormat = .firstNameLastInitial
     @Published var theme: GolfTheme = .purple
@@ -108,8 +109,20 @@ final class LiveRoundViewModel: ObservableObject, Loggable {
     private var hasPerformedInitialHoleNudge = false
     private var loadedSeriesAccessRoundID: String?
     private var isLoadingSeriesAccess = false
+    private var liveSeriesScoreboardContext: LiveSeriesScoreboardContext?
 
     var seriesAccessOverride: SeriesAccessOverride?
+
+    private struct LiveSeriesScoreboardContext {
+        let series: Series
+        let rounds: [SeriesRound]
+        let scoringProfiles: [SeriesScoringProfile]
+        let pointAwards: [SeriesPointAward]
+        let teams: [SeriesTeam]
+        let members: [SeriesMember]
+        let currentSeriesRound: SeriesRound?
+        let currentRoundMappings: [SeriesRoundMapping]
+    }
     
     func bind(appSession: AppSession, roundSession: RoundSession) {
         // Avoid duplicate bindings
@@ -145,6 +158,7 @@ final class LiveRoundViewModel: ObservableObject, Loggable {
                 self.syncVisibleTeeGroupIfNeeded()
                 self.ensureHoleIndexInBounds()
                 self.updateSelectedTeeIfNeeded()
+                self.refreshSeriesScoreboardProjection()
 
                 let modes = self.availableLeaderboardModes
                 if !modes.contains(self.leaderboardMode) {
@@ -209,6 +223,7 @@ final class LiveRoundViewModel: ObservableObject, Loggable {
         rebuildScoreIndex()
         syncVisibleTeeGroupIfNeeded()
         updateSelectedTeeIfNeeded()
+        refreshSeriesScoreboardProjection()
         if !hasInitializedVisibilitySelection && visibleParticipantIDs.isEmpty && !snapshot.participants.isEmpty {
             visibleParticipantIDs = Set(snapshot.participants.map(\.id))
             lastAppliedVisibleParticipantIDs = visibleParticipantIDs
@@ -2726,6 +2741,8 @@ final class LiveRoundViewModel: ObservableObject, Loggable {
         visibleTeeGroupID = nil
         resolvedSeriesID = nil
         isSeriesCommissioner = false
+        seriesScoreboardSnapshot = nil
+        liveSeriesScoreboardContext = nil
         loadedSeriesAccessRoundID = nil
         isLoadingSeriesAccess = false
         selectedTeeID = nil
@@ -2764,6 +2781,12 @@ final class LiveRoundViewModel: ObservableObject, Loggable {
         if let seriesAccessOverride {
             resolvedSeriesID = seriesAccessOverride.seriesID
             isSeriesCommissioner = seriesAccessOverride.isCommissioner
+            if let seriesID = seriesAccessOverride.seriesID, seriesID.isPopulated {
+                await loadLiveSeriesScoreboardContext(seriesID: seriesID)
+            } else {
+                liveSeriesScoreboardContext = nil
+                seriesScoreboardSnapshot = nil
+            }
             loadedSeriesAccessRoundID = roundID
             syncVisibleTeeGroupIfNeeded()
             updateSelectedTeeIfNeeded(force: true)
@@ -2780,6 +2803,8 @@ final class LiveRoundViewModel: ObservableObject, Loggable {
               seriesID.isPopulated else {
             resolvedSeriesID = nil
             isSeriesCommissioner = false
+            liveSeriesScoreboardContext = nil
+            seriesScoreboardSnapshot = nil
             syncVisibleTeeGroupIfNeeded()
             updateSelectedTeeIfNeeded(force: true)
             return
@@ -2798,8 +2823,312 @@ final class LiveRoundViewModel: ObservableObject, Loggable {
                 || activeMembers.first(where: { $0.playerID == currentPlayerID })?.role == .commissioner)
 
         isSeriesCommissioner = isOwnerCommissioner || isPlayerCommissioner
+        await loadLiveSeriesScoreboardContext(seriesID: seriesID, resolvedSeries: series, resolvedMembers: members)
         syncVisibleTeeGroupIfNeeded()
         updateSelectedTeeIfNeeded(force: true)
+    }
+
+    private func loadLiveSeriesScoreboardContext(
+        seriesID: String,
+        resolvedSeries: Series? = nil,
+        resolvedMembers: [SeriesMember]? = nil
+    ) async {
+        let series: Series?
+        if let resolvedSeries {
+            series = resolvedSeries
+        } else {
+            series = await resolveSeries(seriesID: seriesID)
+        }
+        guard let series, series.settings.showScoreboardTile else {
+            liveSeriesScoreboardContext = nil
+            seriesScoreboardSnapshot = nil
+            return
+        }
+
+        let rounds = await FirebaseService.shared.fetchSeriesRounds(seriesID: seriesID)
+        let scoringProfiles = await FirebaseService.shared.fetchScoringProfiles(seriesID: seriesID)
+        let pointAwards = await FirebaseService.shared.fetchPointAwards(seriesID: seriesID)
+        let teams = await FirebaseService.shared.fetchSeriesTeams(seriesID: seriesID)
+        let members: [SeriesMember]
+        if let resolvedMembers {
+            members = resolvedMembers
+        } else {
+            members = await FirebaseService.shared.fetchSeriesMembers(seriesID: seriesID)
+        }
+        let currentSeriesRound = rounds.first { $0.roundID == snapshot.round.id }
+        let mappings: [SeriesRoundMapping]
+        if let currentSeriesRound {
+            mappings = await FirebaseService.shared.fetchSeriesRoundMappings(
+                seriesID: seriesID,
+                seriesRoundID: currentSeriesRound.id
+            )
+        } else {
+            mappings = []
+        }
+
+        liveSeriesScoreboardContext = LiveSeriesScoreboardContext(
+            series: series,
+            rounds: rounds,
+            scoringProfiles: scoringProfiles,
+            pointAwards: pointAwards,
+            teams: teams,
+            members: members,
+            currentSeriesRound: currentSeriesRound,
+            currentRoundMappings: mappings
+        )
+        refreshSeriesScoreboardProjection()
+    }
+
+    private func refreshSeriesScoreboardProjection() {
+        guard let context = liveSeriesScoreboardContext,
+              context.series.settings.showScoreboardTile else {
+            seriesScoreboardSnapshot = nil
+            return
+        }
+
+        let projectedAwards = projectedSeriesPointAwards(using: context)
+        let officialAwards: [SeriesPointAward]
+        if projectedAwards.isPopulated, let currentRoundID = context.currentSeriesRound?.id {
+            officialAwards = context.pointAwards.filter { $0.seriesRoundID != currentRoundID }
+        } else {
+            officialAwards = context.pointAwards
+        }
+
+        seriesScoreboardSnapshot = SeriesScoreboardCalculator.snapshot(
+            series: context.series,
+            rounds: context.rounds,
+            scoringProfiles: context.scoringProfiles,
+            pointAwards: officialAwards,
+            teams: context.teams,
+            members: context.members,
+            projectedAwards: projectedAwards
+        )
+    }
+
+    private func projectedSeriesPointAwards(using context: LiveSeriesScoreboardContext) -> [SeriesPointAward] {
+        guard let seriesRound = context.currentSeriesRound,
+              seriesRound.awardsStatus != .finalized else { return [] }
+
+        let profilesByID = Dictionary(uniqueKeysWithValues: context.scoringProfiles.map { ($0.id, $0) })
+        var awards: [SeriesPointAward] = []
+        var individualAwards: [SeriesPointAward] = []
+
+        if let profileID = seriesRound.individualScoringProfileID,
+           let profile = profilesByID[profileID] {
+            individualAwards = projectedAwards(
+                for: seriesRound,
+                profile: profile,
+                awardTrack: .individual,
+                context: context
+            )
+            awards.append(contentsOf: individualAwards)
+        }
+
+        if let profileID = seriesRound.teamScoringProfileID,
+           let profile = profilesByID[profileID] {
+            if profile.kind == .accrueFromIndividual || profile.outcomeSource == .individualAwardsAggregateToTeam {
+                awards.append(contentsOf: SeriesViewModel.buildAccruedTeamAwards(
+                    seriesRoundID: seriesRound.id,
+                    profile: profile,
+                    individualAwards: individualAwards,
+                    members: context.members,
+                    teams: context.teams,
+                    seriesID: context.series.id,
+                    awardedByMemberID: nil
+                ))
+            } else {
+                awards.append(contentsOf: projectedAwards(
+                    for: seriesRound,
+                    profile: profile,
+                    awardTrack: .team,
+                    context: context
+                ))
+            }
+        }
+
+        return awards
+    }
+
+    private func projectedAwards(
+        for seriesRound: SeriesRound,
+        profile: SeriesScoringProfile,
+        awardTrack: SeriesAwardTrack,
+        context: LiveSeriesScoreboardContext
+    ) -> [SeriesPointAward] {
+        guard profile.kind != .manual,
+              profile.outcomeSource == .roundMatchResult else { return [] }
+
+        let result = engineResult
+        guard result.matchupResults.isPopulated else { return [] }
+        let highestWins = result.template.leaderboardSort == .highestWins
+        let isDirectHolePoints = seriesRound.roundConfig.matchupScoringStyle == .holeByHolePoints
+        let now = Time()
+        var awards: [SeriesPointAward] = []
+
+        for matchupResult in result.matchupResults {
+            let rows = matchupResult.rows
+            guard rows.contains(where: { $0.holesPlayed > 0 || abs($0.total) > 0.000_001 }) else { continue }
+            let sortedRows = rows.sorted {
+                if $0.total != $1.total {
+                    return highestWins ? $0.total > $1.total : $0.total < $1.total
+                }
+                return $0.scoringUnitID < $1.scoringUnitID
+            }
+            guard let first = sortedRows.first else { continue }
+            let isTie = sortedRows.count > 1 && sortedRows.allSatisfy { abs($0.total - first.total) < 0.000_001 }
+            let tieGroupSize = isTie ? sortedRows.count : 1
+
+            for row in sortedRows {
+                let placement = isTie ? 1 : (row.scoringUnitID == first.scoringUnitID ? 1 : 2)
+                let basePoints: Double
+                if isDirectHolePoints {
+                    basePoints = row.total
+                } else {
+                    basePoints = liveResolvePoints(
+                        placement: placement,
+                        tieGroupSize: tieGroupSize,
+                        profile: profile
+                    ) ?? 0
+                }
+
+                let matchWinnerBonus: Double = {
+                    guard isDirectHolePoints, placement == 1 else { return 0 }
+                    let bonus = seriesRound.roundConfig.resolvedMatchWinnerBonusPoints
+                    guard bonus > 0 else { return 0 }
+                    return tieGroupSize > 1 ? bonus / Double(tieGroupSize) : bonus
+                }()
+                let participationBonus = profile.bonusRules
+                    .filter { $0.isEnabled && $0.type == .participation }
+                    .reduce(0.0) { $0 + $1.points }
+                let bonusPoints = matchWinnerBonus + participationBonus
+                let total = basePoints + bonusPoints
+                let competitorType: SeriesCompetitorType = awardTrack == .team ? .team : .member
+                let mappedCompetitors = liveMappedSeriesCompetitors(
+                    row: row,
+                    competitorType: competitorType,
+                    mappings: context.currentRoundMappings,
+                    context: context
+                )
+
+                for competitor in mappedCompetitors {
+                    awards.append(SeriesPointAward(
+                        id: "projected_\(seriesRound.id)_\(awardTrack.rawValue)_\(matchupResult.matchup.id)_\(competitor.id)",
+                        seriesRoundID: seriesRound.id,
+                        awardTrack: awardTrack,
+                        competitorType: competitorType,
+                        competitorID: competitor.id,
+                        competitorName: competitor.name,
+                        profileKind: profile.kind,
+                        placement: placement,
+                        tieGroupSize: isTie ? sortedRows.count : nil,
+                        basePoints: basePoints,
+                        bonusPoints: bonusPoints,
+                        totalPoints: total,
+                        source: .automatic,
+                        roundOwnerID: row.scoringUnitID,
+                        reason: "Live projection",
+                        awardedAt: now,
+                        createdAt: now,
+                        lastUpdatedAt: now,
+                        parentID: context.series.id
+                    ))
+                }
+            }
+        }
+
+        return awards
+    }
+
+    private func liveResolvePoints(
+        placement: Int,
+        tieGroupSize: Int,
+        profile: SeriesScoringProfile
+    ) -> Double? {
+        func placementPoints(at rank: Int) -> Double {
+            profile.placementRules.first(where: { rank >= $0.rankStart && rank <= $0.rankEnd })?.points ?? 0
+        }
+
+        switch profile.kind {
+        case .placement:
+            let occupiedRanks = Array(placement..<(placement + max(1, tieGroupSize)))
+            let total = occupiedRanks.reduce(0.0) { $0 + placementPoints(at: $1) }
+            return total / Double(max(1, tieGroupSize))
+        case .winTieLoss:
+            guard let resultPoints = profile.resultPoints else { return 0 }
+            if tieGroupSize > 1 { return resultPoints.tiePoints }
+            return placement == 1 ? resultPoints.winPoints : resultPoints.lossPoints
+        case .accrueFromIndividual, .manual:
+            return nil
+        }
+    }
+
+    private func liveMappedSeriesCompetitors(
+        row: ScoringRow,
+        competitorType: SeriesCompetitorType,
+        mappings: [SeriesRoundMapping],
+        context: LiveSeriesScoreboardContext
+    ) -> [(id: String, name: String)] {
+        let ownerType = liveRoundOwnerType(for: row.owner)
+        let mapped = mappings.filter {
+            $0.roundOwnerID == row.scoringUnitID
+                && $0.roundOwnerType == ownerType
+                && $0.competitorType == competitorType
+        }
+
+        if mapped.isPopulated {
+            return mapped.map { mapping in
+                (mapping.competitorID, liveCompetitorName(for: mapping.competitorID, type: competitorType, context: context))
+            }
+        }
+
+        switch competitorType {
+        case .team:
+            let teamID: String? = {
+                switch row.owner {
+                case .team:
+                    return row.scoringUnitID
+                case .scoreOwner:
+                    return snapshot.scoringGroup(id: row.scoringUnitID)?.teamID
+                case .participant:
+                    return snapshot.participants.first(where: { $0.id == row.scoringUnitID })?.teamID
+                }
+            }()
+            guard let teamID, teamID.isPopulated else { return [] }
+            return [(teamID, liveCompetitorName(for: teamID, type: .team, context: context))]
+        case .member:
+            return row.participantIDs.compactMap { participantID in
+                guard let participant = snapshot.participants.first(where: { $0.id == participantID }) else { return nil }
+                let memberID = participant.seriesMemberID
+                    ?? context.members.first(where: { $0.playerID == participant.playerID })?.id
+                    ?? participantID
+                return (memberID, liveCompetitorName(for: memberID, type: .member, context: context))
+            }
+        }
+    }
+
+    private func liveRoundOwnerType(for owner: ScoringOwner) -> SeriesRoundOwnerType {
+        switch owner {
+        case .participant: return .participant
+        case .team: return .team
+        case .scoreOwner: return .scoreOwner
+        }
+    }
+
+    private func liveCompetitorName(
+        for competitorID: String,
+        type: SeriesCompetitorType,
+        context: LiveSeriesScoreboardContext
+    ) -> String {
+        switch type {
+        case .team:
+            return context.teams.first(where: { $0.id == competitorID })?.name
+                ?? snapshot.teams.first(where: { $0.id == competitorID })?.name
+                ?? "Team"
+        case .member:
+            return context.members.first(where: { $0.id == competitorID })?.name.fullName
+                ?? snapshot.participants.first(where: { $0.seriesMemberID == competitorID })?.name.fullName
+                ?? "Player"
+        }
     }
 
     private func resolveSeriesIDForRound() async -> String? {

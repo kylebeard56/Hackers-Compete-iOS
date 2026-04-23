@@ -22,6 +22,7 @@ struct EditSeriesRoundSheet: View {
     @State private var matchupScoringStyle: RoundMatchupScoringStyle = .aggregateRoundTotal
     @State private var holeWinPoints: Double = 1
     @State private var matchWinnerBonusPoints: Double = 0
+    @State private var sharedScoreAllowanceText = ""
     @State private var teamScoring = RoundTeamScoringConfiguration(mode: .bestN, count: 2, scope: .perRound)
     @State private var sequentialTeeStartsEnabled = false
     @State private var podGroupingStrategy: SeriesPodGroupingStrategy = .disabled
@@ -121,6 +122,9 @@ struct EditSeriesRoundSheet: View {
             matchupScoringStyle = seriesRound.roundConfig.matchupScoringStyle
             holeWinPoints = seriesRound.roundConfig.resolvedHoleWinPoints
             matchWinnerBonusPoints = seriesRound.roundConfig.resolvedMatchWinnerBonusPoints
+            sharedScoreAllowanceText = allowanceText(
+                from: seriesRound.roundConfig.sharedScoreHandicapConfig ?? FormatTemplateRegistry.template(for: selectedTemplateID).requirements.defaultHandicapConfig
+            )
             teamScoring = seriesRound.roundConfig.teamScoring
             sequentialTeeStartsEnabled = seriesRound.roundConfig.sequentialTeeStartsEnabled ?? false
             podGroupingStrategy = seriesRound.roundConfig.podGroupingStrategy
@@ -324,6 +328,7 @@ struct EditSeriesRoundSheet: View {
                     ForEach(availableTemplates, id: \.id) { template in
                         Button {
                             selectedTemplateID = template.id
+                            sharedScoreAllowanceText = allowanceText(from: template.requirements.defaultHandicapConfig)
                         } label: {
                             HStack {
                                 Text(template.name)
@@ -389,6 +394,23 @@ struct EditSeriesRoundSheet: View {
                         }
                         .buttonStyle(.plain)
                     }
+                }
+            }
+
+            if FormatTemplateRegistry.template(for: selectedTemplateID).scoreSource == .shared {
+                builderField(
+                    title: "Handicap allowance",
+                    subtitle: "Comma-separated percentages applied from lowest to highest course handicap."
+                ) {
+                    TextField("35,15", text: $sharedScoreAllowanceText)
+                        .keyboardType(.numbersAndPunctuation)
+                        .textInputAutocapitalization(.never)
+                        .autocorrectionDisabled()
+                        .fontStyle(kFontName, size: 15, weight: .semibold)
+                        .foregroundStyle(palette.foregroundColor)
+                        .padding(.horizontal, 12)
+                        .padding(.vertical, 10)
+                        .borderedContentStyle(theme: palette.theme, fill: palette.cardEmbeddedRowBackground)
                 }
             }
 
@@ -755,6 +777,7 @@ struct EditSeriesRoundSheet: View {
             teamAssignmentMode: viewModel.usesTeams ? .seriesTeams : .manual,
             teeGroupMode: podGroupingStrategy.usesPodAlignment ? .podAligned : .auto,
             notes: notes.isEmpty ? nil : notes,
+            sharedScoreHandicapConfig: sharedScoreAllowanceConfig,
             countsTowardHandicapPool: countsTowardHandicapPool,
             excludedHandicapMemberIDs: excludedHandicapMemberIDs
         )
@@ -936,6 +959,7 @@ struct EditSeriesRoundSheet: View {
             teamAssignmentMode: viewModel.usesTeams ? .seriesTeams : .manual,
             teeGroupMode: podGroupingStrategy.usesPodAlignment ? .podAligned : .auto,
             notes: notes.isEmpty ? nil : notes,
+            sharedScoreHandicapConfig: sharedScoreAllowanceConfig,
             countsTowardHandicapPool: countsTowardHandicapPool,
             excludedHandicapMemberIDs: excludedHandicapMemberIDs
         )
@@ -1294,8 +1318,36 @@ struct EditSeriesRoundSheet: View {
         FormatTemplateRegistry.template(for: selectedTemplateID).name
     }
 
+    private var sharedScoreAllowanceConfig: HandicapConfiguration? {
+        let percentages = allowancePercentages(from: sharedScoreAllowanceText)
+        guard percentages.isPopulated else { return nil }
+        return HandicapConfiguration(percentage: 1.0, isTeamCombined: true, positionPercentages: percentages)
+    }
+
     private var availableTemplates: [GameTemplate] {
         FormatTemplateRegistry.seriesTemplates
+    }
+
+    private func allowanceText(from config: HandicapConfiguration) -> String {
+        guard let percentages = config.positionPercentages, percentages.isPopulated else { return "" }
+        return percentages.map { percentage in
+            let whole = percentage * 100
+            if abs(whole - whole.rounded()) < 0.000_001 {
+                return "\(Int(whole.rounded()))"
+            }
+            return String(format: "%.1f", whole)
+        }
+        .joined(separator: ",")
+    }
+
+    private func allowancePercentages(from text: String) -> [Double] {
+        text
+            .split(separator: ",")
+            .compactMap { raw in
+                let trimmed = raw.trimmingCharacters(in: .whitespacesAndNewlines)
+                guard let value = Double(trimmed), value >= 0 else { return nil }
+                return value > 1 ? value / 100 : value
+            }
     }
 
     private var seriesPointsDescription: String {

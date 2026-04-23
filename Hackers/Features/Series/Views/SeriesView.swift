@@ -390,6 +390,11 @@ struct SeriesView: View {
                     commissionerChecklist
                 }
 
+                if tab == .rounds, let scoreboard = viewModel.scoreboardSnapshot {
+                    seriesScoreboardTile(scoreboard)
+                        .padding(.horizontal, 16)
+                }
+
                 switch tab {
                 case .rounds:
                     roundsTabContent
@@ -611,6 +616,111 @@ struct SeriesView: View {
             }
         }
         .frame(width: 20, height: 20)
+    }
+
+    private func seriesScoreboardTile(_ scoreboard: SeriesScoreboardSnapshot) -> some View {
+        VStack(alignment: .leading, spacing: 16) {
+            HStack(alignment: .firstTextBaseline) {
+                Text(scoreboardTitle(scoreboard))
+                    .fontStyle(kFontName, size: 12, weight: .semibold)
+                    .foregroundStyle(Color.white.opacity(0.58))
+                    .textCase(.uppercase)
+                Spacer(minLength: 12)
+                Text(scoreboard.usesProjectedTotals ? "Projected" : "Official")
+                    .fontStyle(kFontName, size: 12, weight: .semibold)
+                    .foregroundStyle(Color.white.opacity(0.58))
+            }
+
+            HStack(spacing: 16) {
+                ForEach(scoreboard.entries.prefix(2)) { entry in
+                    scoreboardEntryColumn(entry)
+                }
+            }
+
+            HStack(spacing: 8) {
+                Text(scoreboardFooter(scoreboard))
+                    .fontStyle(kFontName, size: 12, weight: .semibold)
+                    .foregroundStyle(Color.white.opacity(0.62))
+                    .lineLimit(1)
+                    .minimumScaleFactor(0.85)
+                Spacer(minLength: 0)
+                if let threshold = scoreboard.winThreshold {
+                    Text("First to \(threshold.seriesPointsDisplayString)")
+                        .fontStyle(kFontName, size: 12, weight: .semibold)
+                        .foregroundStyle(Color.white.opacity(0.62))
+                }
+            }
+        }
+        .padding(16)
+        .frame(maxWidth: .infinity)
+        .background(Color.black.opacity(colorScheme.isLight ? 0.82 : 0.35))
+        .clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
+        .overlay(
+            RoundedRectangle(cornerRadius: 16, style: .continuous)
+                .stroke(Color.white.opacity(0.12), lineWidth: 1)
+        )
+        .accessibilityElement(children: .combine)
+        .accessibilityLabel(scoreboardAccessibilityLabel(scoreboard))
+    }
+
+    private func scoreboardEntryColumn(_ entry: SeriesScoreboardEntry) -> some View {
+        VStack(alignment: .leading, spacing: 6) {
+            Text(entry.projectedPoints.seriesPointsDisplayString)
+                .fontStyle(kFontName, size: 34, weight: .semibold)
+                .foregroundStyle(scoreboardAccentColor(for: entry))
+                .monospacedDigit()
+                .lineLimit(1)
+                .minimumScaleFactor(0.75)
+
+            HStack(spacing: 6) {
+                Circle()
+                    .fill(scoreboardAccentColor(for: entry))
+                    .frame(width: 10, height: 10)
+                Text(entry.competitorName)
+                    .fontStyle(kFontName, size: 13, weight: .semibold)
+                    .foregroundStyle(Color.white.opacity(0.9))
+                    .lineLimit(1)
+                    .minimumScaleFactor(0.75)
+            }
+
+            if entry.projectedPoints != entry.officialPoints {
+                Text("\(entry.officialPoints.seriesPointsDisplayString) official")
+                    .fontStyle(kFontName, size: 11, weight: .regular)
+                    .foregroundStyle(Color.white.opacity(0.55))
+            }
+        }
+        .frame(maxWidth: .infinity, alignment: .leading)
+    }
+
+    private func scoreboardTitle(_ scoreboard: SeriesScoreboardSnapshot) -> String {
+        let awarded = scoreboard.projectedPointsAwarded.seriesPointsDisplayString
+        guard let total = scoreboard.totalAvailablePoints else {
+            return "\(viewModel.series.name) scoreboard"
+        }
+        return "\(viewModel.series.name) · \(awarded) of \(total.seriesPointsDisplayString)"
+    }
+
+    private func scoreboardFooter(_ scoreboard: SeriesScoreboardSnapshot) -> String {
+        if let remaining = scoreboard.pointsRemaining {
+            return "\(remaining.seriesPointsDisplayString) pts remaining · \(scoreboard.leaderText)"
+        }
+        return scoreboard.leaderText
+    }
+
+    private func scoreboardAccessibilityLabel(_ scoreboard: SeriesScoreboardSnapshot) -> String {
+        let scores = scoreboard.entries
+            .prefix(2)
+            .map { "\($0.competitorName) \($0.projectedPoints.seriesPointsDisplayString)" }
+            .joined(separator: ", ")
+        return "\(scoreboardTitle(scoreboard)), \(scores), \(scoreboardFooter(scoreboard))"
+    }
+
+    private func scoreboardAccentColor(for entry: SeriesScoreboardEntry) -> Color {
+        guard entry.competitorType == .team,
+              let team = viewModel.teams.first(where: { $0.id == entry.competitorID }) else {
+            return Color.accentGreen
+        }
+        return (TeamColor(rawValue: team.color) ?? .unknown).value
     }
 
     // MARK: - Rounds Tab

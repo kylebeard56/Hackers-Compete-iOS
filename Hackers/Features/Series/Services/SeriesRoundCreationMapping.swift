@@ -602,7 +602,12 @@ enum SeriesRoundCreationMapping {
                             owner: .scoreOwner,
                             ownerIDs: group.memberIDs,
                             scoringMethod: .aggregate,
-                            aggregation: .init(mode: .sumAll, scope: .perHole)
+                            aggregation: .init(mode: .sumAll, scope: .perHole),
+                            handicapAdjustments: sharedScoreHandicapAdjustments(
+                                group: group,
+                                participants: participants,
+                                config: seriesRound.roundConfig.sharedScoreHandicapConfig ?? template.requirements.defaultHandicapConfig
+                            )
                         )
                     }
             }
@@ -618,15 +623,45 @@ enum SeriesRoundCreationMapping {
             return scoringGroups
                 .filter { $0.kind == .teeGroup }
                 .map { group in
-                    ScoringUnit(
-                        id: group.id,
-                        owner: .scoreOwner,
-                        ownerIDs: group.memberIDs,
-                        scoringMethod: .aggregate,
-                        aggregation: .init(mode: .sumAll, scope: .perHole)
-                    )
-                }
+                        ScoringUnit(
+                            id: group.id,
+                            owner: .scoreOwner,
+                            ownerIDs: group.memberIDs,
+                            scoringMethod: .aggregate,
+                            aggregation: .init(mode: .sumAll, scope: .perHole),
+                            handicapAdjustments: sharedScoreHandicapAdjustments(
+                                group: group,
+                                participants: participants,
+                                config: seriesRound.roundConfig.sharedScoreHandicapConfig ?? template.requirements.defaultHandicapConfig
+                            )
+                        )
+                    }
         }
+    }
+
+    private static func sharedScoreHandicapAdjustments(
+        group: RoundScoringGroup,
+        participants: [RoundParticipant],
+        config: HandicapConfiguration
+    ) -> [String: Double]? {
+        guard let percentages = config.positionPercentages, percentages.isPopulated else { return nil }
+        let participantsByID = Dictionary(uniqueKeysWithValues: participants.map { ($0.id, $0) })
+        let orderedMembers = group.memberIDs
+            .compactMap { participantsByID[$0] }
+            .sorted {
+                if $0.adjustedHandicap != $1.adjustedHandicap {
+                    return $0.adjustedHandicap < $1.adjustedHandicap
+                }
+                return $0.name.fullName.localizedCaseInsensitiveCompare($1.name.fullName) == .orderedAscending
+            }
+        guard orderedMembers.isPopulated else { return nil }
+
+        var adjustments: [String: Double] = [:]
+        for (index, participant) in orderedMembers.enumerated() {
+            guard index < percentages.count else { break }
+            adjustments[participant.id] = Double(participant.adjustedHandicap) * percentages[index] * config.percentage
+        }
+        return adjustments.isPopulated ? adjustments : nil
     }
 
     static func buildRoundSegment(

@@ -217,6 +217,7 @@ extension HandicapConfiguration {
     // USGA standard configurations
     static let individualStrokePlay = HandicapConfiguration(percentage: 1.0) //0.95)
     static let individualMatchPlay = HandicapConfiguration(percentage: 0.9)
+    static let scramble2Player = HandicapConfiguration(percentage: 1.0, isTeamCombined: true, positionPercentages: [0.35, 0.15])
 //    static let fourBallStrokePlay = HandicapConfiguration(percentage: 0.85)
 //    static let fourBallMatchPlay = HandicapConfiguration(percentage: 0.90)
 //    static let foursomes = HandicapConfiguration(percentage: 0.50, isTeamCombined: true)

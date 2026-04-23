@@ -88,6 +88,11 @@ extension LiveRound {
                 swipeHintTile
                     .padding(.horizontal, 16)
 
+                if let scoreboard = viewModel.seriesScoreboardSnapshot {
+                    liveSeriesScoreboardTile(scoreboard)
+                        .padding(.horizontal, 16)
+                }
+
                 vegasSummaryTile
                     .padding(.horizontal, 16)
 
@@ -107,6 +112,117 @@ extension LiveRound {
                 dismissSwipeHintIfNeeded()
             }
         }
+    }
+
+    private func liveSeriesScoreboardTile(_ scoreboard: SeriesScoreboardSnapshot) -> some View {
+        VStack(spacing: 16) {
+            HStack {
+                Text(liveScoreboardTitle(scoreboard))
+                    .fontStyle(kFontName, size: 12, weight: .semibold)
+                    .foregroundStyle(.white.opacity(0.62))
+                    .textCase(.uppercase)
+                Spacer(minLength: 12)
+                if scoreboard.usesProjectedTotals {
+                    Text("Live")
+                        .fontStyle(kFontName, size: 11, weight: .semibold)
+                        .foregroundStyle(Color.green)
+                        .padding(.horizontal, 10)
+                        .padding(.vertical, 4)
+                        .background(Capsule().fill(Color.green.opacity(0.14)))
+                }
+            }
+
+            HStack(spacing: 18) {
+                if let first = scoreboard.entries.first {
+                    liveScoreboardEntryColumn(first, isTrailing: false)
+                }
+
+                Rectangle()
+                    .fill(.white.opacity(0.18))
+                    .frame(width: 1, height: 54)
+
+                if scoreboard.entries.count > 1 {
+                    liveScoreboardEntryColumn(scoreboard.entries[1], isTrailing: true)
+                }
+            }
+
+            Text(liveScoreboardFooter(scoreboard))
+                .fontStyle(kFontName, size: 12, weight: .medium)
+                .foregroundStyle(.white.opacity(0.58))
+                .frame(maxWidth: .infinity)
+        }
+        .padding(18)
+        .frame(maxWidth: .infinity)
+        .background(
+            RoundedRectangle(cornerRadius: 14, style: .continuous)
+                .fill(Color(red: 0.07, green: 0.07, blue: 0.12))
+        )
+        .overlay(
+            RoundedRectangle(cornerRadius: 14, style: .continuous)
+                .stroke(.white.opacity(0.08), lineWidth: 1)
+        )
+        .accessibilityElement(children: .ignore)
+        .accessibilityLabel(liveScoreboardAccessibilityLabel(scoreboard))
+    }
+
+    private func liveScoreboardEntryColumn(
+        _ entry: SeriesScoreboardEntry,
+        isTrailing: Bool
+    ) -> some View {
+        VStack(alignment: isTrailing ? .trailing : .leading, spacing: 6) {
+            Text(entry.projectedPoints.seriesPointsDisplayString)
+                .fontStyle(kFontName, size: 36, weight: .semibold)
+                .foregroundStyle(liveScoreboardAccentColor(for: entry))
+                .contentTransition(.numericText())
+                .monospacedDigit()
+                .minimumScaleFactor(0.72)
+                .lineLimit(1)
+
+            HStack(spacing: 6) {
+                Circle()
+                    .fill(liveScoreboardAccentColor(for: entry))
+                    .frame(width: 10, height: 10)
+
+                Text(entry.competitorName)
+                    .fontStyle(kFontName, size: 13, weight: .semibold)
+                    .foregroundStyle(.white.opacity(0.88))
+                    .lineLimit(1)
+                    .minimumScaleFactor(0.8)
+            }
+        }
+        .frame(maxWidth: .infinity, alignment: isTrailing ? .trailing : .leading)
+    }
+
+    private func liveScoreboardTitle(_ scoreboard: SeriesScoreboardSnapshot) -> String {
+        let completed = scoreboard.roundSummaries.filter(\.isFinalized).count
+        if completed > 0 {
+            return "Series after round \(completed)"
+        }
+        return scoreboard.usesProjectedTotals ? "Series live" : "Series scoreboard"
+    }
+
+    private func liveScoreboardFooter(_ scoreboard: SeriesScoreboardSnapshot) -> String {
+        let remaining = scoreboard.pointsRemaining.map { "\($0.seriesPointsDisplayString) pts remaining" }
+        if let remaining {
+            return "\(remaining) · \(scoreboard.leaderText)"
+        }
+        return scoreboard.leaderText
+    }
+
+    private func liveScoreboardAccessibilityLabel(_ scoreboard: SeriesScoreboardSnapshot) -> String {
+        let entries = scoreboard.entries
+            .map { "\($0.competitorName) \($0.projectedPoints.seriesPointsDisplayString) points" }
+            .joined(separator: ", ")
+        return "Series scoreboard. \(entries). \(scoreboard.leaderText)."
+    }
+
+    private func liveScoreboardAccentColor(for entry: SeriesScoreboardEntry) -> Color {
+        guard entry.competitorType == .team,
+              let team = viewModel.snapshot.teams.first(where: { $0.id == entry.competitorID }),
+              let teamColor = TeamColor(rawValue: team.color) else {
+            return palette.foregroundColor
+        }
+        return teamColor.value
     }
 
     @ViewBuilder

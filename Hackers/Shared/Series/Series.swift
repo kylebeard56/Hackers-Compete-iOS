@@ -536,6 +536,8 @@ struct SeriesRoundConfiguration: Hashable, Codable {
     var allowLobbyBackPropagation: Bool
     /// When non-nil, overrides the template's `defaultScoreBasis` (gross/net).
     var scoreBasisOverride: ScoreBasis?
+    /// Optional format-specific allowance for shared-score scoring units, applied by handicap rank.
+    var sharedScoreHandicapConfig: HandicapConfiguration?
     var countsTowardHandicapPool: Bool
     var excludedHandicapMemberIDs: [String]
 
@@ -559,6 +561,7 @@ struct SeriesRoundConfiguration: Hashable, Codable {
         allowFormatOverride: Bool = true,
         allowLobbyBackPropagation: Bool = true,
         scoreBasisOverride: ScoreBasis? = nil,
+        sharedScoreHandicapConfig: HandicapConfiguration? = nil,
         countsTowardHandicapPool: Bool = true,
         excludedHandicapMemberIDs: [String] = []
     ) {
@@ -581,6 +584,7 @@ struct SeriesRoundConfiguration: Hashable, Codable {
         self.allowFormatOverride = allowFormatOverride
         self.allowLobbyBackPropagation = allowLobbyBackPropagation
         self.scoreBasisOverride = scoreBasisOverride
+        self.sharedScoreHandicapConfig = sharedScoreHandicapConfig
         self.countsTowardHandicapPool = countsTowardHandicapPool
         self.excludedHandicapMemberIDs = Self.normalizedMemberIDs(excludedHandicapMemberIDs)
     }
@@ -607,6 +611,7 @@ struct SeriesRoundConfiguration: Hashable, Codable {
         case allowFormatOverride = "allow_format_override"
         case allowLobbyBackPropagation = "allow_lobby_back_propagation"
         case scoreBasisOverride = "score_basis_override"
+        case sharedScoreHandicapConfig = "shared_score_handicap_config"
         case countsTowardHandicapPool = "counts_toward_handicap_pool"
         case excludedHandicapMemberIDs = "excluded_handicap_member_ids"
     }
@@ -660,6 +665,7 @@ struct SeriesRoundConfiguration: Hashable, Codable {
         allowFormatOverride = try c.decodeIfPresent(Bool.self, forKey: .allowFormatOverride) ?? true
         allowLobbyBackPropagation = try c.decodeIfPresent(Bool.self, forKey: .allowLobbyBackPropagation) ?? true
         scoreBasisOverride = try c.decodeIfPresent(ScoreBasis.self, forKey: .scoreBasisOverride)
+        sharedScoreHandicapConfig = try c.decodeIfPresent(HandicapConfiguration.self, forKey: .sharedScoreHandicapConfig)
         countsTowardHandicapPool = try c.decodeIfPresent(Bool.self, forKey: .countsTowardHandicapPool) ?? true
         excludedHandicapMemberIDs = Self.normalizedMemberIDs(
             try c.decodeIfPresent([String].self, forKey: .excludedHandicapMemberIDs) ?? []
@@ -703,6 +709,7 @@ struct SeriesRoundConfiguration: Hashable, Codable {
         try c.encode(allowFormatOverride, forKey: .allowFormatOverride)
         try c.encode(allowLobbyBackPropagation, forKey: .allowLobbyBackPropagation)
         try c.encodeIfPresent(scoreBasisOverride, forKey: .scoreBasisOverride)
+        try c.encodeIfPresent(sharedScoreHandicapConfig, forKey: .sharedScoreHandicapConfig)
         try c.encode(countsTowardHandicapPool, forKey: .countsTowardHandicapPool)
         try c.encode(Self.normalizedMemberIDs(excludedHandicapMemberIDs), forKey: .excludedHandicapMemberIDs)
     }
@@ -783,6 +790,7 @@ struct SeriesSettings: Hashable, Codable {
     var useTeams: Bool
     var useIndividualStandings: Bool
     var useTeamStandings: Bool
+    var showScoreboardTile: Bool
     /// Minutes since local midnight for default round tee time (e.g. 990 = 4:30 PM).
     var defaultScheduledTeeTimeMinutesFromMidnight: Int?
     /// `Calendar` weekday integers (1 = Sunday … 7 = Saturday). Empty/nil = no fixed play-day filter.
@@ -804,6 +812,7 @@ struct SeriesSettings: Hashable, Codable {
         useTeams: Bool = false,
         useIndividualStandings: Bool = true,
         useTeamStandings: Bool = false,
+        showScoreboardTile: Bool = false,
         defaultScheduledTeeTimeMinutesFromMidnight: Int? = nil,
         recurringPlayWeekdays: [Int]? = nil
     ) {
@@ -822,6 +831,7 @@ struct SeriesSettings: Hashable, Codable {
         self.useTeams = useTeams
         self.useIndividualStandings = useIndividualStandings
         self.useTeamStandings = useTeamStandings
+        self.showScoreboardTile = showScoreboardTile
         self.defaultScheduledTeeTimeMinutesFromMidnight = defaultScheduledTeeTimeMinutesFromMidnight
         self.recurringPlayWeekdays = recurringPlayWeekdays
     }
@@ -842,6 +852,7 @@ struct SeriesSettings: Hashable, Codable {
         case useTeams = "use_teams"
         case useIndividualStandings = "use_individual_standings"
         case useTeamStandings = "use_team_standings"
+        case showScoreboardTile = "show_scoreboard_tile"
         case defaultScheduledTeeTimeMinutesFromMidnight = "default_scheduled_tee_time_minutes_from_midnight"
         case recurringPlayWeekdays = "recurring_play_weekdays"
     }
@@ -863,6 +874,7 @@ struct SeriesSettings: Hashable, Codable {
         useTeams = try c.decodeIfPresent(Bool.self, forKey: .useTeams) ?? false
         useIndividualStandings = try c.decodeIfPresent(Bool.self, forKey: .useIndividualStandings) ?? true
         useTeamStandings = try c.decodeIfPresent(Bool.self, forKey: .useTeamStandings) ?? false
+        showScoreboardTile = try c.decodeIfPresent(Bool.self, forKey: .showScoreboardTile) ?? false
         defaultScheduledTeeTimeMinutesFromMidnight = try c.decodeIfPresent(Int.self, forKey: .defaultScheduledTeeTimeMinutesFromMidnight)
         recurringPlayWeekdays = try c.decodeIfPresent([Int].self, forKey: .recurringPlayWeekdays)
     }
@@ -884,6 +896,7 @@ struct SeriesSettings: Hashable, Codable {
         try c.encode(useTeams, forKey: .useTeams)
         try c.encode(useIndividualStandings, forKey: .useIndividualStandings)
         try c.encode(useTeamStandings, forKey: .useTeamStandings)
+        try c.encode(showScoreboardTile, forKey: .showScoreboardTile)
         try c.encodeIfPresent(defaultScheduledTeeTimeMinutesFromMidnight, forKey: .defaultScheduledTeeTimeMinutesFromMidnight)
         try c.encodeIfPresent(recurringPlayWeekdays, forKey: .recurringPlayWeekdays)
     }
@@ -895,6 +908,7 @@ struct SeriesSettings: Hashable, Codable {
             break
         case .trip:
             settings.defaultRoundConfig.countsTowardHandicapPool = false
+            settings.showScoreboardTile = true
         case .tournament:
             break
         }
@@ -2299,6 +2313,282 @@ extension Double {
             return "\(Int(roundedTenth.rounded(.towardZero)))"
         }
         return String(format: "%.1f", roundedTenth)
+    }
+}
+
+struct SeriesScoreboardEntry: Identifiable, Equatable {
+    var id: String { competitorID }
+    let competitorID: String
+    let competitorName: String
+    let competitorType: SeriesCompetitorType
+    let officialPoints: Double
+    let projectedPoints: Double
+}
+
+struct SeriesScoreboardRoundSummary: Identifiable, Equatable {
+    let id: String
+    let roundTitle: String
+    let availablePoints: Double?
+    let officialPointsAwarded: Double
+    let isFinalized: Bool
+}
+
+struct SeriesScoreboardSnapshot: Equatable {
+    let awardTrack: SeriesAwardTrack
+    let entries: [SeriesScoreboardEntry]
+    let roundSummaries: [SeriesScoreboardRoundSummary]
+    let totalAvailablePoints: Double?
+    let officialPointsAwarded: Double
+    let projectedPointsAwarded: Double
+    let usesProjectedTotals: Bool
+
+    var pointsRemaining: Double? {
+        totalAvailablePoints.map { max(0, $0 - projectedPointsAwarded) }
+    }
+
+    var winThreshold: Double? {
+        guard entries.count == 2, let totalAvailablePoints else { return nil }
+        return floor(totalAvailablePoints / 2) + 0.5
+    }
+
+    var leaderText: String {
+        guard let first = entries.first else { return "No points yet" }
+        guard entries.count > 1 else { return "\(first.competitorName) leads" }
+        let second = entries[1]
+        let margin = first.projectedPoints - second.projectedPoints
+        if abs(margin) < 0.000_001 { return "All square" }
+        return "\(first.competitorName) leads by \(margin.seriesPointsDisplayString)"
+    }
+}
+
+enum SeriesScoreboardCalculator {
+    static func snapshot(
+        series: Series,
+        rounds: [SeriesRound],
+        scoringProfiles: [SeriesScoringProfile],
+        pointAwards: [SeriesPointAward],
+        teams: [SeriesTeam],
+        members: [SeriesMember],
+        projectedAwards: [SeriesPointAward] = []
+    ) -> SeriesScoreboardSnapshot? {
+        let track = preferredTrack(series: series, teams: teams)
+        let competitors = scoreboardCompetitors(track: track, teams: teams, members: members)
+        guard competitors.isPopulated else { return nil }
+
+        let profilesByID = Dictionary(uniqueKeysWithValues: scoringProfiles.map { ($0.id, $0) })
+        let awardsForTrack = pointAwards.filter { $0.awardTrack == track }
+        let projectedAwardsForTrack = projectedAwards.filter { $0.awardTrack == track }
+
+        let roundSummaries = rounds.sorted { $0.index < $1.index }.map { round in
+            let profile = profile(for: round, track: track, profilesByID: profilesByID)
+            let available = profile.flatMap {
+                availablePoints(
+                    for: round,
+                    profile: $0,
+                    track: track,
+                    series: series,
+                    teams: teams,
+                    members: members,
+                    profilesByID: profilesByID,
+                    awards: pointAwards
+                )
+            }
+            let official = awardsForTrack
+                .filter { $0.seriesRoundID == round.id }
+                .reduce(0.0) { $0 + $1.totalPoints }
+            return SeriesScoreboardRoundSummary(
+                id: round.id,
+                roundTitle: round.title.isPopulated ? round.title : "Round \(round.index + 1)",
+                availablePoints: available,
+                officialPointsAwarded: official,
+                isFinalized: round.awardsStatus == .finalized
+            )
+        }
+
+        let officialTotals = Dictionary(grouping: awardsForTrack, by: \.competitorID)
+            .mapValues { awards in awards.reduce(0.0) { $0 + $1.totalPoints } }
+        let projectedTotals = Dictionary(grouping: projectedAwardsForTrack, by: \.competitorID)
+            .mapValues { awards in awards.reduce(0.0) { $0 + $1.totalPoints } }
+
+        let entries = competitors.map { competitor in
+            let official = officialTotals[competitor.id] ?? 0
+            let projected = official + (projectedTotals[competitor.id] ?? 0)
+            return SeriesScoreboardEntry(
+                competitorID: competitor.id,
+                competitorName: competitor.name,
+                competitorType: competitor.type,
+                officialPoints: official,
+                projectedPoints: projected
+            )
+        }
+        .sorted {
+            if $0.projectedPoints != $1.projectedPoints {
+                return $0.projectedPoints > $1.projectedPoints
+            }
+            return $0.competitorName.localizedCaseInsensitiveCompare($1.competitorName) == .orderedAscending
+        }
+
+        let availableValues = roundSummaries.compactMap(\.availablePoints)
+        let totalAvailable = availableValues.count == roundSummaries.count
+            ? availableValues.reduce(0.0, +)
+            : nil
+        let officialAwarded = entries.reduce(0.0) { $0 + $1.officialPoints }
+        let projectedAwarded = entries.reduce(0.0) { $0 + $1.projectedPoints }
+
+        return SeriesScoreboardSnapshot(
+            awardTrack: track,
+            entries: entries,
+            roundSummaries: roundSummaries,
+            totalAvailablePoints: totalAvailable,
+            officialPointsAwarded: officialAwarded,
+            projectedPointsAwarded: projectedAwarded,
+            usesProjectedTotals: projectedAwardsForTrack.isPopulated
+        )
+    }
+
+    static func availablePoints(
+        for round: SeriesRound,
+        profile: SeriesScoringProfile,
+        track: SeriesAwardTrack,
+        series: Series,
+        teams: [SeriesTeam],
+        members: [SeriesMember],
+        profilesByID: [String: SeriesScoringProfile],
+        awards: [SeriesPointAward] = []
+    ) -> Double? {
+        switch profile.kind {
+        case .placement:
+            let count = competitorCount(track: track, teams: teams, members: members)
+            guard count > 0 else { return 0 }
+            let placementTotal = (1...count).reduce(0.0) { partial, rank in
+                partial + placementPoints(rank: rank, profile: profile)
+            }
+            return placementTotal + enabledParticipationBonus(profile: profile) * Double(count)
+
+        case .winTieLoss:
+            let matchupCount = resolvedMatchupCount(for: round, track: track, teams: teams, members: members)
+            guard matchupCount > 0 else { return 0 }
+            if round.roundConfig.matchupScoringStyle == .holeByHolePoints {
+                let holePoints = Double(round.resolvedCourse(using: series)?.holeSegment.holeCount ?? 18)
+                    * round.roundConfig.resolvedHoleWinPoints
+                return Double(matchupCount) * (holePoints + round.roundConfig.resolvedMatchWinnerBonusPoints)
+            }
+            let resultPoints = profile.resultPoints ?? .init()
+            let perMatch = max(resultPoints.winPoints + resultPoints.lossPoints, resultPoints.tiePoints * 2)
+            return Double(matchupCount) * perMatch
+
+        case .accrueFromIndividual:
+            guard let individualProfileID = round.individualScoringProfileID,
+                  let individualProfile = profilesByID[individualProfileID] else {
+                return nil
+            }
+            return availablePoints(
+                for: round,
+                profile: individualProfile,
+                track: .individual,
+                series: series,
+                teams: teams,
+                members: members,
+                profilesByID: profilesByID,
+                awards: awards
+            )
+
+        case .manual:
+            let existing = awards
+                .filter { $0.seriesRoundID == round.id && $0.awardTrack == track }
+                .reduce(0.0) { $0 + $1.totalPoints }
+            return existing > 0 ? existing : nil
+        }
+    }
+
+    private static func preferredTrack(series: Series, teams: [SeriesTeam]) -> SeriesAwardTrack {
+        if series.settings.useTeamStandings || teams.isPopulated {
+            return .team
+        }
+        return .individual
+    }
+
+    private static func scoreboardCompetitors(
+        track: SeriesAwardTrack,
+        teams: [SeriesTeam],
+        members: [SeriesMember]
+    ) -> [(id: String, name: String, type: SeriesCompetitorType)] {
+        switch track {
+        case .team:
+            return teams
+                .sorted { $0.index < $1.index }
+                .map { ($0.id, $0.name, .team) }
+        case .individual:
+            return members
+                .filter(\.isActive)
+                .sorted { $0.name.fullName.localizedCaseInsensitiveCompare($1.name.fullName) == .orderedAscending }
+                .map { ($0.id, $0.name.fullName, .member) }
+        }
+    }
+
+    private static func profile(
+        for round: SeriesRound,
+        track: SeriesAwardTrack,
+        profilesByID: [String: SeriesScoringProfile]
+    ) -> SeriesScoringProfile? {
+        switch track {
+        case .team:
+            return round.teamScoringProfileID.flatMap { profilesByID[$0] }
+        case .individual:
+            return round.individualScoringProfileID.flatMap { profilesByID[$0] }
+        }
+    }
+
+    private static func competitorCount(
+        track: SeriesAwardTrack,
+        teams: [SeriesTeam],
+        members: [SeriesMember]
+    ) -> Int {
+        switch track {
+        case .team:
+            return teams.count
+        case .individual:
+            return members.filter(\.isActive).count
+        }
+    }
+
+    private static func placementPoints(rank: Int, profile: SeriesScoringProfile) -> Double {
+        profile.placementRules.first { rank >= $0.rankStart && rank <= $0.rankEnd }?.points ?? 0
+    }
+
+    private static func enabledParticipationBonus(profile: SeriesScoringProfile) -> Double {
+        profile.bonusRules
+            .filter { $0.isEnabled && $0.type == .participation }
+            .reduce(0.0) { $0 + $1.points }
+    }
+
+    private static func resolvedMatchupCount(
+        for round: SeriesRound,
+        track: SeriesAwardTrack,
+        teams: [SeriesTeam],
+        members: [SeriesMember]
+    ) -> Int {
+        if round.roundConfig.matchupMode == .individualVsIndividual || track == .individual {
+            let planned = round.plannedMatchups.filter { $0.matchupPlan.validMemberPairing }.count
+            if planned > 0 { return planned }
+            let explicit = round.matchupPlans.filter(\.validMemberPairing).count
+            if explicit > 0 { return explicit }
+            return members.filter(\.isActive).count / 2
+        }
+
+        if round.roundConfig.scoreOwnerScope == .partnership {
+            let byTeam = Dictionary(grouping: round.partnershipPlans.filter(\.isValid), by: \.teamID)
+            let counts = byTeam.values.map(\.count)
+            if counts.count >= 2, let minimum = counts.min(), minimum > 0 {
+                return minimum
+            }
+        }
+
+        let planned = round.plannedMatchups.filter { $0.matchupPlan.validTeamPairing }.count
+        if planned > 0 { return planned }
+        let explicit = round.matchupPlans.filter(\.validTeamPairing).count
+        if explicit > 0 { return explicit }
+        return teams.count / 2
     }
 }
 

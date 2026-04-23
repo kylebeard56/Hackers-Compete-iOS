@@ -312,7 +312,7 @@ struct FormatTemplateRegistry {
                 teamSize: .range(min: 2, max: 4),
                 requiresTeams: true,
                 requiresHandicaps: false,
-                defaultHandicapConfig: .individualStrokePlay,
+                defaultHandicapConfig: .scramble2Player,
                 defaultMaxScoreOverPar: .quad,
                 defaultScoreBasis: .gross
             )

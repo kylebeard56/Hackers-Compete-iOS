@@ -32,6 +32,7 @@ private struct SeriesLeagueRulesSignaturePayload: Codable, Hashable {
     var teamScoring: RoundTeamScoringConfiguration
     var matchupResolutionStyle: RoundMatchupResolutionStyle
     var sequentialTeeStartsEnabled: Bool
+    var sharedScoreHandicapConfig: HandicapConfiguration?
     var defaultTeamScoringProfileID: String?
     var defaultIndividualScoringProfileID: String?
     var handicapConfig: SeriesHandicapConfig
@@ -49,6 +50,7 @@ private struct SeriesLeagueRulesSignaturePayload: Codable, Hashable {
         teamScoring = settings.defaultRoundConfig.teamScoring
         matchupResolutionStyle = settings.defaultRoundConfig.matchupResolutionStyle
         sequentialTeeStartsEnabled = settings.defaultRoundConfig.sequentialTeeStartsEnabled ?? false
+        sharedScoreHandicapConfig = settings.defaultRoundConfig.sharedScoreHandicapConfig
         defaultTeamScoringProfileID = settings.defaultTeamScoringProfileID
         defaultIndividualScoringProfileID = settings.defaultIndividualScoringProfileID
         handicapConfig = settings.handicapConfig
@@ -216,6 +218,17 @@ final class SeriesViewModel: ObservableObject, Loggable {
     var hasScheduledRound: Bool { rounds.isPopulated }
     var hasScoringRules: Bool { isLeagueRulesConfirmed(for: series.settings) }
     var hasDefaultCourse: Bool { series.settings.defaultCourse?.isConfigured == true }
+    var scoreboardSnapshot: SeriesScoreboardSnapshot? {
+        guard series.settings.showScoreboardTile else { return nil }
+        return SeriesScoreboardCalculator.snapshot(
+            series: series,
+            rounds: rounds,
+            scoringProfiles: scoringProfiles,
+            pointAwards: pointAwards,
+            teams: teams,
+            members: members
+        )
+    }
     var skippedDefaultCourse: Bool { false }
     var checklistComplete: Bool { hasPlayers && hasScheduledRound && hasScoringRules }
 
@@ -799,6 +812,19 @@ final class SeriesViewModel: ObservableObject, Loggable {
         await createBuiltInScoringProfilesIfNeeded()
         await refreshSeriesCachesIfNeeded()
         addEvent("series.league_settings_saved", eventProps: seriesTelemetryProps())
+    }
+
+    func setScoreboardVisible(_ isVisible: Bool) async {
+        guard series.settings.showScoreboardTile != isVisible else { return }
+        let previousSettings = series.settings
+        series.settings.showScoreboardTile = isVisible
+        invalidateLeagueRulesConfirmationIfNeeded(previousSettings: previousSettings, newSettings: series.settings)
+        series.lastUpdatedAt = .init()
+        _ = await FirebaseService.shared.updateSeries(series)
+        addEvent(
+            "series.scoreboard_visibility_changed",
+            eventProps: seriesTelemetryProps(["visible": isVisible])
+        )
     }
 
     func confirmLeagueRules(_ settings: SeriesSettings) async {
@@ -2685,11 +2711,13 @@ final class SeriesViewModel: ObservableObject, Loggable {
                 }
                 basePoints = resolved
             }
-            let matchWinnerBonus = isDirectHolePoints
-                && (competitor.tieGroupSize ?? 1) == 1
-                && placement == 1
-                ? seriesRound.roundConfig.resolvedMatchWinnerBonusPoints
-                : 0
+            let tieGroupSize = max(1, competitor.tieGroupSize ?? 1)
+            let matchWinnerBonus: Double = {
+                guard isDirectHolePoints, placement == 1 else { return 0 }
+                let bonus = seriesRound.roundConfig.resolvedMatchWinnerBonusPoints
+                guard bonus > 0 else { return 0 }
+                return tieGroupSize > 1 ? bonus / Double(tieGroupSize) : bonus
+            }()
             let bonusPoints = profile.bonusRules
                 .filter(\.isEnabled)
                 .reduce(0.0) { partial, rule in
