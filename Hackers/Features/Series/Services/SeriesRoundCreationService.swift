@@ -42,14 +42,13 @@ struct SeriesRoundCreationService: Loggable {
 
         let shareCode = await FirebaseService.shared.getUniqueShareCode()
         let roundID = HackersID.string()
-        let competitionScope = SeriesRoundCreationMapping.resolvedCompetitionScope(for: seriesRound)
-        let plannedStructure = SeriesRoundPlanningService.resolvedPlannedStructure(
+        let resolvedPlan = SeriesRoundResolvedPlan(
             series: series,
             seriesRound: seriesRound,
             members: members,
             teams: teams,
             pods: pods,
-            courseSelection: seriesRound.resolvedCourse(using: series)
+            courseSegment: courseSegment
         )
         var round = SeriesRoundCreationMapping.roundDraft(
             id: roundID,
@@ -64,39 +63,54 @@ struct SeriesRoundCreationService: Loggable {
         do {
             round = try await round.post().get()
 
-            let matchupPlans = plannedStructure.matchups.map { $0.matchupPlan }
-            let partnershipPlans = SeriesRoundCreationMapping.resolvedPartnershipPlans(
-                seriesRound: seriesRound,
-                teams: teams,
-                pods: pods,
-                members: members
-            )
-
-            let groupPlans = SeriesRoundPlanningService.teeGroupPlans(from: plannedStructure.teeGroups)
-
-            let seriesTeamsForRound = seriesRound.roundConfig.teamAssignmentMode == .seriesTeams ? teams : []
             let teamsPayload = SeriesRoundCreationMapping.buildRoundTeamsArray(
                 roundID: roundID,
-                seriesTeams: seriesTeamsForRound,
+                seriesTeams: resolvedPlan.seriesTeamsForRound,
                 createdAt: round.createdAt
             )
             let teeGroupsPayload = SeriesRoundPlanningService.teeGroupsPayload(
                 roundID: roundID,
-                plannedTeeGroups: plannedStructure.teeGroups,
+                plannedTeeGroups: resolvedPlan.plannedStructure.teeGroups,
                 createdAt: round.createdAt
             )
 
-            async let teamMappingsTask = batchPostRoundTeams(seriesTeams: seriesTeamsForRound, payload: teamsPayload)
+            async let teamMappingsTask = batchPostRoundTeams(seriesTeams: resolvedPlan.seriesTeamsForRound, payload: teamsPayload)
             async let teeGroupsTask = batchPostTeeGroups(payload: teeGroupsPayload)
             let (teamMappings, teeGroups) = try await (teamMappingsTask, teeGroupsTask)
 
             let groupIDsByPlanID = Dictionary(
-                uniqueKeysWithValues: zip(groupPlans.map { $0.id }, teeGroups.map { $0.id })
+                uniqueKeysWithValues: zip(resolvedPlan.teeGroupPlans.map { $0.id }, teeGroups.map { $0.id })
             )
             let memberAssignments = SeriesRoundCreationMapping.buildMemberAssignments(
-                groupPlans: groupPlans,
+                groupPlans: resolvedPlan.teeGroupPlans,
                 groupIDsByPlanID: groupIDsByPlanID
             )
+
+            if series.handicapConfig.isEnabled {
+                let missingHandicapMemberIDs = SeriesRoundCreationMapping.membersMissingEffectiveHandicap(
+                    members: members,
+                    handicaps: handicaps
+                )
+                if missingHandicapMemberIDs.isPopulated {
+                    addBreadcrumb(
+                        level: .warning,
+                        message: "Series round creation has members without effective handicaps",
+                        parameters: [
+                            "Series ID": series.id,
+                            "Series Round ID": seriesRound.id,
+                            "Member Count": "\(missingHandicapMemberIDs.count)"
+                        ]
+                    )
+                    addEvent(
+                        "series.round_creation_missing_handicaps",
+                        eventProps: [
+                            "series_id": series.id,
+                            "series_round_id": seriesRound.id,
+                            "member_count": missingHandicapMemberIDs.count
+                        ]
+                    )
+                }
+            }
 
             let participantsPayload = SeriesRoundCreationMapping.buildParticipantPayloads(
                 members: members,
@@ -110,6 +124,14 @@ struct SeriesRoundCreationService: Loggable {
             )
 
             let createdParticipants = try await participantsPayload.batchPostChunked().get()
+            let populatedTeeGroupIDs = Set(createdParticipants.compactMap(\.groupID).filter(\.isPopulated))
+            let retainedTeeGroups = teeGroups.filter { populatedTeeGroupIDs.contains($0.id) }
+            for group in teeGroups where !populatedTeeGroupIDs.contains(group.id) {
+                if case .failure(let error) = await group.delete() {
+                    addBreadcrumb(level: .error, message: "series.round_creation tee group prune failed", error: error)
+                    throw error
+                }
+            }
 
             var participantIDsBySeriesMemberID: [String: String] = [:]
             var createdMappings: [SeriesRoundMapping] = []
@@ -129,19 +151,20 @@ struct SeriesRoundCreationService: Loggable {
                 roundID: roundID,
                 seriesRound: seriesRound,
                 participants: createdParticipants,
-                partnershipPlans: partnershipPlans,
-                teeGroups: teeGroups
+                partnershipPlans: resolvedPlan.partnershipPlans,
+                teeGroups: retainedTeeGroups
             )
             let createdScoringGroups = try await scoringGroupsPayload.batchPostChunked().get()
             let scoringUnits = SeriesRoundCreationMapping.buildScoringUnits(
                 seriesRound: seriesRound,
                 participants: createdParticipants,
-                scoringGroups: createdScoringGroups
+                scoringGroups: createdScoringGroups,
+                teamMappings: teamMappings
             )
 
             let roundMatchups = SeriesRoundCreationMapping.buildRoundMatchups(
                 seriesRound: seriesRound,
-                matchupPlans: matchupPlans,
+                matchupPlans: resolvedPlan.matchupPlans,
                 teamMappings: teamMappings,
                 participantIDsBySeriesMemberID: participantIDsBySeriesMemberID,
                 scoringGroups: createdScoringGroups,
@@ -153,7 +176,7 @@ struct SeriesRoundCreationService: Loggable {
                 series: series,
                 seriesRound: seriesRound,
                 courseSegment: courseSegment,
-                competitionScope: competitionScope,
+                competitionScope: resolvedPlan.competitionScope,
                 matchups: roundMatchups,
                 scoringUnits: scoringUnits
             )

@@ -201,7 +201,8 @@ struct TeamMatchup: Codable, Hashable, Identifiable {
 
     /// Whether this matchup has exactly two valid pairings.
     var isValid: Bool {
-        pairingIDs().count == 2
+        let ids = pairingIDs().filter(\.isPopulated)
+        return ids.count == 2 && Set(ids).count == 2
     }
 
     enum CodingKeys: String, CodingKey {

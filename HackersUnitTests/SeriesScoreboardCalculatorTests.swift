@@ -129,6 +129,175 @@ final class SeriesScoreboardCalculatorTests: XCTestCase {
         XCTAssertEqual(units.first?.handicapAdjustments?["high"], 3.0)
     }
 
+    func testMirroredTeeGroupMatchupsYieldOneHundredSixtyAvailablePoints() {
+        let teams = [
+            SeriesTeam(id: "red", name: "Red", color: "red", index: 0),
+            SeriesTeam(id: "blue", name: "Blue", color: "blue", index: 1),
+        ]
+        let members = (0..<16).map { index in
+            SeriesMember(
+                id: "m\(index)",
+                name: Name("Player", "\(index)"),
+                teamID: index % 4 < 2 ? "red" : "blue",
+                isActive: true
+            )
+        }
+        var settings = SeriesSettings.seeded(for: .trip)
+        settings.useTeams = true
+        settings.useTeamStandings = true
+        let series = Series(id: "series", settings: settings)
+        let profile = SeriesScoringProfile(
+            id: "team_wlt_40",
+            outcomeSource: .roundMatchResult,
+            competitorType: .team,
+            kind: .winTieLoss,
+            resultPoints: .init(winPoints: 40, tiePoints: 20, lossPoints: 0)
+        )
+        let round = mirroredRound(id: "mirror", profileID: profile.id)
+
+        let snapshot = SeriesScoreboardCalculator.snapshot(
+            series: series,
+            rounds: [round],
+            scoringProfiles: [profile],
+            pointAwards: [],
+            teams: teams,
+            members: members
+        )
+
+        XCTAssertEqual(snapshot?.totalAvailablePoints, 160)
+        XCTAssertEqual(snapshot?.roundSummaries.first?.availablePoints, 160)
+    }
+
+    func testMirroredTeeGroupMatchupsCountAvailablePointsWithoutPartnershipScoreEntry() {
+        let teams = [
+            SeriesTeam(id: "red", name: "Red", color: "red", index: 0),
+            SeriesTeam(id: "blue", name: "Blue", color: "blue", index: 1),
+        ]
+        let members = (0..<16).map { index in
+            SeriesMember(
+                id: "m\(index)",
+                name: Name("Player", "\(index)"),
+                teamID: index % 4 < 2 ? "red" : "blue",
+                isActive: true
+            )
+        }
+        var settings = SeriesSettings.seeded(for: .trip)
+        settings.useTeams = true
+        settings.useTeamStandings = true
+        let series = Series(id: "series", settings: settings)
+        let profile = SeriesScoringProfile(
+            id: "team_wlt_40",
+            outcomeSource: .roundMatchResult,
+            competitorType: .team,
+            kind: .winTieLoss,
+            resultPoints: .init(winPoints: 40, tiePoints: 20, lossPoints: 0)
+        )
+        let round = mirroredRound(id: "mirror_individual_entry", profileID: profile.id, scoreOwnerScope: .individual)
+
+        let snapshot = SeriesScoreboardCalculator.snapshot(
+            series: series,
+            rounds: [round],
+            scoringProfiles: [profile],
+            pointAwards: [],
+            teams: teams,
+            members: members
+        )
+
+        XCTAssertEqual(snapshot?.totalAvailablePoints, 160)
+        XCTAssertEqual(snapshot?.roundSummaries.first?.availablePoints, 160)
+    }
+
+    func testExplicitPairMatchupsDriveAvailablePoints() {
+        let teams = [
+            SeriesTeam(id: "red", name: "Red", color: "red", index: 0),
+            SeriesTeam(id: "blue", name: "Blue", color: "blue", index: 1),
+        ]
+        let members = (0..<8).map { index in
+            SeriesMember(
+                id: "m\(index)",
+                name: Name("Player", "\(index)"),
+                teamID: index % 4 < 2 ? "red" : "blue",
+                isActive: true
+            )
+        }
+        var settings = SeriesSettings.seeded(for: .trip)
+        settings.useTeams = true
+        settings.useTeamStandings = true
+        let series = Series(id: "series", settings: settings)
+        let profile = SeriesScoringProfile(
+            id: "team_wlt_40",
+            outcomeSource: .roundMatchResult,
+            competitorType: .team,
+            kind: .winTieLoss,
+            resultPoints: .init(winPoints: 40, tiePoints: 20, lossPoints: 0)
+        )
+        var round = mirroredRound(id: "explicit_pairs", profileID: profile.id)
+        round.matchupPlans = [
+            SeriesRoundMatchupPlan(id: "mx_1", pairAID: "g0_red", pairBID: "g1_blue", index: 0),
+            SeriesRoundMatchupPlan(id: "mx_2", pairAID: "g1_red", pairBID: "g0_blue", index: 1),
+        ]
+
+        let snapshot = SeriesScoreboardCalculator.snapshot(
+            series: series,
+            rounds: [round],
+            scoringProfiles: [profile],
+            pointAwards: [],
+            teams: teams,
+            members: members
+        )
+
+        XCTAssertEqual(snapshot?.totalAvailablePoints, 80)
+        XCTAssertEqual(snapshot?.roundSummaries.first?.availablePoints, 80)
+    }
+
+    func testConfidenceSummaryUsesRealTeeGroupNames() {
+        let teams = [
+            SeriesTeam(id: "red", name: "Red", color: "red", index: 0),
+            SeriesTeam(id: "blue", name: "Blue", color: "blue", index: 1),
+        ]
+        let members = [
+            SeriesMember(id: "andrew", name: Name("Andrew", "McCartney"), teamID: "red", isActive: true),
+            SeriesMember(id: "chris", name: Name("Chris", "Robinson"), teamID: "red", isActive: true),
+            SeriesMember(id: "henry", name: Name("Henry", "Scarlato"), teamID: "blue", isActive: true),
+            SeriesMember(id: "justin", name: Name("Justin", "Allen"), teamID: "blue", isActive: true),
+        ]
+        let group = SeriesRoundPlannedTeeGroup(
+            id: "g1",
+            index: 0,
+            seats: members.enumerated().map {
+                SeriesRoundPlannedSeat(id: $0.element.id, memberID: $0.element.id, teeOrder: $0.offset + 1)
+            }
+        )
+        let pairs = [
+            SeriesRoundPartnershipPlan(id: "red_pair", teamID: "red", memberIDs: ["andrew", "chris"]),
+            SeriesRoundPartnershipPlan(id: "blue_pair", teamID: "blue", memberIDs: ["henry", "justin"]),
+        ]
+        let profile = SeriesScoringProfile(
+            id: "team_wlt_40",
+            outcomeSource: .roundMatchResult,
+            competitorType: .team,
+            kind: .winTieLoss,
+            resultPoints: .init(winPoints: 40, tiePoints: 20, lossPoints: 0)
+        )
+
+        let summary = SeriesRoundPointsConfidenceBuilder.summary(
+            roundConfig: SeriesRoundConfiguration(
+                competitionScope: .matchup,
+                scoreOwnerScope: .partnership,
+                matchupMode: .teeGroupPartnerships
+            ),
+            teamProfile: profile,
+            individualProfile: nil,
+            plannedTeeGroups: [group],
+            partnershipPlans: pairs,
+            members: members,
+            teams: teams,
+            courseSelection: nil
+        )
+
+        XCTAssertEqual(summary.example, "Andrew + Chris shoot 71. Henry + Justin shoot 69. Blue wins 40.")
+    }
+
     private func partnershipRound(id: String, index: Int, profileID: String) -> SeriesRound {
         SeriesRound(
             id: id,
@@ -147,6 +316,44 @@ final class SeriesScoreboardCalculatorTests: XCTestCase {
                     memberIDs: ["m\(pairIndex)", "m\(pairIndex + 8)"]
                 )
             }
+        )
+    }
+
+    private func mirroredRound(
+        id: String,
+        profileID: String,
+        scoreOwnerScope: RoundScoreOwnerScope = .partnership
+    ) -> SeriesRound {
+        let groups = (0..<4).map { groupIndex in
+            let start = groupIndex * 4
+            return SeriesRoundPlannedTeeGroup(
+                id: "g\(groupIndex)",
+                index: groupIndex,
+                seats: (0..<4).map { offset in
+                    let memberID = "m\(start + offset)"
+                    return SeriesRoundPlannedSeat(id: memberID, memberID: memberID, teeOrder: offset + 1)
+                }
+            )
+        }
+        let partnerships = (0..<4).flatMap { groupIndex in
+            let start = groupIndex * 4
+            return [
+                SeriesRoundPartnershipPlan(id: "g\(groupIndex)_red", teamID: "red", memberIDs: ["m\(start)", "m\(start + 1)"]),
+                SeriesRoundPartnershipPlan(id: "g\(groupIndex)_blue", teamID: "blue", memberIDs: ["m\(start + 2)", "m\(start + 3)"]),
+            ]
+        }
+        return SeriesRound(
+            id: id,
+            title: id.uppercased(),
+            index: 0,
+            roundConfig: SeriesRoundConfiguration(
+                competitionScope: .matchup,
+                scoreOwnerScope: scoreOwnerScope,
+                matchupMode: .teeGroupPartnerships
+            ),
+            teamScoringProfileID: profileID,
+            plannedTeeGroups: groups,
+            partnershipPlans: partnerships
         )
     }
 

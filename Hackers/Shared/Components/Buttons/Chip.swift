@@ -135,6 +135,16 @@ extension Chip {
         Chip(text: "Required", size: .xSmall, tint: .systemError)
     }
 
+    static var ready: Chip {
+        Chip(
+            text: "Ready",
+            icon: "f00c",
+            iconWeight: .solid,
+            size: .xSmall,
+            tint: .accentGreen
+        )
+    }
+
     static var optional: Chip {
         Chip(
             text: "Optional",

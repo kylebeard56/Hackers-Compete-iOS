@@ -20,6 +20,107 @@ struct SeriesRoundCorrectionContext {
     let entriesByParticipantID: [String: [Int: ScoreEntry]]
 }
 
+struct SeriesRoundMatchupMemberOption: Identifiable, Hashable {
+    let memberID: String
+    let teamID: String?
+    let title: String
+    let subtitle: String?
+
+    var id: String { memberID }
+}
+
+struct SeriesRoundMatchupMemberOptionSection: Identifiable, Hashable {
+    let id: String
+    let title: String
+    let options: [SeriesRoundMatchupMemberOption]
+}
+
+enum SeriesRoundMatchupMemberOptionBuilder {
+    static func sortedMembers(
+        _ members: [SeriesMember],
+        handicapFor: (String) -> Double?
+    ) -> [SeriesMember] {
+        members.sorted { lhs, rhs in
+            let leftHandicap = handicapFor(lhs.id)
+            let rightHandicap = handicapFor(rhs.id)
+
+            switch (leftHandicap, rightHandicap) {
+            case let (left?, right?) where abs(left - right) > 0.000_001:
+                return left < right
+            case (_?, nil):
+                return true
+            case (nil, _?):
+                return false
+            default:
+                let byName = lhs.name.fullName.localizedCaseInsensitiveCompare(rhs.name.fullName)
+                if byName != .orderedSame { return byName == .orderedAscending }
+                return lhs.id < rhs.id
+            }
+        }
+    }
+
+    static func sections(
+        members: [SeriesMember],
+        teams: [SeriesTeam],
+        usesTeams: Bool,
+        handicapFor: (String) -> Double?
+    ) -> [SeriesRoundMatchupMemberOptionSection] {
+        let sorted = sortedMembers(members, handicapFor: handicapFor)
+        guard usesTeams else {
+            return [
+                SeriesRoundMatchupMemberOptionSection(
+                    id: "all-members",
+                    title: "Players",
+                    options: sorted.map { option(for: $0, handicapFor: handicapFor) }
+                ),
+            ]
+        }
+
+        let membersByTeamID = Dictionary(grouping: sorted) { member in
+            guard let teamID = member.teamID, teamID.isPopulated else { return "no-team" }
+            return teamID
+        }
+
+        var sections: [SeriesRoundMatchupMemberOptionSection] = teams.compactMap { team in
+            guard let members = membersByTeamID[team.id], members.isPopulated else { return nil }
+            return SeriesRoundMatchupMemberOptionSection(
+                id: team.id,
+                title: team.name,
+                options: members.map { option(for: $0, handicapFor: handicapFor) }
+            )
+        }
+
+        if let unassigned = membersByTeamID["no-team"], unassigned.isPopulated {
+            sections.append(
+                SeriesRoundMatchupMemberOptionSection(
+                    id: "no-team",
+                    title: "No team",
+                    options: unassigned.map { option(for: $0, handicapFor: handicapFor) }
+                )
+            )
+        }
+
+        return sections
+    }
+
+    static func handicapText(for handicap: Double?) -> String? {
+        guard let handicap else { return nil }
+        return String(format: "%.1f HCP", handicap)
+    }
+
+    private static func option(
+        for member: SeriesMember,
+        handicapFor: (String) -> Double?
+    ) -> SeriesRoundMatchupMemberOption {
+        SeriesRoundMatchupMemberOption(
+            memberID: member.id,
+            teamID: member.teamID,
+            title: member.name.fullName,
+            subtitle: handicapText(for: handicapFor(member.id))
+        )
+    }
+}
+
 enum SeriesLeagueRulesConfirmationState {
     case notConfirmed
     case confirmed(Time)
@@ -273,8 +374,20 @@ final class SeriesViewModel: ObservableObject, Loggable {
 
     func effectiveRoundConfig(for seriesRound: SeriesRound) -> SeriesRoundConfiguration {
         guard let roundID = seriesRound.roundID,
-              let linkedRound = linkedRounds[roundID] else { return seriesRound.roundConfig }
+              let linkedRound = linkedRounds[roundID],
+              shouldUseLinkedRoundConfiguration(for: seriesRound, linkedRound: linkedRound)
+        else { return seriesRound.roundConfig }
         return roundConfig(from: linkedRound, fallback: seriesRound.roundConfig)
+    }
+
+    func shouldUseLinkedRoundConfiguration(for seriesRound: SeriesRound, linkedRound: Round) -> Bool {
+        guard seriesRound.roundConfig.allowLobbyBackPropagation else { return false }
+        switch linkedRound.status {
+        case .lobby, .live, .paused, .complete:
+            return true
+        case .archived:
+            return false
+        }
     }
 
     func roundTileFormatCaption(for seriesRound: SeriesRound) -> String {
@@ -569,6 +682,74 @@ final class SeriesViewModel: ObservableObject, Loggable {
         preserving existingPlans: [SeriesRoundMatchupPlan] = []
     ) -> [SeriesRoundMatchupPlan] {
         let orderedMembers = eligibleMembers
+        guard usesTeams else {
+            return sequentialIndividualMatchupPlans(
+                orderedMembers: orderedMembers,
+                preserving: existingPlans
+            )
+        }
+
+        let sortedMembers = SeriesRoundMatchupMemberOptionBuilder.sortedMembers(orderedMembers) { [weak self] memberID in
+            self?.effectiveHandicap(for: memberID)
+        }
+        let membersByTeamID = Dictionary(grouping: sortedMembers) { $0.teamID ?? "" }
+        let orderedTeamIDs = sortedTeams.map(\.id).filter { membersByTeamID[$0]?.isPopulated == true }
+
+        guard orderedTeamIDs.count >= 2 else {
+            return sequentialIndividualMatchupPlans(
+                orderedMembers: sortedMembers,
+                preserving: existingPlans
+            )
+        }
+
+        var remainingByTeamID = Dictionary(uniqueKeysWithValues: orderedTeamIDs.map { teamID in
+            (teamID, membersByTeamID[teamID] ?? [])
+        })
+        var plans: [SeriesRoundMatchupPlan] = []
+        var matchupIndex = 0
+
+        while true {
+            let availableTeamIDs = orderedTeamIDs.filter { remainingByTeamID[$0]?.isPopulated == true }
+            guard availableTeamIDs.count >= 2 else { break }
+            let teamAID = availableTeamIDs[0]
+            let teamBID = availableTeamIDs[1]
+            guard let memberA = remainingByTeamID[teamAID]?.first,
+                  let memberB = remainingByTeamID[teamBID]?.first else {
+                break
+            }
+            remainingByTeamID[teamAID]?.removeFirst()
+            remainingByTeamID[teamBID]?.removeFirst()
+
+            let memberAID = memberA.id
+            let memberBID = memberB.id
+            let existing = existingPlans.first {
+                Set([$0.memberAID ?? "", $0.memberBID ?? ""]) == Set([memberAID, memberBID])
+            }
+
+            plans.append(
+                SeriesRoundMatchupPlan(
+                    id: existing?.id ?? HackersID.string(),
+                    memberAID: memberAID,
+                    memberBID: memberBID,
+                    index: matchupIndex,
+                    podGroupingStrategy: .disabled,
+                    notes: existing?.notes,
+                    isLocked: existing?.isLocked ?? false,
+                    createdAt: existing?.createdAt ?? .init(),
+                    lastUpdatedAt: .init()
+                )
+            )
+
+            matchupIndex += 1
+        }
+
+        return plans
+    }
+
+    private func sequentialIndividualMatchupPlans(
+        orderedMembers: [SeriesMember],
+        preserving existingPlans: [SeriesRoundMatchupPlan]
+    ) -> [SeriesRoundMatchupPlan] {
         var plans: [SeriesRoundMatchupPlan] = []
         var matchupIndex = 0
         var memberCursor = 0
@@ -758,6 +939,28 @@ final class SeriesViewModel: ObservableObject, Loggable {
         series.lastUpdatedAt = .init()
         _ = await FirebaseService.shared.updateSeries(series)
         addEvent("series.name_updated", eventProps: seriesTelemetryProps())
+    }
+
+    func saveLeagueDetailsAndSettings(name: String, description: String, settings: SeriesSettings) async -> Bool {
+        let trimmedName = name.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard trimmedName.isPopulated else { return false }
+
+        let previousSettings = series.settings
+        let sanitized = sanitizedLeagueSettings(settings)
+        let trimmedDescription = description.trimmingCharacters(in: .whitespacesAndNewlines)
+
+        series.name = trimmedName
+        series.description = trimmedDescription.isPopulated ? trimmedDescription : nil
+        series.settings = sanitized
+        invalidateLeagueRulesConfirmationIfNeeded(previousSettings: previousSettings, newSettings: sanitized)
+        series.lastUpdatedAt = .init()
+        _ = await FirebaseService.shared.updateSeries(series)
+        await createBuiltInScoringProfilesIfNeeded()
+        await refreshSeriesCachesIfNeeded()
+        addEvent("series.league_details_saved", eventProps: seriesTelemetryProps([
+            "has_description": trimmedDescription.isPopulated
+        ]))
+        return true
     }
 
     func updateDefaultCourse(
@@ -1866,6 +2069,34 @@ final class SeriesViewModel: ObservableObject, Loggable {
         return scoringProfiles.first(where: { $0.kind == .winTieLoss && $0.outcomeSource == .roundMatchResult && $0.competitorType == .team })
     }
 
+    func ensureMirrorTeeGroupTeamScoringProfile() async -> SeriesScoringProfile? {
+        await createBuiltInScoringProfilesIfNeeded()
+        if let existing = scoringProfiles.first(where: { profile in
+            profile.kind == .winTieLoss
+                && profile.outcomeSource == .roundMatchResult
+                && profile.competitorType == .team
+                && profile.resultPoints?.winPoints == 40
+                && profile.resultPoints?.tiePoints == 20
+                && profile.resultPoints?.lossPoints == 0
+        }) {
+            return existing
+        }
+
+        let profile = SeriesScoringProfile(
+            id: HackersID.string(),
+            name: "Team WLT 40",
+            summary: "Each group matchup is worth 40 points; ties split 20/20.",
+            outcomeSource: .roundMatchResult,
+            competitorType: .team,
+            kind: .winTieLoss,
+            tieHandling: .splitPoints,
+            placementRules: [],
+            resultPoints: .init(winPoints: 40, tiePoints: 20, lossPoints: 0),
+            parentID: seriesID
+        )
+        return await saveScoringProfile(profile)
+    }
+
     @discardableResult
     func saveScoringProfile(_ profile: SeriesScoringProfile) async -> SeriesScoringProfile? {
         if scoringProfiles.contains(where: { $0.id == profile.id }) {
@@ -2366,7 +2597,10 @@ final class SeriesViewModel: ObservableObject, Loggable {
                     hasChanged = true
                 }
             }
-            let shouldBackPropagate = rounds[roundIndex].roundConfig.allowLobbyBackPropagation
+            let shouldBackPropagate = shouldUseLinkedRoundConfiguration(
+                for: rounds[roundIndex],
+                linkedRound: linkedRound
+            )
                 && (newStatus == .lobby || newStatus == .live || (newStatus == .complete && previousStatus != .complete))
             let shouldProcessCompletedRound = needsCompletedRoundProcessing(
                 for: rounds[roundIndex],
@@ -2379,7 +2613,11 @@ final class SeriesViewModel: ObservableObject, Loggable {
                 : nil
 
             if let snapshot, shouldBackPropagate {
-                let updatedConfig = roundConfig(from: linkedRound, fallback: rounds[roundIndex].roundConfig)
+                let updatedConfig = roundConfig(
+                    from: linkedRound,
+                    segment: snapshot.roundSegment,
+                    fallback: rounds[roundIndex].roundConfig
+                )
                 if rounds[roundIndex].roundConfig != updatedConfig {
                     rounds[roundIndex].roundConfig = updatedConfig
                     hasChanged = true
@@ -3438,21 +3676,53 @@ final class SeriesViewModel: ObservableObject, Loggable {
         return scoringProfiles.first { $0.id == id && !$0.isArchived }
     }
 
-    private func roundConfig(from linkedRound: Round, fallback: SeriesRoundConfiguration) -> SeriesRoundConfiguration {
+    private func roundConfig(
+        from linkedRound: Round,
+        segment: RoundSegment? = nil,
+        fallback: SeriesRoundConfiguration
+    ) -> SeriesRoundConfiguration {
         var updated = fallback
         updated.formatTemplateID = linkedRound.configuration.formatSummary?.templateID ?? fallback.formatTemplateID
         updated.competitionScope = linkedRound.configuration.competitionScope
         updated.teamScoring = linkedRound.configuration.teamScoring
         updated.matchupResolutionStyle = linkedRound.configuration.matchupResolutionStyle
+        updated.scoreOwnerScope = linkedRound.configuration.scoreOwnerScope
+        updated.matchupScoringStyle = linkedRound.configuration.matchupScoringStyle
+        updated.holeWinPoints = linkedRound.configuration.holeWinPoints
+        updated.matchWinnerBonusPoints = linkedRound.configuration.matchWinnerBonusPoints
+        updated.matchTiePolicy = linkedRound.configuration.matchTiePolicy
         updated.sequentialTeeStartsEnabled = linkedRound.configuration.sequentialTeeStartsEnabled ?? fallback.sequentialTeeStartsEnabled ?? false
         if linkedRound.configuration.resolvedCompetitionScope == .matchup {
-            updated.matchupMode = linkedRound.configuration.primaryFormat.configuration.requiresTeams
-                ? .teamVsTeam
-                : .individualVsIndividual
+            updated.matchupMode = seriesMatchupMode(
+                from: linkedRound.configuration,
+                segment: segment,
+                fallback: fallback.matchupMode
+            )
         } else {
             updated.matchupMode = .field
         }
         return updated
+    }
+
+    private func seriesMatchupMode(
+        from configuration: RoundConfiguration,
+        segment: RoundSegment?,
+        fallback: SeriesMatchupMode
+    ) -> SeriesMatchupMode {
+        let matchups = segment?.matchups ?? []
+        if matchups.contains(where: { ($0.mode ?? .team) == .scoreOwner && ($0.scoreOwnerScope ?? configuration.scoreOwnerScope) == .partnership }) {
+            return .teeGroupPartnerships
+        }
+        if matchups.contains(where: { ($0.mode ?? .team) == .team }) {
+            return .teamVsTeam
+        }
+        if matchups.contains(where: { ($0.mode ?? .team) == .individual }) {
+            return .individualVsIndividual
+        }
+        if configuration.scoreOwnerScope == .partnership && fallback == .teeGroupPartnerships {
+            return .teeGroupPartnerships
+        }
+        return configuration.primaryFormat.configuration.requiresTeams ? .teamVsTeam : .individualVsIndividual
     }
 
     private func templateID(for format: GameFormat) -> String {
@@ -3609,7 +3879,8 @@ final class SeriesViewModel: ObservableObject, Loggable {
             holes: holes,
             basis: snapshot.configuration.primaryFormat.configuration.basis,
             template: snapshot.resolvedActiveTemplate,
-            scoreLookupSegmentIDs: snapshot.segmentScoreLookupSegmentIDs
+            scoreLookupSegmentIDs: snapshot.segmentScoreLookupSegmentIDs,
+            handicapStrokeBasis: snapshot.handicapStrokeBasis
         )
         guard let r = result.rows.first(where: { $0.scoringUnitID == participantID }), r.holesPlayed > 0 else { return nil }
         return Int(r.total.rounded())
@@ -3636,7 +3907,8 @@ final class SeriesViewModel: ObservableObject, Loggable {
             holes: holesForScoring(in: snapshot),
             basis: snapshot.configuration.primaryFormat.configuration.basis,
             template: snapshot.resolvedActiveTemplate,
-            scoreLookupSegmentIDs: snapshot.segmentScoreLookupSegmentIDs
+            scoreLookupSegmentIDs: snapshot.segmentScoreLookupSegmentIDs,
+            handicapStrokeBasis: snapshot.handicapStrokeBasis
         )
         guard let participant = snapshot.participants.first(where: { $0.playerID == playerID }) else { return nil }
         guard let row = result.rows.first(where: { $0.scoringUnitID == participant.id }),
@@ -3681,16 +3953,32 @@ final class SeriesViewModel: ObservableObject, Loggable {
         from snapshot: RoundSnapshot,
         seriesRound: SeriesRound
     ) async -> [SeriesRoundMatchupPlan]? {
-        let preferredMode: MatchupMode = snapshot.requiresTeams ? .team : .individual
         let currentMatchups = snapshot.roundSegment?.matchups ?? []
         let validTeamMatchups = currentMatchups
             .filter { ($0.mode ?? .team) == .team && $0.teamIDs.count == 2 }
         let validIndividualMatchups = currentMatchups
             .filter { ($0.mode ?? .team) == .individual && ($0.participantIDs?.count ?? 0) == 2 }
+        let validScoreOwnerMatchups = currentMatchups
+            .filter { ($0.mode ?? .team) == .scoreOwner && ($0.scoreOwnerIDs?.count ?? 0) == 2 }
 
         let expectsMatchups = seriesRound.roundConfig.matchupMode == .teamVsTeam
             || seriesRound.roundConfig.matchupMode == .individualVsIndividual
-        let hasPreferredMatchups = preferredMode == .team ? validTeamMatchups.isPopulated : validIndividualMatchups.isPopulated
+            || seriesRound.roundConfig.matchupMode == .teeGroupPartnerships
+        let preferredMode: MatchupMode
+        if seriesRound.roundConfig.matchupMode == .teeGroupPartnerships || validScoreOwnerMatchups.isPopulated {
+            preferredMode = .scoreOwner
+        } else {
+            preferredMode = snapshot.requiresTeams ? .team : .individual
+        }
+        let hasPreferredMatchups: Bool
+        switch preferredMode {
+        case .team:
+            hasPreferredMatchups = validTeamMatchups.isPopulated
+        case .individual:
+            hasPreferredMatchups = validIndividualMatchups.isPopulated
+        case .scoreOwner:
+            hasPreferredMatchups = validScoreOwnerMatchups.isPopulated
+        }
         if !hasPreferredMatchups {
             return expectsMatchups ? [] : nil
         }
@@ -3711,6 +3999,43 @@ final class SeriesViewModel: ObservableObject, Loggable {
                 .map { ($0.roundOwnerID, $0.competitorID) },
             uniquingKeysWith: { _, new in new }
         )
+        let reverseScoreOwnerTeamMapping = Dictionary(
+            mappings
+                .filter { $0.roundOwnerType == .scoreOwner && $0.competitorType == .team }
+                .map { ($0.roundOwnerID, $0.competitorID) },
+            uniquingKeysWith: { _, new in new }
+        )
+
+        if preferredMode == .scoreOwner {
+            let updatedPlans = validScoreOwnerMatchups.enumerated().compactMap { index, matchup -> SeriesRoundMatchupPlan? in
+                guard let scoreOwnerIDs = matchup.scoreOwnerIDs,
+                      scoreOwnerIDs.count == 2,
+                      scoreOwnerIDs[0] != scoreOwnerIDs[1],
+                      let teamAID = reverseScoreOwnerTeamMapping[scoreOwnerIDs[0]],
+                      let teamBID = reverseScoreOwnerTeamMapping[scoreOwnerIDs[1]],
+                      teamAID != teamBID else { return nil }
+
+                let existing = seriesRound.matchupPlans.first {
+                    $0.id == matchup.id || Set([$0.pairAID ?? "", $0.pairBID ?? ""]) == Set(scoreOwnerIDs)
+                }
+
+                return SeriesRoundMatchupPlan(
+                    id: existing?.id ?? matchup.id,
+                    teamAID: teamAID,
+                    teamBID: teamBID,
+                    pairAID: scoreOwnerIDs[0],
+                    pairBID: scoreOwnerIDs[1],
+                    index: index,
+                    podGroupingStrategy: existing?.podGroupingStrategy ?? seriesRound.roundConfig.podGroupingStrategy,
+                    notes: existing?.notes,
+                    isLocked: existing?.isLocked ?? false,
+                    createdAt: existing?.createdAt ?? .init(),
+                    lastUpdatedAt: .init()
+                )
+            }
+
+            return updatedPlans.sorted { $0.index < $1.index }
+        }
 
         if preferredMode == .individual {
             let updatedPlans = validIndividualMatchups.enumerated().compactMap { index, matchup -> SeriesRoundMatchupPlan? in
@@ -3798,7 +4123,8 @@ final class SeriesViewModel: ObservableObject, Loggable {
                 teamScoring: snapshot.configuration.teamScoring,
                 matchupResolutionStyle: snapshot.configuration.matchupResolutionStyle,
                 scoreLookupSegmentIDs: snapshot.segmentScoreLookupSegmentIDs,
-                resolvedCompetitionScope: snapshot.configuration.resolvedCompetitionScope
+                resolvedCompetitionScope: snapshot.configuration.resolvedCompetitionScope,
+                handicapStrokeBasis: snapshot.handicapStrokeBasis
             )
         }
 
@@ -3811,7 +4137,8 @@ final class SeriesViewModel: ObservableObject, Loggable {
                 holes: holes,
                 basis: snapshot.configuration.primaryFormat.configuration.basis,
                 template: template,
-                scoreLookupSegmentIDs: snapshot.segmentScoreLookupSegmentIDs
+                scoreLookupSegmentIDs: snapshot.segmentScoreLookupSegmentIDs,
+                handicapStrokeBasis: snapshot.handicapStrokeBasis
             )
         }
 
@@ -3827,7 +4154,8 @@ final class SeriesViewModel: ObservableObject, Loggable {
             resolvedCompetitionScope: snapshot.configuration.resolvedCompetitionScope,
             scoreOwnerScope: snapshot.configuration.scoreOwnerScope,
             scoringGroups: snapshot.scoringGroups,
-            perHoleWinPoints: snapshot.configuration.resolvedHoleWinPoints
+            perHoleWinPoints: snapshot.configuration.resolvedHoleWinPoints,
+            handicapStrokeBasis: snapshot.handicapStrokeBasis
         )
     }
 

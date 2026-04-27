@@ -50,6 +50,7 @@ struct GameLobby: View, Loggable {
     
     /// Handicap mutation
     @State var handicapString = ""
+    @State var sharedScoreAllowanceText = ""
     @FocusState var focus: String?
     
     /// Tee Groups
@@ -83,7 +84,7 @@ struct GameLobby: View, Loggable {
     var palette: DesignPalette { .init(theme: .glass, scheme: colorScheme) }
 
     private var teeGroupSyncKey: String {
-        guard snapshot.isSharedScoreSource else { return "" }
+        guard snapshot.shouldAutoMirrorTeeGroupsToTeams else { return "" }
         let groups = snapshot.teeGroups.sorted { $0.index < $1.index }.map(\.id).joined(separator: ",")
         let assignments = snapshot.participants.sorted { $0.id < $1.id }.map { "\($0.id):\($0.groupID ?? "")" }.joined(separator: ",")
         return "\(groups)|\(assignments)"
@@ -208,6 +209,9 @@ struct GameLobby: View, Loggable {
             matchupsEnabled = s.configuration.resolvedCompetitionScope == .matchup
             sequentialTeeStartsEnabled = s.configuration.usesSequentialTeeStarts
             secretScoringEnabled = s.isSecretScoring
+            sharedScoreAllowanceText = Self.allowanceText(
+                from: s.configuration.sharedScoreHandicapConfig ?? s.resolvedActiveTemplate.requirements.defaultHandicapConfig
+            )
             Task { @MainActor in
                 if let user = await AppData.shared.user {
                     isCurrentUserHost = s.participants.contains { $0.userID == user.id && $0.isHost }
@@ -371,7 +375,29 @@ struct GameLobby: View, Loggable {
     }
 }
 
-private extension GameLobby {
+extension GameLobby {
+    static func allowanceText(from config: HandicapConfiguration) -> String {
+        guard let percentages = config.positionPercentages, percentages.isPopulated else { return "" }
+        return percentages.map { percentage in
+            let whole = percentage * 100
+            if abs(whole - whole.rounded()) < 0.000_001 {
+                return "\(Int(whole.rounded()))"
+            }
+            return String(format: "%.1f", whole)
+        }
+        .joined(separator: ",")
+    }
+
+    static func allowancePercentages(from text: String) -> [Double] {
+        text
+            .split(separator: ",")
+            .compactMap { raw in
+                let trimmed = raw.trimmingCharacters(in: .whitespacesAndNewlines)
+                guard let value = Double(trimmed), value >= 0 else { return nil }
+                return value > 1 ? value / 100 : value
+            }
+    }
+
     func trackLobbyViewedIfNeeded(snapshot: RoundSnapshot) {
         guard !didTrackLobbyView else { return }
         guard snapshot.round.id.isPopulated else { return }

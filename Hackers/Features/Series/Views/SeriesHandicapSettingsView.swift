@@ -12,6 +12,7 @@ struct SeriesHandicapSettingsView: View {
 
     @State private var handicapMode: SeriesHandicapMode = .off
     @State private var differentialMultiplier: Double = 0.96
+    @State private var strokeBasis: SeriesHandicapStrokeBasis = .nineHole
     @State private var defaultPar: Double = 36
     @State private var maximumHandicap: Int = 21
     @State private var minimumScores: Int = 1
@@ -159,6 +160,29 @@ struct SeriesHandicapSettingsView: View {
                         }
                     } label: {
                         configMenuLabel(String(format: "%.2f", differentialMultiplier))
+                    }
+                }
+            }
+
+            SeriesSheetRow(palette: palette) {
+                configRow(title: "Handicap basis", subtitle: "What entered HCP values represent for matches.") {
+                    Menu {
+                        ForEach(SeriesHandicapStrokeBasis.allCases, id: \.self) { basis in
+                            Button {
+                                strokeBasis = basis
+                                defaultPar = basis == .nineHole ? 36 : 72
+                                updatePreview()
+                            } label: {
+                                HStack {
+                                    Text(basis.displayName)
+                                    if strokeBasis == basis {
+                                        Image(systemName: "checkmark")
+                                    }
+                                }
+                            }
+                        }
+                    } label: {
+                        configMenuLabel(strokeBasis.displayName)
                     }
                 }
             }
@@ -549,6 +573,7 @@ struct SeriesHandicapSettingsView: View {
         let hc = viewModel.series.handicapConfig
         handicapMode = hc.mode
         differentialMultiplier = hc.config.differentialMultiplier
+        strokeBasis = hc.strokeBasis
         defaultPar = hc.config.defaultParForIndex
         maximumHandicap = hc.config.maximumHandicap
         minimumScores = hc.config.minimumScoresForIndex
@@ -577,7 +602,7 @@ struct SeriesHandicapSettingsView: View {
     private func save() {
         let rules = [GamesUsedRuleDTO(playedLower: 1, playedUpper: 100, used: bestNScores)]
         let dto = mergedHandicapDTO(rules: rules)
-        let config = SeriesHandicapConfig(mode: handicapMode, config: dto)
+        let config = SeriesHandicapConfig(mode: handicapMode, config: dto, strokeBasis: strokeBasis)
         Task {
             await viewModel.saveHandicapSettings(config)
         }

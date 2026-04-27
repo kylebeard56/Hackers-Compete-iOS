@@ -45,6 +45,10 @@ extension GameLobby {
 
                 scoreEntryScopeBlock
 
+                if shouldShowSharedScoreAllowanceBlock {
+                    sharedScoreAllowanceBlock
+                }
+
                 if snapshot.configuration.resolvedCompetitionScope == .matchup && !isVegasFormat {
                     matchupScoringBlock
                 }
@@ -166,6 +170,45 @@ extension GameLobby {
                     }
                 } label: {
                     formatChipLabel(scoreEntryScopeTitle)
+                }
+                .buttonStyle(.plain)
+            }
+        }
+    }
+
+    private var shouldShowSharedScoreAllowanceBlock: Bool {
+        guard handicapsEnabled, snapshot.isSharedScoreSource else { return false }
+        return snapshot.configuration.scoreOwnerScope == .partnership || snapshot.requiresTeams
+    }
+
+    private var sharedScoreAllowanceBlock: some View {
+        configBuilderRow(
+            title: "Pair handicap",
+            subtitle: "Apply ranked handicap percentages to each shared score."
+        ) {
+            HStack(spacing: 8) {
+                TextField("35,15", text: $sharedScoreAllowanceText)
+                    .fontStyle(kFontName, size: 14, weight: .semibold)
+                    .foregroundStyle(Color.charcoal)
+                    .keyboardType(.numbersAndPunctuation)
+                    .multilineTextAlignment(.trailing)
+                    .frame(width: 72)
+                    .padding(.horizontal, 12)
+                    .padding(.vertical, 8)
+                    .glassCardEffect(cornerRadius: 12, tint: palette.whiteGlassButtonColor, shadowOpacity: 0)
+                    .whiteGlassCardShadow(color: palette.shadowColor)
+                    .submitLabel(.done)
+                    .onSubmit { saveSharedScoreAllowance() }
+
+                Button {
+                    Haptics.fire(.light)
+                    saveSharedScoreAllowance()
+                } label: {
+                    Icon(name: "f00c", size: 13, weight: .solid)
+                        .foregroundStyle(palette.foregroundColor)
+                        .frame(width: 34, height: 34)
+                        .glassCardEffect(shape: .circle, tint: palette.whiteGlassButtonColor, shadowOpacity: 0)
+                        .whiteGlassCardShadow(color: palette.shadowColor)
                 }
                 .buttonStyle(.plain)
             }
@@ -338,38 +381,41 @@ extension GameLobby {
         VStack(spacing: 10) {
             configBuilderRow(
                 title: "Count scores",
-                subtitle: "Choose which team scores contribute to the final team total."
+                subtitle: "Choose which scores count and how they're computed for leaderboard."
             ) {
-                Menu {
-                    countScoresButtons
-                } label: {
-                    formatChipLabel(teamScoringModeTitle)
-                }
-                .buttonStyle(.plain)
-            }
+                HStack(spacing: 8) {
+                    Menu {
+                        countScoresButtons
+                    } label: {
+                        formatChipLabel(teamScoringModeTitle)
+                    }
+                    .buttonStyle(.plain)
 
-            configBuilderRow(
-                title: "Count by",
-                subtitle: "Apply team counting on each hole or across the full round."
-            ) {
-                Menu {
-                    ForEach(AggregationScope.allCases, id: \.self) { scope in
-                        Button {
-                            Haptics.fire(.light)
-                            Task { await roundSession.setTeamScoringScope(scope) }
-                        } label: {
-                            HStack {
-                                Text(scope == .perRound ? "Round" : "Hole")
-                                if snapshot.configuration.teamScoring.scope == scope {
-                                    Icon(name: "f00c", size: 12, weight: .solid)
+                    if snapshot.configuration.teamScoring.mode != .all {
+                        Text("per")
+                            .fontStyle(kFontName, size: 15, weight: .regular)
+                            .foregroundStyle(Color.neutral)
+
+                        Menu {
+                            ForEach(AggregationScope.allCases, id: \.self) { scope in
+                                Button {
+                                    Haptics.fire(.light)
+                                    Task { await roundSession.setTeamScoringScope(scope) }
+                                } label: {
+                                    HStack {
+                                        Text(scope == .perRound ? "Round" : "Hole")
+                                        if snapshot.configuration.teamScoring.scope == scope {
+                                            Icon(name: "f00c", size: 12, weight: .solid)
+                                        }
+                                    }
                                 }
                             }
+                        } label: {
+                            formatChipLabel(teamScoringScopeTitle)
                         }
+                        .buttonStyle(.plain)
                     }
-                } label: {
-                    formatChipLabel(snapshot.configuration.teamScoring.scope == .perRound ? "Round" : "Hole")
                 }
-                .buttonStyle(.plain)
             }
 
             if let summary = teamScoringSummaryText {
@@ -525,6 +571,10 @@ extension GameLobby {
         }
     }
 
+    private var teamScoringScopeTitle: String {
+        snapshot.configuration.teamScoring.scope == .perRound ? "Round" : "Hole"
+    }
+
     private var teamScoringSummaryText: String? {
         let scoring = snapshot.configuration.teamScoring
         guard scoring.mode != .all else {
@@ -569,5 +619,13 @@ extension GameLobby {
             let scope = snapshot.configuration.resolvedVegasSelectionScope == .perRound ? "per round" : "per hole"
             return "\(rule) scores are chosen \(scope), then ordered low-to-high to form the team's Vegas number."
         }
+    }
+
+    private func saveSharedScoreAllowance() {
+        let percentages = Self.allowancePercentages(from: sharedScoreAllowanceText)
+        let config = percentages.isPopulated
+            ? HandicapConfiguration(percentage: 1.0, isTeamCombined: true, positionPercentages: percentages)
+            : nil
+        Task { await roundSession.setSharedScoreHandicapConfig(config) }
     }
 }

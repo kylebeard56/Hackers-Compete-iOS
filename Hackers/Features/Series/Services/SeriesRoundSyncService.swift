@@ -47,7 +47,25 @@ struct SeriesRoundSyncService: Loggable {
             seriesRoundID: seriesRound.id
         )
         let usesSeriesTeams = seriesRound.roundConfig.teamAssignmentMode == .seriesTeams
-        let seriesTeamsForRound = usesSeriesTeams ? teams : []
+        let resolvedPlan = SeriesRoundResolvedPlan(
+            series: series,
+            seriesRound: seriesRound,
+            members: participatingMembers,
+            teams: teams,
+            pods: pods,
+            courseSegment: courseSegment
+        )
+        let seriesTeamsForRound = usesSeriesTeams ? resolvedPlan.seriesTeamsForRound : []
+        let seriesTeamIDsForRound = Set(seriesTeamsForRound.map(\.id))
+        let relevantTeamLinks = teamLinks.filter { seriesTeamIDsForRound.contains($0.key) }
+        if options.syncOrganization,
+           let preflightError = SeriesRoundSyncPlanning.organizationTeamMappingPreflightError(
+                seriesTeamsForRound: seriesTeamsForRound,
+                teamLinks: teamLinks,
+                snapshot: snapshot
+           ) {
+            return .failure(preflightError)
+        }
         let partnershipPlans = SeriesRoundCreationMapping.resolvedPartnershipPlans(
             seriesRound: seriesRound,
             teams: teams,
@@ -84,13 +102,7 @@ struct SeriesRoundSyncService: Loggable {
         var workingRound = snapshot.round
 
         if options.syncFormat {
-            let competitionScope = SeriesRoundCreationMapping.resolvedCompetitionScope(for: seriesRound)
-            workingRound.configuration = SeriesRoundCreationMapping.roundConfiguration(
-                series: series,
-                seriesRound: seriesRound,
-                courseSegment: courseSegment,
-                competitionScope: competitionScope
-            )
+            workingRound.configuration = resolvedPlan.roundConfiguration
             workingRound.lastUpdatedAt = .init()
             switch await workingRound.put() {
             case .success(let updated):
@@ -101,11 +113,25 @@ struct SeriesRoundSyncService: Loggable {
             }
         }
 
+        if !options.syncFormat,
+           (options.syncPlayerData || options.syncOrganization),
+           workingRound.configuration.handicapStrokeBasis != series.handicapConfig.strokeBasis {
+            workingRound.configuration.handicapStrokeBasis = series.handicapConfig.strokeBasis
+            workingRound.lastUpdatedAt = .init()
+            switch await workingRound.put() {
+            case .success(let updated):
+                workingRound = updated
+            case .failure(let error):
+                addBreadcrumb(level: .error, message: "series.round_sync handicap basis put failed", error: error)
+                return .failure(.writeFailed(error.localizedDescription))
+            }
+        }
+
         if options.syncOrganization {
             do {
                 let patchedTeams = try SeriesRoundSyncPlanning.roundTeamsPatch(
                     seriesTeamsForRound: seriesTeamsForRound,
-                    teamLinks: teamLinks,
+                    teamLinks: relevantTeamLinks,
                     snapshot: snapshot
                 )
                 for team in patchedTeams {
@@ -130,12 +156,29 @@ struct SeriesRoundSyncService: Loggable {
                 workingParticipants = SeriesRoundSyncPlanning.participantsWithOrganizationSync(
                     participants: workingParticipants,
                     participatingMembers: participatingMembers,
-                    teamLinks: teamLinks,
+                    teamLinks: relevantTeamLinks,
                     memberAssignments: memberAssignments,
                     usesSeriesTeams: usesSeriesTeams
                 )
 
-                let sortedTeeGroups = updatedTeeGroups.sorted { $0.index < $1.index }
+                let populatedTeeGroupIDs = Set(workingParticipants.compactMap(\.groupID).filter(\.isPopulated))
+                let retainedTeeGroups = updatedTeeGroups.filter { populatedTeeGroupIDs.contains($0.id) }
+                for group in updatedTeeGroups where !populatedTeeGroupIDs.contains(group.id) {
+                    if case .failure(let error) = await group.delete() {
+                        addBreadcrumb(level: .error, message: "series.round_sync tee group prune failed", error: error)
+                        return .failure(.writeFailed(error.localizedDescription))
+                    }
+                }
+
+                let populatedTeamIDs = Set(workingParticipants.compactMap(\.teamID).filter(\.isPopulated))
+                for team in snapshot.teams where !populatedTeamIDs.contains(team.id) {
+                    if case .failure(let error) = await team.delete() {
+                        addBreadcrumb(level: .error, message: "series.round_sync team prune failed", error: error)
+                        return .failure(.writeFailed(error.localizedDescription))
+                    }
+                }
+
+                let sortedTeeGroups = retainedTeeGroups.sorted { $0.index < $1.index }
                 let builtGroups = SeriesRoundCreationMapping.buildRoundScoringGroups(
                     roundID: snapshot.round.id,
                     seriesRound: seriesRound,
@@ -175,7 +218,7 @@ struct SeriesRoundSyncService: Loggable {
                 await replaceMappings(
                     seriesID: series.id,
                     seriesRoundID: seriesRound.id,
-                    teamLinks: teamLinks,
+                    teamLinks: relevantTeamLinks,
                     participatingMembers: participatingMembers,
                     participants: workingParticipants,
                     scoringGroups: workingScoringGroups
@@ -200,8 +243,9 @@ struct SeriesRoundSyncService: Loggable {
                 scoringGroups: workingScoringGroups,
                 existingSegment: mainSegment,
                 teams: teams,
+                pods: pods,
                 participatingMembers: participatingMembers,
-                teamLinks: teamLinks
+                teamLinks: relevantTeamLinks
             )
             if case .failure(let error) = await mainSegment.put() {
                 addBreadcrumb(level: .error, message: "series.round_sync segment put failed", error: error)

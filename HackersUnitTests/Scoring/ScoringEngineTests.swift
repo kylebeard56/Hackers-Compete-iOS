@@ -837,6 +837,42 @@ final class ScoringEngineTests: XCTestCase {
         }
     }
 
+    func testStrokesReceived_NineHoleBasisUsesFullValueAcrossNineHoleSegment() {
+        let holes = makeHoles(count: 9)
+        let playedHoleNumbers = Array(1...9)
+
+        let total = playedHoleNumbers.reduce(0) { partial, holeNumber in
+            partial + ScoringEngine.strokesReceived(
+                handicap: 7,
+                holeNumber: holeNumber,
+                holes: holes,
+                playedHoleNumbers: playedHoleNumbers,
+                useHandicaps: true,
+                handicapStrokeBasis: .nineHole
+            )
+        }
+
+        XCTAssertEqual(total, 7)
+    }
+
+    func testStrokesReceived_EighteenHoleBasisScalesToNineHoleSegment() {
+        let holes = makeHoles(count: 9)
+        let playedHoleNumbers = Array(1...9)
+
+        let total = playedHoleNumbers.reduce(0) { partial, holeNumber in
+            partial + ScoringEngine.strokesReceived(
+                handicap: 7,
+                holeNumber: holeNumber,
+                holes: holes,
+                playedHoleNumbers: playedHoleNumbers,
+                useHandicaps: true,
+                handicapStrokeBasis: .eighteenHole
+            )
+        }
+
+        XCTAssertEqual(total, 4)
+    }
+
     func testMaxScoreOverParSelectableCasesIncludeQuintAndSext() {
         XCTAssertEqual(
             MaxScoreOverPar.allCases,

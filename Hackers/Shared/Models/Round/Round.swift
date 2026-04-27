@@ -237,6 +237,10 @@ struct RoundConfiguration: Hashable, Codable {
     var sequentialTeeStartsEnabled: Bool?  // When true, new tee groups rotate across the active hole range.
     var secretScoring: Bool?               // When true, other teams' scores are hidden until revealed
     var scoresRevealed: Bool?              // Host flips this to true to unveil all scores
+    /// Basis for interpreting participant handicap values in net scoring. Missing legacy docs infer from hole count.
+    var handicapStrokeBasis: SeriesHandicapStrokeBasis?
+    /// Optional format-specific allowance for shared-score scoring units, applied by handicap rank.
+    var sharedScoreHandicapConfig: HandicapConfiguration?
     /// When false, team avatars and dots use neutral styling; team names follow indexed "Team N" when reset from lobby.
     var teamColorsEnabled: Bool
 
@@ -264,6 +268,8 @@ struct RoundConfiguration: Hashable, Codable {
         sequentialTeeStartsEnabled: Bool? = false,
         secretScoring: Bool? = nil,
         scoresRevealed: Bool? = nil,
+        handicapStrokeBasis: SeriesHandicapStrokeBasis? = nil,
+        sharedScoreHandicapConfig: HandicapConfiguration? = nil,
         teamColorsEnabled: Bool = true
     ) {
         self.primaryFormat = primaryFormat
@@ -284,6 +290,8 @@ struct RoundConfiguration: Hashable, Codable {
         self.sequentialTeeStartsEnabled = sequentialTeeStartsEnabled
         self.secretScoring = secretScoring
         self.scoresRevealed = scoresRevealed
+        self.handicapStrokeBasis = handicapStrokeBasis
+        self.sharedScoreHandicapConfig = sharedScoreHandicapConfig
         self.teamColorsEnabled = teamColorsEnabled
     }
 
@@ -313,11 +321,17 @@ struct RoundConfiguration: Hashable, Codable {
         case sequentialTeeStartsEnabled = "sequential_tee_starts_enabled"
         case secretScoring = "secret_scoring"
         case scoresRevealed = "scores_revealed"
+        case handicapStrokeBasis = "handicap_stroke_basis"
+        case sharedScoreHandicapConfig = "shared_score_handicap_config"
         case teamColorsEnabled = "team_colors_enabled"
     }
 
     var useHandicaps: Bool {
         primaryFormat.configuration.basis == .net
+    }
+
+    func resolvedHandicapStrokeBasis(holeCount: Int) -> SeriesHandicapStrokeBasis {
+        handicapStrokeBasis ?? SeriesHandicapStrokeBasis.defaultBasis(holeCount: holeCount)
     }
 
     var usesSequentialTeeStarts: Bool {
@@ -387,6 +401,8 @@ struct RoundConfiguration: Hashable, Codable {
         sequentialTeeStartsEnabled = try c.decodeIfPresent(Bool.self, forKey: .sequentialTeeStartsEnabled) ?? false
         secretScoring = try c.decodeIfPresent(Bool.self, forKey: .secretScoring)
         scoresRevealed = try c.decodeIfPresent(Bool.self, forKey: .scoresRevealed)
+        handicapStrokeBasis = try c.decodeIfPresent(SeriesHandicapStrokeBasis.self, forKey: .handicapStrokeBasis)
+        sharedScoreHandicapConfig = try c.decodeIfPresent(HandicapConfiguration.self, forKey: .sharedScoreHandicapConfig)
         teamColorsEnabled = try c.decodeIfPresent(Bool.self, forKey: .teamColorsEnabled) ?? true
         matchupResolutionStyle = try c.decodeIfPresent(RoundMatchupResolutionStyle.self, forKey: .matchupResolutionStyle) ?? .roundAggregate
 
@@ -427,6 +443,8 @@ struct RoundConfiguration: Hashable, Codable {
         try c.encodeIfPresent(sequentialTeeStartsEnabled, forKey: .sequentialTeeStartsEnabled)
         try c.encodeIfPresent(secretScoring, forKey: .secretScoring)
         try c.encodeIfPresent(scoresRevealed, forKey: .scoresRevealed)
+        try c.encodeIfPresent(handicapStrokeBasis, forKey: .handicapStrokeBasis)
+        try c.encodeIfPresent(sharedScoreHandicapConfig, forKey: .sharedScoreHandicapConfig)
         try c.encode(teamColorsEnabled, forKey: .teamColorsEnabled)
     }
 }

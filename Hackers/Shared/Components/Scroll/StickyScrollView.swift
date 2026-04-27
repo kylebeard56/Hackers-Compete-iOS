@@ -18,6 +18,7 @@ struct StickyScrollView<Header: View, Content: View, Footer: View>: View {
     let theme: PaletteTheme
     let fillGeometry: Bool
     let showHeaderDivider: Bool
+    let keyboardDismissMode: ScrollDismissesKeyboardMode
     let onScroll: @Sendable (CGFloat) async -> Void
     
     init(
@@ -29,6 +30,7 @@ struct StickyScrollView<Header: View, Content: View, Footer: View>: View {
         theme: PaletteTheme = .primary,
         fillGeometry: Bool = false,
         showHeaderDivider: Bool = true,
+        keyboardDismissMode: ScrollDismissesKeyboardMode = .never,
         onScroll: @escaping @Sendable (CGFloat) async -> Void
     ) {
         self.name = name
@@ -39,6 +41,7 @@ struct StickyScrollView<Header: View, Content: View, Footer: View>: View {
         self.theme = theme
         self.fillGeometry = fillGeometry
         self.showHeaderDivider = showHeaderDivider
+        self.keyboardDismissMode = keyboardDismissMode
         self.onScroll = onScroll
     }
     
@@ -73,6 +76,7 @@ struct StickyScrollView<Header: View, Content: View, Footer: View>: View {
                         }
                     }
                 }
+                .scrollDismissesKeyboard(keyboardDismissMode)
                 .coordinateSpace(name: coordinateSpace)
                 .onPreferenceChange(ScrollPreferenceKey.self) { offset in
                     Task {

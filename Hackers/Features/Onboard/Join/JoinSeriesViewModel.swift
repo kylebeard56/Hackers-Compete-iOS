@@ -141,11 +141,23 @@ final class JoinSeriesViewModel: ObservableObject, Loggable {
             return
         }
 
+        if let matchingOfflineMember = matchingOfflineMember(for: primary) {
+            claimedMember = matchingOfflineMember
+            do {
+                try await linkClaimedMemberWithPrimaryUser()
+                addEvent("series.join_succeeded", eventProps: joinEventProps(["flow": "claim_matching_offline_member"]))
+                completeFlow = true
+            } catch {
+                joinSeriesError = .unknown
+            }
+            return
+        }
+
         var member = SeriesMember(
             id: HackersID.string(),
             userID: user.id,
             playerID: primary.id,
-            name: primary.name,
+            name: primary.name.normalizedForStorage,
             role: .member,
             isActive: true,
             joinedAt: Time(),
@@ -211,7 +223,7 @@ final class JoinSeriesViewModel: ObservableObject, Loggable {
                     id: HackersID.string(),
                     userID: user.id,
                     playerID: linkedPlayer.id,
-                    name: linkedPlayer.name,
+                    name: linkedPlayer.name.normalizedForStorage,
                     role: .member,
                     isActive: true,
                     joinedAt: Time(),
@@ -243,7 +255,7 @@ final class JoinSeriesViewModel: ObservableObject, Loggable {
                     id: HackersID.string(),
                     userID: nil,
                     playerID: createdPlayer.id,
-                    name: createdPlayer.name,
+                    name: createdPlayer.name.normalizedForStorage,
                     role: .member,
                     isActive: true,
                     joinedAt: Time(),
@@ -290,9 +302,10 @@ final class JoinSeriesViewModel: ObservableObject, Loggable {
         guard var member = claimedMember else { throw LinkError.missingMember }
         guard let seriesID = series?.id else { throw LinkError.missingSeries }
 
+        let claimedName = member.name.normalizedForStorage
         member.userID = user.id
         member.playerID = primary.id
-        member.name = primary.name
+        member.name = claimedName
         member.lastUpdatedAt = Time()
 
         switch await FirebaseService.shared.updateSeriesMember(member) {
@@ -303,6 +316,7 @@ final class JoinSeriesViewModel: ObservableObject, Loggable {
         }
 
         try await FirebaseService.shared.addPlayerToSeries(seriesID: seriesID, playerID: primary.id)
+        await normalizePrimaryPlayerIfNeeded(primary, to: claimedName)
 
         claimedMember = member
         if let idx = members.firstIndex(where: { $0.id == member.id }) {
@@ -318,5 +332,36 @@ final class JoinSeriesViewModel: ObservableObject, Loggable {
         }
         extra.forEach { props[$0.key] = $0.value }
         return props
+    }
+
+    private func normalizePrimaryPlayerIfNeeded(_ primary: Player, to claimedName: Name) async {
+        guard primary.name.normalizedForStorage != claimedName else { return }
+
+        var updatedPrimary = primary
+        updatedPrimary.name = claimedName
+        updatedPrimary.lastUpdatedAt = .init()
+
+        do {
+            _ = try await updatedPrimary.put().get()
+        } catch {
+            addBreadcrumb(level: .warning, message: "Series claim linked member but could not normalize primary player name", error: error)
+        }
+    }
+}
+
+extension JoinSeriesViewModel {
+    func matchingOfflineMember(for player: Player) -> SeriesMember? {
+        Self.matchingOfflineMember(for: player, in: members)
+    }
+
+    static func matchingOfflineMember(for player: Player, in members: [SeriesMember]) -> SeriesMember? {
+        let key = player.name.normalizedMatchKey
+        guard key.isPopulated else { return nil }
+
+        return members.first { member in
+            member.isActive
+                && member.isOffline
+                && member.name.normalizedMatchKey == key
+        }
     }
 }

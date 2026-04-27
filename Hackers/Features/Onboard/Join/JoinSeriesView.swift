@@ -325,9 +325,10 @@ struct ClaimSeriesMemberView: View {
                         onTap: { dismiss() }
                     )
                 } else if let player = viewModel.primaryPlayer {
+                    let matchingOfflineMember = viewModel.matchingOfflineMember(for: player)
                     PrimaryButton(
                         appearance: .fill,
-                        title: "Add \(player.name.fullName)",
+                        title: matchingOfflineMember.map { "Claim \($0.name.fullName)" } ?? "Add \(player.name.fullName)",
                         labelColor: palette.backgroundColor,
                         buttonColor: palette.foregroundColor,
                         theme: palette.theme,

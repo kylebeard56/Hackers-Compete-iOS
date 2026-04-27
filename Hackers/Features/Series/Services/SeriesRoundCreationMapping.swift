@@ -57,7 +57,8 @@ enum SeriesRoundCreationMapping {
     static func resolvedCompetitionScope(for seriesRound: SeriesRound) -> CompetitionScope {
         if seriesRound.matchupPlans.isPopulated
             || seriesRound.roundConfig.matchupMode == .teamVsTeam
-            || seriesRound.roundConfig.matchupMode == .individualVsIndividual {
+            || seriesRound.roundConfig.matchupMode == .individualVsIndividual
+            || seriesRound.roundConfig.matchupMode == .teeGroupPartnerships {
             return .matchup
         }
         return seriesRound.roundConfig.resolvedCompetitionScope
@@ -95,7 +96,9 @@ enum SeriesRoundCreationMapping {
             holeWinPoints: seriesRound.roundConfig.holeWinPoints,
             matchWinnerBonusPoints: seriesRound.roundConfig.matchWinnerBonusPoints,
             matchTiePolicy: seriesRound.roundConfig.matchTiePolicy,
-            sequentialTeeStartsEnabled: seriesRound.roundConfig.sequentialTeeStartsEnabled ?? false
+            sequentialTeeStartsEnabled: seriesRound.roundConfig.sequentialTeeStartsEnabled ?? false,
+            handicapStrokeBasis: series.handicapConfig.strokeBasis,
+            sharedScoreHandicapConfig: seriesRound.roundConfig.sharedScoreHandicapConfig
         )
     }
 
@@ -178,7 +181,7 @@ enum SeriesRoundCreationMapping {
                 index += 1
             }
             return plans
-        case .none, .field:
+        case .teeGroupPartnerships, .none, .field:
             return []
         }
     }
@@ -273,6 +276,48 @@ enum SeriesRoundCreationMapping {
             }
         }
         return assignments
+    }
+
+    static func teeGroupPlansWithAdjacentPartnerships(
+        _ groupPlans: [TeeGroupPlan],
+        partnershipPlans: [SeriesRoundPartnershipPlan]
+    ) -> [TeeGroupPlan] {
+        guard groupPlans.isPopulated, partnershipPlans.isPopulated else { return groupPlans }
+
+        let partnerIDsByMemberID: [String: String] = partnershipPlans.reduce(into: [:]) { partial, plan in
+            guard plan.memberIDs.count == 2 else { return }
+            partial[plan.memberIDs[0]] = plan.memberIDs[1]
+            partial[plan.memberIDs[1]] = plan.memberIDs[0]
+        }
+        guard partnerIDsByMemberID.isPopulated else { return groupPlans }
+
+        return groupPlans.map { plan in
+            let seatByMemberID = Dictionary(uniqueKeysWithValues: plan.seats.map { ($0.memberID, $0) })
+            var consumed = Set<String>()
+            var clusters: [[TeeGroupSeat]] = []
+
+            for seat in plan.seats {
+                guard !consumed.contains(seat.memberID) else { continue }
+                if let partnerID = partnerIDsByMemberID[seat.memberID],
+                   let partnerSeat = seatByMemberID[partnerID] {
+                    let pair = [seat, partnerSeat].sorted {
+                        if $0.teeOrder != $1.teeOrder { return $0.teeOrder < $1.teeOrder }
+                        return $0.memberID < $1.memberID
+                    }
+                    clusters.append(pair)
+                    consumed.insert(seat.memberID)
+                    consumed.insert(partnerID)
+                } else {
+                    clusters.append([seat])
+                    consumed.insert(seat.memberID)
+                }
+            }
+
+            let normalizedSeats = clusters.flatMap { $0 }.enumerated().map { offset, seat in
+                TeeGroupSeat(memberID: seat.memberID, teeOrder: offset + 1)
+            }
+            return TeeGroupPlan(id: plan.id, seats: normalizedSeats)
+        }
     }
 
     static func buildTeeGroupsArray(
@@ -432,7 +477,7 @@ enum SeriesRoundCreationMapping {
                 id: HackersID.string(),
                 userID: member.userID,
                 playerID: member.playerID,
-                name: member.name,
+                name: member.name.normalizedForStorage,
                 teeBoxID: teeBoxID,
                 originalHandicap: effectiveHandicap,
                 adjustedHandicap: effectiveHandicap,
@@ -450,6 +495,15 @@ enum SeriesRoundCreationMapping {
         }
     }
 
+    static func membersMissingEffectiveHandicap(
+        members: [SeriesMember],
+        handicaps: [String: SeriesMemberHandicap]
+    ) -> [String] {
+        members
+            .filter { handicaps[$0.id]?.effectiveIndex == nil }
+            .map(\.id)
+    }
+
     static func buildRoundMatchups(
         seriesRound: SeriesRound,
         matchupPlans: [SeriesRoundMatchupPlan],
@@ -458,7 +512,34 @@ enum SeriesRoundCreationMapping {
         scoringGroups: [RoundScoringGroup],
         participants: [RoundParticipant]
     ) -> [TeamMatchup] {
-        if seriesRound.roundConfig.scoreOwnerScope == .partnership, scoringGroups.isPopulated {
+        if (seriesRound.roundConfig.scoreOwnerScope == .partnership
+            || seriesRound.roundConfig.matchupMode == .teeGroupPartnerships),
+           scoringGroups.isPopulated {
+            if seriesRound.roundConfig.matchupMode == .teeGroupPartnerships {
+                let scoringGroupsByID = Dictionary(uniqueKeysWithValues: scoringGroups.map { ($0.id, $0) })
+                let plannedPairMatchups = matchupPlans.compactMap { plan -> TeamMatchup? in
+                    guard let pairAID = plan.pairAID,
+                          let pairBID = plan.pairBID,
+                          scoringGroupsByID[pairAID] != nil,
+                          scoringGroupsByID[pairBID] != nil,
+                          pairAID != pairBID else {
+                        return nil
+                    }
+                    return TeamMatchup(
+                        id: plan.id,
+                        teamIDs: [],
+                        participantIDs: nil,
+                        scoreOwnerIDs: [pairAID, pairBID],
+                        scoreOwnerScope: .partnership,
+                        mode: .scoreOwner
+                    )
+                }
+
+                if plannedPairMatchups.isPopulated {
+                    return plannedPairMatchups
+                }
+            }
+
             let groupsByTeeGroup = Dictionary(grouping: scoringGroups.filter { $0.kind == .partnership }) { $0.teeGroupID ?? "" }
             let teamOrder = Dictionary(uniqueKeysWithValues: teamMappings.values.map { ($0.roundTeamID, $0.seriesTeamID) })
             var matchups: [TeamMatchup] = []
@@ -473,6 +554,10 @@ enum SeriesRoundCreationMapping {
                     return lhsLabel.localizedCaseInsensitiveCompare(rhsLabel) == .orderedAscending
                 }
                 guard sortedGroups.count == 2 else { continue }
+                if seriesRound.roundConfig.matchupMode == .teeGroupPartnerships {
+                    let teamIDs = Set(sortedGroups.compactMap(\.teamID).filter(\.isPopulated))
+                    guard teamIDs.count == 2 else { continue }
+                }
                 matchups.append(
                     TeamMatchup(
                         id: "score_owner_\(sortedGroups[0].id)_\(sortedGroups[1].id)",
@@ -509,7 +594,7 @@ enum SeriesRoundCreationMapping {
                     participantIDs: [participantAID, participantBID],
                     mode: .individual
                 )
-            case .none, .field:
+            case .teeGroupPartnerships, .none, .field:
                 return nil
             }
         }
@@ -578,18 +663,49 @@ enum SeriesRoundCreationMapping {
     static func buildScoringUnits(
         seriesRound: SeriesRound,
         participants: [RoundParticipant],
-        scoringGroups: [RoundScoringGroup]
+        scoringGroups: [RoundScoringGroup],
+        teamMappings: [String: SeriesToRoundTeamLink] = [:]
     ) -> [ScoringUnit] {
         let template = seriesRound.roundConfig.template
+        let handicapConfig = seriesRound.roundConfig.sharedScoreHandicapConfig ?? template.requirements.defaultHandicapConfig
 
         switch seriesRound.roundConfig.scoreOwnerScope {
         case .individual:
+            if template.scoreSource == .shared,
+               seriesRound.roundConfig.legacyGameFormat.configuration.requiresTeams,
+               teamMappings.isPopulated {
+                return teamMappings.values
+                    .sorted { lhs, rhs in
+                        if lhs.seriesTeamID != rhs.seriesTeamID { return lhs.seriesTeamID < rhs.seriesTeamID }
+                        return lhs.roundTeamID < rhs.roundTeamID
+                    }
+                    .map { link in
+                        let teamParticipants = participants.filter { $0.teamID == link.roundTeamID }
+                        let allowance = handicapAllowance(
+                            participants: teamParticipants,
+                            config: handicapConfig
+                        )
+                        return ScoringUnit(
+                            id: link.roundTeamID,
+                            owner: .team,
+                            ownerIDs: [link.roundTeamID],
+                            scoringMethod: .aggregate,
+                            aggregation: .init(mode: .sumAll, scope: .perHole),
+                            handicapAdjustments: allowance?.memberStrokes,
+                            handicapAllowance: allowance
+                        )
+                    }
+            }
             return participants.map { participant in
                 ScoringUnit(
                     id: participant.id,
                     owner: .participant,
                     ownerIDs: [participant.id],
-                    scoringMethod: .individual
+                    scoringMethod: .individual,
+                    handicapAllowance: handicapAllowance(
+                        participants: [participant],
+                        config: .individualStrokePlay
+                    )
                 )
             }
         case .partnership:
@@ -597,17 +713,19 @@ enum SeriesRoundCreationMapping {
                 return scoringGroups
                     .filter { $0.kind == .partnership }
                     .map { group in
-                        ScoringUnit(
+                        let groupParticipants = participantsForScoringGroup(group, participants: participants)
+                        let allowance = handicapAllowance(
+                            participants: groupParticipants,
+                            config: handicapConfig
+                        )
+                        return ScoringUnit(
                             id: group.id,
                             owner: .scoreOwner,
                             ownerIDs: group.memberIDs,
                             scoringMethod: .aggregate,
                             aggregation: .init(mode: .sumAll, scope: .perHole),
-                            handicapAdjustments: sharedScoreHandicapAdjustments(
-                                group: group,
-                                participants: participants,
-                                config: seriesRound.roundConfig.sharedScoreHandicapConfig ?? template.requirements.defaultHandicapConfig
-                            )
+                            handicapAdjustments: allowance?.memberStrokes,
+                            handicapAllowance: allowance
                         )
                     }
             }
@@ -616,52 +734,80 @@ enum SeriesRoundCreationMapping {
                     id: participant.id,
                     owner: .participant,
                     ownerIDs: [participant.id],
-                    scoringMethod: .individual
+                    scoringMethod: .individual,
+                    handicapAllowance: handicapAllowance(
+                        participants: [participant],
+                        config: .individualStrokePlay
+                    )
                 )
             }
         case .teeGroup:
             return scoringGroups
                 .filter { $0.kind == .teeGroup }
                 .map { group in
-                        ScoringUnit(
+                        let groupParticipants = participantsForScoringGroup(group, participants: participants)
+                        let allowance = handicapAllowance(
+                            participants: groupParticipants,
+                            config: handicapConfig
+                        )
+                        return ScoringUnit(
                             id: group.id,
                             owner: .scoreOwner,
                             ownerIDs: group.memberIDs,
                             scoringMethod: .aggregate,
                             aggregation: .init(mode: .sumAll, scope: .perHole),
-                            handicapAdjustments: sharedScoreHandicapAdjustments(
-                                group: group,
-                                participants: participants,
-                                config: seriesRound.roundConfig.sharedScoreHandicapConfig ?? template.requirements.defaultHandicapConfig
-                            )
+                            handicapAdjustments: allowance?.memberStrokes,
+                            handicapAllowance: allowance
                         )
                     }
         }
     }
 
-    private static func sharedScoreHandicapAdjustments(
-        group: RoundScoringGroup,
+    private static func participantsForScoringGroup(
+        _ group: RoundScoringGroup,
+        participants: [RoundParticipant]
+    ) -> [RoundParticipant] {
+        let participantsByID = Dictionary(uniqueKeysWithValues: participants.map { ($0.id, $0) })
+        return group.memberIDs.compactMap { participantsByID[$0] }
+    }
+
+    private static func handicapAllowance(
         participants: [RoundParticipant],
         config: HandicapConfiguration
-    ) -> [String: Double]? {
-        guard let percentages = config.positionPercentages, percentages.isPopulated else { return nil }
-        let participantsByID = Dictionary(uniqueKeysWithValues: participants.map { ($0.id, $0) })
-        let orderedMembers = group.memberIDs
-            .compactMap { participantsByID[$0] }
-            .sorted {
-                if $0.adjustedHandicap != $1.adjustedHandicap {
-                    return $0.adjustedHandicap < $1.adjustedHandicap
-                }
-                return $0.name.fullName.localizedCaseInsensitiveCompare($1.name.fullName) == .orderedAscending
+    ) -> ScoringUnitHandicapAllowance? {
+        let orderedMembers = participants.sorted {
+            if $0.adjustedHandicap != $1.adjustedHandicap {
+                return $0.adjustedHandicap < $1.adjustedHandicap
             }
+            return $0.name.fullName.localizedCaseInsensitiveCompare($1.name.fullName) == .orderedAscending
+        }
         guard orderedMembers.isPopulated else { return nil }
 
-        var adjustments: [String: Double] = [:]
-        for (index, participant) in orderedMembers.enumerated() {
-            guard index < percentages.count else { break }
-            adjustments[participant.id] = Double(participant.adjustedHandicap) * percentages[index] * config.percentage
+        let memberStrokes: [String: Double]
+        if let percentages = config.positionPercentages, percentages.isPopulated {
+            var strokes: [String: Double] = [:]
+            for (index, participant) in orderedMembers.enumerated() {
+                guard index < percentages.count else { break }
+                strokes[participant.id] = Double(participant.adjustedHandicap) * percentages[index] * config.percentage
+            }
+            memberStrokes = strokes
+        } else if config.isTeamCombined {
+            memberStrokes = Dictionary(uniqueKeysWithValues: orderedMembers.map { participant in
+                (participant.id, Double(participant.adjustedHandicap) * config.percentage)
+            })
+        } else {
+            let average = Double(orderedMembers.map(\.adjustedHandicap).reduce(0, +)) / Double(orderedMembers.count)
+            let unitStrokes = average * config.percentage
+            let perMember = unitStrokes / Double(orderedMembers.count)
+            memberStrokes = Dictionary(uniqueKeysWithValues: orderedMembers.map { ($0.id, perMember) })
         }
-        return adjustments.isPopulated ? adjustments : nil
+
+        let unitStrokes = memberStrokes.values.reduce(0.0, +)
+        return ScoringUnitHandicapAllowance(
+            unitStrokes: unitStrokes,
+            memberStrokes: memberStrokes,
+            sourceConfig: config
+        )
     }
 
     static func buildRoundSegment(
@@ -765,6 +911,65 @@ enum SeriesRoundCreationMapping {
         }
 
         return memberMappings + (teamMapping.map { [$0] } ?? [])
+    }
+}
+
+struct SeriesRoundResolvedPlan: Equatable {
+    let competitionScope: CompetitionScope
+    let roundConfiguration: RoundConfiguration
+    let plannedStructure: SeriesRoundPlannedStructure
+    let matchupPlans: [SeriesRoundMatchupPlan]
+    let partnershipPlans: [SeriesRoundPartnershipPlan]
+    let teeGroupPlans: [SeriesRoundCreationMapping.TeeGroupPlan]
+    let seriesTeamsForRound: [SeriesTeam]
+
+    init(
+        series: Series,
+        seriesRound: SeriesRound,
+        members: [SeriesMember],
+        teams: [SeriesTeam],
+        pods: [SeriesTeamPod],
+        courseSegment: CourseSegment
+    ) {
+        competitionScope = SeriesRoundCreationMapping.resolvedCompetitionScope(for: seriesRound)
+        roundConfiguration = SeriesRoundCreationMapping.roundConfiguration(
+            series: series,
+            seriesRound: seriesRound,
+            courseSegment: courseSegment,
+            competitionScope: competitionScope
+        )
+        plannedStructure = SeriesRoundPlanningService.resolvedPlannedStructure(
+            series: series,
+            seriesRound: seriesRound,
+            members: members,
+            teams: teams,
+            pods: pods,
+            courseSelection: Self.courseSelection(from: courseSegment)
+        )
+        matchupPlans = plannedStructure.matchups.map(\.matchupPlan)
+        partnershipPlans = SeriesRoundCreationMapping.resolvedPartnershipPlans(
+            seriesRound: seriesRound,
+            teams: teams,
+            pods: pods,
+            members: members
+        )
+        teeGroupPlans = SeriesRoundCreationMapping.teeGroupPlansWithAdjacentPartnerships(
+            SeriesRoundPlanningService.teeGroupPlans(from: plannedStructure.teeGroups),
+            partnershipPlans: partnershipPlans
+        )
+        let participatingTeamIDs = Set(members.compactMap(\.teamID).filter(\.isPopulated))
+        seriesTeamsForRound = seriesRound.roundConfig.teamAssignmentMode == .seriesTeams
+            ? teams.filter { participatingTeamIDs.contains($0.id) }
+            : []
+    }
+
+    private static func courseSelection(from segment: CourseSegment) -> SeriesCourseSelection {
+        SeriesCourseSelection(
+            courseID: segment.courseInfo.golfCourseApiID.map(String.init) ?? segment.courseInfo.id,
+            cachedName: segment.courseInfo.name,
+            defaultTeeBoxID: segment.defaultTee ?? "",
+            holeSegment: segment.holeSegment
+        )
     }
 }
 

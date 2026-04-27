@@ -103,9 +103,26 @@ final class SeriesRoundCreationMappingTests: XCTestCase {
         return SeriesRound(id: "sr_field", roundConfig: cfg, parentID: "series1")
     }
 
-    private func makeSeries(handicapsEnabled: Bool = false) -> Series {
+    private func mirroredTeeGroupRound() -> SeriesRound {
+        var cfg = SeriesRoundConfiguration()
+        cfg.competitionScope = .matchup
+        cfg.scoreOwnerScope = .partnership
+        cfg.matchupMode = .teeGroupPartnerships
+        cfg.teamAssignmentMode = .seriesTeams
+        return SeriesRound(id: "sr_mirror", roundConfig: cfg, parentID: "series1")
+    }
+
+    private func mirrorTeamMappings() -> [String: SeriesRoundCreationMapping.SeriesToRoundTeamLink] {
+        [
+            "red": .init(seriesTeamID: "red", roundTeamID: "round_red"),
+            "blue": .init(seriesTeamID: "blue", roundTeamID: "round_blue"),
+        ]
+    }
+
+    private func makeSeries(handicapsEnabled: Bool = false, useTeams: Bool = true) -> Series {
         var settings = SeriesSettings()
         settings.handicapConfig = SeriesHandicapConfig(isEnabled: handicapsEnabled, config: .league2025)
+        settings.useTeams = useTeams
         return Series(id: "series1", settings: settings)
     }
 
@@ -123,6 +140,24 @@ final class SeriesRoundCreationMappingTests: XCTestCase {
         cfg.teamAssignmentMode = .seriesTeams
         let sr = SeriesRound(id: "sr1", roundConfig: cfg, parentID: "series1")
         XCTAssertEqual(SeriesRoundCreationMapping.resolvedCompetitionScope(for: sr), .matchup)
+    }
+
+    func testResolvedCompetitionScope_mirroredTeeGroupsForceMatchup() {
+        var cfg = SeriesRoundConfiguration()
+        cfg.matchupMode = .teeGroupPartnerships
+        cfg.scoreOwnerScope = .partnership
+        cfg.teamAssignmentMode = .seriesTeams
+        let sr = SeriesRound(id: "sr_mirror", roundConfig: cfg, parentID: "series1")
+        let roundConfig = SeriesRoundCreationMapping.roundConfiguration(
+            series: makeSeries(),
+            seriesRound: sr,
+            courseSegment: makeCourseSegment(),
+            competitionScope: SeriesRoundCreationMapping.resolvedCompetitionScope(for: sr)
+        )
+
+        XCTAssertEqual(SeriesRoundCreationMapping.resolvedCompetitionScope(for: sr), .matchup)
+        XCTAssertEqual(roundConfig.competitionScope, .matchup)
+        XCTAssertEqual(roundConfig.scoreOwnerScope, .partnership)
     }
 
     func testRoundDraft_carriesPlayerIDsAndConfiguration() {
@@ -150,6 +185,53 @@ final class SeriesRoundCreationMappingTests: XCTestCase {
         XCTAssertEqual(draft.configuration.courses.first?.holeRange, segment.holeRange)
     }
 
+    func testRoundConfigurationCopiesSharedScoreHandicapConfig() {
+        var cfg = SeriesRoundConfiguration()
+        cfg.sharedScoreHandicapConfig = HandicapConfiguration(
+            percentage: 1.0,
+            isTeamCombined: true,
+            positionPercentages: [0.35, 0.15]
+        )
+        let seriesRound = SeriesRound(id: "sr_shared", roundConfig: cfg, parentID: "series1")
+
+        let roundConfig = SeriesRoundCreationMapping.roundConfiguration(
+            series: makeSeries(handicapsEnabled: true),
+            seriesRound: seriesRound,
+            courseSegment: makeCourseSegment(),
+            competitionScope: .field
+        )
+
+        XCTAssertEqual(roundConfig.sharedScoreHandicapConfig, cfg.sharedScoreHandicapConfig)
+    }
+
+    func testTeeGroupPlansWithAdjacentPartnershipsKeepsPairsTogether() {
+        let groupPlans = [
+            SeriesRoundCreationMapping.TeeGroupPlan(
+                id: "g1",
+                seats: [
+                    .init(memberID: "red_1", teeOrder: 1),
+                    .init(memberID: "blue_1", teeOrder: 2),
+                    .init(memberID: "red_2", teeOrder: 3),
+                    .init(memberID: "blue_2", teeOrder: 4),
+                ]
+            ),
+        ]
+        let partnershipPlans = [
+            SeriesRoundPartnershipPlan(id: "red_pair", teamID: "red", memberIDs: ["red_1", "red_2"]),
+            SeriesRoundPartnershipPlan(id: "blue_pair", teamID: "blue", memberIDs: ["blue_1", "blue_2"]),
+        ]
+
+        let normalized = SeriesRoundCreationMapping.teeGroupPlansWithAdjacentPartnerships(
+            groupPlans,
+            partnershipPlans: partnershipPlans
+        )
+
+        XCTAssertEqual(
+            normalized.first?.seats.map { "\($0.memberID):\($0.teeOrder)" },
+            ["red_1:1", "red_2:2", "blue_1:3", "blue_2:4"]
+        )
+    }
+
     func testRoundDraft_leagueHandicapsOn_defaultsPrimaryFormatToNet() {
         let sr = fieldSeriesRound()
         let segment = makeCourseSegment()
@@ -164,6 +246,40 @@ final class SeriesRoundCreationMappingTests: XCTestCase {
         )
         XCTAssertTrue(draft.configuration.useHandicaps)
         XCTAssertEqual(draft.configuration.primaryFormat.configuration.basis, .net)
+    }
+
+    func testRoundDraft_carriesNineHoleHandicapBasisAndKeepsEnteredHCP() {
+        var settings = SeriesSettings()
+        settings.handicapConfig = SeriesHandicapConfig(isEnabled: true, config: .league2025, strokeBasis: .nineHole)
+        let series = Series(id: "series1", settings: settings)
+        let sr = fieldSeriesRound()
+        let segment = makeCourseSegment()
+        let member = makeMember(id: "m1", name: "Player", playerID: "p1")
+
+        let draft = SeriesRoundCreationMapping.roundDraft(
+            id: "r_nine",
+            shareCode: "NINE",
+            createdBy: "u",
+            series: series,
+            members: [member],
+            seriesRound: sr,
+            courseSegment: segment
+        )
+        let payloads = SeriesRoundCreationMapping.buildParticipantPayloads(
+            members: [member],
+            roundID: draft.id,
+            teamMappings: [:],
+            memberAssignments: [:],
+            handicaps: [
+                "m1": SeriesMemberHandicap(id: "m1", memberID: "m1", computedIndex: 7),
+            ],
+            courseSegment: segment,
+            hostPlayerID: nil
+        )
+
+        XCTAssertEqual(draft.configuration.handicapStrokeBasis, .nineHole)
+        XCTAssertEqual(payloads.first?.adjustedHandicap, 7)
+        XCTAssertEqual(payloads.first?.leagueHandicapStrokesAtCreation, 7)
     }
 
     func testRoundDraft_explicitGrossOverride_keepsGrossWhenLeagueHandicapsOn() {
@@ -755,6 +871,251 @@ final class SeriesRoundCreationMappingTests: XCTestCase {
         XCTAssertEqual(indMatchups[0].participantIDs, ["pa", "pb"])
     }
 
+    func testBuildRoundMatchups_mirroredTeeGroupPartnershipsCreateScoreOwnerMatchup() {
+        let seriesRound = mirroredTeeGroupRound()
+        let scoringGroups = [
+            RoundScoringGroup(id: "red_pair", teamID: "round_red", teeGroupID: "g1", kind: .partnership, memberIDs: ["p1", "p2"]),
+            RoundScoringGroup(id: "blue_pair", teamID: "round_blue", teeGroupID: "g1", kind: .partnership, memberIDs: ["p3", "p4"]),
+        ]
+
+        let matchups = SeriesRoundCreationMapping.buildRoundMatchups(
+            seriesRound: seriesRound,
+            matchupPlans: [],
+            teamMappings: mirrorTeamMappings(),
+            participantIDsBySeriesMemberID: [:],
+            scoringGroups: scoringGroups,
+            participants: []
+        )
+
+        XCTAssertEqual(matchups.count, 1)
+        XCTAssertEqual(matchups.first?.mode, .scoreOwner)
+        XCTAssertEqual(matchups.first?.scoreOwnerScope, .partnership)
+        XCTAssertEqual(Set(matchups.first?.scoreOwnerIDs ?? []), Set(["red_pair", "blue_pair"]))
+    }
+
+    func testBuildRoundMatchups_mirroredTeeGroupsStillCreateScoreOwnerMatchupWhenScoreEntryIsIndividual() {
+        var seriesRound = mirroredTeeGroupRound()
+        seriesRound.roundConfig.scoreOwnerScope = .individual
+        let scoringGroups = [
+            RoundScoringGroup(id: "red_pair", teamID: "round_red", teeGroupID: "g1", kind: .partnership, memberIDs: ["p1", "p2"]),
+            RoundScoringGroup(id: "blue_pair", teamID: "round_blue", teeGroupID: "g1", kind: .partnership, memberIDs: ["p3", "p4"]),
+        ]
+
+        let matchups = SeriesRoundCreationMapping.buildRoundMatchups(
+            seriesRound: seriesRound,
+            matchupPlans: [],
+            teamMappings: mirrorTeamMappings(),
+            participantIDsBySeriesMemberID: [:],
+            scoringGroups: scoringGroups,
+            participants: []
+        )
+
+        XCTAssertEqual(matchups.count, 1)
+        XCTAssertEqual(matchups.first?.mode, .scoreOwner)
+        XCTAssertEqual(Set(matchups.first?.scoreOwnerIDs ?? []), Set(["red_pair", "blue_pair"]))
+    }
+
+    func testBuildRoundMatchups_pairPlansCreateExplicitScoreOwnerMatchups() {
+        let seriesRound = mirroredTeeGroupRound()
+        let scoringGroups = [
+            RoundScoringGroup(id: "g1_red", teamID: "round_red", teeGroupID: "g1", kind: .partnership, memberIDs: ["p1", "p2"]),
+            RoundScoringGroup(id: "g1_blue", teamID: "round_blue", teeGroupID: "g1", kind: .partnership, memberIDs: ["p3", "p4"]),
+            RoundScoringGroup(id: "g2_red", teamID: "round_red", teeGroupID: "g2", kind: .partnership, memberIDs: ["p5", "p6"]),
+            RoundScoringGroup(id: "g2_blue", teamID: "round_blue", teeGroupID: "g2", kind: .partnership, memberIDs: ["p7", "p8"]),
+        ]
+        let matchupPlans = [
+            SeriesRoundMatchupPlan(id: "mx_1", pairAID: "g1_red", pairBID: "g2_blue", index: 0),
+            SeriesRoundMatchupPlan(id: "mx_2", pairAID: "g2_red", pairBID: "g1_blue", index: 1),
+        ]
+
+        let matchups = SeriesRoundCreationMapping.buildRoundMatchups(
+            seriesRound: seriesRound,
+            matchupPlans: matchupPlans,
+            teamMappings: mirrorTeamMappings(),
+            participantIDsBySeriesMemberID: [:],
+            scoringGroups: scoringGroups,
+            participants: []
+        )
+
+        XCTAssertEqual(matchups.map(\.id), ["mx_1", "mx_2"])
+        XCTAssertEqual(Set(matchups[0].scoreOwnerIDs ?? []), Set(["g1_red", "g2_blue"]))
+        XCTAssertEqual(Set(matchups[1].scoreOwnerIDs ?? []), Set(["g2_red", "g1_blue"]))
+    }
+
+    func testBuildRoundMatchups_mirroredTeeGroupsSkipSameTeamAndExtraPairs() {
+        let seriesRound = mirroredTeeGroupRound()
+        let sameTeamGroups = [
+            RoundScoringGroup(id: "red_a", teamID: "round_red", teeGroupID: "g1", kind: .partnership, memberIDs: ["p1", "p2"]),
+            RoundScoringGroup(id: "red_b", teamID: "round_red", teeGroupID: "g1", kind: .partnership, memberIDs: ["p3", "p4"]),
+        ]
+        let extraPairGroups = sameTeamGroups + [
+            RoundScoringGroup(id: "blue_a", teamID: "round_blue", teeGroupID: "g1", kind: .partnership, memberIDs: ["p5", "p6"]),
+        ]
+
+        let sameTeamMatchups = SeriesRoundCreationMapping.buildRoundMatchups(
+            seriesRound: seriesRound,
+            matchupPlans: [],
+            teamMappings: mirrorTeamMappings(),
+            participantIDsBySeriesMemberID: [:],
+            scoringGroups: sameTeamGroups,
+            participants: []
+        )
+        let extraPairMatchups = SeriesRoundCreationMapping.buildRoundMatchups(
+            seriesRound: seriesRound,
+            matchupPlans: [],
+            teamMappings: mirrorTeamMappings(),
+            participantIDsBySeriesMemberID: [:],
+            scoringGroups: extraPairGroups,
+            participants: []
+        )
+
+        XCTAssertTrue(sameTeamMatchups.isEmpty)
+        XCTAssertTrue(extraPairMatchups.isEmpty)
+    }
+
+    func testCaptainChoicePartnershipResolvedPlanPreservesSeriesTeamsTeeSheetMatchupsAndAllowances() throws {
+        var cfg = SeriesRoundConfiguration()
+        cfg.formatTemplateID = FormatTemplateRegistry.captainsChoice.id
+        cfg.competitionScope = .matchup
+        cfg.scoreOwnerScope = .partnership
+        cfg.matchupMode = .teeGroupPartnerships
+        cfg.teamAssignmentMode = .seriesTeams
+        cfg.sharedScoreHandicapConfig = .scramble2Player
+
+        let red = makeTeam(id: "red", name: "Red Team", index: 0, color: "red")
+        let blue = makeTeam(id: "blue", name: "Blue Team", index: 1, color: "blue")
+        let members = [
+            makeMember(id: "r1", name: "Red 1", teamID: "red"),
+            makeMember(id: "r2", name: "Red 2", teamID: "red"),
+            makeMember(id: "b1", name: "Blue 1", teamID: "blue"),
+            makeMember(id: "b2", name: "Blue 2", teamID: "blue"),
+            makeMember(id: "r3", name: "Red 3", teamID: "red"),
+            makeMember(id: "r4", name: "Red 4", teamID: "red"),
+            makeMember(id: "b3", name: "Blue 3", teamID: "blue"),
+            makeMember(id: "b4", name: "Blue 4", teamID: "blue"),
+        ]
+        let plannedTeeGroups = [
+            SeriesRoundPlannedTeeGroup(
+                id: "group_1",
+                index: 0,
+                seats: ["r1", "r2", "b1", "b2"].enumerated().map {
+                    SeriesRoundPlannedSeat(id: $0.element, memberID: $0.element, teeOrder: $0.offset + 1)
+                }
+            ),
+            SeriesRoundPlannedTeeGroup(
+                id: "group_2",
+                index: 1,
+                seats: ["r3", "r4", "b3", "b4"].enumerated().map {
+                    SeriesRoundPlannedSeat(id: $0.element, memberID: $0.element, teeOrder: $0.offset + 1)
+                }
+            ),
+        ]
+        let partnershipPlans = [
+            SeriesRoundPartnershipPlan(id: "red_pair_1", teamID: "red", memberIDs: ["r1", "r2"]),
+            SeriesRoundPartnershipPlan(id: "blue_pair_1", teamID: "blue", memberIDs: ["b1", "b2"]),
+            SeriesRoundPartnershipPlan(id: "red_pair_2", teamID: "red", memberIDs: ["r3", "r4"]),
+            SeriesRoundPartnershipPlan(id: "blue_pair_2", teamID: "blue", memberIDs: ["b3", "b4"]),
+        ]
+        let seriesRound = SeriesRound(
+            id: "sr_captains",
+            roundConfig: cfg,
+            plannedTeeGroups: plannedTeeGroups,
+            partnershipPlans: partnershipPlans,
+            parentID: "series1"
+        )
+        let plan = SeriesRoundResolvedPlan(
+            series: makeSeries(handicapsEnabled: true),
+            seriesRound: seriesRound,
+            members: members,
+            teams: [red, blue],
+            pods: [],
+            courseSegment: makeCourseSegment()
+        )
+
+        XCTAssertEqual(plan.seriesTeamsForRound.map(\.id), ["red", "blue"])
+        XCTAssertEqual(plan.teeGroupPlans.map(\.memberIDs), [
+            ["r1", "r2", "b1", "b2"],
+            ["r3", "r4", "b3", "b4"],
+        ])
+
+        let teamMappings = mirrorTeamMappings()
+        let memberAssignments = SeriesRoundCreationMapping.buildMemberAssignments(
+            groupPlans: plan.teeGroupPlans,
+            groupIDsByPlanID: ["group_1": "round_group_1", "group_2": "round_group_2"]
+        )
+        let handicaps = Dictionary(uniqueKeysWithValues: members.enumerated().map { index, member in
+            (member.id, SeriesMemberHandicap(id: member.id, memberID: member.id, computedIndex: Double(index + 10)))
+        })
+        let participants = SeriesRoundCreationMapping.buildParticipantPayloads(
+            members: members,
+            roundID: "round1",
+            teamMappings: teamMappings,
+            memberAssignments: memberAssignments,
+            handicaps: handicaps,
+            courseSegment: makeCourseSegment(),
+            hostPlayerID: nil
+        )
+        let teeGroups = [
+            TeeTimeGroup(id: "round_group_1", index: 0, createdAt: t0, lastUpdatedAt: t0, parentID: "round1"),
+            TeeTimeGroup(id: "round_group_2", index: 1, createdAt: t0, lastUpdatedAt: t0, parentID: "round1"),
+        ]
+        let scoringGroups = SeriesRoundCreationMapping.buildRoundScoringGroups(
+            roundID: "round1",
+            seriesRound: seriesRound,
+            participants: participants,
+            partnershipPlans: plan.partnershipPlans,
+            teeGroups: teeGroups
+        )
+        let matchups = SeriesRoundCreationMapping.buildRoundMatchups(
+            seriesRound: seriesRound,
+            matchupPlans: plan.matchupPlans,
+            teamMappings: teamMappings,
+            participantIDsBySeriesMemberID: [:],
+            scoringGroups: scoringGroups,
+            participants: participants
+        )
+        let scoringUnits = SeriesRoundCreationMapping.buildScoringUnits(
+            seriesRound: seriesRound,
+            participants: participants,
+            scoringGroups: scoringGroups,
+            teamMappings: teamMappings
+        )
+
+        XCTAssertEqual(Set(participants.compactMap(\.teamID)), Set(["round_red", "round_blue"]))
+        XCTAssertEqual(scoringGroups.count, 4)
+        XCTAssertEqual(matchups.count, 2)
+        XCTAssertTrue(matchups.allSatisfy { ($0.mode ?? .team) == .scoreOwner })
+        XCTAssertEqual(scoringUnits.count, 4)
+        XCTAssertTrue(scoringUnits.allSatisfy { $0.handicapAllowance != nil })
+        let redPairUnitStrokes = try XCTUnwrap(scoringUnits.first { $0.id == "red_pair_1" }?.handicapAllowance?.unitStrokes)
+        XCTAssertEqual(redPairUnitStrokes, 5.15, accuracy: 0.001)
+        XCTAssertEqual(Int(redPairUnitStrokes.rounded(.toNearestOrAwayFromZero)), 5)
+    }
+
+    func testRoundSnapshotAutoMirrorsOnlyClassicSharedTeamRounds() {
+        var classicConfig = SeriesRoundConfiguration(formatTemplateID: FormatTemplateRegistry.captainsChoice.id)
+        classicConfig.teamAssignmentMode = .seriesTeams
+        classicConfig.scoreOwnerScope = .individual
+        let classicRoundConfig = SeriesRoundCreationMapping.roundConfiguration(
+            series: makeSeries(),
+            seriesRound: SeriesRound(id: "classic", roundConfig: classicConfig, parentID: "series1"),
+            courseSegment: makeCourseSegment(),
+            competitionScope: .field
+        )
+        XCTAssertTrue(RoundSnapshot(round: Round(configuration: classicRoundConfig)).shouldAutoMirrorTeeGroupsToTeams)
+
+        var partnershipConfig = classicConfig
+        partnershipConfig.scoreOwnerScope = .partnership
+        partnershipConfig.matchupMode = .teeGroupPartnerships
+        let partnershipRoundConfig = SeriesRoundCreationMapping.roundConfiguration(
+            series: makeSeries(),
+            seriesRound: SeriesRound(id: "partnership", roundConfig: partnershipConfig, parentID: "series1"),
+            courseSegment: makeCourseSegment(),
+            competitionScope: .matchup
+        )
+        XCTAssertFalse(RoundSnapshot(round: Round(configuration: partnershipRoundConfig)).shouldAutoMirrorTeeGroupsToTeams)
+    }
+
     func testBuildRoundScoringGroups_materializesPartnershipsWithoutPartnershipScoreEntry() {
         var cfg = SeriesRoundConfiguration()
         cfg.scoreOwnerScope = .individual
@@ -879,5 +1240,286 @@ final class SeriesRoundCreationMappingTests: XCTestCase {
         XCTAssertEqual(t.id, "sr99_team_rt")
         XCTAssertEqual(t.roundOwnerID, "rt")
         XCTAssertEqual(t.competitorID, "st")
+    }
+
+    func testNameNormalizedForStorageCollapsesDuplicatedFullName() {
+        let name = Name("Scott Sternstein", "Scott Sternstein").normalizedForStorage
+
+        XCTAssertEqual(name.givenName, "Scott")
+        XCTAssertEqual(name.familyName, "Sternstein")
+        XCTAssertEqual(name.fullName, "Scott Sternstein")
+        XCTAssertEqual(name.initials, "SS")
+    }
+
+    @MainActor
+    func testJoinSeriesMatchingOfflineMemberFindsNameMatchBeforeCreatingDuplicate() {
+        let primary = Player(
+            id: "player_scott",
+            userID: "user_scott",
+            name: Name("Scott Sternstein", "Scott Sternstein")
+        )
+        let offlineMember = SeriesMember(
+            id: "member_scott",
+            userID: nil,
+            playerID: "offline_scott",
+            name: Name("Scott", "Sternstein"),
+            teamID: "red",
+            defaultTeeBoxID: "tee_white",
+            createdAt: t0,
+            lastUpdatedAt: t0,
+            parentID: "series1"
+        )
+        let duplicateCandidate = SeriesMember(
+            id: "member_other",
+            userID: nil,
+            playerID: "offline_other",
+            name: Name("Sam", "Player"),
+            createdAt: t0,
+            lastUpdatedAt: t0,
+            parentID: "series1"
+        )
+
+        let match = JoinSeriesViewModel.matchingOfflineMember(
+            for: primary,
+            in: [duplicateCandidate, offlineMember]
+        )
+
+        XCTAssertEqual(match?.id, "member_scott")
+        XCTAssertEqual(match?.teamID, "red")
+        XCTAssertEqual(match?.defaultTeeBoxID, "tee_white")
+    }
+
+    @MainActor
+    func testJoinRoundMatchingOfflineParticipantFindsNameMatchAndKeepsRoundFields() {
+        let primary = Player(
+            id: "player_scott",
+            userID: "user_scott",
+            name: Name("Scott Sternstein", "Scott Sternstein")
+        )
+        let participant = RoundParticipant(
+            id: "participant_scott",
+            userID: nil,
+            playerID: "offline_scott",
+            name: Name("Scott", "Sternstein"),
+            teeBoxID: "tee_white",
+            originalHandicap: 17,
+            adjustedHandicap: 17,
+            leagueHandicapStrokesAtCreation: 17,
+            seriesMemberID: "member_scott",
+            teamID: "round_red",
+            groupID: "group_1",
+            teeOrder: 3,
+            isHost: false,
+            createdAt: t0,
+            lastUpdatedAt: t0,
+            parentID: "round1"
+        )
+
+        let match = JoinRoundViewModel.matchingOfflineParticipant(
+            for: primary,
+            in: [participant]
+        )
+
+        XCTAssertEqual(match?.id, "participant_scott")
+        XCTAssertEqual(match?.teamID, "round_red")
+        XCTAssertEqual(match?.groupID, "group_1")
+        XCTAssertEqual(match?.adjustedHandicap, 17)
+    }
+
+    func testBuildParticipantPayloadsNormalizesNameAndCarriesTeamAndHandicap() {
+        let member = SeriesMember(
+            id: "member_scott",
+            userID: "user_scott",
+            playerID: "player_scott",
+            name: Name("Scott Sternstein", "Scott Sternstein"),
+            teamID: "red",
+            defaultTeeBoxID: "tee_white",
+            createdAt: t0,
+            lastUpdatedAt: t0,
+            parentID: "series1"
+        )
+        let payloads = SeriesRoundCreationMapping.buildParticipantPayloads(
+            members: [member],
+            roundID: "round1",
+            teamMappings: ["red": .init(seriesTeamID: "red", roundTeamID: "round_red")],
+            memberAssignments: ["member_scott": .init(groupID: "group_1", teeOrder: 2)],
+            handicaps: [
+                "member_scott": SeriesMemberHandicap(
+                    id: "member_scott",
+                    memberID: "member_scott",
+                    computedIndex: 16.7
+                ),
+            ],
+            courseSegment: makeCourseSegment(),
+            hostPlayerID: nil
+        )
+
+        let payload = payloads.first
+        XCTAssertEqual(payload?.name.givenName, "Scott")
+        XCTAssertEqual(payload?.name.familyName, "Sternstein")
+        XCTAssertEqual(payload?.teamID, "round_red")
+        XCTAssertEqual(payload?.groupID, "group_1")
+        XCTAssertEqual(payload?.teeOrder, 2)
+        XCTAssertEqual(payload?.originalHandicap, 17)
+        XCTAssertEqual(payload?.adjustedHandicap, 17)
+        XCTAssertEqual(payload?.leagueHandicapStrokesAtCreation, 17)
+    }
+
+    func testMembersMissingEffectiveHandicapReportsOnlyMissingMembers() {
+        let members = [
+            makeMember(id: "m1", name: "Alice"),
+            makeMember(id: "m2", name: "Bob"),
+        ]
+        let missing = SeriesRoundCreationMapping.membersMissingEffectiveHandicap(
+            members: members,
+            handicaps: [
+                "m1": SeriesMemberHandicap(id: "m1", memberID: "m1", computedIndex: 8.2),
+            ]
+        )
+
+        XCTAssertEqual(missing, ["m2"])
+    }
+
+    @MainActor
+    func testSuggestedIndividualMatchupPlans_teamSeriesAvoidsTeammatePairings() {
+        let viewModel = SeriesViewModel()
+        viewModel.series = makeSeries(useTeams: true)
+        viewModel.teams = [
+            makeTeam(id: "t1", name: "Alpha", index: 0),
+            makeTeam(id: "t2", name: "Beta", index: 1),
+        ]
+        viewModel.members = [
+            makeMember(id: "a1", name: "Alice", teamID: "t1"),
+            makeMember(id: "a2", name: "Annie", teamID: "t1"),
+            makeMember(id: "b1", name: "Bob", teamID: "t2"),
+            makeMember(id: "b2", name: "Ben", teamID: "t2"),
+        ]
+
+        let plans = viewModel.suggestedIndividualMatchupPlans()
+
+        XCTAssertEqual(plans.count, 2)
+        XCTAssertEqual(Set(plans.flatMap { [$0.memberAID, $0.memberBID] }.compactMap { $0 }), Set(["a1", "a2", "b1", "b2"]))
+        XCTAssertTrue(plans.allSatisfy { plan in
+            let memberA = viewModel.members.first { $0.id == plan.memberAID }
+            let memberB = viewModel.members.first { $0.id == plan.memberBID }
+            return memberA?.teamID != memberB?.teamID
+        })
+    }
+
+    @MainActor
+    func testSuggestedIndividualMatchupPlans_unevenTeamSizesLeaveLeftoverUnmatched() {
+        let viewModel = SeriesViewModel()
+        viewModel.series = makeSeries(useTeams: true)
+        viewModel.teams = [
+            makeTeam(id: "t1", name: "Alpha", index: 0),
+            makeTeam(id: "t2", name: "Beta", index: 1),
+        ]
+        viewModel.members = [
+            makeMember(id: "a1", name: "Alice", teamID: "t1"),
+            makeMember(id: "a2", name: "Annie", teamID: "t1"),
+            makeMember(id: "a3", name: "Ava", teamID: "t1"),
+            makeMember(id: "b1", name: "Bob", teamID: "t2"),
+            makeMember(id: "b2", name: "Ben", teamID: "t2"),
+        ]
+
+        let plans = viewModel.suggestedIndividualMatchupPlans()
+
+        XCTAssertEqual(plans.count, 2)
+        let usedMemberIDs = Set(plans.flatMap { [$0.memberAID, $0.memberBID] }.compactMap { $0 })
+        XCTAssertFalse(usedMemberIDs.contains("a3"))
+        XCTAssertFalse(plans.contains { $0.memberAID?.hasPrefix("a") == true && $0.memberBID?.hasPrefix("a") == true })
+    }
+
+    @MainActor
+    func testSuggestedIndividualMatchupPlans_teamSeriesUsesHandicapOrderWithinTeams() {
+        let viewModel = SeriesViewModel()
+        viewModel.series = makeSeries(handicapsEnabled: true, useTeams: true)
+        viewModel.teams = [
+            makeTeam(id: "t1", name: "Alpha", index: 0),
+            makeTeam(id: "t2", name: "Beta", index: 1),
+        ]
+        viewModel.members = [
+            makeMember(id: "aHigh", name: "Alice", teamID: "t1"),
+            makeMember(id: "aLow", name: "Annie", teamID: "t1"),
+            makeMember(id: "bLow", name: "Ben", teamID: "t2"),
+            makeMember(id: "bHigh", name: "Bob", teamID: "t2"),
+        ]
+        viewModel.memberHandicaps = [
+            "aHigh": SeriesMemberHandicap(id: "aHigh", memberID: "aHigh", computedIndex: 18.4),
+            "aLow": SeriesMemberHandicap(id: "aLow", memberID: "aLow", computedIndex: 7.2),
+            "bLow": SeriesMemberHandicap(id: "bLow", memberID: "bLow", computedIndex: 8.1),
+            "bHigh": SeriesMemberHandicap(id: "bHigh", memberID: "bHigh", computedIndex: 20.0),
+        ]
+
+        let plans = viewModel.suggestedIndividualMatchupPlans()
+
+        XCTAssertEqual(plans.count, 2)
+        XCTAssertEqual(Set([plans[0].memberAID, plans[0].memberBID]), Set(["aLow", "bLow"]))
+        XCTAssertEqual(Set([plans[1].memberAID, plans[1].memberBID]), Set(["aHigh", "bHigh"]))
+    }
+
+    @MainActor
+    func testSuggestedIndividualMatchupPlans_preservesExistingPairMetadata() {
+        let viewModel = SeriesViewModel()
+        viewModel.series = makeSeries(useTeams: true)
+        viewModel.teams = [
+            makeTeam(id: "t1", name: "Alpha", index: 0),
+            makeTeam(id: "t2", name: "Beta", index: 1),
+        ]
+        viewModel.members = [
+            makeMember(id: "a1", name: "Alice", teamID: "t1"),
+            makeMember(id: "b1", name: "Bob", teamID: "t2"),
+        ]
+        let existing = SeriesRoundMatchupPlan(
+            id: "existing-plan",
+            memberAID: "a1",
+            memberBID: "b1",
+            index: 0,
+            podGroupingStrategy: .disabled,
+            notes: "keep me",
+            isLocked: true,
+            createdAt: t0,
+            lastUpdatedAt: t0
+        )
+
+        let plans = viewModel.suggestedIndividualMatchupPlans(preserving: [existing])
+
+        XCTAssertEqual(plans.count, 1)
+        XCTAssertEqual(plans[0].id, "existing-plan")
+        XCTAssertEqual(plans[0].notes, "keep me")
+        XCTAssertTrue(plans[0].isLocked)
+        XCTAssertEqual(plans[0].createdAt, t0)
+    }
+
+    func testMatchupMemberOptionSections_groupByTeamSortByHandicapAndFormatSubtitle() {
+        let teams = [
+            makeTeam(id: "t1", name: "Alpha", index: 0),
+            makeTeam(id: "t2", name: "Beta", index: 1),
+        ]
+        let members = [
+            makeMember(id: "aNoHcp", name: "Ava", teamID: "t1"),
+            makeMember(id: "aLow", name: "Alice", teamID: "t1"),
+            makeMember(id: "aHigh", name: "Annie", teamID: "t1"),
+            makeMember(id: "b1", name: "Bob", teamID: "t2"),
+        ]
+
+        let sections = SeriesRoundMatchupMemberOptionBuilder.sections(
+            members: members,
+            teams: teams,
+            usesTeams: true
+        ) { memberID in
+            switch memberID {
+            case "aLow": return 7.2
+            case "aHigh": return 15.5
+            case "b1": return 9.0
+            default: return nil
+            }
+        }
+
+        XCTAssertEqual(sections.map(\.title), ["Alpha", "Beta"])
+        XCTAssertEqual(sections[0].options.map(\.memberID), ["aLow", "aHigh", "aNoHcp"])
+        XCTAssertEqual(sections[0].options[0].subtitle, "7.2 HCP")
+        XCTAssertNil(sections[0].options[2].subtitle)
+        XCTAssertEqual(sections[1].options[0].subtitle, "9.0 HCP")
     }
 }

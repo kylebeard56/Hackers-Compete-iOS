@@ -102,7 +102,8 @@ struct ScoringEngine {
         basis: ScoreBasis,
         scoreInputMode: RoundScoreInputMode = .strokes,
         template: GameTemplate,
-        scoreLookupSegmentIDs: [String]? = nil
+        scoreLookupSegmentIDs: [String]? = nil,
+        handicapStrokeBasis: SeriesHandicapStrokeBasis = .eighteenHole
     ) -> ScoringResult {
         let holeNumbers = segment.holeRange.holeNumbers
         let holeMap = Dictionary(uniqueKeysWithValues: holes.map { ($0.number, $0) })
@@ -142,7 +143,8 @@ struct ScoringEngine {
                         holeNumber: holeNumber,
                         holeMap: holeMap,
                         playedHoleNumbers: holeNumbers,
-                        useHandicaps: basis == .net
+                        useHandicaps: basis == .net,
+                        handicapStrokeBasis: handicapStrokeBasis
                     )
                     let gross = rawStrokes ?? max(1, par + grossRelativeToPar)
                     let netRelativeToPar = grossRelativeToPar - received
@@ -201,7 +203,8 @@ struct ScoringEngine {
         resolvedCompetitionScope: CompetitionScope? = nil,
         scoreOwnerScope: RoundScoreOwnerScope = .individual,
         scoringGroups: [RoundScoringGroup] = [],
-        perHoleWinPoints: Double = 1.0
+        perHoleWinPoints: Double = 1.0,
+        handicapStrokeBasis: SeriesHandicapStrokeBasis = .eighteenHole
     ) -> ScoringResult {
         let holeNumbers = segment.holeRange.holeNumbers
         let holeMap = Dictionary(uniqueKeysWithValues: holes.map { ($0.number, $0) })
@@ -224,7 +227,8 @@ struct ScoringEngine {
             scoreIndex: scoreIndex,
             lookupSegmentIDs: lookupSegmentIDs,
             basis: basis,
-            scoreInputMode: scoreInputMode
+            scoreInputMode: scoreInputMode,
+            handicapStrokeBasis: handicapStrokeBasis
         )
 
         let preCompareValues = runPreCompareStages(
@@ -319,7 +323,8 @@ struct ScoringEngine {
         vegasMode: RoundVegasMode,
         selectionRule: RoundVegasSelectionRule,
         selectionScope: AggregationScope,
-        scoreLookupSegmentIDs: [String]? = nil
+        scoreLookupSegmentIDs: [String]? = nil,
+        handicapStrokeBasis: SeriesHandicapStrokeBasis = .eighteenHole
     ) -> ScoringResult {
         let holeNumbers = segment.holeRange.holeNumbers
         let holeMap = Dictionary(uniqueKeysWithValues: holes.map { ($0.number, $0) })
@@ -332,7 +337,8 @@ struct ScoringEngine {
             scoreIndex: scoreIndex,
             lookupSegmentIDs: lookupSegmentIDs,
             basis: basis,
-            scoreInputMode: scoreInputMode
+            scoreInputMode: scoreInputMode,
+            handicapStrokeBasis: handicapStrokeBasis
         )
 
         let participantsByTeam = Dictionary(grouping: participants.compactMap { participant -> (String, RoundParticipant)? in
@@ -480,7 +486,8 @@ struct ScoringEngine {
         teamScoring: RoundTeamScoringConfiguration,
         matchupResolutionStyle: RoundMatchupResolutionStyle,
         scoreLookupSegmentIDs: [String]? = nil,
-        resolvedCompetitionScope: CompetitionScope? = nil
+        resolvedCompetitionScope: CompetitionScope? = nil,
+        handicapStrokeBasis: SeriesHandicapStrokeBasis = .eighteenHole
     ) -> ScoringResult {
         let holeNumbers = segment.holeRange.holeNumbers
         let holeMap = Dictionary(uniqueKeysWithValues: holes.map { ($0.number, $0) })
@@ -494,7 +501,8 @@ struct ScoringEngine {
             scoreIndex: scoreIndex,
             lookupSegmentIDs: lookupSegmentIDs,
             basis: basis,
-            scoreInputMode: scoreInputMode
+            scoreInputMode: scoreInputMode,
+            handicapStrokeBasis: handicapStrokeBasis
         )
 
         let baseValues = applyBaseScoringStages(
@@ -757,7 +765,8 @@ struct ScoringEngine {
         scoreIndex: [String: ScoreEntry],
         lookupSegmentIDs: [String],
         basis: ScoreBasis,
-        scoreInputMode: RoundScoreInputMode = .strokes
+        scoreInputMode: RoundScoreInputMode = .strokes,
+        handicapStrokeBasis: SeriesHandicapStrokeBasis = .eighteenHole
     ) -> [String: [Int: PipelineHoleValue]] {
         let participantByID = Dictionary(uniqueKeysWithValues: participants.map { ($0.id, $0) })
         let teamParticipantIDs = Dictionary(grouping: participants.compactMap { participant -> (String, String)? in
@@ -803,7 +812,8 @@ struct ScoringEngine {
                     holeNumber: holeNumber,
                     holeMap: holeMap,
                     playedHoleNumbers: holeNumbers,
-                    useHandicaps: basis == .net
+                    useHandicaps: basis == .net,
+                    handicapStrokeBasis: handicapStrokeBasis
                 )
                 let gross = resolvedGrossStrokes(entry: entry, par: par) ?? max(1, par + grossRelativeToPar)
                 let net = max(0, gross - received)
@@ -835,7 +845,8 @@ struct ScoringEngine {
         scoreIndex: [String: ScoreEntry],
         lookupSegmentIDs: [String],
         basis: ScoreBasis,
-        scoreInputMode: RoundScoreInputMode = .strokes
+        scoreInputMode: RoundScoreInputMode = .strokes,
+        handicapStrokeBasis: SeriesHandicapStrokeBasis = .eighteenHole
     ) -> [String: [Int: PipelineHoleValue]] {
         buildRawValues(
             scoringUnits: participants.map { participant in
@@ -853,7 +864,8 @@ struct ScoringEngine {
             scoreIndex: scoreIndex,
             lookupSegmentIDs: lookupSegmentIDs,
             basis: basis,
-            scoreInputMode: scoreInputMode
+            scoreInputMode: scoreInputMode,
+            handicapStrokeBasis: handicapStrokeBasis
         )
     }
 
@@ -1151,7 +1163,8 @@ struct ScoringEngine {
         holeNumber: Int,
         holes: [Hole],
         playedHoleNumbers: [Int],
-        useHandicaps: Bool
+        useHandicaps: Bool,
+        handicapStrokeBasis: SeriesHandicapStrokeBasis = .eighteenHole
     ) -> Int {
         let holeMap = Dictionary(uniqueKeysWithValues: holes.map { ($0.number, $0) })
         return strokesReceived(
@@ -1159,7 +1172,8 @@ struct ScoringEngine {
             holeNumber: holeNumber,
             holeMap: holeMap,
             playedHoleNumbers: playedHoleNumbers,
-            useHandicaps: useHandicaps
+            useHandicaps: useHandicaps,
+            handicapStrokeBasis: handicapStrokeBasis
         )
     }
 
@@ -1168,7 +1182,8 @@ struct ScoringEngine {
         holeNumber: Int,
         holeMap: [Int: Hole],
         playedHoleNumbers: [Int],
-        useHandicaps: Bool
+        useHandicaps: Bool,
+        handicapStrokeBasis: SeriesHandicapStrokeBasis = .eighteenHole
     ) -> Int {
         guard useHandicaps else { return 0 }
         let hcp = max(0, handicap)
@@ -1187,24 +1202,40 @@ struct ScoringEngine {
             }
             .map(\.number)
 
+        let allocationOrder: [Int]
         if rankedHoleNumbers.isPopulated {
-            return strokesReceived(
-                handicap: handicap,
-                holeHandicap: holeMap[holeNumber]?.handicap,
-                useHandicaps: true
-            )
+            allocationOrder = rankedHoleNumbers
+        } else {
+            allocationOrder = playedHoleNumbers.filter { holeMap[$0] != nil || $0 == holeNumber }
         }
-
-        let allocationOrder = playedHoleNumbers.filter { holeMap[$0] != nil || $0 == holeNumber }
 
         guard let holeIndex = allocationOrder.firstIndex(of: holeNumber) else { return 0 }
 
         let holesInPlay = allocationOrder.count
         guard holesInPlay > 0 else { return 0 }
-        let full = hcp / holesInPlay
-        let rem = hcp % holesInPlay
+        let strokesForMatch = handicapStrokesForPlayedHoles(
+            handicap: hcp,
+            basis: handicapStrokeBasis,
+            holesInPlay: holesInPlay
+        )
+        guard strokesForMatch > 0 else { return 0 }
+
+        let full = strokesForMatch / holesInPlay
+        let rem = strokesForMatch % holesInPlay
         let extra = holeIndex < rem ? 1 : 0
         return full + extra
+    }
+
+    static func handicapStrokesForPlayedHoles(
+        handicap: Int,
+        basis: SeriesHandicapStrokeBasis,
+        holesInPlay: Int
+    ) -> Int {
+        let hcp = max(0, handicap)
+        guard hcp > 0, holesInPlay > 0 else { return 0 }
+        guard holesInPlay != basis.holeCount else { return hcp }
+        let scaled = Double(hcp) * Double(holesInPlay) / Double(basis.holeCount)
+        return Int(scaled.rounded(.toNearestOrAwayFromZero))
     }
 
     private static func resolvedScoringUnits(
@@ -1287,6 +1318,9 @@ struct ScoringEngine {
         case .participant:
             return participants.first?.adjustedHandicap ?? 0
         case .team, .scoreOwner:
+            if let allowance = scoringUnit.handicapAllowance {
+                return Int(allowance.unitStrokes.rounded())
+            }
             if let handicapAdjustments = scoringUnit.handicapAdjustments, handicapAdjustments.isPopulated {
                 return Int(handicapAdjustments.values.reduce(0.0, +).rounded())
             }

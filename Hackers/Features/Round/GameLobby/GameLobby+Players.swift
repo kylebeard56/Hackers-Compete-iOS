@@ -56,7 +56,7 @@ private struct TeeGroupSlotRow: View {
                             .alignLeading()
 
                         if handicapsEnabled {
-                            Text("\(participant.adjustedHandicap) strokes")
+                            Text("HCP \(participant.adjustedHandicap)")
                                 .fontStyle(kFontName, size: 14, weight: .regular)
                                 .foregroundStyle(Color.neutral)
                                 .alignLeading()
@@ -342,7 +342,18 @@ extension GameLobby {
     private func partnerChainLabel(after participant: RoundParticipant, nextParticipant: RoundParticipant) -> String? {
         guard let group = partnershipGroup(for: participant.id),
               group.id == partnershipGroup(for: nextParticipant.id)?.id else { return nil }
-        return partnershipLabel(for: group)
+        guard let roundedHandicap = roundedSharedHandicap(for: group) else {
+            return partnershipLabel(for: group)
+        }
+        return "\(partnershipLabel(for: group)) - HCP \(roundedHandicap)"
+    }
+
+    private func roundedSharedHandicap(for group: RoundScoringGroup) -> Int? {
+        guard snapshot.configuration.useHandicaps,
+              let unitStrokes = snapshot.roundSegment?.scoringUnits.first(where: { $0.id == group.id })?.handicapAllowance?.unitStrokes else {
+            return nil
+        }
+        return Int(unitStrokes.rounded(.toNearestOrAwayFromZero))
     }
 
     // MARK: - Roster Content
@@ -640,6 +651,7 @@ extension GameLobby {
 
     private var showTeamShortcuts: Bool {
         teamsEnabled
+            && snapshot.shouldAutoMirrorTeeGroupsToTeams
             && snapshot.teams.isEmpty
             && snapshot.participants.count >= 2
     }
@@ -1079,7 +1091,7 @@ extension GameLobby {
             items.append(
                 SubtitleItem(
                     view: AnyView(
-                        Text("\(participant.adjustedHandicap) strokes")
+                        Text("HCP \(participant.adjustedHandicap)")
                             .fontStyle(kFontName, size: 14, weight: .regular)
                             .foregroundStyle(Color.neutral)
                     )
@@ -1296,7 +1308,7 @@ extension GameLobby {
                         .alignLeading()
                     
                     if handicapsEnabled {
-                        Text("\(totalHCP) total strokes")
+                        Text("\(totalHCP) total HCP")
                             .fontStyle(kFontName, size: 15, weight: .medium)
                             .foregroundStyle(.neutral)
                             .alignLeading()
@@ -1600,7 +1612,7 @@ private struct TeamSlotRow: View {
                             .alignLeading()
 
                         if handicapsEnabled {
-                            Text("\(participant.adjustedHandicap) strokes")
+                            Text("HCP \(participant.adjustedHandicap)")
                                 .fontStyle(kFontName, size: 14, weight: .regular)
                                 .foregroundStyle(Color.neutral)
                                 .alignLeading()
@@ -1727,7 +1739,7 @@ extension GameLobby {
     private func teamTile(for team: RoundTeam, readOnly: Bool = false) -> some View {
         let players = teamPlayers(for: team)
 
-        let totalHCP = players.reduce(0) { $0 + $1.adjustedHandicap }
+        let totalHCP = handicapStrokes(forTeam: team, players: players)
         let showTeamHandicap = readOnly && handicapsEnabled
 
         VStack(spacing: 12) {
@@ -1806,6 +1818,15 @@ extension GameLobby {
         return palette.foregroundColor
     }
 
+    private func handicapStrokes(forTeam team: RoundTeam, players: [RoundParticipant]) -> Int {
+        if let unitStrokes = snapshot.roundSegment?.scoringUnits.first(where: { unit in
+            unit.owner == .team && unit.ownerIDs.contains(team.id)
+        })?.handicapAllowance?.unitStrokes {
+            return Int(unitStrokes.rounded(.toNearestOrAwayFromZero))
+        }
+        return players.reduce(0) { $0 + $1.adjustedHandicap }
+    }
+
     @ViewBuilder
     private func teamHeader(for team: RoundTeam, totalHCP: Int, readOnly: Bool = false, showTeamHandicap: Bool = false) -> some View {
         HStack(spacing: 12) {
@@ -1830,7 +1851,7 @@ extension GameLobby {
                         .foregroundStyle(.neutral)
                         .alignLeading()
                 } else if handicapsEnabled {
-                    Text("\(totalHCP) total strokes")
+                    Text("\(totalHCP) total HCP")
                         .fontStyle(kFontName, size: 15, weight: .medium)
                         .foregroundStyle(.neutral)
                         .alignLeading()

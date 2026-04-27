@@ -221,6 +221,17 @@ final class JoinRoundViewModel: ObservableObject, Loggable {
                 joinRoundError = .primaryPlayerNotFound
                 return
             }
+
+            if let matchingOfflineParticipant = matchingOfflineParticipant(for: primary) {
+                claimedParticipant = matchingOfflineParticipant
+                try await claimSelectedParticipantWithPrimaryPlayer(flow: "claim_matching_offline_participant")
+                addEvent(
+                    "round.join_succeeded",
+                    eventProps: joinEventProperties(["flow": "claim_matching_offline_participant"])
+                )
+                completeFlow = true
+                return
+            }
             
             await roundSession?.start(for: roundID)
             try await roundSession?.addPlayers([primary])
@@ -437,10 +448,12 @@ private extension JoinRoundViewModel {
         await roundSession?.start(for: roundID)
 
         var updatedParticipant = existingParticipant
+        let claimedName = existingParticipant.name.normalizedForStorage
         updatedParticipant.userID = user.id
         updatedParticipant.playerID = primary.id
-        updatedParticipant.name = primary.name
+        updatedParticipant.name = claimedName
         try await roundSession?.update(participant: updatedParticipant)
+        await normalizePrimaryPlayerIfNeeded(primary, to: claimedName)
 
         claimedParticipant = updatedParticipant
         participants.upsert(updatedParticipant)
@@ -450,6 +463,7 @@ private extension JoinRoundViewModel {
             participant: updatedParticipant,
             user: user,
             primary: primary,
+            claimedName: claimedName,
             flow: flow
         )
     }
@@ -458,6 +472,7 @@ private extension JoinRoundViewModel {
         participant: RoundParticipant,
         user: HackersUser,
         primary: Player,
+        claimedName: Name,
         flow: String
     ) async {
         guard let seriesMemberID = participant.seriesMemberID, seriesMemberID.isPopulated else { return }
@@ -467,7 +482,7 @@ private extension JoinRoundViewModel {
                 seriesMemberID: seriesMemberID,
                 userID: user.id,
                 playerID: primary.id,
-                name: primary.name
+                name: claimedName
             )
         } catch {
             addBreadcrumb(
@@ -494,6 +509,20 @@ private extension JoinRoundViewModel {
         }
     }
 
+    private func normalizePrimaryPlayerIfNeeded(_ primary: Player, to claimedName: Name) async {
+        guard primary.name.normalizedForStorage != claimedName else { return }
+
+        var updatedPrimary = primary
+        updatedPrimary.name = claimedName
+        updatedPrimary.lastUpdatedAt = .init()
+
+        do {
+            _ = try await updatedPrimary.put().get()
+        } catch {
+            addBreadcrumb(level: .warning, message: "Round claim linked participant but could not normalize primary player name", error: error)
+        }
+    }
+
     private func handleParticipantClaimError(_ error: ParticipantClaimError, flow: String) {
         switch error {
         case .primaryPlayerNotFound:
@@ -504,6 +533,22 @@ private extension JoinRoundViewModel {
             addBreadcrumb(level: .warning, message: "Failed to \(flow): claimed participant nil")
         case .roundNotFound:
             addBreadcrumb(level: .warning, message: "Failed to \(flow): round ID nil")
+        }
+    }
+}
+
+extension JoinRoundViewModel {
+    func matchingOfflineParticipant(for player: Player) -> RoundParticipant? {
+        Self.matchingOfflineParticipant(for: player, in: participants)
+    }
+
+    static func matchingOfflineParticipant(for player: Player, in participants: [RoundParticipant]) -> RoundParticipant? {
+        let key = player.name.normalizedMatchKey
+        guard key.isPopulated else { return nil }
+
+        return participants.first { participant in
+            participant.isOffline
+                && participant.name.normalizedMatchKey == key
         }
     }
 }

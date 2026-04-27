@@ -52,12 +52,20 @@ extension RoundSnapshot {
     var courseInfo: CourseInfo? { courseSegment?.courseInfo }
     var holeRange: HoleRange? { configuration.courses.first?.holeRange }
     var holeSegment: HoleSegment { holeRange?.segment ?? .full18 }
+    var handicapStrokeBasis: SeriesHandicapStrokeBasis {
+        configuration.resolvedHandicapStrokeBasis(holeCount: holeRange?.count ?? holeSegment.holeCount)
+    }
     var defaultTee: Tee? { courseInfo?.teeMap[courseSegment?.defaultTee ?? ""] }
     var tees: [Tee] { courseInfo?.tees ?? [] }
     
     var gameFormat: GameFormat { self.round.configuration.primaryFormat }
     var requiresTeams: Bool { configuration.primaryFormat.configuration.requiresTeams }
     var isSharedScoreSource: Bool { resolvedActiveTemplate.scoreSource == .shared }
+    var shouldAutoMirrorTeeGroupsToTeams: Bool {
+        isSharedScoreSource
+            && requiresTeams
+            && configuration.scoreOwnerScope == .individual
+    }
     var isVegasFormat: Bool { resolvedActiveTemplate.id == FormatTemplateRegistry.vegas.id }
     var isSecretScoring: Bool { configuration.isSecretScoring }
     var areScoresRevealed: Bool { configuration.areScoresRevealed }

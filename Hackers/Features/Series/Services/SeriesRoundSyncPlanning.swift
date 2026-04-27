@@ -24,6 +24,7 @@ enum SeriesRoundSyncError: Error, Equatable, LocalizedError {
     case organizationTeeGroupCountMismatch(expected: Int, actual: Int)
     case organizationSeriesTeamMappingMismatch
     case organizationNotAllowedLive
+    case preflightFailed(String)
     case writeFailed(String)
 
     var errorDescription: String? {
@@ -38,10 +39,12 @@ enum SeriesRoundSyncError: Error, Equatable, LocalizedError {
             return "These sync options are not allowed for the round’s current status."
         case .organizationTeeGroupCountMismatch(let expected, let actual):
             return "Tee group count mismatch: league expects \(expected) groups but the round has \(actual). Fix tee groups or cancel sync."
-      case .organizationSeriesTeamMappingMismatch:
+        case .organizationSeriesTeamMappingMismatch:
             return "Series team ↔ round team mappings are missing or incomplete."
         case .organizationNotAllowedLive:
             return "Organization sync is not allowed while the round is live."
+        case .preflightFailed(let detail):
+            return detail
         case .writeFailed(let detail):
             return detail
         }
@@ -49,6 +52,64 @@ enum SeriesRoundSyncError: Error, Equatable, LocalizedError {
 }
 
 enum SeriesRoundSyncPlanning {
+    struct OrganizationPrunePlan {
+        var teeGroupsToDelete: [TeeTimeGroup] = []
+        var teamsToDelete: [RoundTeam] = []
+        var scoringGroupsToDelete: [RoundScoringGroup] = []
+        var retainedMatchups: [TeamMatchup] = []
+        var didPruneMatchups: Bool = false
+
+        var hasDeletes: Bool {
+            teeGroupsToDelete.isPopulated || teamsToDelete.isPopulated || scoringGroupsToDelete.isPopulated
+        }
+
+        var hasAny: Bool { hasDeletes || didPruneMatchups }
+    }
+
+    static func organizationPrunePlan(
+        snapshot: RoundSnapshot,
+        matchups: [TeamMatchup]? = nil
+    ) -> OrganizationPrunePlan {
+        let participantIDs = Set(snapshot.participants.map(\.id))
+        let activeParticipantIDs = Set(snapshot.participants.filter(\.isPresenceActive).map(\.id))
+        let populatedTeeGroupIDs = Set(snapshot.participants.compactMap(\.groupID).filter(\.isPopulated))
+        let populatedTeamIDs = Set(snapshot.participants.compactMap(\.teamID).filter(\.isPopulated))
+
+        let scoringGroupsToDelete = snapshot.scoringGroups.filter { group in
+            group.memberIDs.filter(participantIDs.contains).isEmpty
+        }
+        let deletedScoringGroupIDs = Set(scoringGroupsToDelete.map(\.id))
+        let retainedScoringGroups = snapshot.scoringGroups.filter { !deletedScoringGroupIDs.contains($0.id) }
+
+        let retainedScoringGroupIDsWithActivePlayers = Set(retainedScoringGroups.compactMap { group -> String? in
+            group.memberIDs.contains(where: activeParticipantIDs.contains) ? group.id : nil
+        })
+        let activeTeamIDs = Set(snapshot.participants.compactMap { participant -> String? in
+            guard participant.isPresenceActive, let teamID = participant.teamID, teamID.isPopulated else { return nil }
+            return teamID
+        })
+
+        let currentMatchups = matchups ?? snapshot.roundSegment?.matchups ?? []
+        let retainedMatchups = currentMatchups.filter { matchup in
+            guard matchup.isValid else { return false }
+            switch matchup.mode ?? .team {
+            case .team:
+                return matchup.teamIDs.allSatisfy(activeTeamIDs.contains)
+            case .individual:
+                return (matchup.participantIDs ?? []).allSatisfy(activeParticipantIDs.contains)
+            case .scoreOwner:
+                return (matchup.scoreOwnerIDs ?? []).allSatisfy(retainedScoringGroupIDsWithActivePlayers.contains)
+            }
+        }
+
+        return OrganizationPrunePlan(
+            teeGroupsToDelete: snapshot.teeGroups.filter { !populatedTeeGroupIDs.contains($0.id) },
+            teamsToDelete: snapshot.teams.filter { !populatedTeamIDs.contains($0.id) },
+            scoringGroupsToDelete: scoringGroupsToDelete,
+            retainedMatchups: retainedMatchups,
+            didPruneMatchups: retainedMatchups.count != currentMatchups.count
+        )
+    }
 
     /// Team links keyed by **series** team id (from `SeriesRoundMapping`).
     static func teamLinks(
@@ -102,22 +163,18 @@ enum SeriesRoundSyncPlanning {
         teams: [SeriesTeam],
         pods: [SeriesTeamPod]
     ) throws -> ([String: SeriesRoundCreationMapping.MemberAssignment], [SeriesRoundCreationMapping.TeeGroupPlan]) {
-        let plannedStructure = SeriesRoundPlanningService.resolvedPlannedStructure(
+        guard let courseSegment = snapshot.courseSegment else {
+            throw SeriesRoundSyncError.missingCourseSegment
+        }
+        let resolvedPlan = SeriesRoundResolvedPlan(
             series: series,
             seriesRound: seriesRound,
             members: participatingMembers,
             teams: teams,
             pods: pods,
-            courseSelection: snapshot.courseSegment.map { segment in
-                SeriesCourseSelection(
-                    courseID: segment.courseInfo.golfCourseApiID.map(String.init) ?? segment.courseInfo.id,
-                    cachedName: segment.courseInfo.name,
-                    defaultTeeBoxID: segment.defaultTee ?? "",
-                    holeSegment: segment.holeSegment
-                )
-            }
+            courseSegment: courseSegment
         )
-        let groupPlans = SeriesRoundPlanningService.teeGroupPlans(from: plannedStructure.teeGroups)
+        let groupPlans = resolvedPlan.teeGroupPlans
         let sortedTeeGroups = snapshot.teeGroups.sorted { $0.index < $1.index }
         let effectivePlans: [SeriesRoundCreationMapping.TeeGroupPlan] = groupPlans.isPopulated
             ? groupPlans
@@ -189,13 +246,15 @@ enum SeriesRoundSyncPlanning {
         guard seriesTeamsForRound.isPopulated else { return [] }
 
         let sortedSeries = seriesTeamsForRound.sorted { $0.index < $1.index }
-        guard sortedSeries.count == teamLinks.count else {
+        let expectedSeriesTeamIDs = Set(sortedSeries.map(\.id))
+        let relevantTeamLinks = teamLinks.filter { expectedSeriesTeamIDs.contains($0.key) }
+        guard sortedSeries.count == relevantTeamLinks.count else {
             throw SeriesRoundSyncError.organizationSeriesTeamMappingMismatch
         }
 
         var patched: [RoundTeam] = []
         for seriesTeam in sortedSeries {
-            guard let link = teamLinks[seriesTeam.id],
+            guard let link = relevantTeamLinks[seriesTeam.id],
                   var roundTeam = snapshot.teams.first(where: { $0.id == link.roundTeamID }) else {
                 throw SeriesRoundSyncError.organizationSeriesTeamMappingMismatch
             }
@@ -205,6 +264,43 @@ enum SeriesRoundSyncPlanning {
             patched.append(roundTeam)
         }
         return patched
+    }
+
+    static func organizationTeamMappingPreflightError(
+        seriesTeamsForRound: [SeriesTeam],
+        teamLinks: [String: SeriesRoundCreationMapping.SeriesToRoundTeamLink],
+        snapshot: RoundSnapshot
+    ) -> SeriesRoundSyncError? {
+        guard seriesTeamsForRound.isPopulated else { return nil }
+
+        let sortedSeries = seriesTeamsForRound.sorted { $0.index < $1.index }
+        let expectedSeriesTeamIDs = Set(sortedSeries.map(\.id))
+        let relevantTeamLinks = teamLinks.filter { expectedSeriesTeamIDs.contains($0.key) }
+        let missingSeriesTeamIDs = sortedSeries
+            .filter { relevantTeamLinks[$0.id] == nil }
+            .map(\.id)
+        let missingRoundTeamIDs = relevantTeamLinks.values
+            .filter { link in !snapshot.teams.contains(where: { $0.id == link.roundTeamID }) }
+            .map(\.roundTeamID)
+
+        guard sortedSeries.count != relevantTeamLinks.count
+                || missingSeriesTeamIDs.isPopulated
+                || missingRoundTeamIDs.isPopulated else {
+            return nil
+        }
+
+        var parts = [
+            "Series team mappings are incomplete for organization sync.",
+            "Expected \(sortedSeries.count), found \(relevantTeamLinks.count)."
+        ]
+        if missingSeriesTeamIDs.isPopulated {
+            parts.append("Missing series team IDs: \(missingSeriesTeamIDs.joined(separator: ", ")).")
+        }
+        if missingRoundTeamIDs.isPopulated {
+            parts.append("Missing round team IDs: \(missingRoundTeamIDs.joined(separator: ", ")).")
+        }
+        parts.append("Round has \(snapshot.teams.count) teams.")
+        return .preflightFailed(parts.joined(separator: " "))
     }
 
     /// Applies player-field sync (name, tee, handicaps) onto existing participants.
@@ -292,24 +388,19 @@ enum SeriesRoundSyncPlanning {
         scoringGroups: [RoundScoringGroup],
         existingSegment: RoundSegment,
         teams: [SeriesTeam],
+        pods: [SeriesTeamPod],
         participatingMembers: [SeriesMember],
         teamLinks: [String: SeriesRoundCreationMapping.SeriesToRoundTeamLink]
     ) -> RoundSegment {
-        let competitionScope = SeriesRoundCreationMapping.resolvedCompetitionScope(for: seriesRound)
-        let plannedStructure = SeriesRoundPlanningService.resolvedPlannedStructure(
+        let resolvedPlan = SeriesRoundResolvedPlan(
             series: series,
             seriesRound: seriesRound,
             members: participatingMembers,
             teams: teams,
-            pods: [],
-            courseSelection: SeriesCourseSelection(
-                courseID: courseSegment.courseInfo.golfCourseApiID.map(String.init) ?? courseSegment.courseInfo.id,
-                cachedName: courseSegment.courseInfo.name,
-                defaultTeeBoxID: courseSegment.defaultTee ?? "",
-                holeSegment: courseSegment.holeSegment
-            )
+            pods: pods,
+            courseSegment: courseSegment
         )
-        let matchupPlans = plannedStructure.matchups.map { $0.matchupPlan }
+        let matchupPlans = resolvedPlan.matchupPlans
         let participantIDs = Dictionary(
             uniqueKeysWithValues: participants.compactMap { p -> (String, String)? in
                 guard let m = p.seriesMemberID else { return nil }
@@ -329,7 +420,8 @@ enum SeriesRoundSyncPlanning {
         let scoringUnits = SeriesRoundCreationMapping.buildScoringUnits(
             seriesRound: seriesRound,
             participants: participants,
-            scoringGroups: scoringGroups
+            scoringGroups: scoringGroups,
+            teamMappings: teamLinks
         )
 
         var segment = existingSegment
@@ -338,7 +430,7 @@ enum SeriesRoundSyncPlanning {
         segment.templateID = seriesRound.roundConfig.formatTemplateID
         segment.scoringUnits = scoringUnits
         segment.matchups = resolvedMatchups.isEmpty ? nil : resolvedMatchups
-        segment.competitionScope = competitionScope
+        segment.competitionScope = resolvedPlan.competitionScope
         segment.lastUpdatedAt = .init()
         return segment
     }

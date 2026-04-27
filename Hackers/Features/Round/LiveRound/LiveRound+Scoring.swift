@@ -341,29 +341,35 @@ extension LiveRound {
 
     @ViewBuilder
     private func partnershipSharedRows(for holeNumber: Int) -> some View {
-        ForEach(viewModel.teeGroupTeamSections) { section in
-            let groups = viewModel.partnershipGroups(in: section.participants)
-            if groups.isPopulated {
-                VStack(spacing: 12) {
-                    ForEach(groups) { scoringGroup in
-                        if let session = viewModel.sharedScoringSession(for: scoringGroup, holeNumber: holeNumber) {
-                            SharedScoreOwnerRow(
-                                palette: palette,
-                                viewModel: viewModel,
-                                title: viewModel.scoringGroupLabel(scoringGroup),
-                                subtitle: viewModel.scoringGroupSubtitle(scoringGroup),
-                                participants: session.participants,
-                                holeNumber: holeNumber,
-                                scoringUnitID: scoringGroup.id,
-                                accentColor: viewModel.scoringGroupAccentColor(scoringGroup),
-                                onEnterScoreTap: {
-                                    viewModel.presentedScoringSession = session
-                                }
-                            )
-                        }
+        let groups = viewModel.teeGroupTeamSections.flatMap { section in
+            viewModel.partnershipGroups(in: section.participants)
+        }
+
+        if groups.isPopulated {
+            VStack(spacing: 12) {
+                ForEach(groups) { scoringGroup in
+                    if let session = viewModel.sharedScoringSession(for: scoringGroup, holeNumber: holeNumber) {
+                        SharedScoreOwnerRow(
+                            palette: palette,
+                            viewModel: viewModel,
+                            title: viewModel.scoringGroupLabel(scoringGroup),
+                            subtitle: viewModel.scoringGroupSubtitle(scoringGroup),
+                            participants: session.participants,
+                            holeNumber: holeNumber,
+                            scoringUnitID: scoringGroup.id,
+                            accentColor: viewModel.scoringGroupAccentColor(scoringGroup),
+                            onEnterScoreTap: {
+                                viewModel.presentedScoringSession = session
+                            }
+                        )
                     }
                 }
             }
+        } else {
+            Text("Set up pair scoring groups in the lobby before entering scores.")
+                .fontStyle(kFontName, size: 14, weight: .regular)
+                .foregroundStyle(Color.neutral)
+                .padding(.vertical, 12)
         }
     }
 
@@ -663,7 +669,9 @@ extension LiveRound {
                     }
                 }
             } else if viewModel.effectiveLeaderboardRows.isEmpty {
-                Text("No players in this round yet.")
+                Text(viewModel.snapshot.isSharedScoreSource && viewModel.snapshot.participants.contains(where: \.isPresenceActive)
+                     ? "No shared scoring groups are set up yet."
+                     : "No players in this round yet.")
                     .fontStyle(kFontName, size: 14, weight: .regular)
                     .foregroundStyle(Color.neutral)
                     .alignCenter()

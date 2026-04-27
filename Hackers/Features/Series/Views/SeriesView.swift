@@ -37,6 +37,22 @@ private enum SeriesTabScrollLayout {
     static let emptyRoundsChromeVertical: CGFloat = 195
 }
 
+private struct LeagueDescriptionCollapsedHeightKey: PreferenceKey {
+    static var defaultValue: CGFloat = 0
+
+    static func reduce(value: inout CGFloat, nextValue: () -> CGFloat) {
+        value = nextValue()
+    }
+}
+
+private struct LeagueDescriptionFullHeightKey: PreferenceKey {
+    static var defaultValue: CGFloat = 0
+
+    static func reduce(value: inout CGFloat, nextValue: () -> CGFloat) {
+        value = nextValue()
+    }
+}
+
 struct SeriesView: View {
     @Environment(\.colorScheme) var colorScheme
     @Environment(\.dismiss) var dismiss
@@ -51,7 +67,6 @@ struct SeriesView: View {
     @State private var scrollPageID: Int? = 0
     @State private var tabScrollViewportHeight: CGFloat = 0
 
-    @State private var showEditNameSheet = false
     @State private var showLeagueSettings = false
     @State private var showHandicapSettings = false
     @State private var showNewRoundSheet = false
@@ -71,6 +86,9 @@ struct SeriesView: View {
     @State private var showAnnouncementsSheet = false
     @State private var showShareSeries = false
     @State private var announcementEditorContext: SeriesAnnouncementEditorContext?
+    @State private var isLeagueDescriptionExpanded = false
+    @State private var leagueDescriptionCollapsedHeight: CGFloat = 0
+    @State private var leagueDescriptionFullHeight: CGFloat = 0
 
     @Namespace private var seriesShareTransition
 
@@ -107,14 +125,6 @@ struct SeriesView: View {
         .onDisappear {
             guard appSession.activeSeriesID == seriesID else { return }
             appSession.activeSeriesID = nil
-        }
-        .sheet(isPresented: $showEditNameSheet) {
-            EditSeriesNameView(currentName: viewModel.series.name) { newName in
-                showEditNameSheet = false
-                Task { await viewModel.updateName(newName) }
-            }
-            .presentationDetents([.medium])
-            .presentationDragIndicator(.visible)
         }
         .sheet(isPresented: $showLeagueSettings) {
             SeriesLeagueSettingsView(viewModel: viewModel)
@@ -277,13 +287,6 @@ struct SeriesView: View {
                     
                     Button {
                         Haptics.fire(.light)
-                        showEditNameSheet = true
-                    } label: {
-                        Label("Edit name", systemImage: "pencil")
-                    }
-
-                    Button {
-                        Haptics.fire(.light)
                         showLeagueSettings = true
                     } label: {
                         Label(viewModel.series.experiencePreset.gearMenuSettingsLabel, systemImage: "slider.horizontal.3")
@@ -388,6 +391,10 @@ struct SeriesView: View {
 
                 if tab == .rounds, viewModel.isCommissioner, !viewModel.isLoading, !viewModel.checklistComplete {
                     commissionerChecklist
+                }
+
+                if tab == .rounds, !viewModel.isLoading {
+                    leagueInfoCard
                 }
 
                 if tab == .rounds, let scoreboard = viewModel.scoreboardSnapshot {
@@ -616,6 +623,184 @@ struct SeriesView: View {
             }
         }
         .frame(width: 20, height: 20)
+    }
+
+    private var leagueInfoCard: some View {
+        VStack(alignment: .leading, spacing: 16) {
+            HStack(alignment: .top, spacing: 12) {
+                VStack(alignment: .leading, spacing: 6) {
+                    Text(leagueInfoTitle)
+                        .fontStyle(kFontName, size: 22, weight: .semibold)
+                        .foregroundStyle(palette.foregroundColor)
+                        .lineLimit(2)
+                        .minimumScaleFactor(0.82)
+
+                    if let description = trimmedLeagueDescription {
+                        VStack(alignment: .leading, spacing: 6) {
+                            Text(description)
+                                .fontStyle(kFontName, size: 14, weight: .regular)
+                                .foregroundStyle(Color.neutral)
+                                .lineLimit(isLeagueDescriptionExpanded ? nil : 3)
+                                .fixedSize(horizontal: false, vertical: true)
+                                .frame(maxWidth: .infinity, alignment: .leading)
+                                .overlay(alignment: .topLeading) {
+                                    leagueDescriptionMeasuringText(description, lineLimit: 3)
+                                        .background {
+                                            GeometryReader { proxy in
+                                                Color.clear.preference(
+                                                    key: LeagueDescriptionCollapsedHeightKey.self,
+                                                    value: proxy.size.height
+                                                )
+                                            }
+                                        }
+                                }
+                                .overlay(alignment: .topLeading) {
+                                    leagueDescriptionMeasuringText(description, lineLimit: nil)
+                                        .background {
+                                            GeometryReader { proxy in
+                                                Color.clear.preference(
+                                                    key: LeagueDescriptionFullHeightKey.self,
+                                                    value: proxy.size.height
+                                                )
+                                            }
+                                        }
+                                }
+
+                            if shouldShowLeagueDescriptionToggle {
+                                Button {
+                                    Haptics.fire(.light)
+                                    withAnimation(.easeInOut(duration: 0.2)) {
+                                        isLeagueDescriptionExpanded.toggle()
+                                    }
+                                } label: {
+                                    HStack(spacing: 4) {
+                                        Text(isLeagueDescriptionExpanded ? "Show less" : "See more")
+                                            .fontStyle(kFontName, size: 13, weight: .semibold)
+
+                                        Icon(
+                                            name: isLeagueDescriptionExpanded ? "chevron.up" : "chevron.down",
+                                            size: 12,
+                                            weight: .semibold
+                                        )
+                                    }
+                                    .foregroundStyle(Color.accentGreen)
+                                }
+                                .buttonStyle(.plain)
+                            }
+                        }
+                    }
+                }
+                .frame(maxWidth: .infinity, alignment: .leading)
+
+                if viewModel.isCommissioner {
+                    NavButton(
+                        style: .glass,
+                        icon: "f044",
+                        size: 16,
+                        weight: .regular,
+                        color: palette.foregroundColor,
+                        theme: palette.theme
+                    ) {
+                        showLeagueSettings = true
+                    }
+                    .accessibilityLabel("Edit league details")
+                }
+            }
+
+            HStack(spacing: 8) {
+                ForEach(Array(leagueInfoStats.enumerated()), id: \.offset) { _, stat in
+                    leagueInfoStatTile(value: stat.value, label: stat.label)
+                }
+            }
+        }
+        .padding(16)
+        .glassCardEffect(forceMaterial: true, tint: palette.cardColor)
+        .padding(.horizontal, 16)
+        .onPreferenceChange(LeagueDescriptionCollapsedHeightKey.self) { height in
+            leagueDescriptionCollapsedHeight = height
+        }
+        .onPreferenceChange(LeagueDescriptionFullHeightKey.self) { height in
+            leagueDescriptionFullHeight = height
+        }
+        .accessibilityElement(children: .contain)
+    }
+
+    private var leagueInfoTitle: String {
+        viewModel.series.name.isEmpty ? viewModel.series.experiencePreset.unnamedExperienceNavTitle : viewModel.series.name
+    }
+
+    private var trimmedLeagueDescription: String? {
+        let trimmed = (viewModel.series.description ?? "").trimmingCharacters(in: .whitespacesAndNewlines)
+        return trimmed.isPopulated ? trimmed : nil
+    }
+
+    private var shouldShowLeagueDescriptionToggle: Bool {
+        leagueDescriptionFullHeight > leagueDescriptionCollapsedHeight + 1
+    }
+
+    private func leagueDescriptionMeasuringText(_ description: String, lineLimit: Int?) -> some View {
+        Text(description)
+            .fontStyle(kFontName, size: 14, weight: .regular)
+            .lineLimit(lineLimit)
+            .fixedSize(horizontal: false, vertical: true)
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .hidden()
+            .accessibilityHidden(true)
+            .allowsHitTesting(false)
+    }
+
+    private var leagueInfoStats: [(value: String, label: String)] {
+        let players = String(viewModel.eligibleMembers.count)
+        let rounds = String(viewModel.rounds.count)
+        if viewModel.series.settings.useTeams || viewModel.teams.isPopulated {
+            return [
+                (players, "Players"),
+                (rounds, "Rounds"),
+                (String(viewModel.teams.count), "Teams")
+            ]
+        }
+        let completed = viewModel.rounds.filter { viewModel.effectiveStatus(for: $0) == .complete }.count
+        return [
+            (players, "Players"),
+            (rounds, "Rounds"),
+            (String(completed), "Complete")
+        ]
+    }
+
+    private func leagueInfoStatTile(value: String, label: String) -> some View {
+        VStack(spacing: 6) {
+            Text(value)
+                .fontStyle(kFontName, size: 24, weight: .semibold)
+                .foregroundStyle(palette.foregroundColor)
+                .monospacedDigit()
+                .lineLimit(1)
+                .minimumScaleFactor(0.7)
+
+            Text(label.uppercased())
+                .fontStyle(kFontName, size: 10, weight: .semibold)
+                .foregroundStyle(palette.foregroundColor.opacity(0.62))
+                .lineLimit(1)
+                .minimumScaleFactor(0.75)
+        }
+        .padding(12)
+        .frame(maxWidth: .infinity)
+        .aspectRatio(1, contentMode: .fit)
+        .background(leagueInfoStatTileFill)
+        .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
+        .overlay {
+            RoundedRectangle(cornerRadius: 12, style: .continuous)
+                .stroke(leagueInfoStatTileStroke, lineWidth: 1)
+        }
+        .shadow(color: palette.shadowColor.opacity(colorScheme.isLight ? 0.55 : 0.2), radius: 8, y: 4)
+        .accessibilityLabel("\(value) \(label)")
+    }
+
+    private var leagueInfoStatTileFill: Color {
+        colorScheme.isLight ? palette.backgroundColor : palette.cardColor
+    }
+
+    private var leagueInfoStatTileStroke: Color {
+        colorScheme.isLight ? Color.neutral4.opacity(0.55) : Color.white.opacity(0.12)
     }
 
     private func seriesScoreboardTile(_ scoreboard: SeriesScoreboardSnapshot) -> some View {

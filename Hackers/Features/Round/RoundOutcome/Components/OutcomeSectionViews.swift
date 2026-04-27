@@ -351,7 +351,7 @@ struct OutcomeGroupedLeaderboardTileView: View {
     let showsSectionTotal: Bool
     let formattedGroupedSectionSum: (Double) -> String
     let formattedAvgScore: (Double) -> String
-    let onRowTap: (RoundParticipant) -> Void
+    let onRowTap: (LiveRoundViewModel.LeaderboardRow) -> Void
 
     var body: some View {
         VStack(spacing: 12) {
@@ -375,7 +375,7 @@ struct OutcomeGroupedLeaderboardTileView: View {
                                 teamColor: row.teamColor,
                                 nameDisplayFormat: nameDisplayFormat,
                                 usesFormatDisplay: row.totalPoints != nil,
-                                onTap: { onRowTap(row.participant) }
+                                onTap: { onRowTap(row) }
                             )
 
                             if row.id != section.rows.last?.id {

@@ -256,7 +256,7 @@ extension ManagePlayerView {
                 .background(palette.cardEmbeddedRowBackground.opacity(0.55))
                 .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
 
-                Text("Handicap strokes come from the league. A commissioner can change them from the roster.")
+                Text("Handicap comes from the league. A commissioner can change it from the roster.")
                     .fontStyle(kFontName, size: 13, weight: .regular)
                     .foregroundStyle(Color.neutral)
                     .multilineTextAlignment(.leading)
@@ -289,7 +289,7 @@ extension ManagePlayerView {
             }
 
             if !snapshot.configuration.useHandicaps {
-                Text("Net scoring using handicap strokes is not enabled yet for this round, but you can still enter a value.")
+                Text("Net scoring using handicap is not enabled yet for this round, but you can still enter a value.")
                     .fontStyle(kFontName, size: 14, weight: .regular)
                     .foregroundStyle(Color.neutral)
                     .multilineTextAlignment(.leading)

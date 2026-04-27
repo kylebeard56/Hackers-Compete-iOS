@@ -13,6 +13,8 @@ extension RoundSession {
     /// Keeps teams in sync with tee groups for shared-score formats (Captain's Choice).
     /// Creates/removes teams as needed and ensures every participant's teamID matches their groupID mapping.
     func syncTeamsToTeeGroups() async throws {
+        guard snapshot.shouldAutoMirrorTeeGroupsToTeams else { return }
+
         let groups = snapshot.teeGroups.sorted { $0.index < $1.index }
         let existingTeams = snapshot.teams.sorted { $0.index < $1.index }
 
@@ -58,7 +60,8 @@ extension RoundSession {
     func mapTeeGroupsToTeams() async throws {
         addBreadcrumb()
 
-        guard snapshot.teams.isEmpty,
+        guard snapshot.shouldAutoMirrorTeeGroupsToTeams,
+              snapshot.teams.isEmpty,
               snapshot.teeGroups.isPopulated,
               snapshot.participants.count >= 2 else {
             return

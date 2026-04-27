@@ -72,7 +72,7 @@ struct Player: Hashable, Codable, Playable, FirebaseIdentifiable {
         self.id = id
         self.userID = userID
         self.playerID = id
-        self.name = name
+        self.name = name.normalizedForStorage
         self.rounds = rounds
         self.handicaps = handicaps
         self.isPrimary = isPrimary
@@ -101,7 +101,7 @@ struct Player: Hashable, Codable, Playable, FirebaseIdentifiable {
         self.id = playable.playerID ?? fallbackID
         self.userID = playable.userID
         self.playerID = playable.playerID ?? fallbackID
-        self.name = playable.name
+        self.name = playable.name.normalizedForStorage
         self.rounds = rounds
         self.handicaps = handicaps
         self.isPrimary = isPrimary
@@ -197,11 +197,12 @@ struct Name: Hashable, Codable {
     }
     
     func encode(to encoder: Encoder) throws {
+        let normalized = normalizedForStorage
         var container = encoder.container(keyedBy: CodingKeys.self)
-        try container.encode(givenName, forKey: .givenName)
-        try container.encode(familyName, forKey: .familyName)
-        try container.encode(searchKey, forKey: .searchKey)
-        try container.encode(searchKeyReverse, forKey: .searchKeyReverse)
+        try container.encode(normalized.givenName, forKey: .givenName)
+        try container.encode(normalized.familyName, forKey: .familyName)
+        try container.encode(normalized.searchKey, forKey: .searchKey)
+        try container.encode(normalized.searchKeyReverse, forKey: .searchKeyReverse)
     }
 }
 
@@ -236,10 +237,43 @@ extension Name {
 }
 
 extension Name {
+    var normalizedForStorage: Name {
+        let given = givenName.trimmingCharacters(in: .whitespacesAndNewlines)
+        let family = familyName.trimmingCharacters(in: .whitespacesAndNewlines)
+
+        if given.isEmpty, family.isEmpty {
+            return Name()
+        }
+
+        if given.localizedCaseInsensitiveCompare(family) == .orderedSame,
+           given.contains(where: \.isWhitespace) {
+            return Name(given)
+        }
+
+        if family.isEmpty, given.contains(where: \.isWhitespace) {
+            return Name(given)
+        }
+
+        if given.isEmpty, family.contains(where: \.isWhitespace) {
+            return Name(family)
+        }
+
+        return Name(given, family)
+    }
+
+    var normalizedMatchKey: String {
+        normalizedForStorage.trimmedFullName.normalizedForSearch
+    }
+
     var isEmpty: Bool { givenName.isEmpty || familyName.isEmpty }
     var isPopulated: Bool { givenName.isPopulated || familyName.isPopulated }
-    var fullName: String { "\(givenName) \(familyName)" }
-    var initials: String { "\(givenName.prefix(1))\(familyName.prefix(1))" }
+    var fullName: String {
+        [givenName, familyName]
+            .map { $0.trimmingCharacters(in: .whitespacesAndNewlines) }
+            .filter(\.isPopulated)
+            .joined(separator: " ")
+    }
+    var initials: String { "\(givenName.trimmingCharacters(in: .whitespacesAndNewlines).prefix(1))\(familyName.trimmingCharacters(in: .whitespacesAndNewlines).prefix(1))" }
     
     var trimmedFullName: String {
         fullName.trimmingCharacters(in: .whitespacesAndNewlines)
@@ -275,4 +309,3 @@ extension Name {
         return false
     }
 }
-

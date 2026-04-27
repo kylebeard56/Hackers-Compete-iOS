@@ -1291,17 +1291,22 @@ struct SeriesScoringProfileSelectionCard: View {
                     .buttonStyle(.plain)
                 }
             }
+            .padding(.horizontal, 16)
         }
+        .padding(.horizontal, -16)
     }
 
     @ViewBuilder
     private var profileDetailsSection: some View {
-        if let selectedProfile {
-            selectedProfileSection(selectedProfile)
-        } else {
-            Text("This track will not award series points for the round.")
+        VStack(alignment: .leading, spacing: 8) {
+            Text(summaryText(for: selectedProfile))
                 .fontStyle(kFontName, size: 12, weight: .regular)
                 .foregroundStyle(Color.neutral)
+                .fixedSize(horizontal: false, vertical: true)
+
+            if let selectedProfile {
+                selectedProfileSection(selectedProfile)
+            }
         }
     }
 
@@ -1326,11 +1331,11 @@ struct SeriesScoringProfileSelectionCard: View {
 
     private var allowedKinds: [SeriesScoringProfileKind] {
         var kinds: [SeriesScoringProfileKind] = [.placement]
-        if competitorType == .team {
-            kinds.append(.accrueFromIndividual)
-        }
         if competitionScope == .matchup && supportsWinTieLoss {
             kinds.append(.winTieLoss)
+        }
+        if competitorType == .team {
+            kinds.append(.accrueFromIndividual)
         }
         return kinds
     }
@@ -1364,7 +1369,7 @@ struct SeriesScoringProfileSelectionCard: View {
         case .placement:
             return "Placement"
         case .accrueFromIndividual:
-            return "Accrue from individual"
+            return "Sum player points to team"
         case .winTieLoss:
             return "Win/Tie/Loss"
         default:
@@ -1391,26 +1396,32 @@ struct SeriesScoringProfileSelectionCard: View {
         }
     }
 
-    private func profileSummary(for profile: SeriesScoringProfile) -> String {
-        if let summary = profile.summary, summary.isPopulated {
-            return summary
+    private func summaryText(for profile: SeriesScoringProfile?) -> String {
+        guard let profile else {
+            return "This \(audienceNoun.lowercased()) track does not award series points for the round."
         }
-
         switch profile.kind {
         case .placement:
             let rules = profile.placementRules
                 .sorted { $0.rankStart < $1.rankStart }
-                .prefix(4)
+                .prefix(3)
                 .map { "\(ordinal($0.rankStart)) \($0.points.cleanNumberText)" }
-            return rules.isEmpty ? "No placement points set yet." : rules.joined(separator: " • ")
+                .joined(separator: ", ")
+            return rules.isEmpty
+                ? "\(audienceNoun) leaderboard awards have not been configured yet."
+                : "\(audienceNoun) leaderboard awards \(rules)."
         case .accrueFromIndividual:
-            return "Sum awarded individual round points into the team standings."
+            return "Each team's total is the sum of its players' individual points from this round."
         case .winTieLoss:
             let points = profile.resultPoints ?? .init()
-            return "Win \(points.winPoints.cleanNumberText) • Tie \(points.tiePoints.cleanNumberText) • Loss \(points.lossPoints.cleanNumberText)"
+            return "Match results award Win \(points.winPoints.cleanNumberText), Tie \(points.tiePoints.cleanNumberText), Loss \(points.lossPoints.cleanNumberText)."
         case .manual:
-            return "Commissioner assigns points after the round."
+            return "Commissioner assigns \(audienceNoun.lowercased()) points manually after the round."
         }
+    }
+
+    private var audienceNoun: String {
+        competitorType == .team ? "Team" : "Individual"
     }
 
     private func editorSeed(for kind: SeriesScoringProfileKind, profile: SeriesScoringProfile?) -> SeriesScoringProfileEditorSeed {
@@ -1558,6 +1569,24 @@ struct SeriesCompletionReviewSheet: View {
         )
     }
 
+    private var membersBySeriesMemberID: [String: SeriesMember] {
+        Dictionary(
+            viewModel.activeMembers.map { ($0.id, $0) },
+            uniquingKeysWith: { first, _ in first }
+        )
+    }
+
+    private var reviewParticipantsByPlayerID: [String: RoundParticipant] {
+        guard let reviewSnapshot else { return [:] }
+        return Dictionary(
+            reviewSnapshot.participants.compactMap { participant in
+                guard let playerID = participant.playerID, playerID.isPopulated else { return nil }
+                return (playerID, participant)
+            },
+            uniquingKeysWith: { first, _ in first }
+        )
+    }
+
     private struct ScoreReviewTeeGroupSection: Identifiable {
         let id: String
         let title: String
@@ -1574,14 +1603,8 @@ struct SeriesCompletionReviewSheet: View {
         guard let snap = reviewSnapshot else {
             return [ScoreReviewTeeGroupSection(id: "all", title: "", playerIDs: allPlayerIDs)]
         }
-        var participantByPlayerID: [String: RoundParticipant] = [:]
-        for p in snap.participants {
-            if let pid = p.playerID, pid.isPopulated {
-                participantByPlayerID[pid] = p
-            }
-        }
         func groupKey(forPlayerID pid: String) -> String {
-            guard let gid = participantByPlayerID[pid]?.groupID, gid.isPopulated else { return "" }
+            guard let gid = reviewParticipantsByPlayerID[pid]?.groupID, gid.isPopulated else { return "" }
             return gid
         }
         var buckets: [String: [String]] = [:]
@@ -1590,7 +1613,7 @@ struct SeriesCompletionReviewSheet: View {
             buckets[key, default: []].append(pid)
         }
         func minTeeOrder(forGroupKey key: String) -> Int {
-            (buckets[key] ?? []).compactMap { participantByPlayerID[$0]?.teeOrder }.min() ?? Int.max
+            (buckets[key] ?? []).compactMap { reviewParticipantsByPlayerID[$0]?.teeOrder }.min() ?? Int.max
         }
         let orderedKeys = buckets.keys.sorted { a, b in
             let aEmpty = a.isEmpty
@@ -1617,8 +1640,8 @@ struct SeriesCompletionReviewSheet: View {
                 let ra = sortRank(a)
                 let rb = sortRank(b)
                 if ra != rb { return ra < rb }
-                let na = membersByPlayerID[a]?.name.fullName ?? String(a.prefix(8))
-                let nb = membersByPlayerID[b]?.name.fullName ?? String(b.prefix(8))
+                let na = resolvedScoreReviewName(playerID: a)
+                let nb = resolvedScoreReviewName(playerID: b)
                 return na.localizedCaseInsensitiveCompare(nb) == .orderedAscending
             }
             let sid = key.isEmpty ? "unassigned" : key
@@ -1817,9 +1840,8 @@ struct SeriesCompletionReviewSheet: View {
 
     private func playerRow(playerID: String) -> some View {
         let row = scoreReviewRowState(playerID: playerID, roundFullyComplete: roundFullyComplete)
-        let member = membersByPlayerID[playerID]
-        let name = member?.name.fullName ?? playerID.prefix(8).description
-        let trailing = reviewSnapshot.map { viewModel.scoreReviewTrailingLabel(playerID: playerID, snapshot: $0) }
+        let name = resolvedScoreReviewName(playerID: playerID)
+        let trailing = reviewSnapshot.flatMap { viewModel.scoreReviewTrailingLabel(playerID: playerID, snapshot: $0) }
 
         return HStack(alignment: .center, spacing: 12) {
             Image(systemName: row.leadingIconName)
@@ -1876,6 +1898,39 @@ struct SeriesCompletionReviewSheet: View {
         }
         .padding(12)
         .glassCardEffect(cornerRadius: 12)
+        .accessibilityLabel(scoreReviewAccessibilityLabel(name: name, row: row, trailing: trailing))
+    }
+
+    private func resolvedScoreReviewName(playerID: String) -> String {
+        if let member = membersByPlayerID[playerID] {
+            return member.name.fullName
+        }
+        if let participant = reviewParticipantsByPlayerID[playerID] {
+            let snapshotName = participant.name.fullName.trimmingCharacters(in: .whitespacesAndNewlines)
+            if snapshotName.isPopulated {
+                return snapshotName
+            }
+            if let seriesMemberID = participant.seriesMemberID,
+               let member = membersBySeriesMemberID[seriesMemberID] {
+                return member.name.fullName
+            }
+        }
+        return playerID.prefix(8).description
+    }
+
+    private func scoreReviewAccessibilityLabel(
+        name: String,
+        row: ScoreReviewRowState,
+        trailing: String?
+    ) -> String {
+        var components: [String] = [name]
+        if row.subtitle.isPopulated {
+            components.append(row.subtitle)
+        }
+        if let trailing, trailing.isPopulated {
+            components.append(trailing)
+        }
+        return components.joined(separator: ", ")
     }
 
     private func peerScorecardSignerPlayerIDs(for playerID: String) -> [String] {

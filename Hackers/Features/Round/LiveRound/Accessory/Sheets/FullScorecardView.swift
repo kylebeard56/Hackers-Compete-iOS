@@ -27,6 +27,7 @@ struct FullScorecardView: View {
     @ObservedObject var viewModel: LiveRoundViewModel
     let participant: RoundParticipant
     var allowsScoreEditing: Bool = true
+    var initialSelectedScoringUnitID: String? = nil
     
     @State private var selectedParticipantID: String?
     @State private var horizontalOffset: CGFloat = 0
@@ -124,7 +125,7 @@ struct FullScorecardView: View {
         .onAppear {
             viewModel.set(snapshot: viewModel.snapshot)
             if selectedParticipantID == nil {
-                selectedParticipantID = participant.id
+                selectedParticipantID = initialSelectedScoringUnitID ?? participant.id
             }
             previousVerticalOffset = verticalOffset
         }
@@ -366,7 +367,7 @@ private extension FullScorecardView {
             guard case .player(let row) = row else { return }
             Haptics.fire(.light)
             withAnimation(.easeInOut(duration: 0.2)) {
-                selectedParticipantID.toggle(to: row.participant.id)
+                selectedParticipantID.toggle(to: row.id)
                 if isRotated { rightPanelContent = nil }
             }
         }
@@ -375,11 +376,11 @@ private extension FullScorecardView {
     func detailCell(row: ScorecardRow, holeNumber: Int) -> some View {
         switch row {
         case .player(let row):
-            let gross = viewModel.grossStrokes(for: row.participant.id, holeNumber: holeNumber)
-            let net = viewModel.netStrokesOnHole(participant: row.participant, holeNumber: holeNumber)
-            let strokesReceived = viewModel.strokesReceivedOnHole(participant: row.participant, holeNumber: holeNumber)
+            let gross = grossStrokes(for: row, holeNumber: holeNumber)
+            let net = netStrokes(for: row, holeNumber: holeNumber)
+            let strokesReceived = strokesReceived(for: row, holeNumber: holeNumber)
             let par = viewModel.hole(for: holeNumber)?.par ?? 4
-            let isSelected = row.participant.id == selectedParticipantID
+            let isSelected = row.id == selectedParticipantID
             let accentColor = participantHighlightColor(for: row.participant)
             let canEditParticipant = allowsScoreEditing && viewModel.canEditScorecard(participant: row.participant)
             let isTeamColor = viewModel.teamColor(for: row.participant) != nil
@@ -394,7 +395,7 @@ private extension FullScorecardView {
             )
             let isEditing: Bool
             if case .scoreEdit(let anchor) = rightPanelContent, isRotated {
-                isEditing = anchor.participant.id == row.participant.id && anchor.holeNumber == holeNumber
+                isEditing = anchor.scoringUnitID == row.scoringUnitID && anchor.holeNumber == holeNumber
             } else {
                 isEditing = false
             }
@@ -405,8 +406,8 @@ private extension FullScorecardView {
                         Button {
                             Haptics.fire(.light)
                             withAnimation(.easeInOut(duration: 0.2)) {
-                                selectedParticipantID = row.participant.id
-                                rightPanelContent = .scoreEdit(ScoreEditAnchor(participant: row.participant, holeNumber: holeNumber))
+                                selectedParticipantID = row.id
+                                rightPanelContent = .scoreEdit(ScoreEditAnchor(row: row, holeNumber: holeNumber))
                             }
                         } label: {
                             scoreCellView
@@ -420,7 +421,7 @@ private extension FullScorecardView {
                 } else {
                     return AnyView(
                         Menu {
-                            scoreEditMenuContent(participant: row.participant, holeNumber: holeNumber, par: par, currentGross: gross)
+                            scoreEditMenuContent(row: row, holeNumber: holeNumber, par: par, currentGross: gross)
                         } label: {
                             scoreCellView
                         }
@@ -435,11 +436,11 @@ private extension FullScorecardView {
     
     @ViewBuilder
     func scoreEditMenuContent(
-        participant: RoundParticipant,
+        row: LiveRoundViewModel.LeaderboardRow,
         holeNumber: Int, par: Int,
         currentGross: Int?
     ) -> some View {
-        let currentValue = viewModel.scoreInputValue(for: participant.id, holeNumber: holeNumber)
+        let currentValue = scoreInputValue(for: row, holeNumber: holeNumber)
         let (primary, more) = viewModel.scoreMenuOptions(for: holeNumber)
         
         Section(header: Text(viewModel.isFriendlyScoreInputMode ? "Enter score relative to par" : "Enter gross score")) {
@@ -448,9 +449,9 @@ private extension FullScorecardView {
                     Haptics.fire(.light)
                     Task {
                         if currentValue == strokes {
-                            await viewModel.clearScore(participant: participant, holeNumber: holeNumber)
+                            await viewModel.clearScore(scoringUnitID: row.scoringUnitID, participant: row.participant, holeNumber: holeNumber)
                         } else {
-                            await viewModel.setScoreInputValue(participant: participant, holeNumber: holeNumber, value: strokes)
+                            await viewModel.setScoreInputValue(scoringUnitID: row.scoringUnitID, participant: row.participant, holeNumber: holeNumber, value: strokes)
                         }
                     }
                 } label: {
@@ -474,9 +475,9 @@ private extension FullScorecardView {
                         Haptics.fire(.light)
                         Task {
                             if currentValue == strokes {
-                                await viewModel.clearScore(participant: participant, holeNumber: holeNumber)
+                                await viewModel.clearScore(scoringUnitID: row.scoringUnitID, participant: row.participant, holeNumber: holeNumber)
                             } else {
-                                await viewModel.setScoreInputValue(participant: participant, holeNumber: holeNumber, value: strokes)
+                                await viewModel.setScoreInputValue(scoringUnitID: row.scoringUnitID, participant: row.participant, holeNumber: holeNumber, value: strokes)
                             }
                         }
                     } label: {
@@ -499,7 +500,7 @@ private extension FullScorecardView {
                 Button("Clear", role: .destructive) {
                     Haptics.fire(.light)
                     Task {
-                        await viewModel.clearScore(participant: participant, holeNumber: holeNumber)
+                        await viewModel.clearScore(scoringUnitID: row.scoringUnitID, participant: row.participant, holeNumber: holeNumber)
                     }
                 }
             }
@@ -513,15 +514,15 @@ private extension FullScorecardView {
             case .hole(let holeNumber):
                 return AnyView(detailCell(row: row, holeNumber: holeNumber))
             case .out(let holes), .inSegment(let holes):
-                return AnyView(segmentSummaryCell(participant: leaderboardRow.participant, holes: holes))
+                return AnyView(segmentSummaryCell(row: leaderboardRow, holes: holes))
             case .total:
-                return AnyView(totalScoreLabel(for: leaderboardRow.participant))
+                return AnyView(totalScoreLabel(for: leaderboardRow))
             }
         }
     }
     
-    func segmentSummaryCell(participant: RoundParticipant, holes: [Int]) -> some View {
-        let summary = segmentScoreSummary(for: participant, holes: holes)
+    func segmentSummaryCell(row: LiveRoundViewModel.LeaderboardRow, holes: [Int]) -> some View {
+        let summary = segmentScoreSummary(for: row, holes: holes)
         
         return VStack(spacing: 2) {
             Text(summary.primary)
@@ -657,12 +658,11 @@ private extension FullScorecardView {
     }
     
     func playerLabel(_ row: LiveRoundViewModel.LeaderboardRow) -> some View {
-        let label = row.placeLabel.replacingOccurrences(of: ".", with: "")
-        let name = shortName(for: row.participant)
-        let isSelected = row.participant.id == selectedParticipantID
+        let name = scorecardPrimaryName(for: row)
+        let partnerNames = scorecardSecondaryNames(for: row)
+        let isSelected = row.id == selectedParticipantID
         let canEditParticipant = allowsScoreEditing && viewModel.canEditScorecard(participant: row.participant)
-        let placeColor = isSelected ? participantHighlightColor(for: row.participant) : Color.neutral3
-        let accrued = accruedScoreLabel(for: row.participant)
+        let accrued = accruedScoreLabel(for: row)
         let accruedColor = isSelected ? participantHighlightColor(for: row.participant) : palette.foregroundColor
         
         return VStack(alignment: .leading, spacing: 1) {
@@ -691,6 +691,14 @@ private extension FullScorecardView {
                     .lineLimit(1)
                     .minimumScaleFactor(0.75)
             }
+
+            if partnerNames.isPopulated {
+                Text(partnerNames.joined(separator: "\n"))
+                    .fontStyle(kFontName, size: 10, weight: .medium)
+                    .foregroundStyle(Color.neutral)
+                    .lineLimit(3)
+                    .minimumScaleFactor(0.75)
+            }
             
             //            Text(label)
             //                .fontStyle(kFontName, size: 9, weight: .semibold)
@@ -705,7 +713,7 @@ private extension FullScorecardView {
         .onTapGesture {
             Haptics.fire(.light)
             withAnimation(.easeInOut(duration: 0.2)) {
-                selectedParticipantID.toggle(to: row.participant.id)
+                selectedParticipantID.toggle(to: row.id)
                 if isRotated { rightPanelContent = nil }
             }
         }
@@ -719,12 +727,10 @@ private extension FullScorecardView {
     }
     
     func leftOverlayCell(_ row: LiveRoundViewModel.LeaderboardRow) -> some View {
-        let placeLabel = row.placeLabel.replacingOccurrences(of: ".", with: "")
-        let initials = row.participant.name.initials
-        let isSelected = row.participant.id == selectedParticipantID
+        let initials = row.isSharedScoreUnit ? scorecardSharedInitials(for: row) : row.participant.name.initials
+        let isSelected = row.id == selectedParticipantID
         let canEditParticipant = allowsScoreEditing && viewModel.canEditScorecard(participant: row.participant)
-        let placeColor = isSelected ? participantHighlightColor(for: row.participant) : Color.neutral3
-        let accrued = accruedScoreLabel(for: row.participant)
+        let accrued = accruedScoreLabel(for: row)
         let accruedColor = isSelected ? participantHighlightColor(for: row.participant) : palette.foregroundColor
         
         return VStack(alignment: .leading, spacing: 1) {
@@ -830,6 +836,17 @@ private extension FullScorecardView {
             .padding(.horizontal, layout.cellHorizontalPadding)
             .padding(.vertical, layout.cellVerticalPadding)
     }
+
+    func totalScoreLabel(for row: LiveRoundViewModel.LeaderboardRow) -> some View {
+        let label = accruedScoreLabel(for: row)
+
+        return Text(label)
+            .fontStyle(kFontName, size: 17, weight: .semibold)
+            .foregroundStyle(palette.foregroundColor)
+            .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .center)
+            .padding(.horizontal, layout.cellHorizontalPadding)
+            .padding(.vertical, layout.cellVerticalPadding)
+    }
     
     // MARK: - Decorations
     
@@ -874,11 +891,22 @@ private extension FullScorecardView {
     
     struct ScoreEditAnchor: Identifiable, Equatable {
         let participant: RoundParticipant
+        let scoringUnitID: String
+        let title: String
         let holeNumber: Int
-        var id: String { "\(participant.id)_\(holeNumber)" }
+        var id: String { "\(scoringUnitID)_\(holeNumber)" }
+
+        init(row: LiveRoundViewModel.LeaderboardRow, holeNumber: Int) {
+            participant = row.participant
+            scoringUnitID = row.scoringUnitID
+            title = row.isSharedScoreUnit
+                ? row.participants.map(\.name.fullName).filter(\.isPopulated).joined(separator: " + ")
+                : row.participant.name.fullName
+            self.holeNumber = holeNumber
+        }
         
         static func == (lhs: ScoreEditAnchor, rhs: ScoreEditAnchor) -> Bool {
-            lhs.participant.id == rhs.participant.id && lhs.holeNumber == rhs.holeNumber
+            lhs.scoringUnitID == rhs.scoringUnitID && lhs.holeNumber == rhs.holeNumber
         }
     }
     
@@ -888,11 +916,11 @@ private extension FullScorecardView {
             scoreEditShowCustomPrompt = false
             return
         }
-        let currentValue = viewModel.scoreInputValue(for: anchor.participant.id, holeNumber: anchor.holeNumber)
+        let currentValue = viewModel.scoringUnitScoreInputValue(scoringUnitID: anchor.scoringUnitID, holeNumber: anchor.holeNumber)
         if currentValue == value {
-            await viewModel.clearScore(participant: anchor.participant, holeNumber: anchor.holeNumber)
+            await viewModel.clearScore(scoringUnitID: anchor.scoringUnitID, participant: anchor.participant, holeNumber: anchor.holeNumber)
         } else {
-            await viewModel.setScoreInputValue(participant: anchor.participant, holeNumber: anchor.holeNumber, value: value)
+            await viewModel.setScoreInputValue(scoringUnitID: anchor.scoringUnitID, participant: anchor.participant, holeNumber: anchor.holeNumber, value: value)
         }
         scoreEditAnchor = nil
         scoreEditCustomText = ""
@@ -1181,7 +1209,7 @@ private extension FullScorecardView {
     
     func scoreTileView(anchor: ScoreEditAnchor) -> some View {
         let par = viewModel.hole(for: anchor.holeNumber)?.par ?? 4
-        let currentValue = viewModel.scoreInputValue(for: anchor.participant.id, holeNumber: anchor.holeNumber)
+        let currentValue = viewModel.scoringUnitScoreInputValue(scoringUnitID: anchor.scoringUnitID, holeNumber: anchor.holeNumber)
         let scoreValues: [Int]
         if viewModel.isFriendlyScoreInputMode {
             let configMax = viewModel.snapshot.gameFormat.configuration.maxScoreOverPar.friendlyMaxRelativeValue(for: par)
@@ -1194,7 +1222,7 @@ private extension FullScorecardView {
         
         return ScrollView {
             VStack(alignment: .leading, spacing: 8) {
-                Text("\(anchor.participant.name.fullName) \(kDot) Hole \(anchor.holeNumber)")
+                Text("\(anchor.title) \(kDot) Hole \(anchor.holeNumber)")
                     .fontStyle(kFontName, size: 13, weight: .semibold)
                     .foregroundStyle(palette.foregroundColor)
                     //.foregroundStyle(participantHighlightColor(for: anchor.participant))
@@ -1211,9 +1239,9 @@ private extension FullScorecardView {
                         Haptics.fire(.light)
                         Task {
                             if currentValue == strokes {
-                                await viewModel.clearScore(participant: anchor.participant, holeNumber: anchor.holeNumber)
+                                await viewModel.clearScore(scoringUnitID: anchor.scoringUnitID, participant: anchor.participant, holeNumber: anchor.holeNumber)
                             } else {
-                                await viewModel.setScoreInputValue(participant: anchor.participant, holeNumber: anchor.holeNumber, value: strokes)
+                                await viewModel.setScoreInputValue(scoringUnitID: anchor.scoringUnitID, participant: anchor.participant, holeNumber: anchor.holeNumber, value: strokes)
                             }
                         }
                         //withAnimation(.easeInOut(duration: 0.2)) { rightPanelContent = nil }
@@ -1239,7 +1267,7 @@ private extension FullScorecardView {
                     Button("Clear (-)") {
                         Haptics.fire(.light)
                         Task {
-                            await viewModel.clearScore(participant: anchor.participant, holeNumber: anchor.holeNumber)
+                            await viewModel.clearScore(scoringUnitID: anchor.scoringUnitID, participant: anchor.participant, holeNumber: anchor.holeNumber)
                         }
                         withAnimation(.easeInOut(duration: 0.2)) { rightPanelContent = nil }
                     }
@@ -1260,7 +1288,7 @@ private extension FullScorecardView {
         
         switch row {
         case .player(let row):
-            if row.participant.id == selectedParticipantID {
+            if row.id == selectedParticipantID {
                 //let highlight = participantHighlightColor(for: row.participant)
                 //return highlight.opacity(0.25)
                 return zebra
@@ -1315,6 +1343,55 @@ private extension FullScorecardView {
             isFloatingToolbarVisible = true
         }
         return true
+    }
+
+    func grossStrokes(for row: LiveRoundViewModel.LeaderboardRow, holeNumber: Int) -> Int? {
+        if row.isSharedScoreUnit {
+            return viewModel.scoringUnitGrossStrokes(scoringUnitID: row.scoringUnitID, holeNumber: holeNumber)
+        }
+        return viewModel.grossStrokes(for: row.participant.id, holeNumber: holeNumber)
+    }
+
+    func netStrokes(for row: LiveRoundViewModel.LeaderboardRow, holeNumber: Int) -> Int? {
+        if row.isSharedScoreUnit {
+            return viewModel.scoringUnitNetStrokes(scoringUnitID: row.scoringUnitID, holeNumber: holeNumber)
+        }
+        return viewModel.netStrokesOnHole(participant: row.participant, holeNumber: holeNumber)
+    }
+
+    func strokesReceived(for row: LiveRoundViewModel.LeaderboardRow, holeNumber: Int) -> Int {
+        if row.isSharedScoreUnit {
+            return viewModel.scoringUnitStrokesReceived(scoringUnitID: row.scoringUnitID, holeNumber: holeNumber)
+        }
+        return viewModel.strokesReceivedOnHole(participant: row.participant, holeNumber: holeNumber)
+    }
+
+    func scoreInputValue(for row: LiveRoundViewModel.LeaderboardRow, holeNumber: Int) -> Int? {
+        if row.isSharedScoreUnit {
+            return viewModel.scoringUnitScoreInputValue(scoringUnitID: row.scoringUnitID, holeNumber: holeNumber)
+        }
+        return viewModel.scoreInputValue(for: row.participant.id, holeNumber: holeNumber)
+    }
+
+    func scorecardPrimaryName(for row: LiveRoundViewModel.LeaderboardRow) -> String {
+        shortName(for: row.participant)
+    }
+
+    func scorecardSecondaryNames(for row: LiveRoundViewModel.LeaderboardRow) -> [String] {
+        guard row.isSharedScoreUnit else { return [] }
+        return row.participants.dropFirst().map { shortName(for: $0) }
+    }
+
+    func scorecardSharedInitials(for row: LiveRoundViewModel.LeaderboardRow) -> String {
+        let initials = row.participants.prefix(3).compactMap { participant -> String? in
+            let given = participant.name.givenName.trimmingCharacters(in: .whitespacesAndNewlines)
+            if let first = given.first {
+                return String(first).uppercased()
+            }
+            let fullName = participant.name.fullName.trimmingCharacters(in: .whitespacesAndNewlines)
+            return fullName.first.map { String($0).uppercased() }
+        }
+        return initials.joined()
     }
     
     func shortName(for participant: RoundParticipant) -> String {
@@ -1390,9 +1467,37 @@ private extension FullScorecardView {
         let totalPar = segmentScores.reduce(0) { $0 + $1.par }
         return (scoreToParLabel(totalStrokes - totalPar), "\(totalStrokes)")
     }
+
+    func segmentScoreSummary(for row: LiveRoundViewModel.LeaderboardRow, holes: [Int]) -> (primary: String, secondary: String) {
+        guard row.isSharedScoreUnit else {
+            return segmentScoreSummary(for: row.participant, holes: holes)
+        }
+
+        let segmentScores = holes.compactMap { holeNumber -> (strokes: Int, par: Int)? in
+            guard let par = viewModel.hole(for: holeNumber)?.par else { return nil }
+            guard let gross = viewModel.scoringUnitGrossStrokes(scoringUnitID: row.scoringUnitID, holeNumber: holeNumber) else { return nil }
+            let net = viewModel.scoringUnitNetStrokes(scoringUnitID: row.scoringUnitID, holeNumber: holeNumber)
+            let displayed = viewModel.scoreBasis == .gross ? gross : (net ?? gross)
+            return (displayed, par)
+        }
+
+        guard !segmentScores.isEmpty else { return ("—", "") }
+
+        let totalStrokes = segmentScores.reduce(0) { $0 + $1.strokes }
+        let totalPar = segmentScores.reduce(0) { $0 + $1.par }
+        return (scoreToParLabel(totalStrokes - totalPar), "\(totalStrokes)")
+    }
     
     func accruedScoreLabel(for participant: RoundParticipant) -> String {
         let score = viewModel.scoreToPar(for: participant, basis: viewModel.scoreBasis)
+        return scoreToParLabel(score)
+    }
+
+    func accruedScoreLabel(for row: LiveRoundViewModel.LeaderboardRow) -> String {
+        guard row.isSharedScoreUnit else {
+            return accruedScoreLabel(for: row.participant)
+        }
+        let score = viewModel.scoringUnitScoreToPar(scoringUnitID: row.scoringUnitID, basis: viewModel.scoreBasis)
         return scoreToParLabel(score)
     }
     
@@ -1540,8 +1645,9 @@ private extension FullScorecardView {
     
     func rowHeight(for row: ScorecardRow) -> CGFloat {
         switch row {
-        case .player:
-            return layout.playerRowHeight
+        case .player(let row):
+            let extraLines = row.isSharedScoreUnit ? max(0, row.participants.count - 1) : 0
+            return layout.playerRowHeight + CGFloat(extraLines) * 14
         }
     }
     
@@ -1550,7 +1656,7 @@ private extension FullScorecardView {
         
         var id: String {
             switch self {
-            case .player(let row): return row.participant.id
+            case .player(let row): return row.id
             }
         }
     }

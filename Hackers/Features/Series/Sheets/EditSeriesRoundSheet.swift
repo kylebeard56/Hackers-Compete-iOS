@@ -6,6 +6,69 @@
 import SwiftUI
 
 struct EditSeriesRoundSheet: View {
+    private enum MatchupSource: Hashable {
+        case byTeam
+        case byPair
+        case byIndividual
+
+        var title: String {
+            switch self {
+            case .byTeam:
+                return "By team"
+            case .byPair:
+                return "By pair"
+            case .byIndividual:
+                return "By individual"
+            }
+        }
+
+        init(mode: SeriesMatchupMode, usesTeams: Bool) {
+            guard usesTeams else {
+                self = .byIndividual
+                return
+            }
+            switch mode {
+            case .teeGroupPartnerships:
+                self = .byPair
+            case .individualVsIndividual:
+                self = .byIndividual
+            case .teamVsTeam, .field, .none:
+                self = .byTeam
+            }
+        }
+    }
+
+    private enum MatchupAutoFillAction: String, Identifiable, Hashable {
+        case random
+        case byHandicap
+        case mirrorTeeSheet
+        case currentTeamOrder
+
+        var id: String { rawValue }
+
+        var title: String {
+            switch self {
+            case .random:
+                return "Random"
+            case .byHandicap:
+                return "By handicap"
+            case .mirrorTeeSheet:
+                return "Mirror tee sheet"
+            case .currentTeamOrder:
+                return "Current team order"
+            }
+        }
+    }
+
+    private struct MatchupSourceMenuOption: Identifiable {
+        let source: MatchupSource
+        let subtitle: String?
+        let isDisabled: Bool
+        let isSelected: Bool
+
+        var id: MatchupSource { source }
+    }
+
     @Environment(\.colorScheme) var colorScheme
     @Environment(\.dismiss) var dismiss
     @ObservedObject var viewModel: SeriesViewModel
@@ -26,6 +89,7 @@ struct EditSeriesRoundSheet: View {
     @State private var teamScoring = RoundTeamScoringConfiguration(mode: .bestN, count: 2, scope: .perRound)
     @State private var sequentialTeeStartsEnabled = false
     @State private var podGroupingStrategy: SeriesPodGroupingStrategy = .disabled
+    @State private var matchupSource: MatchupSource = .byTeam
     @State private var selectedTeamProfileID: String?
     @State private var selectedIndividualProfileID: String?
     @State private var countsTowardHandicapPool = true
@@ -38,6 +102,7 @@ struct EditSeriesRoundSheet: View {
     @State private var partnershipPlans: [SeriesRoundPartnershipPlan] = []
     @State private var profileEditorSeed: SeriesScoringProfileEditorSeed?
     @State private var showCoursePicker = false
+    @State private var showMatchupAutoFillDialog = false
     @State private var isSaving = false
 
     private enum RoundEditorField: Hashable {
@@ -49,6 +114,45 @@ struct EditSeriesRoundSheet: View {
 
     private var palette: DesignPalette { .init(theme: .primary, scheme: colorScheme) }
     private var leagueDefaults: SeriesRoundConfiguration { viewModel.series.settings.defaultRoundConfig }
+    private var teamMatchupUsesWLT: Bool {
+        viewModel.usesTeams && competitionScope == .matchup && matchupSource != .byIndividual
+    }
+    private var individualMatchupUsesWLT: Bool {
+        competitionScope == .matchup && (!viewModel.usesTeams || matchupSource == .byIndividual)
+    }
+    private var selectedMatchupSourceTitle: String { matchupSource.title }
+    private var matchupSourceMenuOptions: [MatchupSourceMenuOption] {
+        [
+            MatchupSourceMenuOption(
+                source: .byTeam,
+                subtitle: nil,
+                isDisabled: false,
+                isSelected: matchupSource == .byTeam
+            ),
+            MatchupSourceMenuOption(
+                source: .byPair,
+                subtitle: "Set pairs in tee sheet below",
+                isDisabled: !canSelectPairMatchupSource,
+                isSelected: matchupSource == .byPair
+            ),
+            MatchupSourceMenuOption(
+                source: .byIndividual,
+                subtitle: nil,
+                isDisabled: false,
+                isSelected: matchupSource == .byIndividual
+            ),
+        ]
+    }
+    private var matchupAutoFillActions: [MatchupAutoFillAction] {
+        switch matchupSource {
+        case .byTeam:
+            return [.random, .currentTeamOrder]
+        case .byPair:
+            return [.random, .mirrorTeeSheet]
+        case .byIndividual:
+            return [.random, .byHandicap, .mirrorTeeSheet]
+        }
+    }
 
     var body: some View {
         StickyScrollView(
@@ -119,6 +223,7 @@ struct EditSeriesRoundSheet: View {
             normalizeSelectedTemplate()
             competitionScope = seriesRound.roundConfig.resolvedCompetitionScope
             scoreOwnerScope = seriesRound.roundConfig.scoreOwnerScope
+            matchupSource = MatchupSource(mode: seriesRound.roundConfig.matchupMode, usesTeams: viewModel.usesTeams)
             matchupScoringStyle = seriesRound.roundConfig.matchupScoringStyle
             holeWinPoints = seriesRound.roundConfig.resolvedHoleWinPoints
             matchWinnerBonusPoints = seriesRound.roundConfig.resolvedMatchWinnerBonusPoints
@@ -134,11 +239,9 @@ struct EditSeriesRoundSheet: View {
             selectedIndividualProfileID = seriesRound.individualScoringProfileID
             notes = seriesRound.notes ?? seriesRound.roundConfig.notes ?? ""
             selectedCourse = seriesRound.courseOverride ?? viewModel.suggestedCourseSelection(forRoundIndex: seriesRound.index)
-            matchupPlans = seriesRound.matchupPlans.isEmpty && competitionScope == .matchup
-                ? (viewModel.usesTeams
-                    ? viewModel.suggestedMatchupPlans(pairGroupingStrategy: podGroupingStrategy)
-                    : viewModel.suggestedIndividualMatchupPlans(preserving: seriesRound.matchupPlans))
-                : seriesRound.matchupPlans.sorted { $0.index < $1.index }
+            matchupPlans = competitionScope == .matchup
+                ? seriesRound.matchupPlans.sorted { $0.index < $1.index }
+                : []
             plannedMatchups = seriesRound.plannedMatchups
             plannedTeeGroups = seriesRound.plannedTeeGroups
             partnershipPlans = seriesRound.partnershipPlans
@@ -147,12 +250,7 @@ struct EditSeriesRoundSheet: View {
         }
         .onChange(of: competitionScope) { _, newValue in
             if newValue == .matchup, matchupPlans.isEmpty {
-                matchupPlans = viewModel.usesTeams
-                    ? viewModel.suggestedMatchupPlans(
-                        pairGroupingStrategy: podGroupingStrategy,
-                        preserving: seriesRound.matchupPlans
-                    )
-                    : viewModel.suggestedIndividualMatchupPlans(preserving: seriesRound.matchupPlans)
+                matchupPlans = seriesRound.matchupPlans.sorted { $0.index < $1.index }
             }
             if newValue != .matchup {
                 matchupPlans = []
@@ -188,6 +286,18 @@ struct EditSeriesRoundSheet: View {
             }
             .presentationDetents([.large])
             .presentationDragIndicator(.visible)
+        }
+        .confirmationDialog(
+            "Auto-fill matchups",
+            isPresented: $showMatchupAutoFillDialog,
+            titleVisibility: .visible
+        ) {
+            ForEach(matchupAutoFillActions) { action in
+                Button(action.title) {
+                    applyMatchupAutoFill(action)
+                }
+            }
+            Button("Cancel", role: .cancel) {}
         }
     }
 
@@ -258,7 +368,7 @@ struct EditSeriesRoundSheet: View {
 
             SeriesSheetRow(palette: palette) {
                 VStack(alignment: .leading, spacing: 6) {
-                    Text(selectedCourse?.cachedName ?? "No course selected")
+                    Text(selectedCourseName)
                         .fontStyle(kFontName, size: 15, weight: .semibold)
                         .foregroundStyle(selectedCourse == nil ? Color.neutral : palette.foregroundColor)
 
@@ -417,7 +527,7 @@ struct EditSeriesRoundSheet: View {
             if viewModel.usesTeams {
                 builderField(
                     title: "Count scores",
-                    subtitle: "Choose whether every team score counts or only the best or worst scores."
+                    subtitle: "Choose which scores count and how they're computed for leaderboard."
                 ) {
                     HStack(spacing: 10) {
                         Menu {
@@ -468,28 +578,27 @@ struct EditSeriesRoundSheet: View {
                                 menuChipLabel("\(teamScoring.count)")
                             }
                             .buttonStyle(.plain)
-                        }
-                    }
-                }
+                            
+                            Text("per")
+                                .fontStyle(kFontName, size: 15, weight: .regular)
+                                .foregroundStyle(Color.secondary)
 
-                builderField(
-                    title: "Count by",
-                    subtitle: "Apply team counting on each hole or across the full round."
-                ) {
-                    HStack(spacing: 8) {
-                        Button {
-                            teamScoring.scope = .perHole
-                        } label: {
-                            formChip("Hole", selected: teamScoring.scope == .perHole)
+                            Menu {
+                                ForEach(AggregationScope.allCases, id: \.self) { scope in
+                                    Button {
+                                        teamScoring.scope = scope
+                                    } label: {
+                                        HStack {
+                                            Text(scope == .perRound ? "Round" : "Hole")
+                                            if teamScoring.scope == scope { Image(systemName: "checkmark") }
+                                        }
+                                    }
+                                }
+                            } label: {
+                                menuChipLabel(teamScoring.scope == .perRound ? "Round" : "Hole")
+                            }
+                            .buttonStyle(.plain)
                         }
-                        .buttonStyle(.plain)
-
-                        Button {
-                            teamScoring.scope = .perRound
-                        } label: {
-                            formChip("Round", selected: teamScoring.scope == .perRound)
-                        }
-                        .buttonStyle(.plain)
                     }
                 }
             }
@@ -549,19 +658,46 @@ struct EditSeriesRoundSheet: View {
 
     private var matchupSection: some View {
         SeriesSheetCard(palette: palette) {
-            sectionTitle("Matchups")
+            VStack(alignment: .leading, spacing: 12) {
+                Text("Matchups")
+                    .fontStyle(kFontName, size: 15, weight: .semibold)
+                    .foregroundStyle(palette.foregroundColor)
 
-            Text(viewModel.usesTeams
-                ? "Adjust weekly team pairings here. If you leave the matchup list empty, the app can still auto-pair teams by order."
-                : "Set the player-vs-player pairings for this round. These pairings drive individual matchup scoring and WLT awards.")
-                .fontStyle(kFontName, size: 13, weight: .regular)
-                .foregroundStyle(Color.neutral)
+                Text(matchupSectionSubtitle)
+                    .fontStyle(kFontName, size: 13, weight: .regular)
+                    .foregroundStyle(Color.neutral)
+
+                HStack(spacing: 10) {
+                    if viewModel.usesTeams {
+                        Menu {
+                            ForEach(matchupSourceMenuOptions) { option in
+                                Button {
+                                    selectMatchupSource(option.source)
+                                } label: {
+                                    matchupSourceMenuItem(option)
+                                }
+                                .disabled(option.isDisabled)
+                            }
+                        } label: {
+                            menuChipLabel(selectedMatchupSourceTitle)
+                        }
+                        .buttonStyle(.plain)
+                    }
+
+                    Button {
+                        showMatchupAutoFillDialog = true
+                    } label: {
+                        sparkleActionChipLabel("Auto-fill")
+                    }
+                    .buttonStyle(.plain)
+
+                    Spacer(minLength: 0)
+                }
+            }
 
             if matchupPlans.isEmpty {
                 SeriesSheetRow(palette: palette) {
-                    Text(viewModel.usesTeams
-                        ? "No matchups yet. Auto-fill from team order or add one manually."
-                        : "No pairings yet. Auto-fill from the current player order or add one manually.")
+                    Text(matchupEmptyStateText)
                         .fontStyle(kFontName, size: 13, weight: .regular)
                         .foregroundStyle(Color.neutral)
                 }
@@ -573,45 +709,8 @@ struct EditSeriesRoundSheet: View {
                 }
             }
 
-            HStack(spacing: 10) {
-                Button {
-                    matchupPlans = viewModel.usesTeams
-                        ? viewModel.suggestedMatchupPlans(
-                            pairGroupingStrategy: podGroupingStrategy,
-                            preserving: matchupPlans
-                        )
-                        : viewModel.suggestedIndividualMatchupPlans(preserving: matchupPlans)
-                } label: {
-                    Chip(
-                        text: "Auto-fill",
-                        size: .small,
-                        foreground: palette.foregroundColor,
-                        background: palette.cardEmbeddedRowBackground
-                    )
-                }
-                .buttonStyle(.plain)
-
-                Button {
-                    matchupPlans.append(
-                        SeriesRoundMatchupPlan(
-                            id: HackersID.string(),
-                            index: matchupPlans.count,
-                            podGroupingStrategy: podGroupingStrategy,
-                            createdAt: .init(),
-                            lastUpdatedAt: .init()
-                        )
-                    )
-                } label: {
-                    Chip(
-                        text: "Add matchup",
-                        size: .small,
-                        foreground: .white,
-                        background: Color.accentGreen
-                    )
-                }
-                .buttonStyle(.plain)
-
-                Spacer(minLength: 0)
+            fullWidthCardActionButton("Add matchup") {
+                appendEmptyMatchupRow()
             }
         }
     }
@@ -629,10 +728,6 @@ struct EditSeriesRoundSheet: View {
     private var scoringSection: some View {
         SeriesSheetCard(palette: palette) {
             sectionTitle("Series Points")
-
-            Text(seriesPointsDescription)
-                .fontStyle(kFontName, size: 13, weight: .regular)
-                .foregroundStyle(Color.neutral)
 
             if competitionScope == .matchup {
                 builderField(
@@ -709,10 +804,10 @@ struct EditSeriesRoundSheet: View {
                 SeriesScoringProfileSelectionCard(
                     viewModel: viewModel,
                     title: "Team awards",
-                    subtitle: "Choose how team points are assigned for this round.",
+                    subtitle: "Choose whether teams score directly or by summing each player's points for this round.",
                     competitorType: .team,
                     competitionScope: competitionScope,
-                    supportsWinTieLoss: competitionScope == .matchup,
+                    supportsWinTieLoss: teamMatchupUsesWLT,
                     selectedProfileID: $selectedTeamProfileID
                 ) { seed in
                     profileEditorSeed = seed
@@ -725,12 +820,80 @@ struct EditSeriesRoundSheet: View {
                 subtitle: "Choose how player points are assigned for this round.",
                 competitorType: .member,
                 competitionScope: competitionScope,
-                supportsWinTieLoss: competitionScope == .matchup && !viewModel.usesTeams,
+                supportsWinTieLoss: individualMatchupUsesWLT,
                 selectedProfileID: $selectedIndividualProfileID
             ) { seed in
                 profileEditorSeed = seed
             }
+
+            reviewPointStructureCard
         }
+    }
+
+    private var reviewPointStructureCard: some View {
+        SeriesSheetRow(palette: palette) {
+            VStack(alignment: .leading, spacing: 12) {
+                HStack(spacing: 8) {
+                    Image(systemName: "info.circle.fill")
+                        .font(.system(size: 13, weight: .semibold))
+                        .foregroundStyle(Color.neutral2)
+                    Text("Example scoring")
+                        .fontStyle(kFontName, size: 14, weight: .semibold)
+                        .foregroundStyle(palette.foregroundColor)
+                }
+
+                Text(pointsConfidenceSummary.example)
+                    .fontStyle(kFontName, size: 13, weight: .regular)
+                    .foregroundStyle(Color.neutral)
+                    .fixedSize(horizontal: false, vertical: true)
+            }
+        }
+    }
+
+    private var pointsConfidenceSummary: SeriesRoundPointsConfidenceSummary {
+        return SeriesRoundPointsConfidenceBuilder.summary(
+            roundConfig: confidenceRoundConfig,
+            teamProfile: selectedTeamScoringProfile,
+            individualProfile: selectedIndividualScoringProfile,
+            plannedTeeGroups: plannedTeeGroups,
+            partnershipPlans: normalizedPartnershipPlans(),
+            members: planningMembers,
+            teams: viewModel.sortedTeams,
+            courseSelection: planningCourseSelection
+        )
+    }
+
+    private var selectedTeamScoringProfile: SeriesScoringProfile? {
+        guard let selectedTeamProfileID else { return nil }
+        return viewModel.scoringProfiles.first { $0.id == selectedTeamProfileID }
+    }
+
+    private var selectedIndividualScoringProfile: SeriesScoringProfile? {
+        guard let selectedIndividualProfileID else { return nil }
+        return viewModel.scoringProfiles.first { $0.id == selectedIndividualProfileID }
+    }
+
+    private var confidenceRoundConfig: SeriesRoundConfiguration {
+        SeriesRoundConfiguration(
+            formatTemplateID: selectedTemplateID,
+            competitionScope: competitionScope,
+            teamScoring: teamScoring,
+            matchupResolutionStyle: .roundAggregate,
+            scoreOwnerScope: scoreOwnerScope,
+            matchupScoringStyle: matchupScoringStyle,
+            holeWinPoints: competitionScope == .matchup ? holeWinPoints : nil,
+            matchWinnerBonusPoints: competitionScope == .matchup ? matchWinnerBonusPoints : nil,
+            matchTiePolicy: .half,
+            sequentialTeeStartsEnabled: sequentialTeeStartsEnabled,
+            matchupMode: resolvedMatchupMode(for: competitionScope),
+            podGroupingStrategy: podGroupingStrategy,
+            teamAssignmentMode: viewModel.usesTeams ? .seriesTeams : .manual,
+            teeGroupMode: podGroupingStrategy.usesPodAlignment ? .podAligned : .auto,
+            notes: notes.isEmpty ? nil : notes,
+            sharedScoreHandicapConfig: sharedScoreAllowanceConfig,
+            countsTowardHandicapPool: countsTowardHandicapPool,
+            excludedHandicapMemberIDs: excludedHandicapMemberIDs
+        )
     }
 
     private var notesSection: some View {
@@ -759,7 +922,7 @@ struct EditSeriesRoundSheet: View {
         guard !isSaving else { return }
         isSaving = true
         let resolvedCompetitionScope = competitionScope
-        let roundConfig = SeriesRoundConfiguration(
+        var roundConfig = SeriesRoundConfiguration(
             formatTemplateID: selectedTemplateID,
             competitionScope: resolvedCompetitionScope,
             teamScoring: teamScoring,
@@ -770,9 +933,7 @@ struct EditSeriesRoundSheet: View {
             matchWinnerBonusPoints: competitionScope == .matchup ? matchWinnerBonusPoints : nil,
             matchTiePolicy: .half,
             sequentialTeeStartsEnabled: sequentialTeeStartsEnabled,
-            matchupMode: resolvedCompetitionScope == .matchup
-                ? (viewModel.usesTeams ? .teamVsTeam : .individualVsIndividual)
-                : .field,
+            matchupMode: resolvedMatchupMode(for: resolvedCompetitionScope),
             podGroupingStrategy: podGroupingStrategy,
             teamAssignmentMode: viewModel.usesTeams ? .seriesTeams : .manual,
             teeGroupMode: podGroupingStrategy.usesPodAlignment ? .podAligned : .auto,
@@ -781,6 +942,10 @@ struct EditSeriesRoundSheet: View {
             countsTowardHandicapPool: countsTowardHandicapPool,
             excludedHandicapMemberIDs: excludedHandicapMemberIDs
         )
+        roundConfig.allowCourseOverride = seriesRound.roundConfig.allowCourseOverride
+        roundConfig.allowFormatOverride = seriesRound.roundConfig.allowFormatOverride
+        roundConfig.allowLobbyBackPropagation = resolvedAllowLobbyBackPropagation()
+        roundConfig.scoreBasisOverride = seriesRound.roundConfig.scoreBasisOverride
         let resolvedMatchups = normalizedMatchupPlans()
         let plannedStructure = persistedPlanningStructure()
         let resolvedPartnershipPlans = normalizedPartnershipPlans()
@@ -804,6 +969,19 @@ struct EditSeriesRoundSheet: View {
             isSaving = false
             onSaved()
             dismiss()
+        }
+    }
+
+    private func resolvedAllowLobbyBackPropagation() -> Bool {
+        guard let linked = viewModel.linkedRound(for: seriesRound) else {
+            return seriesRound.roundConfig.allowLobbyBackPropagation
+        }
+
+        switch linked.status {
+        case .lobby, .live, .paused:
+            return false
+        case .complete, .archived:
+            return seriesRound.roundConfig.allowLobbyBackPropagation
         }
     }
 
@@ -866,22 +1044,121 @@ struct EditSeriesRoundSheet: View {
         planningCourseSelection?.holeSegment.holeRange ?? .init(startHole: 1, endHole: 18)
     }
 
+    private var matchupSectionSubtitle: String {
+        guard viewModel.usesTeams else {
+            return "Set the player-vs-player pairings for this round. These pairings drive individual matchup scoring and WLT awards."
+        }
+        if matchupSource == .byPair {
+            return "Choose pair-vs-pair matchups using the pairs defined in the tee sheet below."
+        }
+        if matchupSource == .byIndividual {
+            return "Set player-vs-player pairings inside this team round. These matchups drive individual matchup scoring and player WLT awards."
+        }
+        return "Use team rows for classic head-to-head matchups, or switch to pair-vs-pair groups or individual player matchups."
+    }
+
+    private var extractablePairGroups: [SeriesRoundPlannedTeeGroup] {
+        plannedTeeGroups.sorted { $0.index < $1.index }.filter {
+            SeriesTeeGroupMirrorAnalyzer.status(
+                for: $0,
+                partnershipPlans: partnershipPlans,
+                membersByID: planningMembersByID
+            ) == .ready
+        }
+    }
+
+    private var canSelectPairMatchupSource: Bool {
+        matchupSource == .byPair || extractablePairGroups.isPopulated || normalizedPartnershipPlans().count >= 2
+    }
+
+    private var matchupEmptyStateText: String {
+        if viewModel.usesTeams && matchupSource == .byPair {
+            return "No matches yet. Use Auto-fill from the tee sheet or add one manually."
+        }
+        if viewModel.usesTeams && matchupSource == .byTeam {
+            return "No matchups yet. Use Auto-fill or add one manually."
+        }
+        return "No pairings yet. Use Auto-fill or add one manually."
+    }
+
+    private struct PairMatchupOption: Identifiable, Hashable {
+        var id: String
+        var teamID: String
+        var memberIDs: [String]
+        var title: String
+        var subtitle: String
+        var sortKey: String
+    }
+
+    private var pairMatchupOptions: [PairMatchupOption] {
+        let validPlans = normalizedPartnershipPlans().filter(\.isValid)
+        let groupsByPairID = Dictionary(uniqueKeysWithValues: plannedTeeGroups.flatMap { group in
+            SeriesTeeGroupMirrorAnalyzer.pairs(
+                for: group,
+                partnershipPlans: validPlans,
+                membersByID: planningMembersByID
+            ).map { ($0.id, group) }
+        })
+
+        return validPlans.compactMap { plan in
+            let subtitle = pairNamesText(for: plan.memberIDs)
+            guard subtitle.isPopulated else { return nil }
+            if let group = groupsByPairID[plan.id] {
+                let pairs = SeriesTeeGroupMirrorAnalyzer.pairs(
+                    for: group,
+                    partnershipPlans: validPlans,
+                    membersByID: planningMembersByID
+                )
+                let pairIndex = pairs.firstIndex { $0.id == plan.id } ?? 0
+                let letter = String(Array("ABCDEFGHIJKLMNOPQRSTUVWXYZ")[safe: pairIndex] ?? Character("A"))
+                return PairMatchupOption(
+                    id: plan.id,
+                    teamID: plan.teamID,
+                    memberIDs: plan.memberIDs,
+                    title: "Group \(group.index + 1) Pair \(letter)",
+                    subtitle: subtitle,
+                    sortKey: String(format: "0_%03d_%03d", group.index, pairIndex)
+                )
+            }
+
+            let fallbackTitle = plan.label?.isPopulated == true ? plan.label! : "Pair"
+            return PairMatchupOption(
+                id: plan.id,
+                teamID: plan.teamID,
+                memberIDs: plan.memberIDs,
+                title: fallbackTitle,
+                subtitle: subtitle,
+                sortKey: "1_\(fallbackTitle.lowercased())_\(subtitle.lowercased())"
+            )
+        }
+        .sorted { $0.sortKey < $1.sortKey }
+    }
+
     private func normalizedMatchupPlans() -> [SeriesRoundMatchupPlan] {
         guard competitionScope == .matchup else { return [] }
 
-        let source = matchupPlans.isEmpty
-            ? (viewModel.usesTeams
-                ? viewModel.suggestedMatchupPlans(
-                    pairGroupingStrategy: podGroupingStrategy,
-                    preserving: seriesRound.matchupPlans
-                )
-                : viewModel.suggestedIndividualMatchupPlans(preserving: seriesRound.matchupPlans))
-            : matchupPlans
+        let source = matchupPlans.isEmpty ? defaultMatchupPlans(preserving: seriesRound.matchupPlans) : matchupPlans
 
         return source.enumerated().compactMap { index, plan in
             var updated = plan
-            if viewModel.usesTeams {
+            if viewModel.usesTeams && matchupSource == .byPair {
+                guard let pairAID = plan.pairAID,
+                      let pairBID = plan.pairBID,
+                      pairAID.isPopulated,
+                      pairBID.isPopulated,
+                      pairAID != pairBID else { return nil }
+                updated.pairAID = pairAID
+                updated.pairBID = pairBID
+                updated.teamAID = ""
+                updated.teamBID = ""
+                updated.memberAID = nil
+                updated.memberBID = nil
+            } else if viewModel.usesTeams && matchupSource == .byTeam {
                 guard plan.teamAID.isPopulated, plan.teamBID.isPopulated, plan.teamAID != plan.teamBID else { return nil }
+                updated.pairAID = nil
+                updated.pairBID = nil
+                updated.memberAID = nil
+                updated.memberBID = nil
             } else {
                 guard let memberAID = plan.memberAID,
                       let memberBID = plan.memberBID,
@@ -892,6 +1169,8 @@ struct EditSeriesRoundSheet: View {
                 updated.memberBID = memberBID
                 updated.teamAID = ""
                 updated.teamBID = ""
+                updated.pairAID = nil
+                updated.pairBID = nil
             }
             updated.index = index
             updated.podGroupingStrategy = viewModel.usesTeams ? podGroupingStrategy : .disabled
@@ -900,19 +1179,29 @@ struct EditSeriesRoundSheet: View {
         }
     }
 
+    private func defaultMatchupPlans(preserving existingPlans: [SeriesRoundMatchupPlan] = []) -> [SeriesRoundMatchupPlan] {
+        if viewModel.usesTeams {
+            switch matchupSource {
+            case .byTeam:
+                return viewModel.suggestedMatchupPlans(
+                    pairGroupingStrategy: podGroupingStrategy,
+                    preserving: existingPlans
+                )
+            case .byPair:
+                return autofilledPairMatchupPlans()
+            case .byIndividual:
+                return viewModel.suggestedIndividualMatchupPlans(preserving: existingPlans)
+            }
+        }
+        return viewModel.suggestedIndividualMatchupPlans(preserving: existingPlans)
+    }
+
     private func normalizedPartnershipPlans() -> [SeriesRoundPartnershipPlan] {
         let teamEntries: [(String, String)] = planningMembers.compactMap { member in
             guard let teamID = member.teamID, teamID.isPopulated else { return nil }
             return (member.id, teamID)
         }
         let teamIDByMemberID = Dictionary(uniqueKeysWithValues: teamEntries)
-        let teeGroupEntries: [(String, String)] = plannedTeeGroups.flatMap { group in
-            group.seats.compactMap { seat in
-                guard seat.memberID.isPopulated else { return nil }
-                return (seat.memberID, group.id)
-            }
-        }
-        let teeGroupIDByMemberID = Dictionary(uniqueKeysWithValues: teeGroupEntries)
         var usedMemberIDs: Set<String> = []
 
         return partnershipPlans.compactMap { plan -> SeriesRoundPartnershipPlan? in
@@ -922,10 +1211,7 @@ struct EditSeriesRoundSheet: View {
             let memberBID = memberIDs[1]
             guard !usedMemberIDs.contains(memberAID), !usedMemberIDs.contains(memberBID) else { return nil }
             guard let teamID = teamIDByMemberID[memberAID],
-                  teamIDByMemberID[memberBID] == teamID,
-                  let groupID = teeGroupIDByMemberID[memberAID],
-                  teeGroupIDByMemberID[memberBID] == groupID,
-                  groupID.isPopulated else {
+                  teamIDByMemberID[memberBID] == teamID else {
                 return nil
             }
             usedMemberIDs.insert(memberAID)
@@ -952,9 +1238,7 @@ struct EditSeriesRoundSheet: View {
             matchWinnerBonusPoints: competitionScope == .matchup ? matchWinnerBonusPoints : nil,
             matchTiePolicy: .half,
             sequentialTeeStartsEnabled: sequentialTeeStartsEnabled,
-            matchupMode: competitionScope == .matchup
-                ? (viewModel.usesTeams ? .teamVsTeam : .individualVsIndividual)
-                : .field,
+            matchupMode: resolvedMatchupMode(for: competitionScope),
             podGroupingStrategy: podGroupingStrategy,
             teamAssignmentMode: viewModel.usesTeams ? .seriesTeams : .manual,
             teeGroupMode: podGroupingStrategy.usesPodAlignment ? .podAligned : .auto,
@@ -1055,6 +1339,290 @@ struct EditSeriesRoundSheet: View {
         }
     }
 
+    private func resolvedMatchupMode(for scope: CompetitionScope) -> SeriesMatchupMode {
+        guard scope == .matchup else { return .field }
+        guard viewModel.usesTeams else { return .individualVsIndividual }
+        switch matchupSource {
+        case .byTeam:
+            return .teamVsTeam
+        case .byPair:
+            return .teeGroupPartnerships
+        case .byIndividual:
+            return .individualVsIndividual
+        }
+    }
+
+    private func selectTeamMatchupSource() {
+        selectMatchupSource(.byTeam)
+    }
+
+    private func selectPairMatchupSource() {
+        selectMatchupSource(.byPair)
+    }
+
+    private func selectIndividualMatchupSource() {
+        selectMatchupSource(.byIndividual)
+    }
+
+    private func selectMatchupSource(_ source: MatchupSource) {
+        guard source != .byPair || canSelectPairMatchupSource else { return }
+        if source == .byPair {
+            ensurePartnershipPlansFromReadyGroups()
+        }
+        matchupSource = source
+        matchupPlans = clearedMatchupPlansForSourceSwitch()
+        refreshPlanningStructure()
+        normalizeSelectedProfilesForCompetition()
+    }
+
+    private func clearedMatchupPlansForSourceSwitch() -> [SeriesRoundMatchupPlan] {
+        matchupPlans.enumerated().map { index, plan in
+            var updated = plan
+            updated.index = index
+            updated.teamAID = ""
+            updated.teamBID = ""
+            updated.memberAID = nil
+            updated.memberBID = nil
+            updated.pairAID = nil
+            updated.pairBID = nil
+            updated.lastUpdatedAt = .init()
+            return updated
+        }
+    }
+
+    private func ensurePartnershipPlansFromReadyGroups() {
+        partnershipPlans = mergedPartnershipPlansFromReadyGroups()
+    }
+
+    private func mergedPartnershipPlansFromReadyGroups() -> [SeriesRoundPartnershipPlan] {
+        var plans = normalizedPartnershipPlans()
+        let membersByID = planningMembersByID
+        for group in plannedTeeGroups.sorted(by: { $0.index < $1.index }) {
+            let groupMemberIDs = Set(group.memberIDs)
+            let storedPairs = plans.filter { Set($0.memberIDs).isSubset(of: groupMemberIDs) }
+            if storedPairs.count == 2, Set(storedPairs.map(\.teamID)).count == 2 { continue }
+            let orderedSeats = group.seats.sorted { $0.teeOrder < $1.teeOrder }
+            guard orderedSeats.count == 4 else { continue }
+            let candidatePairs = [
+                Array(orderedSeats[0...1]).map(\.memberID),
+                Array(orderedSeats[2...3]).map(\.memberID)
+            ]
+            let resolvedPairs: [(teamID: String, memberIDs: [String])] = candidatePairs.compactMap { memberIDs in
+                let teamIDs = Set(memberIDs.compactMap { membersByID[$0]?.teamID }.filter(\.isPopulated))
+                guard teamIDs.count == 1, let teamID = teamIDs.first else { return nil }
+                return (teamID, memberIDs)
+            }
+            guard resolvedPairs.count == 2, Set(resolvedPairs.map(\.teamID)).count == 2 else { continue }
+            let replacedMemberIDs = Set(resolvedPairs.flatMap(\.memberIDs))
+            plans.removeAll { !$0.memberIDs.filter(replacedMemberIDs.contains).isEmpty }
+            for (index, pair) in resolvedPairs.enumerated() {
+                plans.append(
+                    SeriesRoundPartnershipPlan(
+                        id: "extracted_\(group.id)_pair_\(index)",
+                        teamID: pair.teamID,
+                        memberIDs: pair.memberIDs,
+                        label: index == 0 ? "Pair A" : "Pair B",
+                        createdAt: .init(),
+                        lastUpdatedAt: .init()
+                    )
+                )
+            }
+        }
+        return plans
+    }
+
+    private func autofilledPairMatchupPlans() -> [SeriesRoundMatchupPlan] {
+        let currentOptionsByID = Dictionary(uniqueKeysWithValues: pairMatchupOptions.map { ($0.id, $0) })
+        return plannedTeeGroups.sorted { $0.index < $1.index }.enumerated().compactMap { index, group in
+            let pairs = SeriesTeeGroupMirrorAnalyzer.pairs(
+                for: group,
+                partnershipPlans: normalizedPartnershipPlans(),
+                membersByID: planningMembersByID
+            )
+            let teamIDs = Set(pairs.map(\.teamID).filter(\.isPopulated))
+            guard pairs.count == 2, teamIDs.count == 2 else { return nil }
+            guard currentOptionsByID[pairs[0].id] != nil, currentOptionsByID[pairs[1].id] != nil else { return nil }
+
+            let existing = matchupPlans.first {
+                Set([$0.pairAID ?? "", $0.pairBID ?? ""]) == Set([pairs[0].id, pairs[1].id])
+            }
+            return SeriesRoundMatchupPlan(
+                id: existing?.id ?? HackersID.string(),
+                pairAID: pairs[0].id,
+                pairBID: pairs[1].id,
+                index: index,
+                podGroupingStrategy: .disabled,
+                notes: existing?.notes,
+                isLocked: existing?.isLocked ?? false,
+                createdAt: existing?.createdAt ?? .init(),
+                lastUpdatedAt: .init()
+            )
+        }
+    }
+
+    private func autofillTeamMatchupsByCurrentOrder() -> [SeriesRoundMatchupPlan] {
+        buildTeamMatchupPlans(from: viewModel.sortedTeams.map(\.id))
+    }
+
+    private func autofillTeamMatchupsRandom() -> [SeriesRoundMatchupPlan] {
+        buildTeamMatchupPlans(from: viewModel.sortedTeams.map(\.id).shuffled())
+    }
+
+    private func autofillIndividualMatchupsRandom() -> [SeriesRoundMatchupPlan] {
+        buildMemberMatchupPlans(from: teamAwareOrderedMemberPairings(from: planningMembers.map(\.id).shuffled()))
+    }
+
+    private func autofillIndividualMatchupsByHandicap() -> [SeriesRoundMatchupPlan] {
+        let orderedMemberIDs = SeriesRoundMatchupMemberOptionBuilder.sortedMembers(planningMembers) { memberID in
+            viewModel.effectiveHandicap(for: memberID)
+        }
+        .map(\.id)
+        return buildMemberMatchupPlans(from: teamAwareOrderedMemberPairings(from: orderedMemberIDs))
+    }
+
+    private func autofillIndividualMatchupsFromTeeSheet() -> [SeriesRoundMatchupPlan] {
+        let pairings = plannedTeeGroups
+            .sorted { $0.index < $1.index }
+            .flatMap { group -> [(String, String)] in
+                let orderedSeats = group.seats.sorted { $0.teeOrder < $1.teeOrder }
+                return stride(from: 0, to: orderedSeats.count - 1, by: 2).compactMap { index in
+                    guard index + 1 < orderedSeats.count else { return nil }
+                    return (orderedSeats[index].memberID, orderedSeats[index + 1].memberID)
+                }
+            }
+        return buildMemberMatchupPlans(from: pairings)
+    }
+
+    private func autofillPairMatchupsRandom() -> [SeriesRoundMatchupPlan] {
+        ensurePartnershipPlansFromReadyGroups()
+        return buildPairMatchupPlans(from: pairMatchupOptions.map(\.id).shuffled())
+    }
+
+    private func buildTeamMatchupPlans(from orderedTeamIDs: [String]) -> [SeriesRoundMatchupPlan] {
+        let pairings: [(String, String)] = stride(from: 0, to: orderedTeamIDs.count - 1, by: 2).compactMap { index in
+            guard index + 1 < orderedTeamIDs.count else { return nil }
+            return (orderedTeamIDs[index], orderedTeamIDs[index + 1])
+        }
+        return pairings.enumerated().compactMap { index, pairing in
+            guard pairing.0.isPopulated, pairing.1.isPopulated, pairing.0 != pairing.1 else { return nil }
+            let existing = matchupPlans.first {
+                Set([$0.teamAID, $0.teamBID]) == Set([pairing.0, pairing.1])
+            }
+            return SeriesRoundMatchupPlan(
+                id: existing?.id ?? HackersID.string(),
+                teamAID: pairing.0,
+                teamBID: pairing.1,
+                index: index,
+                podGroupingStrategy: podGroupingStrategy,
+                notes: existing?.notes,
+                isLocked: existing?.isLocked ?? false,
+                createdAt: existing?.createdAt ?? .init(),
+                lastUpdatedAt: .init()
+            )
+        }
+    }
+
+    private func buildMemberMatchupPlans(from orderedMemberIDs: [String]) -> [SeriesRoundMatchupPlan] {
+        let pairings: [(String, String)] = stride(from: 0, to: orderedMemberIDs.count - 1, by: 2).compactMap { index in
+            guard index + 1 < orderedMemberIDs.count else { return nil }
+            return (orderedMemberIDs[index], orderedMemberIDs[index + 1])
+        }
+        return buildMemberMatchupPlans(from: pairings)
+    }
+
+    private func teamAwareOrderedMemberPairings(from orderedMemberIDs: [String]) -> [(String, String)] {
+        var remaining = orderedMemberIDs.filter(\.isPopulated)
+        var pairings: [(String, String)] = []
+
+        while !remaining.isEmpty {
+            let memberID = remaining.removeFirst()
+            guard let opponentIndex = remaining.firstIndex(where: { canAutoPairMembers(memberID, with: $0) }) else {
+                continue
+            }
+            let opponentID = remaining.remove(at: opponentIndex)
+            pairings.append((memberID, opponentID))
+        }
+
+        return pairings
+    }
+
+    private func canAutoPairMembers(_ memberID: String, with opponentID: String) -> Bool {
+        guard memberID != opponentID else { return false }
+        guard viewModel.usesTeams else { return true }
+
+        let memberTeamID = planningMembersByID[memberID]?.teamID
+        let opponentTeamID = planningMembersByID[opponentID]?.teamID
+        if let memberTeamID, memberTeamID.isPopulated,
+           let opponentTeamID, opponentTeamID.isPopulated {
+            return memberTeamID != opponentTeamID
+        }
+        return true
+    }
+
+    private func buildMemberMatchupPlans(from pairings: [(String, String)]) -> [SeriesRoundMatchupPlan] {
+        pairings.enumerated().compactMap { index, pairing in
+            guard pairing.0.isPopulated, pairing.1.isPopulated, pairing.0 != pairing.1 else { return nil }
+            let existing = matchupPlans.first {
+                Set([$0.memberAID ?? "", $0.memberBID ?? ""]) == Set([pairing.0, pairing.1])
+            }
+            return SeriesRoundMatchupPlan(
+                id: existing?.id ?? HackersID.string(),
+                memberAID: pairing.0,
+                memberBID: pairing.1,
+                index: index,
+                podGroupingStrategy: .disabled,
+                notes: existing?.notes,
+                isLocked: existing?.isLocked ?? false,
+                createdAt: existing?.createdAt ?? .init(),
+                lastUpdatedAt: .init()
+            )
+        }
+    }
+
+    private func buildPairMatchupPlans(from orderedPairIDs: [String]) -> [SeriesRoundMatchupPlan] {
+        stride(from: 0, to: orderedPairIDs.count - 1, by: 2).enumerated().compactMap { step, index in
+            let left = orderedPairIDs[index]
+            let right = orderedPairIDs[index + 1]
+            guard left.isPopulated, right.isPopulated, left != right else { return nil }
+            let existing = matchupPlans.first {
+                Set([$0.pairAID ?? "", $0.pairBID ?? ""]) == Set([left, right])
+            }
+            return SeriesRoundMatchupPlan(
+                id: existing?.id ?? HackersID.string(),
+                pairAID: left,
+                pairBID: right,
+                index: step,
+                podGroupingStrategy: .disabled,
+                notes: existing?.notes,
+                isLocked: existing?.isLocked ?? false,
+                createdAt: existing?.createdAt ?? .init(),
+                lastUpdatedAt: .init()
+            )
+        }
+    }
+
+    private func applyMatchupAutoFill(_ action: MatchupAutoFillAction) {
+        switch (matchupSource, action) {
+        case (.byTeam, .random):
+            matchupPlans = autofillTeamMatchupsRandom()
+        case (.byTeam, .currentTeamOrder):
+            matchupPlans = autofillTeamMatchupsByCurrentOrder()
+        case (.byPair, .random):
+            matchupPlans = autofillPairMatchupsRandom()
+        case (.byPair, .mirrorTeeSheet):
+            ensurePartnershipPlansFromReadyGroups()
+            matchupPlans = autofilledPairMatchupPlans()
+        case (.byIndividual, .random):
+            matchupPlans = autofillIndividualMatchupsRandom()
+        case (.byIndividual, .byHandicap):
+            matchupPlans = autofillIndividualMatchupsByHandicap()
+        case (.byIndividual, .mirrorTeeSheet):
+            matchupPlans = autofillIndividualMatchupsFromTeeSheet()
+        default:
+            break
+        }
+    }
+
     private var planningSection: some View {
         SeriesRoundTeeSheetPlanningCard(
             palette: palette,
@@ -1063,17 +1631,38 @@ struct EditSeriesRoundSheet: View {
             eligibleMembers: planningMembers,
             membersByID: planningMembersByID,
             teamsByID: planningTeamsByID,
+            handicapsEnabled: viewModel.series.handicapConfig.isEnabled,
+            effectiveHandicapText: handicapValueText(for:),
             plannedTeeGroups: $plannedTeeGroups,
             partnershipPlans: $partnershipPlans,
+            showPairStatus: matchupSource == .byPair,
             onRegenerate: { refreshPlanningStructure(forceRegenerate: true) },
             onResetManualOverrides: { refreshPlanningStructure(forceRegenerate: true) }
         )
     }
 
+    private func pairNamesText(for memberIDs: [String]) -> String {
+        memberIDs.compactMap(formattedPlayerLabel(for:)).joined(separator: " + ")
+    }
+
+    private func matchupPlayerLine(for memberID: String) -> String {
+        let formatted = formattedPlayerLabel(for: memberID)
+        guard let name = planningMembersByID[memberID]?.name else { return formatted ?? "Unknown player" }
+        let fullName = name.trimmedFullName
+        guard fullName.count > 18 else { return formatted ?? fullName }
+
+        let given = name.givenName.trimmingCharacters(in: .whitespacesAndNewlines)
+        let family = name.familyName.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard given.isPopulated, family.isPopulated else { return formatted ?? fullName }
+        let shortName = "\(given) \(family.prefix(1))."
+        let metadata = playerInlineMetadata(for: memberID)
+        return metadata.isPopulated ? "\(shortName) • \(metadata)" : shortName
+    }
+
     private func matchupRow(index: Int, plan: SeriesRoundMatchupPlan) -> some View {
         VStack(alignment: .leading, spacing: 12) {
             HStack {
-                Text("Matchup \(index + 1)")
+                Text("Match \(index + 1)")
                     .fontStyle(kFontName, size: 13, weight: .semibold)
                     .foregroundStyle(palette.foregroundColor)
 
@@ -1098,21 +1687,29 @@ struct EditSeriesRoundSheet: View {
             }
 
             HStack(spacing: 10) {
-                if viewModel.usesTeams {
+                if viewModel.usesTeams && matchupSource == .byPair {
+                    matchupPairMenu(
+                        title: "Pair A",
+                        plan: plan,
+                        selection: pairOption(for: plan.pairAID)
+                    ) { selectedPairID in
+                        assignPair(selectedPairID, to: plan.id, side: .a)
+                    }
+                } else if viewModel.usesTeams && matchupSource == .byTeam {
                     matchupTeamMenu(
                         title: "Team A",
                         selection: teamName(for: plan.teamAID) ?? "Choose",
                         availableTeams: availableTeams(for: plan, currentTeamID: plan.teamAID)
                     ) { selectedTeamID in
-                        updateMatchup(planID: plan.id, teamAID: selectedTeamID)
+                        assignTeam(selectedTeamID, to: plan.id, side: .a)
                     }
                 } else {
                     matchupMemberMenu(
                         title: "Player A",
-                        selection: memberName(for: plan.memberAID) ?? "Choose",
+                        selectionID: plan.memberAID,
                         availableMembers: availableMembers(for: plan, currentMemberID: plan.memberAID)
                     ) { selectedMemberID in
-                        updateMatchup(planID: plan.id, memberAID: selectedMemberID)
+                        assignMember(selectedMemberID, to: plan.id, side: .a)
                     }
                 }
 
@@ -1120,24 +1717,91 @@ struct EditSeriesRoundSheet: View {
                     .fontStyle(kFontName, size: 13, weight: .semibold)
                     .foregroundStyle(Color.neutral)
 
-                if viewModel.usesTeams {
+                if viewModel.usesTeams && matchupSource == .byPair {
+                    matchupPairMenu(
+                        title: "Pair B",
+                        plan: plan,
+                        selection: pairOption(for: plan.pairBID)
+                    ) { selectedPairID in
+                        assignPair(selectedPairID, to: plan.id, side: .b)
+                    }
+                } else if viewModel.usesTeams && matchupSource == .byTeam {
                     matchupTeamMenu(
                         title: "Team B",
                         selection: teamName(for: plan.teamBID) ?? "Choose",
                         availableTeams: availableTeams(for: plan, currentTeamID: plan.teamBID)
                     ) { selectedTeamID in
-                        updateMatchup(planID: plan.id, teamBID: selectedTeamID)
+                        assignTeam(selectedTeamID, to: plan.id, side: .b)
                     }
                 } else {
                     matchupMemberMenu(
                         title: "Player B",
-                        selection: memberName(for: plan.memberBID) ?? "Choose",
+                        selectionID: plan.memberBID,
                         availableMembers: availableMembers(for: plan, currentMemberID: plan.memberBID)
                     ) { selectedMemberID in
-                        updateMatchup(planID: plan.id, memberBID: selectedMemberID)
+                        assignMember(selectedMemberID, to: plan.id, side: .b)
                     }
                 }
             }
+        }
+    }
+
+    private func matchupPairMenu(
+        title: String,
+        plan: SeriesRoundMatchupPlan,
+        selection: PairMatchupOption?,
+        onSelect: @escaping (String) -> Void
+    ) -> some View {
+        VStack(alignment: .leading, spacing: 6) {
+            Text(title)
+                .fontStyle(kFontName, size: 12, weight: .semibold)
+                .foregroundStyle(Color.neutral)
+            Menu {
+                ForEach(availablePairOptions(for: plan, currentPairID: selection?.id), id: \.id) { option in
+                    Button {
+                        onSelect(option.id)
+                    } label: {
+                        VStack(alignment: .leading, spacing: 2) {
+                            Text(option.title)
+                            Text(option.subtitle)
+                        }
+                    }
+                }
+            } label: {
+                VStack(alignment: .leading, spacing: 4) {
+                    Text(selection?.title.isPopulated == true ? selection!.title : "Choose")
+                        .fontStyle(kFontName, size: 13, weight: .semibold)
+                        .foregroundStyle(selection?.title.isPopulated == true ? palette.foregroundColor : Color.neutral)
+                        .lineLimit(1)
+
+                    if let selection {
+                        VStack(alignment: .leading, spacing: 1) {
+                            ForEach(Array(selection.memberIDs.prefix(2)), id: \.self) { memberID in
+                                Text(matchupPlayerLine(for: memberID))
+                                    .fontStyle(kFontName, size: 11, weight: .regular)
+                                    .foregroundStyle(Color.neutral)
+                                    .lineLimit(1)
+                            }
+                        }
+                    } else {
+                        Text("Select a planned pair")
+                            .fontStyle(kFontName, size: 11, weight: .regular)
+                            .foregroundStyle(Color.neutral)
+                            .lineLimit(2)
+                    }
+                }
+                .frame(maxWidth: .infinity, alignment: .leading)
+                .overlay(alignment: .trailing) {
+                    Icon(name: "f078", size: 12, weight: .solid)
+                        .foregroundStyle(Color.neutral)
+                        .padding(.trailing, 12)
+                }
+                .padding(.horizontal, 12)
+                .padding(.vertical, 10)
+                .background(Color.neutral6)
+                .clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
+            }
+            .buttonStyle(.plain)
         }
     }
 
@@ -1177,20 +1841,15 @@ struct EditSeriesRoundSheet: View {
     }
 
     private func availableTeams(for plan: SeriesRoundMatchupPlan, currentTeamID: String) -> [SeriesTeam] {
-        let usedTeamIDs = Set(
-            matchupPlans
-                .filter { $0.id != plan.id }
-                .flatMap { [$0.teamAID, $0.teamBID] }
-                .filter(\.isPopulated)
-        )
+        let siblingTeamID = siblingTeamID(for: plan, currentTeamID: currentTeamID)
         return viewModel.sortedTeams.filter { team in
-            team.id == currentTeamID || !usedTeamIDs.contains(team.id)
+            team.id != siblingTeamID
         }
     }
 
     private func matchupMemberMenu(
         title: String,
-        selection: String,
+        selectionID: String?,
         availableMembers: [SeriesMember],
         onSelect: @escaping (String) -> Void
     ) -> some View {
@@ -1198,21 +1857,24 @@ struct EditSeriesRoundSheet: View {
             Text(title)
                 .fontStyle(kFontName, size: 12, weight: .semibold)
                 .foregroundStyle(Color.neutral)
+            let sections = matchupMemberOptionSections(for: availableMembers)
             Menu {
-                ForEach(availableMembers, id: \.id) { member in
-                    Button(member.name.fullName) {
-                        onSelect(member.id)
+                ForEach(sections) { section in
+                    if viewModel.usesTeams {
+                        Section(section.title) {
+                            memberMenuButtons(for: section.options, onSelect: onSelect)
+                        }
+                    } else {
+                        memberMenuButtons(for: section.options, onSelect: onSelect)
                     }
                 }
             } label: {
-                HStack(spacing: 8) {
-                    Text(selection)
-                        .fontStyle(kFontName, size: 13, weight: .semibold)
-                        .foregroundStyle(selection == "Choose" ? Color.neutral : palette.foregroundColor)
-                        .lineLimit(1)
+                HStack(alignment: .top, spacing: 8) {
+                    playerSelectionMenuLabel(for: selectionID)
                     Spacer(minLength: 0)
                     Icon(name: "f078", size: 12, weight: .solid)
                         .foregroundStyle(Color.neutral)
+                        .padding(.top, 2)
                 }
                 .padding(.horizontal, 12)
                 .padding(.vertical, 10)
@@ -1224,25 +1886,180 @@ struct EditSeriesRoundSheet: View {
     }
 
     private func availableMembers(for plan: SeriesRoundMatchupPlan, currentMemberID: String?) -> [SeriesMember] {
-        let usedMemberIDs = Set(
-            matchupPlans
-                .filter { $0.id != plan.id }
-                .flatMap { [$0.memberAID, $0.memberBID] }
-                .compactMap { $0 }
-                .filter(\.isPopulated)
-        )
+        let siblingMemberID = siblingMemberID(for: plan, currentMemberID: currentMemberID)
+        let siblingTeamID = siblingMemberID.flatMap { planningMembersByID[$0]?.teamID }
         return viewModel.eligibleMembers.filter { member in
-            member.id == currentMemberID || !usedMemberIDs.contains(member.id)
+            if member.id == siblingMemberID { return false }
+            if viewModel.usesTeams,
+               let siblingTeamID,
+               siblingTeamID.isPopulated,
+               member.teamID == siblingTeamID {
+                return false
+            }
+            return true
         }
+    }
+
+    private func availablePairOptions(for plan: SeriesRoundMatchupPlan, currentPairID: String?) -> [PairMatchupOption] {
+        return pairMatchupOptions.filter { option in
+            option.id != siblingPairID(for: plan, currentPairID: currentPairID)
+        }
+    }
+
+    private func siblingTeamID(for plan: SeriesRoundMatchupPlan, currentTeamID: String?) -> String? {
+        if currentTeamID == plan.teamAID { return plan.teamBID }
+        if currentTeamID == plan.teamBID { return plan.teamAID }
+        if plan.teamAID.isPopulated { return plan.teamAID }
+        return plan.teamBID.isPopulated ? plan.teamBID : nil
     }
 
     private func teamName(for teamID: String) -> String? {
         viewModel.sortedTeams.first(where: { $0.id == teamID })?.name
     }
 
+    private func siblingPairID(for plan: SeriesRoundMatchupPlan, currentPairID: String?) -> String? {
+        if currentPairID == plan.pairAID { return plan.pairBID }
+        if currentPairID == plan.pairBID { return plan.pairAID }
+        return plan.pairAID ?? plan.pairBID
+    }
+
+    private func pairOption(for pairID: String?) -> PairMatchupOption? {
+        guard let pairID else { return nil }
+        return pairMatchupOptions.first(where: { $0.id == pairID })
+    }
+
+    private func siblingMemberID(for plan: SeriesRoundMatchupPlan, currentMemberID: String?) -> String? {
+        if currentMemberID == plan.memberAID { return plan.memberBID }
+        if currentMemberID == plan.memberBID { return plan.memberAID }
+        return plan.memberAID ?? plan.memberBID
+    }
+
     private func memberName(for memberID: String?) -> String? {
         guard let memberID else { return nil }
-        return viewModel.eligibleMembers.first(where: { $0.id == memberID })?.name.fullName
+        return formattedPlayerLabel(for: memberID)
+    }
+
+    private func playerDisplayName(for memberID: String?) -> String? {
+        guard let memberID else { return nil }
+        let name = planningMembersByID[memberID]?.name.trimmedFullName
+        if let name, name.isPopulated {
+            return name
+        }
+        return nil
+    }
+
+    private func playerSubtitle(for memberID: String?) -> String? {
+        guard let memberID else { return nil }
+        let metadata = playerInlineMetadata(for: memberID)
+        if metadata.isPopulated {
+            return metadata
+        }
+        return nil
+    }
+
+    @ViewBuilder
+    private func playerSelectionMenuLabel(for memberID: String?) -> some View {
+        let title = playerDisplayName(for: memberID) ?? "Choose"
+        VStack(alignment: .leading, spacing: 2) {
+            Text(title)
+                .fontStyle(kFontName, size: 13, weight: .semibold)
+                .foregroundStyle(memberID == nil ? Color.neutral : palette.foregroundColor)
+                .lineLimit(1)
+            if let subtitle = playerSubtitle(for: memberID) {
+                Text(subtitle)
+                    .fontStyle(kFontName, size: 11, weight: .regular)
+                    .foregroundStyle(Color.neutral)
+                    .lineLimit(2)
+            } else if memberID == nil {
+                Text("Select a player")
+                    .fontStyle(kFontName, size: 11, weight: .regular)
+                    .foregroundStyle(Color.neutral)
+                    .lineLimit(2)
+            }
+        }
+    }
+
+    private func formattedPlayerLabel(for memberID: String) -> String? {
+        let name = planningMembersByID[memberID]?.name.trimmedFullName
+        let metadata = playerInlineMetadata(for: memberID)
+        let resolvedName: String? = {
+            if let name, name.isPopulated { return name }
+            return nil
+        }()
+        let resolvedMetadata: String? = metadata.isPopulated ? metadata : nil
+        switch (resolvedName, resolvedMetadata) {
+        case let (name?, metadata?):
+            return "\(name) • \(metadata)"
+        case let (name?, nil):
+            return name
+        case let (nil, metadata?):
+            return metadata
+        default:
+            return nil
+        }
+    }
+
+    private func playerInlineMetadata(for memberID: String) -> String {
+        var components: [String] = []
+        if let teamID = planningMembersByID[memberID]?.teamID,
+           let teamName = planningTeamsByID[teamID]?.name,
+           teamName.isPopulated {
+            components.append(teamName)
+        }
+        if let handicap = handicapText(for: memberID) {
+            components.append(handicap)
+        }
+        return components.joined(separator: " • ")
+    }
+
+    private func handicapText(for memberID: String) -> String? {
+        guard viewModel.series.handicapConfig.isEnabled else { return nil }
+        guard let value = handicapValueText(for: memberID) else { return nil }
+        return "HCP \(value)"
+    }
+
+    private func handicapValueText(for memberID: String) -> String? {
+        guard let handicap = viewModel.effectiveHandicap(for: memberID),
+              handicap.isFinite else { return nil }
+        return formatHandicapValue(handicap)
+    }
+
+    private func formatHandicapValue(_ handicap: Double) -> String {
+        let rounded = handicap.rounded(.toNearestOrAwayFromZero)
+        if abs(handicap - rounded) < 0.05 {
+            return String(Int(rounded))
+        }
+        let oneDecimal = String(format: "%.1f", handicap)
+        return oneDecimal.hasSuffix(".0") ? String(oneDecimal.dropLast(2)) : oneDecimal
+    }
+
+    private func matchupMemberOptionSections(for members: [SeriesMember]) -> [SeriesRoundMatchupMemberOptionSection] {
+        SeriesRoundMatchupMemberOptionBuilder.sections(
+            members: members,
+            teams: viewModel.sortedTeams,
+            usesTeams: viewModel.usesTeams
+        ) { memberID in
+            viewModel.effectiveHandicap(for: memberID)
+        }
+    }
+
+    @ViewBuilder
+    private func memberMenuButtons(
+        for options: [SeriesRoundMatchupMemberOption],
+        onSelect: @escaping (String) -> Void
+    ) -> some View {
+        ForEach(options) { option in
+            Button {
+                onSelect(option.memberID)
+            } label: {
+                VStack(alignment: .leading, spacing: 2) {
+                    Text(option.title)
+                    if let subtitle = option.subtitle {
+                        Text(subtitle)
+                    }
+                }
+            }
+        }
     }
 
     private func updateMatchup(
@@ -1250,14 +2067,133 @@ struct EditSeriesRoundSheet: View {
         teamAID: String? = nil,
         teamBID: String? = nil,
         memberAID: String? = nil,
-        memberBID: String? = nil
+        memberBID: String? = nil,
+        pairAID: String? = nil,
+        pairBID: String? = nil
     ) {
         guard let index = matchupPlans.firstIndex(where: { $0.id == planID }) else { return }
         if let teamAID { matchupPlans[index].teamAID = teamAID }
         if let teamBID { matchupPlans[index].teamBID = teamBID }
         if let memberAID { matchupPlans[index].memberAID = memberAID }
         if let memberBID { matchupPlans[index].memberBID = memberBID }
+        if let pairAID { matchupPlans[index].pairAID = pairAID }
+        if let pairBID { matchupPlans[index].pairBID = pairBID }
         matchupPlans[index].lastUpdatedAt = .init()
+    }
+
+    private enum MatchupSide {
+        case a
+        case b
+    }
+
+    private func assignTeam(_ teamID: String, to planID: String, side: MatchupSide) {
+        guard let targetIndex = matchupPlans.firstIndex(where: { $0.id == planID }) else { return }
+        let oppositeTeamID = side == .a ? matchupPlans[targetIndex].teamBID : matchupPlans[targetIndex].teamAID
+        let currentTeamID = side == .a ? matchupPlans[targetIndex].teamAID : matchupPlans[targetIndex].teamBID
+        guard teamID != oppositeTeamID, teamID != currentTeamID else { return }
+
+        clearExistingTeamAssignment(teamID, excludingPlanID: planID)
+        if side == .a {
+            matchupPlans[targetIndex].teamAID = teamID
+        } else {
+            matchupPlans[targetIndex].teamBID = teamID
+        }
+        matchupPlans[targetIndex].lastUpdatedAt = .init()
+    }
+
+    private func assignPair(_ pairID: String, to planID: String, side: MatchupSide) {
+        guard let targetIndex = matchupPlans.firstIndex(where: { $0.id == planID }) else { return }
+        let oppositePairID = side == .a ? matchupPlans[targetIndex].pairBID : matchupPlans[targetIndex].pairAID
+        let currentPairID = side == .a ? matchupPlans[targetIndex].pairAID : matchupPlans[targetIndex].pairBID
+        guard pairID != oppositePairID, pairID != currentPairID else { return }
+
+        clearExistingPairAssignment(pairID, excludingPlanID: planID)
+        if side == .a {
+            matchupPlans[targetIndex].pairAID = pairID
+        } else {
+            matchupPlans[targetIndex].pairBID = pairID
+        }
+        matchupPlans[targetIndex].lastUpdatedAt = .init()
+    }
+
+    private func assignMember(_ memberID: String, to planID: String, side: MatchupSide) {
+        guard let targetIndex = matchupPlans.firstIndex(where: { $0.id == planID }) else { return }
+        let oppositeMemberID = side == .a ? matchupPlans[targetIndex].memberBID : matchupPlans[targetIndex].memberAID
+        let currentMemberID = side == .a ? matchupPlans[targetIndex].memberAID : matchupPlans[targetIndex].memberBID
+        guard memberID != oppositeMemberID, memberID != currentMemberID else { return }
+        if viewModel.usesTeams,
+           let oppositeMemberID,
+           let oppositeTeamID = planningMembersByID[oppositeMemberID]?.teamID,
+           oppositeTeamID.isPopulated,
+           planningMembersByID[memberID]?.teamID == oppositeTeamID {
+            return
+        }
+
+        clearExistingMemberAssignment(memberID, excludingPlanID: planID)
+        if side == .a {
+            matchupPlans[targetIndex].memberAID = memberID
+        } else {
+            matchupPlans[targetIndex].memberBID = memberID
+        }
+        matchupPlans[targetIndex].lastUpdatedAt = .init()
+    }
+
+    private func clearExistingTeamAssignment(_ teamID: String, excludingPlanID: String) {
+        for index in matchupPlans.indices where matchupPlans[index].id != excludingPlanID {
+            var didClear = false
+            if matchupPlans[index].teamAID == teamID {
+                matchupPlans[index].teamAID = ""
+                didClear = true
+            }
+            if matchupPlans[index].teamBID == teamID {
+                matchupPlans[index].teamBID = ""
+                didClear = true
+            }
+            if didClear {
+                matchupPlans[index].lastUpdatedAt = .init()
+            }
+        }
+    }
+
+    private var selectedCourseName: String {
+        if let selectedCourse, selectedCourse.cachedName.isPopulated {
+            return selectedCourse.cachedName
+        }
+        return "No course selected"
+    }
+
+    private func clearExistingPairAssignment(_ pairID: String, excludingPlanID: String) {
+        for index in matchupPlans.indices where matchupPlans[index].id != excludingPlanID {
+            var didClear = false
+            if matchupPlans[index].pairAID == pairID {
+                matchupPlans[index].pairAID = nil
+                didClear = true
+            }
+            if matchupPlans[index].pairBID == pairID {
+                matchupPlans[index].pairBID = nil
+                didClear = true
+            }
+            if didClear {
+                matchupPlans[index].lastUpdatedAt = .init()
+            }
+        }
+    }
+
+    private func clearExistingMemberAssignment(_ memberID: String, excludingPlanID: String) {
+        for index in matchupPlans.indices where matchupPlans[index].id != excludingPlanID {
+            var didClear = false
+            if matchupPlans[index].memberAID == memberID {
+                matchupPlans[index].memberAID = nil
+                didClear = true
+            }
+            if matchupPlans[index].memberBID == memberID {
+                matchupPlans[index].memberBID = nil
+                didClear = true
+            }
+            if didClear {
+                matchupPlans[index].lastUpdatedAt = .init()
+            }
+        }
     }
 
     private func labeledMenu<Content: View>(title: String, @ViewBuilder content: () -> Content) -> some View {
@@ -1298,6 +2234,64 @@ struct EditSeriesRoundSheet: View {
             foreground: selected ? .white : palette.foregroundColor,
             background: selected ? Color.accentGreen : palette.cardEmbeddedRowBackground
         )
+    }
+
+    private func appendEmptyMatchupRow() {
+        matchupPlans.append(
+            SeriesRoundMatchupPlan(
+                id: HackersID.string(),
+                index: matchupPlans.count,
+                podGroupingStrategy: podGroupingStrategy,
+                createdAt: .init(),
+                lastUpdatedAt: .init()
+            )
+        )
+    }
+
+    private func sparkleActionChipLabel(_ title: String) -> some View {
+        HStack(spacing: 8) {
+            Image(systemName: "sparkles")
+                .font(.system(size: 13, weight: .semibold))
+                .foregroundStyle(palette.foregroundColor)
+            Text(title)
+                .fontStyle(kFontName, size: 14, weight: .semibold)
+                .foregroundStyle(palette.foregroundColor)
+        }
+        .padding(.horizontal, 14)
+        .padding(.vertical, 10)
+        .glassCardEffect(cornerRadius: 16, tint: palette.whiteGlassButtonColor)
+    }
+
+    private func matchupSourceMenuItem(_ option: MatchupSourceMenuOption) -> some View {
+        HStack(alignment: .top, spacing: 10) {
+            VStack(alignment: .leading, spacing: 2) {
+                Text(option.source.title)
+                    .fontStyle(kFontName, size: 13, weight: .semibold)
+                if let subtitle = option.subtitle {
+                    Text(subtitle)
+                        .fontStyle(kFontName, size: 11, weight: .regular)
+                }
+            }
+            Spacer(minLength: 8)
+            if option.isSelected {
+                Image(systemName: "checkmark")
+                    .font(.system(size: 12, weight: .semibold))
+            }
+        }
+        .foregroundStyle(option.isDisabled ? Color.neutral : palette.foregroundColor)
+    }
+
+    private func fullWidthCardActionButton(_ title: String, action: @escaping () -> Void) -> some View {
+        Button(action: action) {
+            Text(title)
+                .fontStyle(kFontName, size: 14, weight: .semibold)
+                .foregroundStyle(palette.backgroundColor)
+                .frame(maxWidth: .infinity)
+                .padding(.vertical, 12)
+                .background(palette.foregroundColor)
+                .clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
+        }
+        .buttonStyle(.plain)
     }
 
     private func menuChipLabel(_ title: String) -> some View {
@@ -1352,6 +2346,9 @@ struct EditSeriesRoundSheet: View {
 
     private var seriesPointsDescription: String {
         if viewModel.usesTeams {
+            if matchupSource == .byIndividual && competitionScope == .matchup {
+                return "Team awards feed the team standings. Individual awards feed player standings. Team awards use finishing order, while individual win/tie/loss uses the scheduled head-to-head results."
+            }
             return "Team awards feed the team standings. Individual awards feed player standings. Placement uses finishing order, while win/tie/loss uses matchup results."
         }
         if competitionScope == .matchup {
@@ -1399,6 +2396,7 @@ struct EditSeriesRoundSheet: View {
         let d = leagueDefaults
         if selectedTemplateID != d.formatTemplateID { return .confirmed }
         if competitionScope != d.resolvedCompetitionScope { return .confirmed }
+        if resolvedMatchupMode(for: competitionScope) != d.matchupMode { return .confirmed }
         if teamScoring != d.teamScoring { return .confirmed }
         if sequentialTeeStartsEnabled != (d.sequentialTeeStartsEnabled ?? false) { return .confirmed }
         if podGroupingStrategy != d.podGroupingStrategy { return .confirmed }
@@ -1425,7 +2423,7 @@ struct EditSeriesRoundSheet: View {
         case .optional:
             Chip(text: "Optional", size: .xSmall, foreground: Color.neutral, background: palette.cardEmbeddedRowBackground)
         case .confirmed:
-            Chip(text: "Ready", size: .xSmall, foreground: .white, background: Color.accentGreen)
+            Chip.ready
         case .leagueDefault:
             Chip(text: "League default", size: .xSmall, foreground: Color.neutral, background: palette.cardEmbeddedRowBackground)
         }
@@ -1434,19 +2432,19 @@ struct EditSeriesRoundSheet: View {
     private func normalizeSelectedProfilesForCompetition() {
         if let currentTeamProfileID = selectedTeamProfileID,
            let profile = viewModel.scoringProfiles.first(where: { $0.id == currentTeamProfileID }),
-           (!viewModel.usesTeams || competitionScope != .matchup),
+           (!viewModel.usesTeams || competitionScope != .matchup || matchupSource == .byIndividual),
            profile.kind == .winTieLoss {
             self.selectedTeamProfileID = viewModel.scoringProfiles.first {
-                !$0.isArchived && $0.competitorType == .team && $0.kind == .placement
+                !$0.isArchived && $0.competitorType == .team && $0.kind != .winTieLoss
             }?.id
         }
 
         if let currentIndividualProfileID = selectedIndividualProfileID,
            let profile = viewModel.scoringProfiles.first(where: { $0.id == currentIndividualProfileID }),
-           (competitionScope != .matchup || viewModel.usesTeams),
+           (competitionScope != .matchup || (viewModel.usesTeams && matchupSource != .byIndividual)),
            profile.kind == .winTieLoss {
             self.selectedIndividualProfileID = viewModel.scoringProfiles.first {
-                !$0.isArchived && $0.competitorType == .member && $0.kind == .placement
+                !$0.isArchived && $0.competitorType == .member && $0.kind != .winTieLoss
             }?.id
         }
     }

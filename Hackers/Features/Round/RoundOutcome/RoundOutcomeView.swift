@@ -18,6 +18,7 @@ struct RoundOutcomeView: View {
 
     @State private var showEditRoundSheet = false
     @State private var showFullScorecard = false
+    @State private var selectedFullScorecardScoringUnitID: String?
     @State private var presentedParticipant: RoundParticipant?
     @State private var isCourseBreakdownExpanded = false
     @State private var holeSort: LiveRoundViewModel.OutcomeHoleSort = .holeNumber
@@ -55,7 +56,7 @@ struct RoundOutcomeView: View {
                             showsSectionTotal: viewModel.showsGroupedLeaderboardSectionTotal,
                             formattedGroupedSectionSum: viewModel.formattedGroupedSectionSum(_:),
                             formattedAvgScore: viewModel.formattedAvgScore(_:),
-                            onRowTap: { presentedParticipant = $0 }
+                            onRowTap: { handleOutcomeRowTap($0) }
                         )
                     }
 
@@ -89,7 +90,8 @@ struct RoundOutcomeView: View {
                 FullScorecardView(
                     viewModel: viewModel,
                     participant: participant,
-                    allowsScoreEditing: appSession.roundOutcomeAllowsEditing
+                    allowsScoreEditing: appSession.roundOutcomeAllowsEditing,
+                    initialSelectedScoringUnitID: selectedFullScorecardScoringUnitID
                 )
                 .presentationBackground(.ultraThinMaterial)
             }
@@ -255,6 +257,7 @@ struct RoundOutcomeView: View {
         Button {
             Haptics.fire(.light)
             if snapshot.participants.isPopulated {
+                selectedFullScorecardScoringUnitID = nil
                 showFullScorecard = true
             }
         } label: {
@@ -326,7 +329,7 @@ struct RoundOutcomeView: View {
                     nameDisplayFormat: viewModel.nameDisplayFormat,
                     usesFormatDisplay: row.totalPoints != nil,
                     isHighestWinsFormat: isHighestWins,
-                    onTap: { presentedParticipant = row.participant }
+                    onTap: { handleOutcomeRowTap(row) }
                 )
 
                 if row.id != rows.last?.id {
@@ -378,6 +381,15 @@ struct RoundOutcomeView: View {
                 return value
             }
         return cityState.isPopulated ? cityState.joined(separator: ", ") : nil
+    }
+
+    private func handleOutcomeRowTap(_ row: LiveRoundViewModel.LeaderboardRow) {
+        if row.isSharedScoreUnit {
+            selectedFullScorecardScoringUnitID = row.scoringUnitID
+            showFullScorecard = true
+        } else {
+            presentedParticipant = row.participant
+        }
     }
 }
 

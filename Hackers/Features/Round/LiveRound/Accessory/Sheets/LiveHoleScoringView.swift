@@ -302,12 +302,22 @@ private extension LiveHoleScoringView {
 
     private var ownerTitle: String {
         if isSharedEntry {
-            return scoringSession.title ?? displayParticipants.map(\.name.fullName).joined(separator: " + ")
+            let names = displayParticipants
+                .map(\.name.fullName)
+                .filter(\.isPopulated)
+            if names.isPopulated {
+                return names.joined(separator: " + ")
+            }
+            return scoringSession.title ?? currentGolfer.name.fullName
         }
         return currentGolfer.name.fullName
     }
 
     private var ownerSubtitle: String? {
+        if isSharedEntry,
+           let label = viewModel.scoringUnitHandicapLabel(scoringUnitID: scoringSession.scoringUnitID) {
+            return label
+        }
         if let subtitle = scoringSession.subtitle, subtitle.isPopulated {
             return subtitle
         }
@@ -347,7 +357,7 @@ private extension LiveHoleScoringView {
         return HStack(spacing: -12) {
             ForEach(Array(members.enumerated()), id: \.element.id) { index, participant in
                 PlayerAvatarView(
-                    initials: participant.name.initials,
+                    initials: sharedInitial(for: participant),
                     size: playerCircleSize * 0.72,
                     fillColor: viewModel.teamColor(for: participant)?.opacity(0.8),
                     glassTint: Color.neutral6,
@@ -373,6 +383,14 @@ private extension LiveHoleScoringView {
                     .padding(.leading, 4)
             }
         }
+    }
+
+    private func sharedInitial(for participant: RoundParticipant) -> String {
+        let given = participant.name.givenName.trimmingCharacters(in: .whitespacesAndNewlines)
+        if let first = given.first {
+            return String(first).uppercased()
+        }
+        return String(participant.name.fullName.prefix(1)).uppercased()
     }
 
     @ViewBuilder

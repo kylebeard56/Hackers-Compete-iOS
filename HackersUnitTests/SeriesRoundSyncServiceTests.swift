@@ -69,6 +69,144 @@ final class SeriesRoundSyncServiceTests: XCTestCase {
         XCTAssertNil(links["y"])
     }
 
+    @MainActor
+    func testEffectiveRoundConfig_respectsBackPropagationFlag() {
+        let viewModel = SeriesViewModel()
+        let linkedRound = Round(
+            id: "round1",
+            status: .lobby,
+            configuration: RoundConfiguration(
+                formatSummary: RoundFormatSummary(templateID: "linked_template")
+            )
+        )
+        viewModel.linkedRounds = ["round1": linkedRound]
+
+        var seriesConfig = SeriesRoundConfiguration(
+            formatTemplateID: "series_template",
+            allowLobbyBackPropagation: false
+        )
+        var seriesRound = SeriesRound(
+            id: "series_round1",
+            roundID: "round1",
+            roundConfig: seriesConfig,
+            parentID: "series1"
+        )
+
+        XCTAssertEqual(viewModel.effectiveRoundConfig(for: seriesRound).formatTemplateID, "series_template")
+
+        seriesConfig.allowLobbyBackPropagation = true
+        seriesRound.roundConfig = seriesConfig
+
+        XCTAssertEqual(viewModel.effectiveRoundConfig(for: seriesRound).formatTemplateID, "linked_template")
+    }
+
+    func testOrganizationTeamMappingPreflight_reportsMissingTeamIDs() {
+        let seriesTeams = [
+            SeriesTeam(
+                id: "series_team1",
+                name: "Team 1",
+                color: "red",
+                index: 0,
+                createdAt: t0,
+                lastUpdatedAt: t0,
+                parentID: "series1"
+            ),
+            SeriesTeam(
+                id: "series_team2",
+                name: "Team 2",
+                color: "blue",
+                index: 1,
+                createdAt: t0,
+                lastUpdatedAt: t0,
+                parentID: "series1"
+            ),
+        ]
+        let teamLinks: [String: SeriesRoundCreationMapping.SeriesToRoundTeamLink] = [
+            "series_team1": .init(seriesTeamID: "series_team1", roundTeamID: "round_team1"),
+        ]
+        let snapshot = RoundSnapshot(
+            teams: [
+                RoundTeam(
+                    id: "round_team1",
+                    name: "Team 1",
+                    color: "red",
+                    index: 0,
+                    createdAt: t0,
+                    lastUpdatedAt: t0,
+                    parentID: "round1"
+                ),
+            ]
+        )
+
+        let error = SeriesRoundSyncPlanning.organizationTeamMappingPreflightError(
+            seriesTeamsForRound: seriesTeams,
+            teamLinks: teamLinks,
+            snapshot: snapshot
+        )
+
+        guard case .preflightFailed(let message) = error else {
+            return XCTFail("Expected preflightFailed")
+        }
+        XCTAssertTrue(message.contains("Expected 2, found 1"))
+        XCTAssertTrue(message.contains("series_team2"))
+    }
+
+    func testOrganizationPrunePlanRemovesEmptyArtifactsAndInvalidMatchups() {
+        let participants = [
+            RoundParticipant(
+                id: "p1",
+                name: Name("Alice", "One"),
+                teamID: "team_active",
+                groupID: "group_active",
+                createdAt: t0,
+                parentID: "round1"
+            ),
+            RoundParticipant(
+                id: "p2",
+                name: Name("Bob", "Two"),
+                teamID: "team_other",
+                groupID: "group_active",
+                createdAt: t0,
+                parentID: "round1"
+            ),
+        ]
+        let snapshot = RoundSnapshot(
+            participants: participants,
+            teams: [
+                RoundTeam(id: "team_active", name: "Team 1", color: "red", index: 0, createdAt: t0, parentID: "round1"),
+                RoundTeam(id: "team_other", name: "Team 2", color: "blue", index: 1, createdAt: t0, parentID: "round1"),
+                RoundTeam(id: "team_empty", name: "Team 3", color: "green", index: 2, createdAt: t0, parentID: "round1"),
+            ],
+            teeGroups: [
+                TeeTimeGroup(id: "group_active", index: 0, createdAt: t0, parentID: "round1"),
+                TeeTimeGroup(id: "group_empty", index: 1, createdAt: t0, parentID: "round1"),
+            ],
+            scoringGroups: [
+                RoundScoringGroup(id: "pair_active", kind: .partnership, memberIDs: ["p1", "p2"], createdAt: t0, parentID: "round1"),
+                RoundScoringGroup(id: "pair_empty", kind: .partnership, memberIDs: ["ghost"], createdAt: t0, parentID: "round1"),
+            ],
+            segments: [
+                RoundSegment(
+                    id: "segment1",
+                    matchups: [
+                        TeamMatchup(id: "valid_team", teamIDs: ["team_active", "team_other"], mode: .team),
+                        TeamMatchup(id: "empty_team", teamIDs: ["team_active", "team_empty"], mode: .team),
+                        TeamMatchup(id: "ghost_participant", participantIDs: ["p1", "ghost"], mode: .individual),
+                        TeamMatchup(id: "bad_score_owner", scoreOwnerIDs: ["pair_active", "pair_empty"], scoreOwnerScope: .partnership, mode: .scoreOwner),
+                    ]
+                ),
+            ]
+        )
+
+        let plan = SeriesRoundSyncPlanning.organizationPrunePlan(snapshot: snapshot)
+
+        XCTAssertEqual(plan.teeGroupsToDelete.map(\.id), ["group_empty"])
+        XCTAssertEqual(plan.teamsToDelete.map(\.id), ["team_empty"])
+        XCTAssertEqual(plan.scoringGroupsToDelete.map(\.id), ["pair_empty"])
+        XCTAssertEqual(plan.retainedMatchups.map(\.id), ["valid_team"])
+        XCTAssertTrue(plan.didPruneMatchups)
+    }
+
     func testParticipantsWithPlayerDataSync_preservesManualHandicap() {
         let p = RoundParticipant(
             id: "part1",
@@ -136,6 +274,44 @@ final class SeriesRoundSyncServiceTests: XCTestCase {
         XCTAssertEqual(out.first?.name.fullName, "New Name")
         XCTAssertEqual(out.first?.adjustedHandicap, 14)
         XCTAssertEqual(out.first?.teeBoxID, "tee_white")
+    }
+
+    func testResolvedPlanCarriesSeriesHandicapBasisForSync() {
+        var settings = SeriesSettings()
+        settings.handicapConfig = SeriesHandicapConfig(isEnabled: true, config: .league2025, strokeBasis: .nineHole)
+        let series = Series(id: "series1", settings: settings)
+        let member = SeriesMember(
+            id: "mem1",
+            userID: "u1",
+            playerID: "pl1",
+            name: Name("Player", "One"),
+            createdAt: t0,
+            lastUpdatedAt: t0,
+            parentID: "series1"
+        )
+        let courseSegment = CourseSegment(
+            courseInfo: CourseInfo(
+                id: "c1",
+                golfCourseApiID: nil,
+                name: "C",
+                totalHoles: 18,
+                location: nil,
+                tees: []
+            ),
+            holeRange: HoleRange(startHole: 1, endHole: 9),
+            defaultTee: "tee_white"
+        )
+
+        let plan = SeriesRoundResolvedPlan(
+            series: series,
+            seriesRound: SeriesRound(id: "sr1", parentID: "series1"),
+            members: [member],
+            teams: [],
+            pods: [],
+            courseSegment: courseSegment
+        )
+
+        XCTAssertEqual(plan.roundConfiguration.handicapStrokeBasis, .nineHole)
     }
 
     func testParticipantsWithOrganizationSync_preservesNonContiguousTeeOrder() {

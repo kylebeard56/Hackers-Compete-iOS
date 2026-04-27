@@ -144,6 +144,31 @@ extension RoundSession {
         }
     }
 
+    func setSharedScoreHandicapConfig(_ config: HandicapConfiguration?) async {
+        addBreadcrumb()
+        let previous = snapshot.configuration.sharedScoreHandicapConfig
+
+        do {
+            if snapshot.round.configuration.sharedScoreHandicapConfig != config {
+                snapshot.round.configuration.sharedScoreHandicapConfig = config
+                _ = try await snapshot.round.put().get()
+            }
+
+            try await rebuildRoundScoringConfiguration()
+
+            guard previous != config else { return }
+            emitRoundSetupEvent(
+                "round_setup.shared_score_handicap_changed",
+                extra: [
+                    "has_value": config != nil,
+                    "percentage_count": config?.positionPercentages?.count ?? 0
+                ]
+            )
+        } catch {
+            addBreadcrumb(level: .error, message: "Failed to set shared score handicap config", error: error)
+        }
+    }
+
     func revealScores() async {
         addBreadcrumb()
         do {

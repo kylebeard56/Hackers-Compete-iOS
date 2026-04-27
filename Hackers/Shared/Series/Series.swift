@@ -411,6 +411,7 @@ enum SeriesMatchupMode: String, CaseIterable, Codable {
     case field
     case teamVsTeam = "team_vs_team"
     case individualVsIndividual = "individual_vs_individual"
+    case teeGroupPartnerships = "tee_group_partnerships"
 }
 
 enum SeriesTeamAssignmentMode: String, CaseIterable, Codable {
@@ -471,6 +472,33 @@ enum SeriesHandicapMode: String, CaseIterable, Codable {
     case off
     case fixed
     case dynamic
+}
+
+enum SeriesHandicapStrokeBasis: String, CaseIterable, Codable {
+    case nineHole = "nine_hole"
+    case eighteenHole = "eighteen_hole"
+
+    var displayName: String {
+        switch self {
+        case .nineHole: return "9 holes"
+        case .eighteenHole: return "18 holes"
+        }
+    }
+
+    var holeCount: Int {
+        switch self {
+        case .nineHole: return 9
+        case .eighteenHole: return 18
+        }
+    }
+
+    static func defaultBasis(defaultParForIndex: Double) -> SeriesHandicapStrokeBasis {
+        defaultParForIndex <= 40 ? .nineHole : .eighteenHole
+    }
+
+    static func defaultBasis(holeCount: Int) -> SeriesHandicapStrokeBasis {
+        holeCount <= 9 ? .nineHole : .eighteenHole
+    }
 }
 
 extension SeriesHandicapMode {
@@ -722,6 +750,7 @@ struct SeriesRoundConfiguration: Hashable, Codable {
 struct SeriesHandicapConfig: Hashable, Codable {
     var mode: SeriesHandicapMode
     var config: HandicapComputationConfigDTO
+    var strokeBasis: SeriesHandicapStrokeBasis
 
     var isEnabled: Bool {
         get { mode.isEnabled }
@@ -738,24 +767,29 @@ struct SeriesHandicapConfig: Hashable, Codable {
 
     init(
         mode: SeriesHandicapMode = .off,
-        config: HandicapComputationConfigDTO = .league2025
+        config: HandicapComputationConfigDTO = .league2025,
+        strokeBasis: SeriesHandicapStrokeBasis? = nil
     ) {
         self.mode = mode
         self.config = config
+        self.strokeBasis = strokeBasis ?? SeriesHandicapStrokeBasis.defaultBasis(defaultParForIndex: config.defaultParForIndex)
     }
 
     init(
         isEnabled: Bool,
-        config: HandicapComputationConfigDTO = .league2025
+        config: HandicapComputationConfigDTO = .league2025,
+        strokeBasis: SeriesHandicapStrokeBasis? = nil
     ) {
         self.mode = isEnabled ? .dynamic : .off
         self.config = config
+        self.strokeBasis = strokeBasis ?? SeriesHandicapStrokeBasis.defaultBasis(defaultParForIndex: config.defaultParForIndex)
     }
 
     enum CodingKeys: String, CodingKey {
         case mode
         case isEnabled = "is_enabled"
         case config
+        case strokeBasis = "stroke_basis"
     }
 
     init(from decoder: Decoder) throws {
@@ -764,6 +798,8 @@ struct SeriesHandicapConfig: Hashable, Codable {
         let decodedEnabled = try c.decodeIfPresent(Bool.self, forKey: .isEnabled)
         mode = decodedMode ?? ((decodedEnabled ?? false) ? .dynamic : .off)
         config = try c.decodeIfPresent(HandicapComputationConfigDTO.self, forKey: .config) ?? .league2025
+        strokeBasis = try c.decodeIfPresent(SeriesHandicapStrokeBasis.self, forKey: .strokeBasis)
+            ?? SeriesHandicapStrokeBasis.defaultBasis(defaultParForIndex: config.defaultParForIndex)
     }
 
     func encode(to encoder: Encoder) throws {
@@ -771,6 +807,7 @@ struct SeriesHandicapConfig: Hashable, Codable {
         try c.encode(mode, forKey: .mode)
         try c.encode(isEnabled, forKey: .isEnabled)
         try c.encode(config, forKey: .config)
+        try c.encode(strokeBasis, forKey: .strokeBasis)
     }
 }
 
@@ -1401,6 +1438,8 @@ struct SeriesRoundMatchupPlan: Hashable, Codable, Identifiable {
     var teamBID: String
     var memberAID: String?
     var memberBID: String?
+    var pairAID: String?
+    var pairBID: String?
     var index: Int
     var podGroupingStrategy: SeriesPodGroupingStrategy
     var notes: String?
@@ -1414,6 +1453,8 @@ struct SeriesRoundMatchupPlan: Hashable, Codable, Identifiable {
         teamBID: String = "",
         memberAID: String? = nil,
         memberBID: String? = nil,
+        pairAID: String? = nil,
+        pairBID: String? = nil,
         index: Int = 0,
         podGroupingStrategy: SeriesPodGroupingStrategy = .disabled,
         notes: String? = nil,
@@ -1426,6 +1467,8 @@ struct SeriesRoundMatchupPlan: Hashable, Codable, Identifiable {
         self.teamBID = teamBID
         self.memberAID = memberAID
         self.memberBID = memberBID
+        self.pairAID = pairAID
+        self.pairBID = pairBID
         self.index = index
         self.podGroupingStrategy = podGroupingStrategy
         self.notes = notes
@@ -1440,6 +1483,8 @@ struct SeriesRoundMatchupPlan: Hashable, Codable, Identifiable {
         case teamBID = "team_b_id"
         case memberAID = "member_a_id"
         case memberBID = "member_b_id"
+        case pairAID = "pair_a_id"
+        case pairBID = "pair_b_id"
         case podGroupingStrategy = "pod_grouping_strategy"
         case isLocked = "is_locked"
         case createdAt = "created_at"
@@ -1451,7 +1496,11 @@ struct SeriesRoundMatchupPlan: Hashable, Codable, Identifiable {
         guard let memberAID, let memberBID else { return false }
         return memberAID.isPopulated && memberBID.isPopulated && memberAID != memberBID
     }
-    var isValid: Bool { validTeamPairing || validMemberPairing }
+    var validPairPairing: Bool {
+        guard let pairAID, let pairBID else { return false }
+        return pairAID.isPopulated && pairBID.isPopulated && pairAID != pairBID
+    }
+    var isValid: Bool { validTeamPairing || validMemberPairing || validPairPairing }
 }
 
 enum SeriesRoundPlanSource: String, CaseIterable, Codable {
@@ -1624,6 +1673,328 @@ struct SeriesRoundPartnershipPlan: Hashable, Codable, Identifiable {
 
     private static func normalizedMemberIDs(_ memberIDs: [String]) -> [String] {
         Array(Set(memberIDs.filter(\.isPopulated))).sorted()
+    }
+}
+
+enum SeriesTeeGroupMirrorStatus: String, Equatable {
+    case ready
+    case needsTwoOpposingPairs
+    case sameTeamOnly
+    case tooManyPairs
+
+    var label: String {
+        switch self {
+        case .ready: return "Matchup ready"
+        case .needsTwoOpposingPairs: return "Needs two opposing pairs"
+        case .sameTeamOnly: return "Same team only"
+        case .tooManyPairs: return "Too many pairs"
+        }
+    }
+}
+
+struct SeriesTeeGroupMirrorPair: Hashable {
+    var id: String
+    var teamID: String
+    var memberIDs: [String]
+}
+
+enum SeriesTeeGroupMirrorAnalyzer {
+    static func pairs(
+        for group: SeriesRoundPlannedTeeGroup,
+        partnershipPlans: [SeriesRoundPartnershipPlan],
+        membersByID: [String: SeriesMember]
+    ) -> [SeriesTeeGroupMirrorPair] {
+        let groupMemberIDs = Set(group.memberIDs)
+        let storedPairs = partnershipPlans.compactMap { plan -> SeriesTeeGroupMirrorPair? in
+            guard plan.isValid, Set(plan.memberIDs).isSubset(of: groupMemberIDs) else { return nil }
+            return SeriesTeeGroupMirrorPair(id: plan.id, teamID: plan.teamID, memberIDs: plan.memberIDs)
+        }
+        if storedPairs.isPopulated { return storedPairs }
+
+        let orderedSeats = group.seats.sorted { $0.teeOrder < $1.teeOrder }
+        guard orderedSeats.count == 4 else { return [] }
+        let candidatePairs = [
+            Array(orderedSeats[0...1]).map(\.memberID),
+            Array(orderedSeats[2...3]).map(\.memberID)
+        ]
+        return candidatePairs.enumerated().compactMap { index, memberIDs -> SeriesTeeGroupMirrorPair? in
+            let teamIDs = Set(memberIDs.compactMap { membersByID[$0]?.teamID }.filter(\.isPopulated))
+            guard teamIDs.count == 1, let teamID = teamIDs.first else { return nil }
+            return SeriesTeeGroupMirrorPair(
+                id: "derived_pair_\(group.id)_\(index)",
+                teamID: teamID,
+                memberIDs: memberIDs
+            )
+        }
+    }
+
+    static func status(
+        for group: SeriesRoundPlannedTeeGroup,
+        partnershipPlans: [SeriesRoundPartnershipPlan],
+        membersByID: [String: SeriesMember]
+    ) -> SeriesTeeGroupMirrorStatus {
+        let pairs = pairs(for: group, partnershipPlans: partnershipPlans, membersByID: membersByID)
+        if pairs.count > 2 { return .tooManyPairs }
+        guard pairs.count == 2 else { return .needsTwoOpposingPairs }
+        let teamIDs = Set(pairs.map(\.teamID).filter(\.isPopulated))
+        if teamIDs.count == 2 { return .ready }
+        if teamIDs.count == 1 { return .sameTeamOnly }
+        return .needsTwoOpposingPairs
+    }
+}
+
+struct SeriesRoundPointsConfidenceSummary: Equatable {
+    var example: String
+}
+
+enum SeriesRoundPointsConfidenceBuilder {
+    static func summary(
+        roundConfig: SeriesRoundConfiguration,
+        teamProfile: SeriesScoringProfile?,
+        individualProfile: SeriesScoringProfile?,
+        plannedTeeGroups: [SeriesRoundPlannedTeeGroup],
+        partnershipPlans: [SeriesRoundPartnershipPlan],
+        members: [SeriesMember],
+        teams: [SeriesTeam],
+        courseSelection: SeriesCourseSelection?
+    ) -> SeriesRoundPointsConfidenceSummary {
+        let membersByID = Dictionary(uniqueKeysWithValues: members.map { ($0.id, $0) })
+        let teamsByID = Dictionary(uniqueKeysWithValues: teams.map { ($0.id, $0) })
+        let readyGroups = plannedTeeGroups.sorted { $0.index < $1.index }.filter {
+            SeriesTeeGroupMirrorAnalyzer.status(
+                for: $0,
+                partnershipPlans: partnershipPlans,
+                membersByID: membersByID
+            ) == .ready
+        }
+        return SeriesRoundPointsConfidenceSummary(
+            example: example(
+                roundConfig: roundConfig,
+                teamProfile: teamProfile,
+                individualProfile: individualProfile,
+                readyGroups: readyGroups,
+                partnershipPlans: partnershipPlans,
+                membersByID: membersByID,
+                teamsByID: teamsByID,
+                allMembers: members,
+                allTeams: teams,
+                courseSelection: courseSelection
+            )
+        )
+    }
+
+    private static func example(
+        roundConfig: SeriesRoundConfiguration,
+        teamProfile: SeriesScoringProfile?,
+        individualProfile: SeriesScoringProfile?,
+        readyGroups: [SeriesRoundPlannedTeeGroup],
+        partnershipPlans: [SeriesRoundPartnershipPlan],
+        membersByID: [String: SeriesMember],
+        teamsByID: [String: SeriesTeam],
+        allMembers: [SeriesMember],
+        allTeams: [SeriesTeam],
+        courseSelection: SeriesCourseSelection?
+    ) -> String {
+        if roundConfig.matchupMode == .teeGroupPartnerships {
+            return pairMatchupExample(
+                roundConfig: roundConfig,
+                teamProfile: teamProfile,
+                individualProfile: individualProfile,
+                readyGroups: readyGroups,
+                partnershipPlans: partnershipPlans,
+                membersByID: membersByID,
+                teamsByID: teamsByID,
+                courseSelection: courseSelection
+            )
+        }
+        return generalExample(
+            roundConfig: roundConfig,
+            teamProfile: teamProfile,
+            individualProfile: individualProfile,
+            members: allMembers,
+            teams: allTeams
+        )
+    }
+
+    private static func pairMatchupExample(
+        roundConfig: SeriesRoundConfiguration,
+        teamProfile: SeriesScoringProfile?,
+        individualProfile: SeriesScoringProfile?,
+        readyGroups: [SeriesRoundPlannedTeeGroup],
+        partnershipPlans: [SeriesRoundPartnershipPlan],
+        membersByID: [String: SeriesMember],
+        teamsByID: [String: SeriesTeam],
+        courseSelection: SeriesCourseSelection?
+    ) -> String {
+        var fragments: [String] = []
+
+        if let group = readyGroups.first {
+            let pairs = SeriesTeeGroupMirrorAnalyzer.pairs(
+                for: group,
+                partnershipPlans: partnershipPlans,
+                membersByID: membersByID
+            )
+            if pairs.count == 2 {
+                let leftPair = pairName(pairs[0], membersByID: membersByID)
+                let rightPair = pairName(pairs[1], membersByID: membersByID)
+                let leftTeam = teamsByID[pairs[0].teamID]?.name ?? "Team A"
+                let rightTeam = teamsByID[pairs[1].teamID]?.name ?? "Team B"
+
+                if let teamProfile {
+                    fragments.append(
+                        teamExampleText(
+                            profile: teamProfile,
+                            winnerName: leftTeam,
+                            loserName: rightTeam,
+                            winningScoreText: "\(leftPair) beat \(rightPair)",
+                            roundConfig: roundConfig,
+                            courseSelection: courseSelection
+                        )
+                    )
+                }
+
+                if let individualProfile {
+                    fragments.append(
+                        individualProfile.kind == .accrueFromIndividual
+                            ? ""
+                            : "\(leftPair) and \(rightPair) still use the selected individual awards for player standings."
+                    )
+                }
+            }
+        }
+
+        if fragments.isEmpty {
+            if teamProfile == nil, individualProfile == nil {
+                return "No team or individual series points will be awarded until a scoring profile is selected."
+            }
+            if teamProfile == nil {
+                return "Set a team scoring profile to award pair-vs-pair tee sheet results."
+            }
+            return "Set two same-team pairs in a tee group to preview the scoring example."
+        }
+
+        return fragments.filter(\.isPopulated).joined(separator: " ")
+    }
+
+    private static func generalExample(
+        roundConfig: SeriesRoundConfiguration,
+        teamProfile: SeriesScoringProfile?,
+        individualProfile: SeriesScoringProfile?,
+        members: [SeriesMember],
+        teams: [SeriesTeam]
+    ) -> String {
+        var fragments: [String] = []
+
+        if let teamProfile {
+            let orderedTeams = teams.sorted { $0.index < $1.index }
+            let winner = orderedTeams.first?.name ?? "Team A"
+            let runnerUp = orderedTeams.dropFirst().first?.name ?? "Team B"
+            fragments.append(
+                teamExampleText(
+                    profile: teamProfile,
+                    winnerName: winner,
+                    loserName: runnerUp,
+                    winningScoreText: "\(winner) finish ahead of \(runnerUp)",
+                    roundConfig: roundConfig,
+                    courseSelection: nil
+                )
+            )
+        }
+
+        if let individualProfile {
+            let orderedMembers = members.sorted {
+                $0.name.fullName.localizedCaseInsensitiveCompare($1.name.fullName) == .orderedAscending
+            }
+            let first = orderedMembers.first?.name.fullName ?? "Player A"
+            let second = orderedMembers.dropFirst().first?.name.fullName ?? "Player B"
+            fragments.append(individualExampleText(profile: individualProfile, winnerName: first, loserName: second))
+        }
+
+        if fragments.isEmpty {
+            return "No team or individual series points will be awarded until a scoring profile is selected."
+        }
+        return fragments.joined(separator: " ")
+    }
+
+    private static func teamExampleText(
+        profile: SeriesScoringProfile,
+        winnerName: String,
+        loserName: String,
+        winningScoreText: String,
+        roundConfig: SeriesRoundConfiguration,
+        courseSelection: SeriesCourseSelection?
+    ) -> String {
+        switch profile.kind {
+        case .placement:
+            let rules = profile.placementRules.sorted { $0.rankStart < $1.rankStart }
+            guard let firstRule = rules.first else {
+                return "\(winnerName) earn team points from leaderboard finish once the placement spread is configured."
+            }
+            if let secondRule = rules.dropFirst().first {
+                return "If \(winnerName) finish 1st and \(loserName) finish 2nd, teams earn \(numberText(firstRule.points)) and \(numberText(secondRule.points)) points."
+            }
+            return "If \(winnerName) win the round, they earn \(numberText(firstRule.points)) team points."
+        case .winTieLoss:
+            let points = profile.resultPoints ?? .init()
+            if roundConfig.matchupScoringStyle == .holeByHolePoints {
+                let holeCount = courseSelection?.holeSegment.holeCount ?? 18
+                let winnerTotal = Double(holeCount) * roundConfig.resolvedHoleWinPoints + roundConfig.resolvedMatchWinnerBonusPoints
+                return "If \(winningScoreText), \(winnerName) can bank up to \(numberText(winnerTotal)) team points from hole wins and winner bonus."
+            }
+            return "If \(winningScoreText), \(winnerName) earn \(numberText(points.winPoints)) team points and \(loserName) earn \(numberText(points.lossPoints))."
+        case .accrueFromIndividual:
+            if roundConfig.matchupScoringStyle == .holeByHolePoints {
+                return "Each team's total is the sum of its players' hole points and any match winner bonus from this round."
+            }
+            return "Team standings add up the individual points awarded to each player on the roster this round."
+        case .manual:
+            return "Team points are assigned manually after the round is complete."
+        }
+    }
+
+    private static func individualExampleText(
+        profile: SeriesScoringProfile,
+        winnerName: String,
+        loserName: String
+    ) -> String {
+        switch profile.kind {
+        case .placement:
+            let rules = profile.placementRules.sorted { $0.rankStart < $1.rankStart }
+            guard let firstRule = rules.first else {
+                return "\(winnerName) earn individual points from leaderboard finish once the placement spread is configured."
+            }
+            if let secondRule = rules.dropFirst().first {
+                return "If \(winnerName) finishes 1st and \(loserName) finishes 2nd, players earn \(numberText(firstRule.points)) and \(numberText(secondRule.points)) points."
+            }
+            return "If \(winnerName) wins the round, they earn \(numberText(firstRule.points)) individual points."
+        case .winTieLoss:
+            let points = profile.resultPoints ?? .init()
+            return "If \(winnerName) beats \(loserName), they earn \(numberText(points.winPoints)) individual points while \(loserName) earn \(numberText(points.lossPoints))."
+        case .accrueFromIndividual:
+            return "Individual points feed directly into the selected team scoring model."
+        case .manual:
+            return "Individual points are assigned manually after the round is complete."
+        }
+    }
+
+    private static func pairName(
+        _ pair: SeriesTeeGroupMirrorPair,
+        membersByID: [String: SeriesMember]
+    ) -> String {
+        let names = pair.memberIDs.compactMap { membersByID[$0]?.name.givenName }.filter(\.isPopulated)
+        if names.count == 2 { return names.joined(separator: " + ") }
+        return pair.memberIDs.compactMap { membersByID[$0]?.name.fullName }.joined(separator: " + ")
+    }
+
+    private static func numberText(_ value: Double) -> String {
+        let formatted = String(format: "%.2f", value)
+        if formatted.hasSuffix("00") {
+            return String(formatted.dropLast(3))
+        }
+        if formatted.hasSuffix("0") {
+            return String(formatted.dropLast(1))
+        }
+        return formatted
     }
 }
 
@@ -2576,7 +2947,43 @@ enum SeriesScoreboardCalculator {
             return members.filter(\.isActive).count / 2
         }
 
+        if round.roundConfig.matchupMode == .teeGroupPartnerships {
+            let planned = round.plannedMatchups.filter { $0.matchupPlan.validPairPairing }.count
+            if planned > 0 { return planned }
+            let explicit = round.matchupPlans.filter(\.validPairPairing).count
+            if explicit > 0 { return explicit }
+        }
+
+        if round.roundConfig.matchupMode == .teeGroupPartnerships, round.plannedTeeGroups.isPopulated {
+            let memberTeamIDs = Dictionary(uniqueKeysWithValues: members.compactMap { member -> (String, String)? in
+                guard let teamID = member.teamID, teamID.isPopulated else { return nil }
+                return (member.id, teamID)
+            })
+            let pairsByMemberID = round.partnershipPlans
+                .filter(\.isValid)
+                .reduce(into: [String: SeriesRoundPartnershipPlan]()) { partial, pair in
+                    for memberID in pair.memberIDs {
+                        partial[memberID] = pair
+                    }
+                }
+
+            let mirroredCount = round.plannedTeeGroups.reduce(0) { partial, group in
+                var pairIDs: Set<String> = []
+                var pairTeamIDs: Set<String> = []
+                for memberID in group.memberIDs {
+                    guard let pair = pairsByMemberID[memberID] else { continue }
+                    pairIDs.insert(pair.id)
+                    if let teamID = pair.memberIDs.compactMap({ memberTeamIDs[$0] }).first {
+                        pairTeamIDs.insert(teamID)
+                    }
+                }
+                return partial + (pairIDs.count == 2 && pairTeamIDs.count == 2 ? 1 : 0)
+            }
+            if mirroredCount > 0 { return mirroredCount }
+        }
+
         if round.roundConfig.scoreOwnerScope == .partnership {
+
             let byTeam = Dictionary(grouping: round.partnershipPlans.filter(\.isValid), by: \.teamID)
             let counts = byTeam.values.map(\.count)
             if counts.count >= 2, let minimum = counts.min(), minimum > 0 {

@@ -206,13 +206,25 @@ struct SharedScoreOwnerRow: View {
                     .lineLimit(1)
 
                 if let subtitle, subtitle.isPopulated {
-                    Text(subtitle)
+                    Text(subtitleText(base: subtitle))
                         .fontStyle(kFontName, size: 13, weight: .regular)
                         .foregroundStyle(Color.neutral)
                         .lineLimit(2)
+                } else if let handicapLabel = viewModel.scoringUnitHandicapLabel(scoringUnitID: scoringUnitID) {
+                    Text(handicapLabel)
+                        .fontStyle(kFontName, size: 13, weight: .regular)
+                        .foregroundStyle(Color.neutral)
+                        .lineLimit(1)
                 }
             }
         }
+    }
+
+    private func subtitleText(base: String) -> String {
+        guard let handicapLabel = viewModel.scoringUnitHandicapLabel(scoringUnitID: scoringUnitID) else {
+            return base
+        }
+        return "\(base) - \(handicapLabel)"
     }
 
     private var memberAvatarStrip: some View {

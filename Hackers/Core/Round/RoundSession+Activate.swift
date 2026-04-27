@@ -29,6 +29,21 @@ extension RoundSession {
         
         isStartingLiveRound = true
         defer { isStartingLiveRound = false }
+
+        do {
+            try await pruneEmptyOrganizationArtifacts()
+        } catch {
+            addBreadcrumb(
+                level: .error,
+                message: "Failed to prune round session prior to activation validation",
+                error: error,
+                parameters: [
+                    "Round ID": snapshot.round.id
+                ]
+            )
+            Haptics.fire(.error)
+            return false
+        }
         
         var errors: Set<RoundActivationError> = .init()
         
@@ -191,22 +206,7 @@ extension RoundSession {
         
         // 5. If all checks pass, cleanup and prune all empty teams or tee groups that were orphaned.
         do {
-            let teeGroupCounts = Dictionary(grouping: snapshot.participants, by: \.groupID).mapValues(\.count)
-            let teamCounts = Dictionary(grouping: snapshot.participants, by: \.teamID).mapValues(\.count)
-            
-            // Prune empty tee groups
-            for (key, value) in teeGroupCounts {
-                if let key, let group = snapshot.teeGroups.first(where: { $0.id == key }), value == 0 {
-                    try await removeTeeGroup(group)
-                }
-            }
-            
-            // Prune empty teams
-            for (key, value) in teamCounts {
-                if let key, let team = snapshot.teams.first(where: { $0.id == key }), value == 0 {
-                    try await removeTeam(team)
-                }
-            }
+            try await pruneEmptyOrganizationArtifacts()
             
             // Prune all teams and remove teamIDs if prior set and no longer want teams
             if !snapshot.requiresTeams {
@@ -221,16 +221,6 @@ extension RoundSession {
                 }
             }
 
-            // Prune orphaned or empty matchups (keep only valid pairings for both modes)
-            if snapshot.configuration.resolvedCompetitionScope == .matchup,
-               let mainSegment = snapshot.segments.first {
-                let current = mainSegment.matchups ?? []
-                let validMatchups = current.filter { $0.isValid }
-                if validMatchups.count != current.count {
-                    await setMatchups(validMatchups)
-                }
-            }
-            
             snapshot.round.status = .live
             snapshot.round = try await snapshot.round.put().get()
             addEvent(
@@ -253,6 +243,28 @@ extension RoundSession {
             )
             Haptics.fire(.error)
             return false
+        }
+    }
+
+    private func pruneEmptyOrganizationArtifacts() async throws {
+        let plan = SeriesRoundSyncPlanning.organizationPrunePlan(snapshot: snapshot)
+        guard plan.hasAny else { return }
+
+        for group in plan.teeGroupsToDelete {
+            try await removeTeeGroup(group)
+        }
+
+        for team in plan.teamsToDelete {
+            try await removeTeam(team)
+        }
+
+        for group in plan.scoringGroupsToDelete {
+            _ = try await group.delete().get()
+            snapshot.scoringGroups.removeAll { $0.id == group.id }
+        }
+
+        if plan.didPruneMatchups {
+            await setMatchups(plan.retainedMatchups)
         }
     }
 }

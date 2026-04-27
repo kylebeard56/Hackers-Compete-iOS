@@ -14,6 +14,8 @@ struct SeriesLeagueSettingsView: View {
 
     @ObservedObject var viewModel: SeriesViewModel
 
+    @State private var draftLeagueName = ""
+    @State private var draftLeagueDescription = ""
     @State private var draftSettings = SeriesSettings()
     @State private var hasLoaded = false
 
@@ -30,6 +32,13 @@ struct SeriesLeagueSettingsView: View {
     @State private var individualPointsExpanded = false
 
     @State private var isLoadingDefaultCourseForTeeMenu = false
+    @State private var previousSettingsScrollOffset: CGFloat?
+    @FocusState private var focusedDetailsField: LeagueDetailsField?
+
+    private enum LeagueDetailsField: Hashable {
+        case name
+        case description
+    }
 
     /// Tees for the default-tee Menu, sourced from the view model's cache / linked rounds (same path as SeriesRosterView).
     private var defaultLeagueTees: [Tee] {
@@ -57,6 +66,7 @@ struct SeriesLeagueSettingsView: View {
             },
             content: {
                 VStack(spacing: 16) {
+                    leagueDetailsSection
                     leagueBasicsSection
                     pointsAwardsSection
                     behaviorSection
@@ -67,33 +77,19 @@ struct SeriesLeagueSettingsView: View {
                 .padding(.horizontal, 16)
                 .padding(.top, 8)
             },
-            footer: {
-                VStack(spacing: 0) {
-                    Line()
-                    PrimaryButton(
-                        appearance: .fill,
-                        title: "Save",
-                        labelColor: palette.backgroundColor,
-                        buttonColor: palette.foregroundColor,
-                        theme: palette.theme,
-                        fillWidth: true,
-                        isDisabled: .false,
-                        isLoading: .false,
-                        onTapAsync: {
-                            await viewModel.saveLeagueSettings(draftSettings)
-                            dismiss()
-                        }
-                    )
-                    .padding(.horizontal, 16)
-                    .padding(.vertical, 12)
+            footer: { settingsFooter },
+            keyboardDismissMode: .interactively,
+            onScroll: { offset in
+                await MainActor.run {
+                    dismissDetailsFocusOnScroll(offset)
                 }
-                .background(palette.backgroundColor)
-            },
-            onScroll: { _ in }
+            }
         )
         .background(palette.backgroundColor.ignoresSafeArea())
         .task {
             guard !hasLoaded else { return }
+            draftLeagueName = viewModel.series.name
+            draftLeagueDescription = viewModel.series.description ?? ""
             draftSettings = viewModel.series.settings
             normalizeSelectedTemplate()
             normalizeDraftProfilesForCompetition()
@@ -176,6 +172,111 @@ struct SeriesLeagueSettingsView: View {
             await viewModel.ensureTeeChoicesLoaded(for: draftSettings.defaultCourse)
             isLoadingDefaultCourseForTeeMenu = false
         }
+        .resignKeyboardOnTapGesture()
+    }
+
+    private var settingsFooter: some View {
+        VStack(spacing: 0) {
+            Line()
+            HStack(spacing: 12) {
+                PrimaryButton(
+                    appearance: .fill,
+                    title: "Save",
+                    labelColor: palette.backgroundColor,
+                    buttonColor: palette.foregroundColor,
+                    theme: palette.theme,
+                    fillWidth: true,
+                    isDisabled: .init(get: { !canSave }, set: { _ in }),
+                    isLoading: .false,
+                    onTapAsync: {
+                        let saved = await viewModel.saveLeagueDetailsAndSettings(
+                            name: draftLeagueName,
+                            description: draftLeagueDescription,
+                            settings: draftSettings
+                        )
+                        if saved {
+                            dismiss()
+                        }
+                    }
+                )
+
+                if focusedDetailsField != nil {
+                    NavButton(
+                        style: .glass,
+                        icon: "keyboard.chevron.compact.down",
+                        size: 24,
+                        color: palette.foregroundColor,
+                        theme: palette.theme,
+                        onTap: { focusedDetailsField = nil }
+                    )
+                    .accessibilityLabel("Dismiss keyboard")
+                }
+            }
+            .padding(.horizontal, 16)
+            .padding(.vertical, 12)
+        }
+        .background(palette.backgroundColor)
+    }
+
+    private var leagueDetailsSection: some View {
+        settingsGroup(title: "League details") {
+            SeriesSheetCard(palette: palette) {
+                builderField(
+                    title: "Name",
+                    subtitle: "Shown in navigation, invites, and the league overview."
+                ) {
+                    HStack(spacing: 12) {
+                        TextField("League name", text: $draftLeagueName)
+                            .fontStyle(kFontName, size: 17, weight: .regular)
+                            .foregroundStyle(palette.foregroundColor)
+                            .textInputAutocapitalization(.words)
+                            .focused($focusedDetailsField, equals: .name)
+
+                        Spacer(minLength: 0)
+
+                        if focusedDetailsField == .name, draftLeagueName.isPopulated {
+                            ClearTextButton(theme: palette.theme) { draftLeagueName = "" }
+                        }
+                    }
+                    .borderedContentStyle(
+                        isActive: focusedDetailsField == .name,
+                        theme: palette.theme,
+                        fill: palette.backgroundColor
+                    )
+                }
+
+                builderField(
+                    title: "Description",
+                    subtitle: "Optional notes, expectations, or league context for everyone."
+                ) {
+                    HStack(alignment: .top, spacing: 12) {
+                        TextField("Add league notes or a description", text: $draftLeagueDescription, axis: .vertical)
+                            .fontStyle(kFontName, size: 15, weight: .regular)
+                            .foregroundStyle(palette.foregroundColor)
+                            .textInputAutocapitalization(.sentences)
+                            .lineLimit(4...10)
+                            .focused($focusedDetailsField, equals: .description)
+                            .frame(maxWidth: .infinity, alignment: .topLeading)
+
+                        if focusedDetailsField == .description, draftLeagueDescription.isPopulated {
+                            ClearTextButton(theme: palette.theme) { draftLeagueDescription = "" }
+                        }
+                    }
+                    .borderedContentStyle(
+                        isActive: focusedDetailsField == .description,
+                        theme: palette.theme,
+                        fill: palette.backgroundColor
+                    )
+                }
+            }
+        }
+    }
+
+    private func dismissDetailsFocusOnScroll(_ offset: CGFloat) {
+        defer { previousSettingsScrollOffset = offset }
+        guard focusedDetailsField != nil, let previousSettingsScrollOffset else { return }
+        guard abs(offset - previousSettingsScrollOffset) > 2 else { return }
+        focusedDetailsField = nil
     }
 
     private var leagueBasicsSection: some View {
@@ -421,7 +522,7 @@ struct SeriesLeagueSettingsView: View {
                 if draftSettings.useTeams {
                     builderField(
                         title: "Count scores",
-                        subtitle: "Choose whether every team score counts or only the best or worst scores."
+                        subtitle: "Choose which scores count and how they're computed for leaderboard."
                     ) {
                         HStack(spacing: 10) {
                             Menu {
@@ -483,28 +584,29 @@ struct SeriesLeagueSettingsView: View {
                                     settingsMenuChip("\(draftSettings.defaultRoundConfig.teamScoring.count)")
                                 }
                                 .buttonStyle(.plain)
-                            }
-                        }
-                    }
+                                
+                                Text("per")
+                                    .fontStyle(kFontName, size: 15, weight: .regular)
+                                    .foregroundStyle(Color.secondary)
 
-                    builderField(
-                        title: "Count by",
-                        subtitle: "Apply team counting on each hole or across the full round."
-                    ) {
-                        HStack(spacing: 8) {
-                            Button {
-                                draftSettings.defaultRoundConfig.teamScoring.scope = .perHole
-                            } label: {
-                                settingsChip("Hole", selected: draftSettings.defaultRoundConfig.teamScoring.scope == .perHole)
+                                Menu {
+                                    ForEach(AggregationScope.allCases, id: \.self) { scope in
+                                        Button {
+                                            draftSettings.defaultRoundConfig.teamScoring.scope = scope
+                                        } label: {
+                                            HStack {
+                                                Text(scope == .perRound ? "Round" : "Hole")
+                                                if draftSettings.defaultRoundConfig.teamScoring.scope == scope {
+                                                    Image(systemName: "checkmark")
+                                                }
+                                            }
+                                        }
+                                    }
+                                } label: {
+                                    settingsMenuChip(draftSettings.defaultRoundConfig.teamScoring.scope == .perRound ? "Round" : "Hole")
+                                }
+                                .buttonStyle(.plain)
                             }
-                            .buttonStyle(.plain)
-
-                            Button {
-                                draftSettings.defaultRoundConfig.teamScoring.scope = .perRound
-                            } label: {
-                                settingsChip("Round", selected: draftSettings.defaultRoundConfig.teamScoring.scope == .perRound)
-                            }
-                            .buttonStyle(.plain)
                         }
                     }
                 }
@@ -574,6 +676,31 @@ struct SeriesLeagueSettingsView: View {
 
     private var behaviorSection: some View {
         settingsGroup(title: "Behavior") {
+            SeriesSheetCard(palette: palette) {
+                builderField(
+                    title: "Series type",
+                    subtitle: seriesTypeSubtitle
+                ) {
+                    Menu {
+                        ForEach(SeriesExperiencePreset.allCases, id: \.self) { option in
+                            Button {
+                                draftSettings.experiencePreset = option
+                            } label: {
+                                HStack {
+                                    Text(option.displayName)
+                                    if draftSettings.experiencePreset == option {
+                                        Image(systemName: "checkmark")
+                                    }
+                                }
+                            }
+                        }
+                    } label: {
+                        settingsMenuChip(seriesTypeTitle)
+                    }
+                    .buttonStyle(.plain)
+                }
+            }
+
             SeriesSheetCard(palette: palette) {
                 Toggle(isOn: $draftSettings.useTeams) {
                     settingsToggleLabel(title: "Use teams", subtitle: "Enable persistent teams and optional fixed pairs.")
@@ -1128,6 +1255,21 @@ struct SeriesLeagueSettingsView: View {
         }
     }
 
+    private var seriesTypeTitle: String {
+        draftSettings.experiencePreset.displayName
+    }
+
+    private var seriesTypeSubtitle: String {
+        switch draftSettings.experiencePreset {
+        case .league:
+            return "League rules, standings, and commissioner controls."
+        case .trip:
+            return "Trip logistics, flexible pairings, and scoring defaults."
+        case .tournament:
+            return "Tournament logistics, multi-round scoring, and editable defaults."
+        }
+    }
+
     private var pairGroupingTitle: String {
         viewModel.pairGroupingTitle(for: draftSettings.podGroupingDefault)
     }
@@ -1138,6 +1280,17 @@ struct SeriesLeagueSettingsView: View {
 
     private var hasUnsavedChanges: Bool {
         draftSettings != viewModel.series.settings
+            || draftLeagueName.trimmingCharacters(in: .whitespacesAndNewlines) != viewModel.series.name
+            || normalizedDraftLeagueDescription != viewModel.series.description
+    }
+
+    private var normalizedDraftLeagueDescription: String? {
+        let trimmed = draftLeagueDescription.trimmingCharacters(in: .whitespacesAndNewlines)
+        return trimmed.isPopulated ? trimmed : nil
+    }
+
+    private var canSave: Bool {
+        draftLeagueName.trimmingCharacters(in: .whitespacesAndNewlines).isPopulated
     }
 
     private var rulesConfirmationState: SeriesLeagueRulesConfirmationState {

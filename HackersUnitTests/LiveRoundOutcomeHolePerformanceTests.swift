@@ -109,6 +109,25 @@ final class LiveRoundOutcomeHolePerformanceTests: XCTestCase {
             "+0.15"
         )
     }
+
+    func testSharedScorePartnershipRowsDriveLeaderboardAndScorecard() async throws {
+        let viewModel = await boundViewModel(
+            snapshot: Self.makeSharedPartnershipSnapshot(),
+            participantID: "p1"
+        )
+
+        let rows = viewModel.effectiveLeaderboardRows
+
+        XCTAssertEqual(rows.map(\.id), ["pair_1", "pair_2"])
+        XCTAssertTrue(rows.allSatisfy(\.isSharedScoreUnit))
+        XCTAssertEqual(rows[0].participant.id, "p1")
+        XCTAssertEqual(rows[0].participants.map(\.id), ["p1", "p2"])
+        XCTAssertEqual(rows[1].participants.map(\.id), ["p3", "p4"])
+        XCTAssertEqual(rows[0].scoreToPar, 0)
+        XCTAssertEqual(rows[1].scoreToPar, 1)
+        XCTAssertEqual(viewModel.scorecardParticipants.map(\.id), ["pair_1", "pair_2"])
+        XCTAssertEqual(viewModel.scoringUnitGrossStrokes(scoringUnitID: "pair_1", holeNumber: 1), 4)
+    }
 }
 
 private extension LiveRoundOutcomeHolePerformanceTests {
@@ -189,6 +208,83 @@ private extension LiveRoundOutcomeHolePerformanceTests {
         return snapshot
     }
 
+    static func makeSharedPartnershipSnapshot() -> RoundSnapshot {
+        let roundID = "shared_partnership_round"
+        let segmentID = "shared_partnership_segment"
+        let tee = makeTee(id: "shared_tee", name: "Blue", holeOverrides: [
+            1: Hole(number: 1, par: 4, yardage: 420, handicap: 8)
+        ])
+        let courseInfo = CourseInfo(
+            id: "shared_course",
+            name: "Shared Score Club",
+            totalHoles: 18,
+            tees: [tee]
+        )
+        let template = FormatTemplateRegistry.captainsChoice
+        let format = GameFormat(
+            type: .strokePlay,
+            configuration: GameConfiguration(
+                method: .aggregate,
+                basis: .gross,
+                handicap: .scramble2Player,
+                requiresTeams: true
+            )
+        )
+        let round = Round(
+            id: roundID,
+            status: .live,
+            configuration: RoundConfiguration(
+                primaryFormat: format,
+                formatSummary: RoundFormatSummary(from: template),
+                courses: [
+                    CourseSegment(
+                        courseInfo: courseInfo,
+                        holeRange: HoleRange(startHole: 1, endHole: 18),
+                        defaultTee: tee.id
+                    )
+                ],
+                scoreOwnerScope: .partnership,
+                sharedScoreHandicapConfig: .scramble2Player
+            )
+        )
+        let participants = [
+            makeSharedParticipant(id: "p1", first: "John", last: "Smith", teamID: "red", teeID: tee.id, teeOrder: 1, roundID: roundID),
+            makeSharedParticipant(id: "p2", first: "Tyler", last: "Davis", teamID: "red", teeID: tee.id, teeOrder: 2, roundID: roundID),
+            makeSharedParticipant(id: "p3", first: "Alice", last: "Lee", teamID: "blue", teeID: tee.id, teeOrder: 3, roundID: roundID),
+            makeSharedParticipant(id: "p4", first: "Morgan", last: "Ray", teamID: "blue", teeID: tee.id, teeOrder: 4, roundID: roundID),
+        ]
+        let groups = [
+            RoundScoringGroup(id: "pair_1", teamID: "red", teeGroupID: "group_1", kind: .partnership, memberIDs: ["p1", "p2"], parentID: roundID),
+            RoundScoringGroup(id: "pair_2", teamID: "blue", teeGroupID: "group_1", kind: .partnership, memberIDs: ["p3", "p4"], parentID: roundID),
+        ]
+        let segment = RoundSegment(
+            id: segmentID,
+            roundID: roundID,
+            holeRange: HoleRange(startHole: 1, endHole: 18),
+            gameFormat: format,
+            templateID: template.id,
+            scoringUnits: groups.map {
+                ScoringUnit(id: $0.id, owner: .scoreOwner, ownerIDs: $0.memberIDs, scoringMethod: .aggregate)
+            },
+            parentID: roundID
+        )
+
+        return RoundSnapshot(
+            round: round,
+            participants: participants,
+            teams: [
+                RoundTeam(id: "red", name: "Red", color: "red", index: 0, createdAt: .init(), parentID: roundID),
+                RoundTeam(id: "blue", name: "Blue", color: "blue", index: 1, createdAt: .init(), parentID: roundID),
+            ],
+            scoringGroups: groups,
+            segments: [segment],
+            scoring: [
+                makeSharedScoreEntry(roundID: roundID, segmentID: segmentID, scoringUnitID: "pair_1", participantIDs: ["p1", "p2"], holeNumber: 1, strokes: 4),
+                makeSharedScoreEntry(roundID: roundID, segmentID: segmentID, scoringUnitID: "pair_2", participantIDs: ["p3", "p4"], holeNumber: 1, strokes: 5),
+            ]
+        )
+    }
+
     static func makeParticipant(
         id: String,
         playerID: String,
@@ -231,6 +327,58 @@ private extension LiveRoundOutcomeHolePerformanceTests {
             strokes: strokes,
             pickedUp: pickedUp,
             entryID: participantID,
+            createdAt: .init(),
+            lastUpdatedAt: .init(),
+            parentID: roundID
+        )
+    }
+
+    static func makeSharedParticipant(
+        id: String,
+        first: String,
+        last: String,
+        teamID: String,
+        teeID: String,
+        teeOrder: Int,
+        roundID: String
+    ) -> RoundParticipant {
+        RoundParticipant(
+            id: id,
+            userID: "user_\(id)",
+            playerID: "player_\(id)",
+            name: Name(first, last),
+            teeBoxID: teeID,
+            originalHandicap: 10,
+            adjustedHandicap: 10,
+            teamID: teamID,
+            groupID: "group_1",
+            teeOrder: teeOrder,
+            isHost: id == "p1",
+            presenceStatus: .active,
+            createdAt: .init(),
+            lastUpdatedAt: .init(),
+            parentID: roundID
+        )
+    }
+
+    static func makeSharedScoreEntry(
+        roundID: String,
+        segmentID: String,
+        scoringUnitID: String,
+        participantIDs: [String],
+        holeNumber: Int,
+        strokes: Int
+    ) -> ScoreEntry {
+        ScoreEntry(
+            id: ScoreEntry.makeID(hole: holeNumber, segment: segmentID, scoringUnit: scoringUnitID),
+            holeNumber: holeNumber,
+            segmentID: segmentID,
+            groupID: "group_1",
+            scoringUnitID: scoringUnitID,
+            participantIDs: participantIDs,
+            strokes: strokes,
+            pickedUp: false,
+            entryID: participantIDs.first ?? scoringUnitID,
             createdAt: .init(),
             lastUpdatedAt: .init(),
             parentID: roundID

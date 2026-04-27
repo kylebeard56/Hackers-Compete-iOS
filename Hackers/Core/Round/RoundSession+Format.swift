@@ -781,9 +781,14 @@ extension RoundSession {
                 id: participant.id,
                 owner: .participant,
                 ownerIDs: [participant.id],
-                scoringMethod: .individual
+                scoringMethod: .individual,
+                handicapAllowance: handicapAllowance(
+                    participants: [participant],
+                    config: .individualStrokePlay
+                )
             )
         }
+        let handicapConfig = snapshot.configuration.sharedScoreHandicapConfig ?? template.requirements.defaultHandicapConfig
 
         switch scope {
         case .individual:
@@ -791,12 +796,16 @@ extension RoundSession {
                 return teams
                     .sorted { $0.index < $1.index }
                     .map { team in
-                        ScoringUnit(
+                        let teamParticipants = participants.filter { $0.teamID == team.id }
+                        let allowance = handicapAllowance(participants: teamParticipants, config: handicapConfig)
+                        return ScoringUnit(
                             id: team.id,
                             owner: .team,
                             ownerIDs: [team.id],
                             scoringMethod: .aggregate,
-                            aggregation: .init(mode: .sumAll, scope: .perHole)
+                            aggregation: .init(mode: .sumAll, scope: .perHole),
+                            handicapAdjustments: allowance?.memberStrokes,
+                            handicapAllowance: allowance
                         )
                     }
             }
@@ -806,12 +815,16 @@ extension RoundSession {
                 return scoringGroups
                     .filter { $0.kind == .partnership }
                     .map { group in
-                        ScoringUnit(
+                        let groupParticipants = participantsForScoringGroup(group, participants: participants)
+                        let allowance = handicapAllowance(participants: groupParticipants, config: handicapConfig)
+                        return ScoringUnit(
                             id: group.id,
                             owner: .scoreOwner,
                             ownerIDs: group.memberIDs,
                             scoringMethod: .aggregate,
-                            aggregation: .init(mode: .sumAll, scope: .perHole)
+                            aggregation: .init(mode: .sumAll, scope: .perHole),
+                            handicapAdjustments: allowance?.memberStrokes,
+                            handicapAllowance: allowance
                         )
                     }
             }
@@ -820,15 +833,65 @@ extension RoundSession {
             return scoringGroups
                 .filter { $0.kind == .teeGroup }
                 .map { group in
-                    ScoringUnit(
+                    let groupParticipants = participantsForScoringGroup(group, participants: participants)
+                    let allowance = handicapAllowance(participants: groupParticipants, config: handicapConfig)
+                    return ScoringUnit(
                         id: group.id,
                         owner: .scoreOwner,
                         ownerIDs: group.memberIDs,
                         scoringMethod: .aggregate,
-                        aggregation: .init(mode: .sumAll, scope: .perHole)
+                        aggregation: .init(mode: .sumAll, scope: .perHole),
+                        handicapAdjustments: allowance?.memberStrokes,
+                        handicapAllowance: allowance
                     )
                 }
         }
+    }
+
+    private func participantsForScoringGroup(
+        _ group: RoundScoringGroup,
+        participants: [RoundParticipant]
+    ) -> [RoundParticipant] {
+        let participantsByID = Dictionary(uniqueKeysWithValues: participants.map { ($0.id, $0) })
+        return group.memberIDs.compactMap { participantsByID[$0] }
+    }
+
+    private func handicapAllowance(
+        participants: [RoundParticipant],
+        config: HandicapConfiguration
+    ) -> ScoringUnitHandicapAllowance? {
+        let orderedMembers = participants.sorted {
+            if $0.adjustedHandicap != $1.adjustedHandicap {
+                return $0.adjustedHandicap < $1.adjustedHandicap
+            }
+            return $0.name.fullName.localizedCaseInsensitiveCompare($1.name.fullName) == .orderedAscending
+        }
+        guard orderedMembers.isPopulated else { return nil }
+
+        let memberStrokes: [String: Double]
+        if let percentages = config.positionPercentages, percentages.isPopulated {
+            var strokes: [String: Double] = [:]
+            for (index, participant) in orderedMembers.enumerated() {
+                guard index < percentages.count else { break }
+                strokes[participant.id] = Double(participant.adjustedHandicap) * percentages[index] * config.percentage
+            }
+            memberStrokes = strokes
+        } else if config.isTeamCombined {
+            memberStrokes = Dictionary(uniqueKeysWithValues: orderedMembers.map { participant in
+                (participant.id, Double(participant.adjustedHandicap) * config.percentage)
+            })
+        } else {
+            let average = Double(orderedMembers.map(\.adjustedHandicap).reduce(0, +)) / Double(orderedMembers.count)
+            let unitStrokes = average * config.percentage
+            let perMember = unitStrokes / Double(orderedMembers.count)
+            memberStrokes = Dictionary(uniqueKeysWithValues: orderedMembers.map { ($0.id, perMember) })
+        }
+
+        return ScoringUnitHandicapAllowance(
+            unitStrokes: memberStrokes.values.reduce(0.0, +),
+            memberStrokes: memberStrokes,
+            sourceConfig: config
+        )
     }
 
     private func rebuildMatchups(
@@ -936,6 +999,8 @@ extension RoundSession {
                         return ($0.label ?? $0.id) < ($1.label ?? $1.id)
                     }
                     guard groups.count == 2 else { return nil }
+                    let teamIDs = Set(groups.compactMap(\.teamID).filter(\.isPopulated))
+                    guard teamIDs.count == 2 else { return nil }
                     return TeamMatchup(
                         id: "score_owner_matchup_\(groups[0].id)_\(groups[1].id)",
                         teamIDs: [],

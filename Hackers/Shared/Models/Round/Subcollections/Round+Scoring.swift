@@ -127,6 +127,28 @@ extension ScoreEntry {
 }
 
 // MARK: - Scoring Unit (linked to RoundSegment)
+struct ScoringUnitHandicapAllowance: Hashable, Codable {
+    var unitStrokes: Double
+    var memberStrokes: [String: Double]
+    var sourceConfig: HandicapConfiguration
+
+    init(
+        unitStrokes: Double = 0,
+        memberStrokes: [String: Double] = [:],
+        sourceConfig: HandicapConfiguration = .individualStrokePlay
+    ) {
+        self.unitStrokes = unitStrokes
+        self.memberStrokes = memberStrokes
+        self.sourceConfig = sourceConfig
+    }
+
+    enum CodingKeys: String, CodingKey {
+        case unitStrokes = "unit_strokes"
+        case memberStrokes = "member_strokes"
+        case sourceConfig = "source_config"
+    }
+}
+
 struct ScoringUnit: Hashable, Codable, Identifiable {
     var id: String                                      // Unique ID for this scoring unit
     var owner: ScoringOwner                             // Whether a participant or team owns this score
@@ -134,6 +156,7 @@ struct ScoringUnit: Hashable, Codable, Identifiable {
     var scoringMethod: ScoringMethod                    // Individual scoring or aggregate of multiple participants
     var aggregation: Aggregation?                       // How scores are reflected (if participants.count > 1)
     var handicapAdjustments: [String: Double]?          // Adjusted HCP per player based on game format fairness
+    var handicapAllowance: ScoringUnitHandicapAllowance? // Canonical unit handicap plus member contribution detail
 
     init(
         id: String = "",
@@ -141,7 +164,8 @@ struct ScoringUnit: Hashable, Codable, Identifiable {
         ownerIDs: [String] = [],
         scoringMethod: ScoringMethod = .individual,
         aggregation: Aggregation? = nil,
-        handicapAdjustments: [String : Double]? = nil
+        handicapAdjustments: [String : Double]? = nil,
+        handicapAllowance: ScoringUnitHandicapAllowance? = nil
     ) {
         self.id = id
         self.owner = owner
@@ -149,6 +173,7 @@ struct ScoringUnit: Hashable, Codable, Identifiable {
         self.scoringMethod = scoringMethod
         self.aggregation = aggregation
         self.handicapAdjustments = handicapAdjustments
+        self.handicapAllowance = handicapAllowance
     }
     
     enum CodingKeys: String, CodingKey {
@@ -156,6 +181,7 @@ struct ScoringUnit: Hashable, Codable, Identifiable {
         case ownerIDs = "owner_ids"
         case scoringMethod = "scoring_method"
         case handicapAdjustments = "handicap_adjustments"
+        case handicapAllowance = "handicap_allowance"
     }
     
     var teamID: String? {

@@ -38,7 +38,7 @@ struct OutcomeLeaderboardRowView: View {
                     RoundedRectangle(cornerRadius: 3)
                         .fill(teamColor.opacity(0.9))
                         .frame(width: row.memberNames != nil ? 4 : teamDotSize,
-                               height: row.memberNames != nil ? 28 : teamDotSize)
+                               height: row.memberNames != nil ? (row.isSharedScoreUnit ? 36 : 28) : teamDotSize)
                 }
 
                 VStack(alignment: .leading, spacing: 2) {
@@ -60,7 +60,7 @@ struct OutcomeLeaderboardRowView: View {
                         Text(names)
                             .fontStyle(kFontName, size: 12, weight: .regular)
                             .foregroundStyle(Color.neutral)
-                            .lineLimit(1)
+                            .lineLimit(row.isSharedScoreUnit ? 3 : 1)
                     }
                 }
 
@@ -101,6 +101,9 @@ struct OutcomeLeaderboardRowView: View {
     }
 
     private var displayName: String {
+        if row.isSharedScoreUnit {
+            return fullParticipantName
+        }
         if let teamName = row.teamName, teamName.isPopulated {
             return teamName
         }
@@ -108,6 +111,9 @@ struct OutcomeLeaderboardRowView: View {
     }
 
     private var compactDisplayName: String {
+        if row.isSharedScoreUnit {
+            return compactParticipantName
+        }
         if let teamName = row.teamName, teamName.isPopulated {
             return teamName
         }
