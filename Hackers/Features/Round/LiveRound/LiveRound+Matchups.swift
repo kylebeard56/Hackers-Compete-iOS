@@ -154,14 +154,14 @@ private struct MatchupTileView: View {
 
         return VStack(alignment: .leading, spacing: 8) {
             if let team1 {
-                teamEntityRow(team: team1, total: leftRow?.total, leadingPill: true)
+                teamEntityRow(team: team1, total: viewModel.matchupTotal(in: section, sideID: team1.id), leadingPill: true)
                     .frame(maxWidth: .infinity, alignment: .leading)
             }
             Text("vs")
                 .fontStyle(kFontName, size: 12, weight: .bold)
                 .foregroundStyle(Color.neutral)
             if let team2 {
-                teamEntityRow(team: team2, total: rightRow?.total, leadingPill: true)
+                teamEntityRow(team: team2, total: viewModel.matchupTotal(in: section, sideID: team2.id), leadingPill: true)
                     .frame(maxWidth: .infinity, alignment: .leading)
             }
         }
@@ -175,14 +175,14 @@ private struct MatchupTileView: View {
 
         return VStack(alignment: .leading, spacing: 8) {
             if let owner1 {
-                scoreOwnerEntityRow(owner: owner1, total: leftRow?.total, leadingPill: true)
+                scoreOwnerEntityRow(owner: owner1, total: viewModel.matchupTotal(in: section, sideID: owner1.id), leadingPill: true)
                     .frame(maxWidth: .infinity, alignment: .leading)
             }
             Text("vs")
                 .fontStyle(kFontName, size: 12, weight: .bold)
                 .foregroundStyle(Color.neutral)
             if let owner2 {
-                scoreOwnerEntityRow(owner: owner2, total: rightRow?.total, leadingPill: true)
+                scoreOwnerEntityRow(owner: owner2, total: viewModel.matchupTotal(in: section, sideID: owner2.id), leadingPill: true)
                     .frame(maxWidth: .infinity, alignment: .leading)
             }
         }
@@ -200,7 +200,7 @@ private struct MatchupTileView: View {
                     Haptics.fire(.light)
                     viewModel.presentedParticipant = participant1
                 } label: {
-                    individualEntityRow(participant: participant1, total: leftRow?.total, leadingPill: true)
+                    individualEntityRow(participant: participant1, total: viewModel.matchupTotal(in: section, sideID: participant1.id), leadingPill: true)
                 }
                 .buttonStyle(.plain)
                 .frame(maxWidth: .infinity, alignment: .leading)
@@ -213,7 +213,7 @@ private struct MatchupTileView: View {
                     Haptics.fire(.light)
                     viewModel.presentedParticipant = participant2
                 } label: {
-                    individualEntityRow(participant: participant2, total: rightRow?.total, leadingPill: false)
+                    individualEntityRow(participant: participant2, total: viewModel.matchupTotal(in: section, sideID: participant2.id), leadingPill: false)
                 }
                 .buttonStyle(.plain)
                 .frame(maxWidth: .infinity, alignment: .leading)

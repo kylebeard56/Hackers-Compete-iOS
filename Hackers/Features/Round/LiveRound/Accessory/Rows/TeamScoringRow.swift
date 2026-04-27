@@ -20,21 +20,23 @@ struct TeamScoringRow: View {
     let team: RoundTeam
     let participants: [RoundParticipant]
     let holeNumber: Int
+    var scoringUnitID: String? = nil
     var onEnterScoreTap: (() -> Void)? = nil
 
     private var hole: Hole? { viewModel.hole(for: holeNumber) }
     private var holePar: Int { hole?.par ?? 4 }
+    private var effectiveScoringUnitID: String { scoringUnitID ?? team.id }
 
     private var gross: Int? {
-        viewModel.teamGrossStrokes(teamID: team.id, holeNumber: holeNumber)
+        viewModel.scoringUnitGrossStrokes(scoringUnitID: effectiveScoringUnitID, holeNumber: holeNumber)
     }
 
     private var scoreInputValue: Int? {
-        viewModel.scoringUnitScoreInputValue(scoringUnitID: team.id, holeNumber: holeNumber)
+        viewModel.scoringUnitScoreInputValue(scoringUnitID: effectiveScoringUnitID, holeNumber: holeNumber)
     }
 
     private var teamScoreToPar: Int {
-        viewModel.teamScoreToPar(teamID: team.id, basis: viewModel.scoreBasis)
+        viewModel.scoringUnitScoreToPar(scoringUnitID: effectiveScoringUnitID, basis: viewModel.scoreBasis)
     }
 
     private var memberNames: String {

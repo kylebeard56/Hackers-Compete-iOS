@@ -283,7 +283,7 @@ struct RoundOutcomeView: View {
 
             Line()
 
-            if viewModel.leaderboardRows.isEmpty {
+            if viewModel.effectiveLeaderboardRows.isEmpty {
                 Text("No players in this round yet.")
                     .fontStyle(kFontName, size: 14, weight: .regular)
                     .foregroundStyle(Color.neutral)

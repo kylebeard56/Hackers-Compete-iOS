@@ -327,6 +327,7 @@ extension LiveRound {
                     team: team,
                     participants: section.participants,
                     holeNumber: holeNumber,
+                    scoringUnitID: viewModel.scoringUnitID(forTeamID: team.id),
                     onEnterScoreTap: {
                         viewModel.presentedScoringSession = viewModel.sharedTeamScoringSession(
                             team: team,
@@ -356,7 +357,7 @@ extension LiveRound {
                             subtitle: viewModel.scoringGroupSubtitle(scoringGroup),
                             participants: session.participants,
                             holeNumber: holeNumber,
-                            scoringUnitID: scoringGroup.id,
+                            scoringUnitID: session.scoringUnitID,
                             accentColor: viewModel.scoringGroupAccentColor(scoringGroup),
                             onEnterScoreTap: {
                                 viewModel.presentedScoringSession = session
@@ -448,7 +449,7 @@ extension LiveRound {
                 subtitle: viewModel.scoringGroupSubtitle(scoringGroup),
                 participants: session.participants,
                 holeNumber: holeNumber,
-                scoringUnitID: scoringGroup.id,
+                scoringUnitID: session.scoringUnitID,
                 accentColor: viewModel.scoringGroupAccentColor(scoringGroup),
                 onEnterScoreTap: {
                     viewModel.presentedScoringSession = session

@@ -494,12 +494,14 @@ struct OutcomeMatchupTileView: View {
 
     @ViewBuilder
     private func matchupSideRow(scoringUnitID: String) -> some View {
-        let total = section.rows.first(where: { $0.scoringUnitID == scoringUnitID })?.total
-        let isWinner = status.winningScoringUnitID == scoringUnitID
+        let resolvedScoringUnitID = viewModel.matchupScoringUnitID(in: section, sideID: scoringUnitID)
+        let total = viewModel.matchupTotal(in: section, sideID: scoringUnitID)
+        let isWinner = status.winningScoringUnitID == resolvedScoringUnitID
         let accent = accentColor(for: scoringUnitID)
+        let totalText = formattedMatchupTotal(total)
 
         HStack(spacing: 12) {
-            Text(total.map { viewModel.formattedMatchupTotal($0, isPointsFormat: isPointsFormat) } ?? "—")
+            Text(totalText)
                 .fontStyle(kFontName, size: 20, weight: .semibold)
                 .foregroundStyle(isWinner ? (accent ?? palette.foregroundColor) : palette.foregroundColor)
                 .frame(width: 48, height: 48)
@@ -647,6 +649,11 @@ struct OutcomeMatchupTileView: View {
         case .scoreOwner:
             return scoringGroupMap[scoringUnitID].flatMap { viewModel.scoringGroupSubtitle($0) }
         }
+    }
+
+    private func formattedMatchupTotal(_ total: Double?) -> String {
+        guard let total else { return "—" }
+        return viewModel.formattedMatchupTotal(total, isPointsFormat: isPointsFormat)
     }
 }
 

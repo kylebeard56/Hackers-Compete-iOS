@@ -666,9 +666,31 @@ private extension LiveHoleScoringView {
     }
 
     func clearScore() async {
-        await viewModel.clearScore(participant: currentGolfer, holeNumber: holeNumber, entryMethod: .clear)
+        if isSharedEntry {
+            await viewModel.clearScore(
+                scoringUnitID: scoringSession.scoringUnitID,
+                participant: currentGolfer,
+                holeNumber: holeNumber,
+                entryMethod: .clear
+            )
+        } else {
+            await viewModel.clearScore(participant: currentGolfer, holeNumber: holeNumber, entryMethod: .clear)
+        }
         savedScore = nil
         draftScore = Self.clearScoreSentinel
+    }
+
+    private func saveScore(participant: RoundParticipant, value: Int, holeNumber: Int) async {
+        if isSharedEntry {
+            await viewModel.setScoreInputValue(
+                scoringUnitID: scoringSession.scoringUnitID,
+                participant: participant,
+                holeNumber: holeNumber,
+                value: value
+            )
+        } else {
+            await viewModel.setQuickScoreValue(participant: participant, value: value, holeNumber: holeNumber)
+        }
     }
 
     func saveAndClose() {
@@ -677,7 +699,7 @@ private extension LiveHoleScoringView {
         let needsSave = shouldCommitScore()
         if needsSave {
             Task {
-                await viewModel.setQuickScoreValue(participant: golfer, value: score, holeNumber: holeNumber)
+                await saveScore(participant: golfer, value: score, holeNumber: holeNumber)
                 await MainActor.run { dismiss() }
             }
         } else {
@@ -700,7 +722,7 @@ private extension LiveHoleScoringView {
 
             if needsSave {
                 Task.detached(priority: .background) {
-                    await viewModel.setQuickScoreValue(
+                    await saveScore(
                         participant: golfer,
                         value: score,
                         holeNumber: hole
@@ -715,7 +737,7 @@ private extension LiveHoleScoringView {
 
             if needsSave {
                 Task.detached(priority: .background) {
-                    await viewModel.setQuickScoreValue(
+                    await saveScore(
                         participant: golfer,
                         value: score,
                         holeNumber: hole
@@ -735,7 +757,7 @@ private extension LiveHoleScoringView {
         }
 
         if needsSave && !simpleForward {
-            await viewModel.setQuickScoreValue(
+            await saveScore(
                 participant: golfer,
                 value: score,
                 holeNumber: hole
@@ -753,7 +775,7 @@ private extension LiveHoleScoringView {
 
         if simpleForward {
             Task.detached(priority: .background) {
-                await viewModel.setQuickScoreValue(
+                await saveScore(
                     participant: golfer,
                     value: score,
                     holeNumber: hole

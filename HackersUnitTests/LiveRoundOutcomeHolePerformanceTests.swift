@@ -128,6 +128,44 @@ final class LiveRoundOutcomeHolePerformanceTests: XCTestCase {
         XCTAssertEqual(viewModel.scorecardParticipants.map(\.id), ["pair_1", "pair_2"])
         XCTAssertEqual(viewModel.scoringUnitGrossStrokes(scoringUnitID: "pair_1", holeNumber: 1), 4)
     }
+
+    func testSharedScorePartnershipRowsResolveOpaqueScoringUnitIDs() async throws {
+        var snapshot = Self.makeSharedPartnershipSnapshot()
+        snapshot.segments[0].scoringUnits = [
+            ScoringUnit(id: "unit_pair_1", owner: .scoreOwner, ownerIDs: ["p1", "p2"], scoringMethod: .aggregate),
+            ScoringUnit(id: "unit_pair_2", owner: .scoreOwner, ownerIDs: ["p3", "p4"], scoringMethod: .aggregate),
+        ]
+
+        let viewModel = await boundViewModel(snapshot: snapshot, participantID: "p1")
+
+        let rows = viewModel.effectiveLeaderboardRows
+
+        XCTAssertEqual(rows.map(\.id), ["unit_pair_1", "unit_pair_2"])
+        XCTAssertTrue(rows.allSatisfy(\.isSharedScoreUnit))
+        XCTAssertEqual(rows[0].teamID, "red")
+        XCTAssertEqual(rows[0].participants.map(\.id), ["p1", "p2"])
+        XCTAssertEqual(rows[1].participants.map(\.id), ["p3", "p4"])
+        XCTAssertEqual(viewModel.scorecardParticipants.map(\.id), ["unit_pair_1", "unit_pair_2"])
+        XCTAssertEqual(viewModel.scoringUnitGrossStrokes(scoringUnitID: "unit_pair_1", holeNumber: 1), 4)
+    }
+
+    func testSharedTeamRowsResolveOpaqueScoringUnitIDs() async throws {
+        let snapshot = Self.makeSharedTeamSnapshot(opaqueScoringUnitIDs: true)
+        let viewModel = await boundViewModel(snapshot: snapshot, participantID: "p1")
+
+        let rows = viewModel.effectiveLeaderboardRows
+
+        XCTAssertEqual(rows.map(\.id), ["unit_red", "unit_blue"])
+        XCTAssertTrue(rows.allSatisfy(\.isSharedScoreUnit))
+        XCTAssertEqual(rows[0].teamID, "red")
+        XCTAssertEqual(rows[0].teamName, "Red")
+        XCTAssertEqual(rows[0].participants.map(\.id), ["p1", "p2"])
+        XCTAssertEqual(rows[1].teamID, "blue")
+        XCTAssertEqual(rows[1].participants.map(\.id), ["p3", "p4"])
+        XCTAssertEqual(viewModel.scorecardParticipants.map(\.id), ["unit_red", "unit_blue"])
+        XCTAssertEqual(viewModel.scoringUnitGrossStrokes(scoringUnitID: "unit_red", holeNumber: 1), 4)
+        XCTAssertEqual(viewModel.scoringUnitScoreToPar(scoringUnitID: "unit_blue", basis: .gross), 1)
+    }
 }
 
 private extension LiveRoundOutcomeHolePerformanceTests {
@@ -283,6 +321,47 @@ private extension LiveRoundOutcomeHolePerformanceTests {
                 makeSharedScoreEntry(roundID: roundID, segmentID: segmentID, scoringUnitID: "pair_2", participantIDs: ["p3", "p4"], holeNumber: 1, strokes: 5),
             ]
         )
+    }
+
+    static func makeSharedTeamSnapshot(opaqueScoringUnitIDs: Bool) -> RoundSnapshot {
+        var snapshot = makeSharedPartnershipSnapshot()
+        let roundID = "shared_team_round"
+        let segmentID = "shared_team_segment"
+
+        snapshot.round.id = roundID
+        snapshot.round.configuration.scoreOwnerScope = .individual
+        snapshot.round.configuration.primaryFormat.configuration.method = .aggregate
+        snapshot.round.configuration.primaryFormat.configuration.requiresTeams = true
+        snapshot.scoringGroups = []
+        snapshot.segments = [
+            RoundSegment(
+                id: segmentID,
+                roundID: roundID,
+                holeRange: HoleRange(startHole: 1, endHole: 18),
+                gameFormat: snapshot.round.configuration.primaryFormat,
+                templateID: FormatTemplateRegistry.captainsChoice.id,
+                scoringUnits: [
+                    ScoringUnit(
+                        id: opaqueScoringUnitIDs ? "unit_red" : "red",
+                        owner: .team,
+                        ownerIDs: ["red"],
+                        scoringMethod: .aggregate
+                    ),
+                    ScoringUnit(
+                        id: opaqueScoringUnitIDs ? "unit_blue" : "blue",
+                        owner: .team,
+                        ownerIDs: ["blue"],
+                        scoringMethod: .aggregate
+                    )
+                ],
+                parentID: roundID
+            )
+        ]
+        snapshot.scoring = [
+            makeSharedScoreEntry(roundID: roundID, segmentID: segmentID, scoringUnitID: "red", participantIDs: ["p1", "p2"], holeNumber: 1, strokes: 4),
+            makeSharedScoreEntry(roundID: roundID, segmentID: segmentID, scoringUnitID: "blue", participantIDs: ["p3", "p4"], holeNumber: 1, strokes: 5),
+        ]
+        return snapshot
     }
 
     static func makeParticipant(
