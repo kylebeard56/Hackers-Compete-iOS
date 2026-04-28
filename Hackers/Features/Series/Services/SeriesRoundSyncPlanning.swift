@@ -66,6 +66,21 @@ enum SeriesRoundSyncPlanning {
         var hasAny: Bool { hasDeletes || didPruneMatchups }
     }
 
+    struct LobbyAttendancePlan {
+        var round: Round
+        var teeGroupsToPut: [TeeTimeGroup]
+        var teeGroupsToDelete: [TeeTimeGroup]
+        var teamsToPut: [RoundTeam]
+        var teamsToDelete: [RoundTeam]
+        var participantsToPut: [RoundParticipant]
+        var participantsToDelete: [RoundParticipant]
+        var scoringGroupsToPut: [RoundScoringGroup]
+        var scoringGroupsToDelete: [RoundScoringGroup]
+        var segment: RoundSegment
+        var mappingsToPut: [SeriesRoundMapping]
+        var mappingsToDelete: [SeriesRoundMapping]
+    }
+
     static func organizationPrunePlan(
         snapshot: RoundSnapshot,
         matchups: [TeamMatchup]? = nil
@@ -228,8 +243,15 @@ enum SeriesRoundSyncPlanning {
             useSequentialStarts: seriesRound.roundConfig.usesSequentialTeeStarts,
             scheduledTeeTime: scheduledTeeTime
         )
+        let scheduledGroups = SeriesRoundCreationMapping.teeGroupsWithSchedule(
+            templateGroups,
+            holeRange: courseSegment.holeRange,
+            useShotgunStart: seriesRound.roundConfig.usesSequentialTeeStarts,
+            scheduledTeeTime: scheduledTeeTime,
+            fallbackTeeTime: sorted.compactMap(\.teeTime).first
+        )
 
-        return zip(sorted, templateGroups).map { existing, template in
+        return zip(sorted, scheduledGroups).map { existing, template in
             var next = existing
             next.teeTime = template.teeTime
             next.startingHole = template.startingHole
@@ -380,6 +402,235 @@ enum SeriesRoundSyncPlanning {
             next.lastUpdatedAt = .init()
             return next
         }
+    }
+
+    static func buildLobbyAttendancePlan(
+        series: Series,
+        seriesRound: SeriesRound,
+        participatingMembers: [SeriesMember],
+        teams: [SeriesTeam],
+        pods: [SeriesTeamPod],
+        handicaps: [String: SeriesMemberHandicap],
+        seriesMappings: [SeriesRoundMapping],
+        snapshot: RoundSnapshot,
+        hostPlayerID: String?,
+        presenceStatusByMemberID: [String: RoundParticipantPresenceStatus]
+    ) throws -> LobbyAttendancePlan {
+        guard snapshot.round.status == .lobby else {
+            throw SeriesRoundSyncError.optionsDisallowedForRoundStatus
+        }
+        guard !snapshot.scoring.contains(where: \.hasRecordedScore) else {
+            throw SeriesRoundSyncError.preflightFailed("RSVP can no longer rebuild this lobby because score entries already exist.")
+        }
+        guard let courseSegment = snapshot.courseSegment,
+              let existingSegment = snapshot.roundSegment else {
+            throw SeriesRoundSyncError.missingCourseSegment
+        }
+
+        let resolvedPlan = SeriesRoundResolvedPlan(
+            series: series,
+            seriesRound: seriesRound,
+            members: participatingMembers,
+            teams: teams,
+            pods: pods,
+            courseSegment: courseSegment
+        )
+        let usesSeriesTeams = seriesRound.roundConfig.teamAssignmentMode == .seriesTeams
+        let existingTeamLinks = teamLinks(mappings: seriesMappings, seriesRoundID: seriesRound.id)
+        let existingTeamByID = Dictionary(uniqueKeysWithValues: snapshot.teams.map { ($0.id, $0) })
+
+        let seriesTeamsForRound = usesSeriesTeams ? resolvedPlan.seriesTeamsForRound.sorted { $0.index < $1.index } : []
+        var teamLinksBySeriesID: [String: SeriesRoundCreationMapping.SeriesToRoundTeamLink] = [:]
+        var teamsToPut: [RoundTeam] = []
+        for (index, seriesTeam) in seriesTeamsForRound.enumerated() {
+            let existingID = existingTeamLinks[seriesTeam.id]?.roundTeamID
+            var roundTeam = existingID.flatMap { existingTeamByID[$0] } ?? RoundTeam(
+                id: HackersID.string(),
+                name: seriesTeam.name,
+                color: seriesTeam.roundColorToken,
+                index: index,
+                createdAt: .init(),
+                lastUpdatedAt: .init(),
+                parentID: snapshot.round.id
+            )
+            roundTeam.name = seriesTeam.name
+            roundTeam.color = seriesTeam.roundColorToken
+            roundTeam.index = index
+            roundTeam.parentID = snapshot.round.id
+            roundTeam.lastUpdatedAt = .init()
+            teamsToPut.append(roundTeam)
+            teamLinksBySeriesID[seriesTeam.id] = .init(seriesTeamID: seriesTeam.id, roundTeamID: roundTeam.id)
+        }
+
+        let templateGroups = SeriesRoundPlanningService.teeGroupsPayload(
+            roundID: snapshot.round.id,
+            plannedTeeGroups: resolvedPlan.plannedStructure.teeGroups,
+            createdAt: .init()
+        )
+        let existingGroups = snapshot.teeGroups.sorted { $0.index < $1.index }
+        let teeGroupsToPut = templateGroups.enumerated().map { index, template -> TeeTimeGroup in
+            var group = index < existingGroups.count ? existingGroups[index] : template
+            group.index = index
+            group.teeTime = template.teeTime
+            group.startingHole = template.startingHole
+            group.parentID = snapshot.round.id
+            group.lastUpdatedAt = .init()
+            return group
+        }
+        let teeGroupsToDelete = Array(existingGroups.dropFirst(teeGroupsToPut.count))
+        let groupIDsByPlanID = Dictionary(
+            uniqueKeysWithValues: zip(resolvedPlan.teeGroupPlans.map(\.id), teeGroupsToPut.map(\.id))
+        )
+        let memberAssignments = SeriesRoundCreationMapping.buildMemberAssignments(
+            groupPlans: resolvedPlan.teeGroupPlans,
+            groupIDsByPlanID: groupIDsByPlanID
+        )
+
+        let templates = SeriesRoundCreationMapping.buildParticipantPayloads(
+            members: participatingMembers,
+            roundID: snapshot.round.id,
+            teamMappings: teamLinksBySeriesID,
+            memberAssignments: memberAssignments,
+            handicaps: handicaps,
+            maximumHandicap: series.handicapConfig.isEnabled ? series.handicapConfig.config.maximumHandicap : nil,
+            courseSegment: courseSegment,
+            hostPlayerID: hostPlayerID,
+            presenceStatusByMemberID: presenceStatusByMemberID
+        )
+        let existingParticipantByMemberID = Dictionary(
+            uniqueKeysWithValues: snapshot.participants.compactMap { participant -> (String, RoundParticipant)? in
+                guard let memberID = participant.seriesMemberID else { return nil }
+                return (memberID, participant)
+            }
+        )
+        let participatingMemberIDs = Set(participatingMembers.map(\.id))
+        let nonSeriesParticipants = snapshot.participants.filter { $0.seriesMemberID == nil }
+        let participantsToPut = zip(participatingMembers, templates).map { member, template -> RoundParticipant in
+            guard let existing = existingParticipantByMemberID[member.id] else { return template }
+            var next = template
+            next.id = existing.id
+            next.createdAt = existing.createdAt
+            next.parentID = existing.parentID
+            next.isHost = existing.isHost
+            next.userID = existing.userID ?? template.userID
+            next.playerID = existing.playerID ?? template.playerID
+            next.lastUpdatedAt = .init()
+            return next
+        }
+        let participantsToDelete = snapshot.participants.filter { participant in
+            guard let memberID = participant.seriesMemberID else { return false }
+            return !participatingMemberIDs.contains(memberID)
+        }
+        let workingParticipants = nonSeriesParticipants + participantsToPut
+
+        let populatedTeeGroupIDs = Set(workingParticipants.compactMap(\.groupID).filter(\.isPopulated))
+        let retainedTeeGroups = teeGroupsToPut.filter { populatedTeeGroupIDs.contains($0.id) }
+        let emptyTeeGroupsToDelete = teeGroupsToPut.filter { !populatedTeeGroupIDs.contains($0.id) }
+        let populatedTeamIDs = Set(workingParticipants.compactMap(\.teamID).filter(\.isPopulated))
+        let teamsToDelete = snapshot.teams.filter { !populatedTeamIDs.contains($0.id) }
+
+        let scoringGroupsToPut = SeriesRoundCreationMapping.buildRoundScoringGroups(
+            roundID: snapshot.round.id,
+            seriesRound: seriesRound,
+            participants: workingParticipants,
+            partnershipPlans: resolvedPlan.partnershipPlans,
+            teeGroups: retainedTeeGroups
+        )
+        let scoringGroupsByID = Dictionary(uniqueKeysWithValues: scoringGroupsToPut.map { ($0.id, $0) })
+        let scoringGroupsToDelete = snapshot.scoringGroups.filter { scoringGroupsByID[$0.id] == nil }
+
+        let segment = buildUpdatedSegment(
+            series: series,
+            seriesRound: seriesRound,
+            courseSegment: courseSegment,
+            participants: workingParticipants,
+            scoringGroups: scoringGroupsToPut,
+            existingSegment: existingSegment,
+            teams: teams,
+            pods: pods,
+            participatingMembers: participatingMembers,
+            teamLinks: teamLinksBySeriesID
+        )
+
+        var round = snapshot.round
+        round.players = workingParticipants.compactMap(\.playerID)
+        round.configuration.handicapStrokeBasis = series.handicapConfig.strokeBasis
+        round.lastUpdatedAt = .init()
+
+        let mappingsToPut = buildSeriesRoundMappings(
+            seriesID: series.id,
+            seriesRoundID: seriesRound.id,
+            teamLinks: teamLinksBySeriesID,
+            participatingMembers: participatingMembers,
+            participants: workingParticipants,
+            scoringGroups: scoringGroupsToPut
+        )
+        let nextMappingIDs = Set(mappingsToPut.map(\.id))
+        let mappingsToDelete = seriesMappings.filter { mapping in
+            mapping.seriesRoundID == seriesRound.id && !nextMappingIDs.contains(mapping.id)
+        }
+
+        return LobbyAttendancePlan(
+            round: round,
+            teeGroupsToPut: retainedTeeGroups,
+            teeGroupsToDelete: teeGroupsToDelete + emptyTeeGroupsToDelete,
+            teamsToPut: teamsToPut.filter { populatedTeamIDs.contains($0.id) },
+            teamsToDelete: teamsToDelete,
+            participantsToPut: participantsToPut,
+            participantsToDelete: participantsToDelete,
+            scoringGroupsToPut: scoringGroupsToPut,
+            scoringGroupsToDelete: scoringGroupsToDelete,
+            segment: segment,
+            mappingsToPut: mappingsToPut,
+            mappingsToDelete: mappingsToDelete
+        )
+    }
+
+    static func buildSeriesRoundMappings(
+        seriesID: String,
+        seriesRoundID: String,
+        teamLinks: [String: SeriesRoundCreationMapping.SeriesToRoundTeamLink],
+        participatingMembers: [SeriesMember],
+        participants: [RoundParticipant],
+        scoringGroups: [RoundScoringGroup]
+    ) -> [SeriesRoundMapping] {
+        var mappings: [SeriesRoundMapping] = []
+        let participantByMemberID = Dictionary(uniqueKeysWithValues: participants.compactMap { participant -> (String, RoundParticipant)? in
+            guard let memberID = participant.seriesMemberID else { return nil }
+            return (memberID, participant)
+        })
+        for member in participatingMembers {
+            guard let participant = participantByMemberID[member.id] else { continue }
+            mappings.append(
+                SeriesRoundCreationMapping.seriesRoundParticipantMapping(
+                    seriesRoundID: seriesRoundID,
+                    seriesID: seriesID,
+                    memberID: member.id,
+                    participantID: participant.id
+                )
+            )
+        }
+        for link in teamLinks.values {
+            mappings.append(
+                SeriesRoundCreationMapping.seriesRoundTeamMapping(
+                    seriesRoundID: seriesRoundID,
+                    seriesID: seriesID,
+                    link: link
+                )
+            )
+        }
+        for scoringGroup in scoringGroups {
+            mappings.append(
+                contentsOf: SeriesRoundCreationMapping.seriesRoundScoreOwnerMappings(
+                    seriesRoundID: seriesRoundID,
+                    seriesID: seriesID,
+                    scoringGroup: scoringGroup,
+                    participants: participants,
+                    teamMappings: teamLinks
+                )
+            )
+        }
+        return mappings
     }
 
     static func buildUpdatedSegment(

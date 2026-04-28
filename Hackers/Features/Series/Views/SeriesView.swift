@@ -1311,7 +1311,7 @@ struct SeriesView: View {
             // ACTION BUTTONSUX Re
             if status == .planned {
                 HStack(alignment: .center, spacing: 10) {
-                    if attendanceEnabled {
+                    if viewModel.isRSVPEligible(for: round) {
                         let rsvp = viewModel.currentAttendanceStatus(for: round.id)
                         PrimaryButton(
                             appearance: .fill,
@@ -1338,7 +1338,7 @@ struct SeriesView: View {
                             appearance: .fill,
                             title: viewModel.openLinkedRoundButtonTitle(for: round),
                             labelColor: .white,
-                            buttonColor: Color.accentGreen,
+                            buttonColor: viewModel.openLinkedRoundButtonColor(for: round),
                             theme: palette.theme,
                             height: SeriesRoundTileButtonMetrics.height,
                             fontSize: SeriesRoundTileButtonMetrics.fontSize,
@@ -1350,6 +1350,25 @@ struct SeriesView: View {
                 }
             } else if status == .lobby || status == .live {
                 HStack(alignment: .center, spacing: 10) {
+                    if viewModel.isRSVPEligible(for: round) {
+                        let rsvp = viewModel.currentAttendanceStatus(for: round.id)
+                        PrimaryButton(
+                            appearance: .fill,
+                            title: rsvp.buttonLabel,
+                            icon: rsvp.buttonIcon,
+                            iconWeight: .solid,
+                            labelColor: rsvp.labelColor(palette: palette),
+                            buttonColor: rsvp.buttonColor(palette: palette),
+                            theme: palette.theme,
+                            height: SeriesRoundTileButtonMetrics.height,
+                            fillWidth: false,
+                            iconSize: SeriesRoundTileButtonMetrics.iconSize,
+                            fontSize: SeriesRoundTileButtonMetrics.fontSize,
+                            isDisabled: .false,
+                            isLoading: .false,
+                            onTap: { roundToAttendance = round }
+                        )
+                    }
                     if viewModel.isCommissioner, round.roundID != nil {
                         PrimaryButton(
                             appearance: .fill,
@@ -1371,7 +1390,7 @@ struct SeriesView: View {
                                 appearance: .fill,
                                 title: viewModel.openLinkedRoundButtonTitle(for: round),
                                 labelColor: .white,
-                                buttonColor: Color.accentGreen,
+                                buttonColor: viewModel.openLinkedRoundButtonColor(for: round),
                                 theme: palette.theme,
                                 height: SeriesRoundTileButtonMetrics.height,
                                 fontSize: SeriesRoundTileButtonMetrics.fontSize,
@@ -1389,7 +1408,7 @@ struct SeriesView: View {
                             appearance: .fill,
                             title: viewModel.openLinkedRoundButtonTitle(for: round),
                             labelColor: .white,
-                            buttonColor: Color.accentGreen,
+                            buttonColor: viewModel.openLinkedRoundButtonColor(for: round),
                             theme: palette.theme,
                             height: SeriesRoundTileButtonMetrics.height,
                             fontSize: SeriesRoundTileButtonMetrics.fontSize,
@@ -1418,7 +1437,7 @@ struct SeriesView: View {
                         appearance: .fill,
                         title: viewModel.openLinkedRoundButtonTitle(for: round),
                         labelColor: .white,
-                        buttonColor: Color.accentYellow,
+                        buttonColor: viewModel.openLinkedRoundButtonColor(for: round),
                         theme: palette.theme,
                         height: SeriesRoundTileButtonMetrics.height,
                         fontSize: SeriesRoundTileButtonMetrics.fontSize,
@@ -1434,7 +1453,7 @@ struct SeriesView: View {
                     appearance: .fill,
                     title: viewModel.openLinkedRoundButtonTitle(for: round),
                     labelColor: .white,
-                    buttonColor: Color.accentGreen,
+                    buttonColor: viewModel.openLinkedRoundButtonColor(for: round),
                     theme: palette.theme,
                     height: SeriesRoundTileButtonMetrics.height,
                     fillWidth: false,
@@ -1472,7 +1491,7 @@ struct SeriesView: View {
                 appearance: .fill,
                 title: viewModel.openLinkedRoundButtonTitle(for: round),
                 labelColor: .white,
-                buttonColor: Color.accentGreen,
+                buttonColor: viewModel.openLinkedRoundButtonColor(for: round),
                 theme: palette.theme,
                 height: SeriesRoundTileButtonMetrics.height,
                 fontSize: SeriesRoundTileButtonMetrics.fontSize,

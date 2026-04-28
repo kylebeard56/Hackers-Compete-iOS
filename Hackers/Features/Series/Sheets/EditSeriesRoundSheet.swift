@@ -1336,6 +1336,13 @@ struct EditSeriesRoundSheet: View {
         plannedMatchups = structure.matchups
         if forceRegenerate || !plannedTeeGroups.contains(where: \.hasManualOverrides) {
             plannedTeeGroups = structure.teeGroups
+        } else {
+            plannedTeeGroups = SeriesRoundCreationMapping.plannedTeeGroupsWithSchedule(
+                plannedTeeGroups,
+                holeRange: planningHoleRange,
+                useShotgunStart: sequentialTeeStartsEnabled,
+                scheduledTeeTime: planningDraftRound.scheduledAt.map { Date(timeIntervalSince1970: $0.unix) }
+            )
         }
     }
 

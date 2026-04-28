@@ -20,6 +20,203 @@ struct SeriesRoundCorrectionContext {
     let entriesByParticipantID: [String: [Int: ScoreEntry]]
 }
 
+struct SeriesRoundCSVDocument: Equatable {
+    var header: String
+    var rows: [String]
+
+    var content: String {
+        ([header] + rows).joined(separator: "\n")
+    }
+}
+
+enum SeriesRoundCSVExporter {
+    static func document(seriesRound: SeriesRound, snapshot: RoundSnapshot, members: [SeriesMember]) -> SeriesRoundCSVDocument {
+        let holeNumbers = snapshot.holeRange?.holeNumbers ?? snapshot.holeSegment.holeRange.holeNumbers
+        let usesHandicaps = snapshot.configuration.useHandicaps
+        let header = csvHeader(holeNumbers: holeNumbers, includesHandicap: usesHandicaps)
+        let rows = csvRows(
+            seriesRound: seriesRound,
+            snapshot: snapshot,
+            members: members,
+            holeNumbers: holeNumbers,
+            includesHandicap: usesHandicaps
+        )
+        return .init(header: header, rows: rows)
+    }
+
+    private struct ParticipantCSVContext {
+        var matchupIndex: Int?
+        var matchupID: String
+        var matchupSide: String
+        var matchupSideID: String
+        var teeGroupIndex: Int?
+        var teeGroupID: String
+        var teeGroupName: String
+        var teeTime: String
+        var startingHole: Int?
+        var teamName: String
+    }
+
+    private static func csvRows(
+        seriesRound: SeriesRound,
+        snapshot: RoundSnapshot,
+        members: [SeriesMember],
+        holeNumbers: [Int],
+        includesHandicap: Bool
+    ) -> [String] {
+        let scoreEntriesByParticipant = Dictionary(grouping: snapshot.scoring, by: \.scoringUnitID)
+        let teamsByID = Dictionary(uniqueKeysWithValues: snapshot.teams.map { ($0.id, $0) })
+        let groupsByID = Dictionary(uniqueKeysWithValues: snapshot.teeGroups.map { ($0.id, $0) })
+        let contexts = participantContexts(snapshot: snapshot, teamsByID: teamsByID, groupsByID: groupsByID)
+
+        return snapshot.participants.sorted { lhs, rhs in
+            let lc = contexts[lhs.id]
+            let rc = contexts[rhs.id]
+            if (lc?.matchupIndex ?? Int.max) != (rc?.matchupIndex ?? Int.max) {
+                return (lc?.matchupIndex ?? Int.max) < (rc?.matchupIndex ?? Int.max)
+            }
+            if (lc?.teeGroupIndex ?? Int.max) != (rc?.teeGroupIndex ?? Int.max) {
+                return (lc?.teeGroupIndex ?? Int.max) < (rc?.teeGroupIndex ?? Int.max)
+            }
+            if (lhs.teeOrder ?? Int.max) != (rhs.teeOrder ?? Int.max) {
+                return (lhs.teeOrder ?? Int.max) < (rhs.teeOrder ?? Int.max)
+            }
+            return lhs.name.fullName.localizedCaseInsensitiveCompare(rhs.name.fullName) == .orderedAscending
+        }.map { participant in
+            let context = contexts[participant.id] ?? ParticipantCSVContext(
+                matchupIndex: nil,
+                matchupID: "",
+                matchupSide: "",
+                matchupSideID: "",
+                teeGroupIndex: nil,
+                teeGroupID: participant.groupID ?? "",
+                teeGroupName: participant.groupID.flatMap { groupsByID[$0]?.name } ?? "",
+                teeTime: participant.groupID.flatMap { groupsByID[$0]?.teeTime } ?? "",
+                startingHole: participant.groupID.flatMap { groupsByID[$0]?.startingHole },
+                teamName: participant.teamID.flatMap { teamsByID[$0]?.name } ?? ""
+            )
+            let entriesByHole = Dictionary(uniqueKeysWithValues: (scoreEntriesByParticipant[participant.id] ?? []).map { ($0.holeNumber, $0) })
+            let tee = snapshot.courseSegment?.tee(from: participant.teeBoxID)
+                ?? snapshot.courseSegment?.tee(from: snapshot.courseSegment?.defaultTee ?? "")
+                ?? snapshot.courseSegment?.courseInfo.tees.first
+            var totalToPar = 0
+            var holeValues: [String] = []
+
+            for holeNumber in holeNumbers {
+                if let strokes = entriesByHole[holeNumber]?.strokes {
+                    let par = tee?.holes.first(where: { $0.number == holeNumber })?.par ?? 4
+                    let toPar = strokes - par
+                    totalToPar += toPar
+                    holeValues.append(String(toPar))
+                } else {
+                    holeValues.append("")
+                }
+            }
+
+            let memberID = participant.seriesMemberID ?? members.first(where: { $0.playerID == participant.playerID })?.id ?? ""
+            var columns = [
+                seriesRound.id,
+                snapshot.round.id,
+                memberID,
+                participant.playerID ?? "",
+                participant.name.fullName,
+                participant.teamID ?? "",
+                context.teamName,
+                context.matchupIndex.map { String($0 + 1) } ?? "",
+                context.matchupID,
+                context.matchupSide,
+                context.matchupSideID,
+                context.teeGroupIndex.map { String($0 + 1) } ?? "",
+                context.teeGroupID,
+                context.teeGroupName,
+                context.teeTime,
+                context.startingHole.map(String.init) ?? ""
+            ]
+            if includesHandicap {
+                columns.append(String(participant.adjustedHandicap))
+            }
+            columns += holeValues + [String(totalToPar)]
+            return columns.map(escapedCSV).joined(separator: ",")
+        }
+    }
+
+    private static func participantContexts(
+        snapshot: RoundSnapshot,
+        teamsByID: [String: RoundTeam],
+        groupsByID: [String: TeeTimeGroup]
+    ) -> [String: ParticipantCSVContext] {
+        var contexts: [String: ParticipantCSVContext] = [:]
+        let scoringGroupsByID = Dictionary(uniqueKeysWithValues: snapshot.scoringGroups.map { ($0.id, $0) })
+        let matchups = snapshot.roundSegment?.matchups ?? []
+
+        for participant in snapshot.participants {
+            let teeGroup = participant.groupID.flatMap { groupsByID[$0] }
+            let matchupContext = matchups.enumerated().compactMap { index, matchup -> (Int, String, String, String)? in
+                let sideIDs = matchup.pairingIDs()
+                for (sideIndex, sideID) in sideIDs.enumerated() {
+                    let contains: Bool
+                    switch matchup.mode ?? .team {
+                    case .team:
+                        contains = participant.teamID == sideID
+                    case .individual:
+                        contains = participant.id == sideID
+                    case .scoreOwner:
+                        contains = scoringGroupsByID[sideID]?.memberIDs.contains(participant.id) == true
+                    }
+                    if contains {
+                        return (index, matchup.id, sideIndex == 0 ? "A" : "B", sideID)
+                    }
+                }
+                return nil
+            }.first
+
+            contexts[participant.id] = ParticipantCSVContext(
+                matchupIndex: matchupContext?.0,
+                matchupID: matchupContext?.1 ?? "",
+                matchupSide: matchupContext?.2 ?? "",
+                matchupSideID: matchupContext?.3 ?? "",
+                teeGroupIndex: teeGroup?.index,
+                teeGroupID: teeGroup?.id ?? participant.groupID ?? "",
+                teeGroupName: teeGroup?.name ?? "",
+                teeTime: teeGroup?.teeTime ?? "",
+                startingHole: teeGroup?.startingHole,
+                teamName: participant.teamID.flatMap { teamsByID[$0]?.name } ?? ""
+            )
+        }
+        return contexts
+    }
+
+    private static func csvHeader(holeNumbers: [Int], includesHandicap: Bool) -> String {
+        var base = [
+            "series_round_id",
+            "round_id",
+            "series_member_id",
+            "player_id",
+            "player_name",
+            "team_id",
+            "team_name",
+            "matchup_index",
+            "matchup_id",
+            "matchup_side",
+            "matchup_side_id",
+            "tee_group_index",
+            "tee_group_id",
+            "tee_group_name",
+            "tee_time",
+            "starting_hole"
+        ]
+        if includesHandicap {
+            base.append("handicap_strokes")
+        }
+        return (base + holeNumbers.map { "hole_\($0)_to_par" } + ["total_to_par"]).joined(separator: ",")
+    }
+
+    private static func escapedCSV(_ value: String) -> String {
+        let escaped = value.replacingOccurrences(of: "\"", with: "\"\"")
+        return "\"\(escaped)\""
+    }
+}
+
 struct SeriesRoundMatchupMemberOption: Identifiable, Hashable {
     let memberID: String
     let teamID: String?
@@ -497,7 +694,37 @@ final class SeriesViewModel: ObservableObject, Loggable {
     }
 
     func openLinkedRoundButtonTitle(for seriesRound: SeriesRound) -> String {
-        linkedRoundNavigationTarget(for: seriesRound) == .roundOutcome ? "View results" : "Open round"
+        switch linkedRoundNavigationTarget(for: seriesRound) {
+        case .roundOutcome:
+            return "View results"
+        case .liveRound:
+            return "Continue playing"
+        case .lobby:
+            return "Open lobby"
+        }
+    }
+
+    func openLinkedRoundButtonColor(for seriesRound: SeriesRound) -> Color {
+        switch linkedRoundNavigationTarget(for: seriesRound) {
+        case .roundOutcome:
+            return .accentYellow
+        case .liveRound:
+            return .accentPurple
+        case .lobby:
+            return .accentGreen
+        }
+    }
+
+    func isRSVPEligible(for seriesRound: SeriesRound) -> Bool {
+        guard series.settings.isAttendanceEnabled else { return false }
+        let status = effectiveStatus(for: seriesRound)
+        if status == .planned { return true }
+        guard status == .lobby,
+              let roundID = seriesRound.roundID,
+              linkedRounds[roundID]?.status == .lobby else {
+            return false
+        }
+        return true
     }
 
     /// Returns whether the current user participated in the linked round and their score label.
@@ -1854,6 +2081,9 @@ final class SeriesViewModel: ObservableObject, Loggable {
         status: SeriesRoundAttendanceStatus,
         declinedNote: String?
     ) async {
+        guard let seriesRound = rounds.first(where: { $0.id == seriesRoundID }),
+              isRSVPEligible(for: seriesRound) else { return }
+
         if memberID != currentMemberID {
             guard let target = activeMembers.first(where: { $0.id == memberID }),
                   canProxyRSVP(for: target) else { return }
@@ -1881,6 +2111,7 @@ final class SeriesViewModel: ObservableObject, Loggable {
             }
             attendanceByRound[seriesRoundID] = roundAttendance
             attendanceByMember[memberID] = saved
+            await applyLobbyAttendanceChangeIfNeeded(seriesRoundID: seriesRoundID)
             addEvent(
                 "series.attendance_updated",
                 eventProps: seriesTelemetryProps([
@@ -1892,6 +2123,95 @@ final class SeriesViewModel: ObservableObject, Loggable {
         case .failure(let error):
             addBreadcrumb(level: .error, message: "Failed to update attendance", error: error)
         }
+    }
+
+    private func applyLobbyAttendanceChangeIfNeeded(seriesRoundID: String) async {
+        guard let seriesRound = rounds.first(where: { $0.id == seriesRoundID }),
+              isRSVPEligible(for: seriesRound),
+              let roundID = seriesRound.roundID,
+              let linked = linkedRounds[roundID],
+              linked.status == .lobby,
+              let snapshot = await loadRoundSnapshot(roundID: roundID) else {
+            return
+        }
+
+        let attendance = attendanceByRound[seriesRoundID] ?? []
+        let attendanceByMemberID = Dictionary(uniqueKeysWithValues: attendance.map { ($0.memberID, $0) })
+        let participatingMembers = eligibleMembers.filter { member in
+            guard let attendance = attendanceByMemberID[member.id],
+                  let resolved = SeriesRoundAttendanceStatus(rawValue: attendance.status) else {
+                return series.settings.attendanceDefault != .no
+            }
+            return resolved == .accepted || resolved == .pending
+        }
+        let presenceStatusByMemberID = Dictionary(uniqueKeysWithValues: participatingMembers.map { member in
+            let resolvedStatus: RoundParticipantPresenceStatus
+            if let attendance = attendanceByMemberID[member.id],
+               attendance.status == SeriesRoundAttendanceStatus.pending.rawValue {
+                resolvedStatus = .unconfirmed
+            } else if attendanceByMemberID[member.id] == nil,
+                      series.settings.attendanceDefault == .pending {
+                resolvedStatus = .unconfirmed
+            } else {
+                resolvedStatus = .active
+            }
+            return (member.id, resolvedStatus)
+        })
+
+        let mappings = await FirebaseService.shared.fetchSeriesRoundMappings(
+            seriesID: seriesID,
+            seriesRoundID: seriesRoundID
+        )
+        let hostPlayerID = await AppData.shared.getPrimaryPlayer()?.id
+
+        do {
+            let plan = try SeriesRoundSyncPlanning.buildLobbyAttendancePlan(
+                series: series,
+                seriesRound: seriesRound,
+                participatingMembers: participatingMembers,
+                teams: teams,
+                pods: pods,
+                handicaps: memberHandicaps,
+                seriesMappings: mappings,
+                snapshot: snapshot,
+                hostPlayerID: hostPlayerID,
+                presenceStatusByMemberID: presenceStatusByMemberID
+            )
+            try await applyLobbyAttendancePlan(plan)
+            await refreshLinkedRoundState()
+        } catch {
+            addBreadcrumb(level: .error, message: "Failed to apply lobby RSVP rebuild", error: error)
+        }
+    }
+
+    private func applyLobbyAttendancePlan(_ plan: SeriesRoundSyncPlanning.LobbyAttendancePlan) async throws {
+        _ = try await plan.round.put().get()
+        for item in plan.teeGroupsToDelete {
+            _ = try await item.delete().get()
+        }
+        for item in plan.teamsToDelete {
+            _ = try await item.delete().get()
+        }
+        for item in plan.scoringGroupsToDelete {
+            _ = try await item.delete().get()
+        }
+        for item in plan.participantsToDelete {
+            _ = try await item.delete().get()
+        }
+        for item in plan.mappingsToDelete {
+            _ = try await item.delete().get()
+        }
+        try await putSubcollectionItems(plan.teeGroupsToPut)
+        try await putSubcollectionItems(plan.teamsToPut)
+        try await putSubcollectionItems(plan.participantsToPut)
+        try await putSubcollectionItems(plan.scoringGroupsToPut)
+        try await putSubcollectionItems(plan.mappingsToPut)
+        _ = try await plan.segment.put().get()
+    }
+
+    private func putSubcollectionItems<T: FirebaseSubcollectable>(_ items: [T]) async throws {
+        guard items.isPopulated else { return }
+        _ = try await items.batchPut().get()
     }
 
     private func seedAttendance(for round: SeriesRound) async {
@@ -3388,22 +3708,20 @@ final class SeriesViewModel: ObservableObject, Loggable {
         defer { exportingRoundID = nil }
 
         guard let snapshot = await loadRoundSnapshot(roundID: roundID) else { return nil }
-        let rows = buildCSVRows(seriesRound: seriesRound, snapshot: snapshot)
-        guard rows.isPopulated else { return nil }
+        let document = SeriesRoundCSVExporter.document(seriesRound: seriesRound, snapshot: snapshot, members: members)
+        guard document.rows.isPopulated else { return nil }
 
-        let header = csvHeader(for: snapshot.holeSegment.holeCount)
-        let csv = ([header] + rows).joined(separator: "\n")
         let fileURL = FileManager.default.temporaryDirectory
             .appendingPathComponent("series-round-\(seriesRound.index + 1)-\(seriesRound.id.prefix(6)).csv")
 
         do {
-            try csv.write(to: fileURL, atomically: true, encoding: .utf8)
+            try document.content.write(to: fileURL, atomically: true, encoding: .utf8)
             exportedCSVURL = fileURL
             addEvent(
                 "series.round_csv_exported",
                 eventProps: seriesTelemetryProps([
                     "series_round_id": seriesRound.id,
-                    "hole_count": snapshot.holeSegment.holeCount
+                    "hole_count": snapshot.holeRange?.count ?? snapshot.holeSegment.holeCount
                 ])
             )
             return fileURL
@@ -4807,59 +5125,6 @@ final class SeriesViewModel: ObservableObject, Loggable {
         case .manual:
             return nil
         }
-    }
-
-    private func buildCSVRows(seriesRound: SeriesRound, snapshot: RoundSnapshot) -> [String] {
-        let holeNumbers = snapshot.holeRange?.holeNumbers ?? Array(1...snapshot.holeSegment.holeCount)
-        let scoreEntriesByParticipant = Dictionary(grouping: snapshot.scoring, by: \.scoringUnitID)
-
-        return snapshot.participants.map { participant in
-            let entriesByHole = Dictionary(uniqueKeysWithValues: (scoreEntriesByParticipant[participant.id] ?? []).map { ($0.holeNumber, $0) })
-            let tee = snapshot.courseSegment?.tee(from: participant.teeBoxID)
-                ?? snapshot.courseSegment?.tee(from: snapshot.courseSegment?.defaultTee ?? "")
-                ?? snapshot.courseSegment?.courseInfo.tees.first
-            var totalToPar = 0
-            var holeValues: [String] = []
-
-            for holeNumber in holeNumbers {
-                if let strokes = entriesByHole[holeNumber]?.strokes {
-                    let par = tee?.holes.first(where: { $0.number == holeNumber })?.par ?? 4
-                    let toPar = strokes - par
-                    totalToPar += toPar
-                    holeValues.append(String(toPar))
-                } else {
-                    holeValues.append("")
-                }
-            }
-
-            let memberID = participant.seriesMemberID ?? members.first(where: { $0.playerID == participant.playerID })?.id ?? ""
-            let columns = [
-                seriesRound.id,
-                snapshot.round.id,
-                memberID,
-                participant.playerID ?? "",
-                escapedCSV(participant.name.fullName),
-                participant.teamID ?? ""
-            ] + holeValues + [String(totalToPar)]
-            return columns.joined(separator: ",")
-        }
-    }
-
-    private func csvHeader(for holeCount: Int) -> String {
-        let holeHeaders = (1...holeCount).map { "hole_\($0)_to_par" }
-        return ([
-            "series_round_id",
-            "round_id",
-            "series_member_id",
-            "player_id",
-            "player_name",
-            "team_id"
-        ] + holeHeaders + ["total_to_par"]).joined(separator: ",")
-    }
-
-    private func escapedCSV(_ value: String) -> String {
-        let escaped = value.replacingOccurrences(of: "\"", with: "\"\"")
-        return "\"\(escaped)\""
     }
 
     /// Assigns a `share_code` when missing (older series documents) so join links work.

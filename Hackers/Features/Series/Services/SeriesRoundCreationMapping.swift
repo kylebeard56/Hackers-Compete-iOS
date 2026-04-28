@@ -328,13 +328,8 @@ enum SeriesRoundCreationMapping {
         scheduledTeeTime: Date? = nil
     ) -> [TeeTimeGroup] {
         let plans = groupPlans.isPopulated ? groupPlans : [TeeGroupPlan(id: "group_0", memberIDs: [])]
-        let iso = ISO8601DateFormatter()
-        return plans.enumerated().map { index, _ in
-            let teeTime: String? = scheduledTeeTime.map { base in
-                let offset = base.addingTimeInterval(Double(index) * 8 * 60)
-                return iso.string(from: offset)
-            }
-            var group = TeeTimeGroup(
+        let groups = plans.enumerated().map { index, _ in
+            TeeTimeGroup(
                 id: HackersID.string(),
                 index: index,
                 teeTime: nil,
@@ -346,9 +341,82 @@ enum SeriesRoundCreationMapping {
                 lastUpdatedAt: .init(),
                 parentID: roundID
             )
-            group.teeTime = teeTime
-            return group
         }
+        return teeGroupsWithSchedule(
+            groups,
+            holeRange: holeRange,
+            useShotgunStart: useSequentialStarts,
+            scheduledTeeTime: scheduledTeeTime
+        )
+    }
+
+    static func teeGroupsWithSchedule(
+        _ groups: [TeeTimeGroup],
+        holeRange: HoleRange,
+        useShotgunStart: Bool,
+        scheduledTeeTime: Date? = nil,
+        fallbackTeeTime: String? = nil,
+        intervalMinutes: Int = 8
+    ) -> [TeeTimeGroup] {
+        let ordered = groups.sorted { $0.index < $1.index }
+        let base = scheduledTeeTime
+            ?? fallbackTeeTime.flatMap(Self.dateFromISO8601)
+            ?? ordered.compactMap(\.teeTime).first.flatMap(Self.dateFromISO8601)
+        let iso = ISO8601DateFormatter()
+
+        return ordered.enumerated().map { index, group in
+            var updated = group
+            updated.index = index
+            updated.startingHole = useShotgunStart
+                ? TeeTimeGroup.sequentialStartingHole(forSequenceIndex: index, in: holeRange)
+                : holeRange.startHole
+            if let base {
+                let date = useShotgunStart
+                    ? base
+                    : base.addingTimeInterval(Double(index * intervalMinutes) * 60)
+                updated.teeTime = iso.string(from: date)
+            } else {
+                updated.teeTime = nil
+            }
+            return updated
+        }
+    }
+
+    static func plannedTeeGroupsWithSchedule(
+        _ groups: [SeriesRoundPlannedTeeGroup],
+        holeRange: HoleRange,
+        useShotgunStart: Bool,
+        scheduledTeeTime: Date? = nil,
+        fallbackTeeTime: String? = nil,
+        intervalMinutes: Int = 8
+    ) -> [SeriesRoundPlannedTeeGroup] {
+        let ordered = groups.sorted { $0.index < $1.index }
+        let base = scheduledTeeTime
+            ?? fallbackTeeTime.flatMap(Self.dateFromISO8601)
+            ?? ordered.compactMap(\.teeTime).first.flatMap(Self.dateFromISO8601)
+        let iso = ISO8601DateFormatter()
+
+        return ordered.enumerated().map { index, group in
+            var updated = group
+            updated.index = index
+            updated.startingHole = useShotgunStart
+                ? TeeTimeGroup.sequentialStartingHole(forSequenceIndex: index, in: holeRange)
+                : holeRange.startHole
+            if let base {
+                let date = useShotgunStart
+                    ? base
+                    : base.addingTimeInterval(Double(index * intervalMinutes) * 60)
+                updated.teeTime = iso.string(from: date)
+            } else {
+                updated.teeTime = nil
+            }
+            return updated
+        }
+    }
+
+    private static func dateFromISO8601(_ value: String?) -> Date? {
+        guard let value, value.isPopulated else { return nil }
+        return ISO8601DateFormatter().date(from: value)
     }
 
     private static func groupedSeats(

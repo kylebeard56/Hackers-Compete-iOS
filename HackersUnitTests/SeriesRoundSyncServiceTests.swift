@@ -38,6 +38,29 @@ final class SeriesRoundSyncServiceTests: XCTestCase {
         XCTAssertNotNil(SeriesRoundSyncPlanning.validateOptions(options, roundStatus: .complete))
     }
 
+    @MainActor
+    func testRoundTileLinkedActionCopyAndRSVPEligibility() {
+        let viewModel = SeriesViewModel()
+        var settings = SeriesSettings()
+        settings.isAttendanceEnabled = true
+        viewModel.series = Series(id: "series1", settings: settings)
+
+        let planned = SeriesRound(id: "planned", status: .planned, parentID: "series1")
+        let lobby = SeriesRound(id: "lobby", status: .lobby, roundID: "round_lobby", parentID: "series1")
+        let live = SeriesRound(id: "live", status: .live, roundID: "round_live", parentID: "series1")
+        viewModel.rounds = [planned, lobby, live]
+        viewModel.linkedRounds = [
+            "round_lobby": Round(id: "round_lobby", status: .lobby),
+            "round_live": Round(id: "round_live", status: .live),
+        ]
+
+        XCTAssertEqual(viewModel.openLinkedRoundButtonTitle(for: lobby), "Open lobby")
+        XCTAssertEqual(viewModel.openLinkedRoundButtonTitle(for: live), "Continue playing")
+        XCTAssertTrue(viewModel.isRSVPEligible(for: planned))
+        XCTAssertTrue(viewModel.isRSVPEligible(for: lobby))
+        XCTAssertFalse(viewModel.isRSVPEligible(for: live))
+    }
+
     func testTeamLinks_filtersMappings() {
         let sid = "sr1"
         let mappings = [
@@ -372,6 +395,38 @@ final class SeriesRoundSyncServiceTests: XCTestCase {
         XCTAssertEqual(plan.roundConfiguration.handicapStrokeBasis, .nineHole)
     }
 
+    func testTeeGroupsWithLeagueSchedule_usesExistingFirstTimeWhenNoScheduledDate() throws {
+        var cfg = SeriesRoundConfiguration()
+        cfg.sequentialTeeStartsEnabled = true
+        let seriesRound = SeriesRound(id: "sr1", roundConfig: cfg, parentID: "series1")
+        let snapshot = RoundSnapshot(
+            round: Round(id: "round1", status: .lobby),
+            teeGroups: [
+                TeeTimeGroup(id: "g1", index: 0, teeTime: "2026-05-01T14:00:00Z", startingHole: 1, createdAt: t0, parentID: "round1"),
+                TeeTimeGroup(id: "g2", index: 1, teeTime: "2026-05-01T14:08:00Z", startingHole: 1, createdAt: t0, parentID: "round1"),
+            ],
+            segments: [
+                RoundSegment(id: "seg1", parentID: "round1")
+            ]
+        )
+        var snap = snapshot
+        snap.round.configuration.courses = [
+            testCourseSegment()
+        ]
+
+        let updated = try SeriesRoundSyncPlanning.teeGroupsWithLeagueSchedule(
+            snapshot: snap,
+            groupPlans: [
+                .init(id: "p1", memberIDs: ["m1"]),
+                .init(id: "p2", memberIDs: ["m2"]),
+            ],
+            seriesRound: seriesRound
+        )
+
+        XCTAssertEqual(Set(updated.compactMap(\.teeTime)), ["2026-05-01T14:00:00Z"])
+        XCTAssertEqual(updated.map(\.startingHole), [1, 2])
+    }
+
     func testParticipantsWithOrganizationSync_preservesNonContiguousTeeOrder() {
         let participant = RoundParticipant(
             id: "part1",
@@ -417,5 +472,149 @@ final class SeriesRoundSyncServiceTests: XCTestCase {
         XCTAssertEqual(out.first?.groupID, "g_new")
         XCTAssertEqual(out.first?.teeOrder, 3)
         XCTAssertEqual(out.first?.teamID, "team_round_new")
+    }
+
+    func testLobbyAttendancePlan_removesDeclinedMemberAndBlocksScoredLobby() throws {
+        var settings = SeriesSettings()
+        settings.useTeams = false
+        let series = Series(id: "series1", settings: settings)
+        let member1 = testMember(id: "m1", playerID: "p1")
+        let member2 = testMember(id: "m2", playerID: "p2")
+        let segment = testCourseSegment()
+        let snapshot = RoundSnapshot(
+            round: Round(
+                id: "round1",
+                status: .lobby,
+                configuration: RoundConfiguration(
+                    courses: [segment]
+                )
+            ),
+            participants: [
+                RoundParticipant(id: "part1", playerID: "p1", name: member1.name, seriesMemberID: "m1", groupID: "g1", teeOrder: 1, createdAt: t0, parentID: "round1"),
+                RoundParticipant(id: "part2", playerID: "p2", name: member2.name, seriesMemberID: "m2", groupID: "g1", teeOrder: 2, createdAt: t0, parentID: "round1"),
+            ],
+            teeGroups: [TeeTimeGroup(id: "g1", index: 0, createdAt: t0, parentID: "round1")],
+            segments: [RoundSegment(id: "seg1", parentID: "round1")]
+        )
+
+        let plan = try SeriesRoundSyncPlanning.buildLobbyAttendancePlan(
+            series: series,
+            seriesRound: SeriesRound(id: "sr1", parentID: "series1"),
+            participatingMembers: [member1],
+            teams: [],
+            pods: [],
+            handicaps: [:],
+            seriesMappings: [],
+            snapshot: snapshot,
+            hostPlayerID: nil,
+            presenceStatusByMemberID: ["m1": .active]
+        )
+
+        XCTAssertEqual(plan.participantsToDelete.map(\.id), ["part2"])
+        XCTAssertEqual(plan.participantsToPut.map(\.seriesMemberID), ["m1"])
+        XCTAssertEqual(plan.round.players, ["p1"])
+
+        var scored = snapshot
+        scored.scoring = [
+            ScoreEntry(id: "score1", holeNumber: 1, scoringUnitID: "part1", strokes: 4, parentID: "round1")
+        ]
+        XCTAssertThrowsError(
+            try SeriesRoundSyncPlanning.buildLobbyAttendancePlan(
+                series: series,
+                seriesRound: SeriesRound(id: "sr1", parentID: "series1"),
+                participatingMembers: [member1],
+                teams: [],
+                pods: [],
+                handicaps: [:],
+                seriesMappings: [],
+                snapshot: scored,
+                hostPlayerID: nil,
+                presenceStatusByMemberID: ["m1": .active]
+            )
+        )
+    }
+
+    func testCSVExporter_addsGroupingAndHandicapColumnsInSortedOrder() {
+        let segment = testCourseSegment(holeRange: HoleRange(startHole: 10, endHole: 11))
+        let teamA = RoundTeam(id: "teamA", name: "Team A", color: "red", index: 0, createdAt: t0, parentID: "round1")
+        let teamB = RoundTeam(id: "teamB", name: "Team B", color: "blue", index: 1, createdAt: t0, parentID: "round1")
+        let group1 = TeeTimeGroup(id: "group1", index: 0, teeTime: "2026-05-01T14:00:00Z", startingHole: 10, createdAt: t0, parentID: "round1")
+        let group2 = TeeTimeGroup(id: "group2", index: 1, teeTime: "2026-05-01T14:08:00Z", startingHole: 11, createdAt: t0, parentID: "round1")
+        let alice = RoundParticipant(id: "pa", playerID: "player_a", name: Name("Alice", "A"), teeBoxID: "tee_white", adjustedHandicap: 5, seriesMemberID: "ma", teamID: "teamA", groupID: "group2", teeOrder: 2, createdAt: t0, parentID: "round1")
+        let bob = RoundParticipant(id: "pb", playerID: "player_b", name: Name("Bob", "B"), teeBoxID: "tee_white", adjustedHandicap: 7, seriesMemberID: "mb", teamID: "teamB", groupID: "group1", teeOrder: 1, createdAt: t0, parentID: "round1")
+        var netFormat = GameFormat.strokePlay
+        netFormat.configuration.basis = .net
+        let snapshot = RoundSnapshot(
+            round: Round(
+                id: "round1",
+                configuration: RoundConfiguration(
+                    primaryFormat: netFormat,
+                    courses: [segment]
+                )
+            ),
+            participants: [alice, bob],
+            teams: [teamA, teamB],
+            teeGroups: [group2, group1],
+            segments: [
+                RoundSegment(
+                    id: "seg1",
+                    matchups: [TeamMatchup(id: "match1", teamIDs: ["teamB", "teamA"], mode: .team)],
+                    parentID: "round1"
+                )
+            ],
+            scoring: [
+                ScoreEntry(id: ScoreEntry.makeID(hole: 10, segment: "seg1", scoringUnit: "pa"), holeNumber: 10, segmentID: "seg1", scoringUnitID: "pa", strokes: 5, parentID: "round1"),
+                ScoreEntry(id: ScoreEntry.makeID(hole: 10, segment: "seg1", scoringUnit: "pb"), holeNumber: 10, segmentID: "seg1", scoringUnitID: "pb", strokes: 4, parentID: "round1"),
+            ]
+        )
+
+        let doc = SeriesRoundCSVExporter.document(
+            seriesRound: SeriesRound(id: "sr1", parentID: "series1"),
+            snapshot: snapshot,
+            members: []
+        )
+
+        XCTAssertTrue(doc.header.contains("handicap_strokes"))
+        XCTAssertTrue(doc.header.contains("hole_10_to_par"))
+        XCTAssertFalse(doc.header.contains("hole_1_to_par"))
+        XCTAssertTrue(doc.rows[0].contains("\"Bob B\""))
+        XCTAssertTrue(doc.rows[0].contains("\"Team B\""))
+        XCTAssertTrue(doc.rows[0].contains("\"match1\""))
+        XCTAssertTrue(doc.rows[1].contains("\"Alice A\""))
+    }
+
+    private func testMember(id: String, playerID: String, teamID: String? = nil) -> SeriesMember {
+        SeriesMember(
+            id: id,
+            userID: "u_\(id)",
+            playerID: playerID,
+            name: Name(id.uppercased(), "Player"),
+            teamID: teamID,
+            createdAt: t0,
+            lastUpdatedAt: t0,
+            parentID: "series1"
+        )
+    }
+
+    private func testCourseSegment(holeRange: HoleRange = HoleRange(startHole: 1, endHole: 18)) -> CourseSegment {
+        let holes = (1...18).map { Hole(number: $0, par: 4, yardage: 400, handicap: $0) }
+        let tee = Tee(
+            id: "tee_white",
+            name: "White",
+            gender: "male",
+            totalHoles: 18,
+            holes: holes,
+            ratingFull: 72,
+            slopeFull: 113,
+            ratingFront: nil,
+            slopeFront: nil,
+            ratingBack: nil,
+            slopeBack: nil
+        )
+        return CourseSegment(
+            courseInfo: CourseInfo(id: "course1", golfCourseApiID: nil, name: "Test Course", totalHoles: 18, location: nil, tees: [tee]),
+            holeRange: holeRange,
+            defaultTee: "tee_white"
+        )
     }
 }

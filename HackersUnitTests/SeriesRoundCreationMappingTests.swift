@@ -232,6 +232,74 @@ final class SeriesRoundCreationMappingTests: XCTestCase {
         )
     }
 
+    func testBuildTeeGroupsArray_shotgunUsesSameScheduledTeeTime() throws {
+        let scheduled = try XCTUnwrap(ISO8601DateFormatter().date(from: "2026-05-01T14:00:00Z"))
+        let groups = SeriesRoundCreationMapping.buildTeeGroupsArray(
+            roundID: "round1",
+            groupPlans: [
+                .init(id: "g1", memberIDs: ["m1"]),
+                .init(id: "g2", memberIDs: ["m2"]),
+                .init(id: "g3", memberIDs: ["m3"]),
+            ],
+            holeRange: HoleRange(startHole: 1, endHole: 18),
+            useSequentialStarts: true,
+            scheduledTeeTime: scheduled
+        )
+
+        XCTAssertEqual(Set(groups.compactMap(\.teeTime)).count, 1)
+        XCTAssertEqual(groups.map(\.startingHole), [1, 2, 3])
+    }
+
+    func testBuildTeeGroupsArray_nonShotgunStaggersScheduledTeeTime() throws {
+        let scheduled = try XCTUnwrap(ISO8601DateFormatter().date(from: "2026-05-01T14:00:00Z"))
+        let groups = SeriesRoundCreationMapping.buildTeeGroupsArray(
+            roundID: "round1",
+            groupPlans: [
+                .init(id: "g1", memberIDs: ["m1"]),
+                .init(id: "g2", memberIDs: ["m2"]),
+            ],
+            holeRange: HoleRange(startHole: 10, endHole: 18),
+            useSequentialStarts: false,
+            scheduledTeeTime: scheduled
+        )
+
+        let first = try XCTUnwrap(groups.first?.teeTime.flatMap(ISO8601DateFormatter().date(from:)))
+        let second = try XCTUnwrap(groups.dropFirst().first?.teeTime.flatMap(ISO8601DateFormatter().date(from:)))
+        XCTAssertEqual(second.timeIntervalSince(first), 8 * 60, accuracy: 0.1)
+        XCTAssertEqual(groups.map(\.startingHole), [10, 10])
+    }
+
+    func testPlannedTeeGroupsWithSchedule_preservesManualSeatsAndUsesFirstTimeFallback() {
+        let existing = [
+            SeriesRoundPlannedTeeGroup(
+                id: "g1",
+                index: 0,
+                teeTime: "2026-05-01T14:00:00Z",
+                startingHole: 1,
+                seats: [.init(id: "s1", memberID: "m1", teeOrder: 1, source: .manualOverride)],
+                source: .manualOverride
+            ),
+            SeriesRoundPlannedTeeGroup(
+                id: "g2",
+                index: 1,
+                teeTime: "2026-05-01T14:08:00Z",
+                startingHole: 1,
+                seats: [.init(id: "s2", memberID: "m2", teeOrder: 1, source: .manualOverride)],
+                source: .manualOverride
+            ),
+        ]
+
+        let shotgun = SeriesRoundCreationMapping.plannedTeeGroupsWithSchedule(
+            existing,
+            holeRange: HoleRange(startHole: 1, endHole: 18),
+            useShotgunStart: true
+        )
+
+        XCTAssertEqual(Set(shotgun.compactMap(\.teeTime)), ["2026-05-01T14:00:00Z"])
+        XCTAssertEqual(shotgun.map(\.startingHole), [1, 2])
+        XCTAssertEqual(shotgun.flatMap(\.seats).map(\.source), [.manualOverride, .manualOverride])
+    }
+
     func testRoundDraft_leagueHandicapsOn_defaultsPrimaryFormatToNet() {
         let sr = fieldSeriesRound()
         let segment = makeCourseSegment()
