@@ -17,7 +17,7 @@ struct LiveHoleScoringView: View, Loggable {
     @ObservedObject var viewModel: LiveRoundViewModel
     let scoringSession: ScoringSession
 
-    @State private var currentGolferIndex: Int = 0
+    @State private var currentScoringUnitIndex: Int = 0
     @State private var draftScore: Int = 0
     @State private var savedScore: Int?
     @State private var navigationDirection: NavigationDirection = .forward
@@ -42,6 +42,16 @@ struct LiveHoleScoringView: View, Loggable {
         }
     }
 
+    private struct ScoringUnitItem: Identifiable {
+        var id: String { scoringUnitID }
+
+        let scoringUnitID: String
+        let anchorParticipant: RoundParticipant
+        let participants: [RoundParticipant]
+        let isShared: Bool
+        let accentColor: Color?
+    }
+
     private var holeNumber: Int {
         scoringSession.holeNumber
     }
@@ -55,16 +65,62 @@ struct LiveHoleScoringView: View, Loggable {
         return participants.isPopulated ? participants : [scoringSession.participant]
     }
 
-    private var scoringParticipants: [RoundParticipant] {
-        isSharedEntry ? [scoringSession.participant] : sessionParticipants
+    private var scoringUnits: [ScoringUnitItem] {
+        if isSharedEntry {
+            let sharedUnits = viewModel.visibleSharedScoringSubjects.compactMap { subject -> ScoringUnitItem? in
+                guard let session = viewModel.sharedScoringSession(for: subject, holeNumber: holeNumber) else {
+                    return nil
+                }
+                return ScoringUnitItem(
+                    scoringUnitID: session.scoringUnitID,
+                    anchorParticipant: session.participant,
+                    participants: session.participants,
+                    isShared: true,
+                    accentColor: subject.accentColor
+                )
+            }
+
+            if sharedUnits.isPopulated {
+                return sharedUnits
+            }
+
+            return [
+                ScoringUnitItem(
+                    scoringUnitID: scoringSession.scoringUnitID,
+                    anchorParticipant: scoringSession.participant,
+                    participants: sessionParticipants,
+                    isShared: true,
+                    accentColor: scoringSession.participant.teamID.flatMap { _ in viewModel.teamColor(for: scoringSession.participant) }
+                )
+            ]
+        }
+
+        let participants = sessionParticipants.filter(\.isPresenceActive)
+        let resolvedParticipants = participants.isPopulated ? participants : sessionParticipants
+        return resolvedParticipants.map { participant in
+            ScoringUnitItem(
+                scoringUnitID: participant.id,
+                anchorParticipant: participant,
+                participants: [participant],
+                isShared: false,
+                accentColor: viewModel.teamColor(for: participant)
+            )
+        }
     }
 
-    private var displayParticipants: [RoundParticipant] {
-        sessionParticipants
+    private var currentScoringUnit: ScoringUnitItem {
+        scoringUnits[safe: currentScoringUnitIndex]
+            ?? ScoringUnitItem(
+                scoringUnitID: scoringSession.scoringUnitID,
+                anchorParticipant: scoringSession.participant,
+                participants: sessionParticipants,
+                isShared: isSharedEntry,
+                accentColor: viewModel.teamColor(for: scoringSession.participant)
+            )
     }
 
     private var currentGolfer: RoundParticipant {
-        scoringParticipants[safe: currentGolferIndex] ?? scoringSession.participant
+        currentScoringUnit.anchorParticipant
     }
 
     private var hole: Hole? {
@@ -76,19 +132,13 @@ struct LiveHoleScoringView: View, Loggable {
     private var holeHandicap: Int? { hole?.handicap }
 
     private var isEditMode: Bool {
-        if isSharedEntry {
-            return savedScoreForCurrent != nil
-        }
-        return scoringParticipants.isPopulated
-            && scoringParticipants.allSatisfy {
-                viewModel.scoreInputValue(for: $0.id, holeNumber: holeNumber) != nil
-            }
+        scoringUnits.isPopulated && scoringUnits.allSatisfy { currentSavedScore(for: $0) != nil }
     }
 
     private var savedScoreForCurrent: Int? {
-        if isSharedEntry {
+        if currentScoringUnit.isShared {
             return viewModel.scoringUnitScoreInputValue(
-                scoringUnitID: scoringSession.scoringUnitID,
+                scoringUnitID: currentScoringUnit.scoringUnitID,
                 holeNumber: holeNumber
             )
         }
@@ -118,16 +168,8 @@ struct LiveHoleScoringView: View, Loggable {
         return [Self.clearScoreSentinel] + scores
     }
 
-    private var teamTint: Color {
-        viewModel.teamColor(for: currentGolfer) ?? palette.foregroundColor
-    }
-    
-    private var isScored: Bool {
-        viewModel.scoreInputValue(for: currentGolfer.id, holeNumber: holeNumber).exists
-    }
-
     private var netScoreLabel: String? {
-        guard !isSharedEntry else { return nil }
+        guard !currentScoringUnit.isShared else { return nil }
         guard viewModel.snapshot.configuration.useHandicaps else { return nil }
         guard draftScore != Self.clearScoreSentinel else { return nil }
         let strokesReceived = viewModel.strokesReceivedOnHole(
@@ -161,34 +203,7 @@ struct LiveHoleScoringView: View, Loggable {
             
             Spacer(minLength: 0)
 
-            if isSharedEntry {
-                sharedOwnerStrip
-            } else {
-                GeometryReader { geo in
-                    ScrollViewReader { proxy in
-                        ScrollView(.horizontal, showsIndicators: false) {
-                            HStack(spacing: 20) {
-                                ForEach(scoringParticipants) { player in
-                                    playerDot(for: player)
-                                        .id(player.id)
-                                }
-                            }
-                            .padding(.horizontal, 16)
-                            .frame(minWidth: geo.size.width, maxWidth: .infinity, minHeight: geo.size.height, alignment: .bottom)
-                        }
-                        .scrollClipDisabled()
-                        .onAppear {
-                            proxy.scrollTo(currentGolfer.id, anchor: .center)
-                        }
-                        .onChange(of: currentGolferIndex) { _, _ in
-                            withAnimation(.easeInOut(duration: 0.2)) {
-                                proxy.scrollTo(currentGolfer.id, anchor: .center)
-                            }
-                        }
-                    }
-                }
-                .frame(height: playerCircleSize * 1.5)
-            }
+            scoringGroupSelector
 
             Spacer(minLength: 0)
             
@@ -208,7 +223,7 @@ struct LiveHoleScoringView: View, Loggable {
             configureInitialState()
             trackScoringSheetOpenedIfNeeded()
         }
-        .onChange(of: currentGolferIndex) {
+        .onChange(of: currentScoringUnitIndex) {
             syncDraftScore(resetDraft: true)
         }
         .onChange(of: savedScoreForCurrent) { _, newValue in
@@ -219,16 +234,25 @@ struct LiveHoleScoringView: View, Loggable {
 
 private extension LiveHoleScoringView {
     var playerName: some View {
-        Text(ownerTitle)
-            .fontStyle(kFontName, size: 32, weight: .semibold)
-            .foregroundStyle(palette.foregroundColor)
-            .minimumScaleFactor(0.6)
-            .lineLimit(1)
-            .id(isSharedEntry ? scoringSession.scoringUnitID : currentGolfer.id)
+        ViewThatFits(in: .horizontal) {
+            playerNameText(title(for: currentScoringUnit, style: .full))
+                .fixedSize(horizontal: true, vertical: false)
+
+            playerNameText(title(for: currentScoringUnit, style: .compact))
+        }
+            .id(currentScoringUnit.id)
             .transition(.asymmetric(
                 insertion: .move(edge: navigationDirection.edge).combined(with: .opacity),
                 removal: .move(edge: navigationDirection == .forward ? .leading : .trailing).combined(with: .opacity)
             ))
+    }
+
+    private func playerNameText(_ text: String) -> some View {
+        Text(text)
+            .fontStyle(kFontName, size: 32, weight: .semibold)
+            .foregroundStyle(palette.foregroundColor)
+            .minimumScaleFactor(0.6)
+            .lineLimit(1)
     }
     
     var holeInfo: some View {
@@ -259,133 +283,184 @@ private extension LiveHoleScoringView {
         }
     }
 
-    func playerDot(for player: RoundParticipant) -> some View {
-        let ratio: CGFloat = 1.2
-        let isCurrent = player.id == currentGolfer.id
-        let scale: CGFloat = isCurrent ? ratio : 1.0
-        let isScored = viewModel.scoreInputValue(for: player.id, holeNumber: holeNumber).exists
-        let teamColor = viewModel.teamColor(for: player)
-        let hasTeams = viewModel.snapshot.requiresTeams
-        let useHandicaps = viewModel.snapshot.configuration.useHandicaps
-        let strokesReceived = viewModel.strokesReceivedOnHole(
-            participant: player,
-            holeNumber: holeNumber
-        )
-        let avatarTint: Color = hasTeams ? (teamColor ?? viewModel.theme.color) : viewModel.theme.color
+    var scoringGroupSelector: some View {
+        let units = scoringUnits
+        let showNavigation = units.count > 1
 
-        return VStack(spacing: 6) {
-            ZStack {
-                PlayerAvatarView(
-                    initials: player.name.initials,
-                    size: playerCircleSize,
-                    glassTint: isCurrent
-                        ? avatarTint.opacity(colorScheme.translucent)
-                        : Color.neutral6,//avatarTint.opacity(colorScheme.isLight ? 0.3 : 0.5),
-                    badgeIcon: isScored ? "checkmark.circle.fill" : nil,
-                    badgeIconColor: teamColor ?? effectiveAccent,
-                    badgeBackgroundColor: palette.backgroundColor
-                )
-            }
-            .scaleEffect(scale, anchor: .bottom)
-            .animation(.spring(response: 0.4, dampingFraction: 0.75), value: isCurrent)
-            .frame(width: playerCircleSize, height: playerCircleSize)
-            
-            if useHandicaps {
-                handicapDots(for: player, strokesReceived: strokesReceived)
-            }
-        }
-        .onTapGesture {
-            Haptics.fire(.light)
-            jumpToPlayer(player)
-        }
-    }
+        return GeometryReader { geo in
+            HStack(spacing: 12) {
+                if showNavigation {
+                    NavButton(
+                        style: .glass,
+                        icon: "f053",
+                        size: 18,
+                        color: palette.foregroundColor,
+                        background: palette.glassButtonColor,
+                        onTap: { moveToAdjacentUnit(direction: -1) }
+                    )
+                }
 
-    private var ownerTitle: String {
-        if isSharedEntry {
-            let names = displayParticipants
-                .map(\.name.fullName)
-                .filter(\.isPopulated)
-            if names.isPopulated {
-                return names.joined(separator: " + ")
-            }
-            return scoringSession.title ?? currentGolfer.name.fullName
-        }
-        return currentGolfer.name.fullName
-    }
+                ScrollViewReader { proxy in
+                    ScrollView(.horizontal, showsIndicators: false) {
+                        HStack(spacing: 20) {
+                            ForEach(Array(units.enumerated()), id: \.element.id) { index, unit in
+                                scoringUnitDot(for: unit, index: index)
+                                    .id(unit.id)
+                            }
+                        }
+                        .padding(.horizontal, 16)
+                        .frame(
+                            minWidth: max(0, geo.size.width - (showNavigation ? 112 : 0)),
+                            maxWidth: .infinity,
+                            minHeight: geo.size.height,
+                            alignment: .center
+                        )
+                    }
+                    .scrollClipDisabled()
+                    .onAppear {
+                        proxy.scrollTo(currentScoringUnit.id, anchor: .center)
+                    }
+                    .onChange(of: currentScoringUnitIndex) { _, _ in
+                        withAnimation(.easeInOut(duration: 0.2)) {
+                            proxy.scrollTo(currentScoringUnit.id, anchor: .center)
+                        }
+                    }
+                }
 
-    private var ownerSubtitle: String? {
-        if isSharedEntry,
-           let label = viewModel.scoringUnitHandicapLabel(scoringUnitID: scoringSession.scoringUnitID) {
-            return label
-        }
-        if let subtitle = scoringSession.subtitle, subtitle.isPopulated {
-            return subtitle
-        }
-        guard isSharedEntry else { return nil }
-        let names = displayParticipants
-            .map { viewModel.formatDisplayName(for: $0) }
-            .filter(\.isPopulated)
-        return names.isPopulated ? names.joined(separator: ", ") : nil
-    }
-
-    private var sharedOwnerStrip: some View {
-        HStack(spacing: 14) {
-            sharedOwnerAvatars
-
-            VStack(alignment: .leading, spacing: 4) {
-                Text(ownerTitle)
-                    .fontStyle(kFontName, size: 18, weight: .semibold)
-                    .foregroundStyle(effectiveAccent)
-                    .lineLimit(1)
-
-                if let ownerSubtitle {
-                    Text(ownerSubtitle)
-                        .fontStyle(kFontName, size: 14, weight: .medium)
-                        .foregroundStyle(Color.neutral2)
-                        .lineLimit(2)
+                if showNavigation {
+                    NavButton(
+                        style: .glass,
+                        icon: "f054",
+                        size: 18,
+                        color: palette.foregroundColor,
+                        background: palette.glassButtonColor,
+                        onTap: { moveToAdjacentUnit(direction: 1) }
+                    )
                 }
             }
-
-            Spacer(minLength: 0)
         }
+        .frame(height: playerCircleSize * 1.65)
         .padding(.horizontal, 16)
     }
 
-    private var sharedOwnerAvatars: some View {
-        let members = Array(displayParticipants.prefix(4))
+    private func scoringUnitDot(for unit: ScoringUnitItem, index: Int) -> some View {
+        let ratio: CGFloat = 1.2
+        let isCurrent = unit.id == currentScoringUnit.id
+        let scale: CGFloat = isCurrent ? ratio : 1.0
+        let isScored = currentSavedScore(for: unit) != nil
+        let members = Array(unit.participants.prefix(4))
+        let extraCount = max(0, unit.participants.count - members.count)
+        let overlap = playerCircleSize * -0.22
+        let groupWidth = playerCircleSize
+            + CGFloat(max(0, members.count - 1)) * (playerCircleSize + overlap)
+            + (extraCount > 0 ? playerCircleSize * 0.48 : 0)
 
-        return HStack(spacing: -12) {
-            ForEach(Array(members.enumerated()), id: \.element.id) { index, participant in
-                PlayerAvatarView(
-                    initials: sharedInitial(for: participant),
-                    size: playerCircleSize * 0.72,
-                    fillColor: viewModel.teamColor(for: participant)?.opacity(0.8),
-                    glassTint: Color.neutral6,
-                    badgeIcon: savedScoreForCurrent != nil && index == 0 ? "checkmark.circle.fill" : nil,
-                    badgeIconColor: effectiveAccent,
-                    badgeBackgroundColor: palette.backgroundColor,
-                    initialsColor: viewModel.teamColor(for: participant) == nil ? palette.foregroundColor : .white
-                )
-                .overlay {
-                    Circle()
-                        .stroke(palette.backgroundColor, lineWidth: 2)
+        return VStack(spacing: 6) {
+            HStack(spacing: overlap) {
+                ForEach(Array(members.enumerated()), id: \.element.id) { memberIndex, participant in
+                    let participantTint = viewModel.teamColor(for: participant) ?? unit.accentColor ?? effectiveAccent
+                    let usesFill = unit.isShared && isCurrent
+                    let fillColor = usesFill ? participantTint.opacity(0.9) : nil
+
+                    PlayerAvatarView(
+                        initials: initials(for: participant),
+                        size: playerCircleSize,
+                        fillColor: fillColor,
+                        glassTint: isCurrent
+                            ? participantTint.opacity(colorScheme.translucent)
+                            : Color.neutral6,
+                        initialsColor: usesFill ? .white : palette.foregroundColor
+                    )
+                    .overlay {
+                        if unit.participants.count > 1 {
+                            Circle()
+                                .stroke(palette.backgroundColor, lineWidth: 2)
+                        }
+                    }
+                    .overlay(alignment: .topTrailing) {
+                        if isScored && memberIndex == members.count - 1 {
+                            scoringUnitBadge(color: unit.accentColor ?? participantTint)
+                        }
+                    }
+                    .zIndex(Double(members.count - memberIndex))
                 }
-                .zIndex(Double(members.count - index))
-            }
 
-            if displayParticipants.count > members.count {
-                Text("+\(displayParticipants.count - members.count)")
-                    .fontStyle(kFontName, size: 12, weight: .semibold)
-                    .foregroundStyle(palette.foregroundColor)
-                    .padding(.horizontal, 8)
-                    .padding(.vertical, 6)
-                    .glassCardEffect(shape: Capsule(), interactive: false, tint: palette.whiteGlassButtonColor, shadowOpacity: 0)
-                    .padding(.leading, 4)
+                if extraCount > 0 {
+                    Text("+\(extraCount)")
+                        .fontStyle(kFontName, size: 12, weight: .semibold)
+                        .foregroundStyle(palette.foregroundColor)
+                        .frame(width: playerCircleSize * 0.48, height: playerCircleSize * 0.48)
+                        .glassCardEffect(shape: Circle(), interactive: false, tint: palette.whiteGlassButtonColor, shadowOpacity: 0)
+                        .padding(.leading, 4)
+                }
             }
+            .scaleEffect(scale, anchor: .bottom)
+            .animation(.spring(response: 0.4, dampingFraction: 0.75), value: isCurrent)
+            .frame(width: groupWidth, height: playerCircleSize)
+        }
+        .onTapGesture {
+            Haptics.fire(.light)
+            jumpToScoringUnit(at: index)
         }
     }
 
-    private func sharedInitial(for participant: RoundParticipant) -> String {
+    private func scoringUnitBadge(color: Color) -> some View {
+        let badgeSize = playerCircleSize * 0.4
+
+        return ZStack {
+            Circle()
+                .fill(palette.backgroundColor)
+                .frame(width: badgeSize, height: badgeSize)
+
+            Icon(name: "checkmark.circle.fill", size: badgeSize * 0.58, weight: .solid)
+                .foregroundStyle(color)
+        }
+        .padding(.top, -1 * badgeSize / 4)
+        .padding(.trailing, -1 * badgeSize / 4)
+        .zIndex(10)
+    }
+
+    private enum ScoringUnitTitleStyle {
+        case full, compact
+    }
+
+    private func title(for unit: ScoringUnitItem, style: ScoringUnitTitleStyle) -> String {
+        let participants = unit.participants
+        guard participants.isPopulated else {
+            return scoringSession.title ?? unit.anchorParticipant.name.fullName
+        }
+
+        if participants.count >= 3 {
+            let compactNames = participants
+                .map(compactName(for:))
+                .filter(\.isPopulated)
+            return compactNames.isPopulated ? compactNames.joined(separator: ", ") : scoringSession.title ?? "Group Score"
+        }
+
+        let names = participants
+            .map { participant in
+                style == .full ? fullName(for: participant) : compactName(for: participant)
+            }
+            .filter(\.isPopulated)
+        let separator = participants.count == 2 ? " + " : ""
+        return names.isPopulated ? names.joined(separator: separator) : scoringSession.title ?? "Group Score"
+    }
+
+    private func fullName(for participant: RoundParticipant) -> String {
+        let name = participant.name.fullName.trimmingCharacters(in: .whitespacesAndNewlines)
+        return name.isPopulated ? name : compactName(for: participant)
+    }
+
+    private func compactName(for participant: RoundParticipant) -> String {
+        let name = viewModel.nameDisplayFormat.displayName(for: participant.name)
+        return name.isPopulated ? name : participant.name.fullName
+    }
+
+    private func initials(for participant: RoundParticipant) -> String {
+        let initials = participant.name.initials.trimmingCharacters(in: .whitespacesAndNewlines)
+        if initials.isPopulated {
+            return initials.uppercased()
+        }
         let given = participant.name.givenName.trimmingCharacters(in: .whitespacesAndNewlines)
         if let first = given.first {
             return String(first).uppercased()
@@ -448,7 +523,7 @@ private extension LiveHoleScoringView {
                         Haptics.fire(.light)
                     }
                 }
-                .id(currentGolfer.id) // Force recreation when golfer changes
+                .id(currentScoringUnit.id) // Force recreation when scoring unit changes
             }
             .frame(height: scoreInputHeight)
 
@@ -503,18 +578,18 @@ private extension LiveHoleScoringView {
         }
     }
 
-    /// Indices that still lack a stored score after this CTA (current row is excluded when `shouldCommitScore()`).
+    /// Indices that still lack a stored score after this CTA (current unit is excluded when `shouldCommitScore()`).
     private var remainingUnscoredIndicesAfterAction: [Int] {
-        scoringParticipants.indices.filter { index in
-            if index == currentGolferIndex {
+        scoringUnits.indices.filter { index in
+            if index == currentScoringUnitIndex {
                 if shouldCommitScore() { return false }
-                return currentSavedScore(for: scoringParticipants[index]) == nil
+                return currentSavedScore(for: scoringUnits[index]) == nil
             }
-            return currentSavedScore(for: scoringParticipants[index]) == nil
+            return currentSavedScore(for: scoringUnits[index]) == nil
         }
     }
 
-    /// True when every player will have a score for this hole after the current action (non–edit flow only).
+    /// True when every scoring unit will have a score for this hole after the current action (non–edit flow only).
     private var holeWillCompleteAfterThisCTA: Bool {
         !isEditMode && remainingUnscoredIndicesAfterAction.isEmpty
     }
@@ -522,14 +597,27 @@ private extension LiveHoleScoringView {
     /// Next roster index after this CTA when the hole is not yet complete.
     private func nextIndexAfterCTA() -> Int {
         let remaining = Set(remainingUnscoredIndicesAfterAction)
-        guard !remaining.isEmpty else { return currentGolferIndex }
+        guard !remaining.isEmpty else { return currentScoringUnitIndex }
 
-        for step in 1..<scoringParticipants.count {
-            let idx = (currentGolferIndex + step) % scoringParticipants.count
+        for step in 1..<scoringUnits.count {
+            let idx = (currentScoringUnitIndex + step) % scoringUnits.count
             if remaining.contains(idx) { return idx }
         }
 
-        return (currentGolferIndex + 1) % scoringParticipants.count
+        return (currentScoringUnitIndex + 1) % scoringUnits.count
+    }
+
+    private var scoreProgressText: String {
+        let total = scoringUnits.count
+        guard total > 0 else { return "No scores entered" }
+        let completedStored = scoringUnits.indices.filter { index in
+            currentSavedScore(for: scoringUnits[index]) != nil
+        }.count
+        let completed = min(total, completedStored + (shouldCommitScore() && savedScore == nil ? 1 : 0))
+        let scoreNoun = scoringUnits.contains { $0.isShared || $0.participants.count > 1 }
+            ? "group scores"
+            : "scores"
+        return "\(completed) of \(total) \(scoreNoun) entered"
     }
 
     var ctaSection: some View {
@@ -575,31 +663,30 @@ private extension LiveHoleScoringView {
     var footerText: String {
         guard !isEditMode else { return "All scores entered" }
         guard !holeWillCompleteAfterThisCTA else { return "All scores entered" }
-        let nextIndex = nextIndexAfterCTA()
-        let next = scoringParticipants[nextIndex]
-        return isSharedEntry ? "Shared score entry" : "Next: \(next.name.fullName)"
+        return scoreProgressText
     }
 
     func configureInitialState() {
-        if isSharedEntry {
-            currentGolferIndex = 0
-            syncDraftScore(resetDraft: true)
-            return
-        }
+        let units = scoringUnits
 
         if isEditMode {
-            currentGolferIndex = scoringParticipants.firstIndex(where: { $0.id == scoringSession.participant.id }) ?? 0
+            currentScoringUnitIndex = initialScoringUnitIndex(in: units) ?? 0
         } else {
-            let tappedIndex = scoringParticipants.firstIndex(where: { $0.id == scoringSession.participant.id })
-            let firstUnscoredIndex = scoringParticipants.firstIndex { p in
-                viewModel.scoreInputValue(for: p.id, holeNumber: holeNumber) == nil
+            let tappedIndex = initialScoringUnitIndex(in: units)
+            let firstUnscoredIndex = units.firstIndex { unit in
+                currentSavedScore(for: unit) == nil
             }
-            // Open on whoever was tapped (e.g. last in tee order). CTA/footer/route use
-            // `holeWillCompleteAfterThisCTA` and `nextIndexAfterCTA()` so unscored players
-            // are still surfaced in order without jumping the initial selection.
-            currentGolferIndex = tappedIndex ?? firstUnscoredIndex ?? 0
+            // Open on the tapped scoring unit when possible while still surfacing unscored units in CTA order.
+            currentScoringUnitIndex = tappedIndex ?? firstUnscoredIndex ?? 0
         }
         syncDraftScore(resetDraft: true)
+    }
+
+    private func initialScoringUnitIndex(in units: [ScoringUnitItem]) -> Int? {
+        units.firstIndex { unit in
+            unit.scoringUnitID == scoringSession.scoringUnitID
+                || unit.participants.contains { $0.id == scoringSession.participant.id }
+        }
     }
 
     func trackScoringSheetOpenedIfNeeded() {
@@ -625,25 +712,30 @@ private extension LiveHoleScoringView {
         )
     }
     
-    func jumpToPlayer(_ player: RoundParticipant) {
-        guard !isSharedEntry else { return }
-        guard let index = scoringParticipants.firstIndex(where: { $0.id == player.id }) else { return }
-        guard index != currentGolferIndex else { return }
-        
-        let golfer = currentGolfer
+    func moveToAdjacentUnit(direction: Int) {
+        guard scoringUnits.count > 1 else { return }
+        let next = (currentScoringUnitIndex + direction + scoringUnits.count) % scoringUnits.count
+        jumpToScoringUnit(at: next)
+    }
+
+    func jumpToScoringUnit(at index: Int) {
+        guard scoringUnits.indices.contains(index) else { return }
+        guard index != currentScoringUnitIndex else { return }
+
+        let unit = currentScoringUnit
         let score = draftScore
         let needsSave = shouldCommitScore()
 
         if needsSave {
             Task {
-                await viewModel.setQuickScoreValue(participant: golfer, value: score, holeNumber: holeNumber)
+                await saveScore(unit: unit, value: score, holeNumber: holeNumber)
             }
         }
 
-        navigationDirection = index > currentGolferIndex ? .forward : .backward
+        navigationDirection = index > currentScoringUnitIndex ? .forward : .backward
 
         withAnimation(.easeInOut(duration: 0.2)) {
-            currentGolferIndex = index
+            currentScoringUnitIndex = index
         }
     }
 
@@ -666,40 +758,41 @@ private extension LiveHoleScoringView {
     }
 
     func clearScore() async {
-        if isSharedEntry {
+        let unit = currentScoringUnit
+        if unit.isShared {
             await viewModel.clearScore(
-                scoringUnitID: scoringSession.scoringUnitID,
-                participant: currentGolfer,
+                scoringUnitID: unit.scoringUnitID,
+                participant: unit.anchorParticipant,
                 holeNumber: holeNumber,
                 entryMethod: .clear
             )
         } else {
-            await viewModel.clearScore(participant: currentGolfer, holeNumber: holeNumber, entryMethod: .clear)
+            await viewModel.clearScore(participant: unit.anchorParticipant, holeNumber: holeNumber, entryMethod: .clear)
         }
         savedScore = nil
         draftScore = Self.clearScoreSentinel
     }
 
-    private func saveScore(participant: RoundParticipant, value: Int, holeNumber: Int) async {
-        if isSharedEntry {
+    private func saveScore(unit: ScoringUnitItem, value: Int, holeNumber: Int) async {
+        if unit.isShared {
             await viewModel.setScoreInputValue(
-                scoringUnitID: scoringSession.scoringUnitID,
-                participant: participant,
+                scoringUnitID: unit.scoringUnitID,
+                participant: unit.anchorParticipant,
                 holeNumber: holeNumber,
                 value: value
             )
         } else {
-            await viewModel.setQuickScoreValue(participant: participant, value: value, holeNumber: holeNumber)
+            await viewModel.setQuickScoreValue(participant: unit.anchorParticipant, value: value, holeNumber: holeNumber)
         }
     }
 
     func saveAndClose() {
-        let golfer = currentGolfer
+        let unit = currentScoringUnit
         let score = draftScore
         let needsSave = shouldCommitScore()
         if needsSave {
             Task {
-                await saveScore(participant: golfer, value: score, holeNumber: holeNumber)
+                await saveScore(unit: unit, value: score, holeNumber: holeNumber)
                 await MainActor.run { dismiss() }
             }
         } else {
@@ -708,14 +801,14 @@ private extension LiveHoleScoringView {
     }
 
     func handleCTA() async {
-        let golfer = currentGolfer
+        let unit = currentScoringUnit
         let score = draftScore
         let hole = holeNumber
         let needsSave = shouldCommitScore()
         let autoAdvance = viewModel.autoAdvanceWhenHoleComplete
         let willComplete = holeWillCompleteAfterThisCTA
         let nextIdx = nextIndexAfterCTA()
-        let simpleForward = currentGolferIndex + 1 < scoringParticipants.count && nextIdx == currentGolferIndex + 1
+        let simpleForward = currentScoringUnitIndex + 1 < scoringUnits.count && nextIdx == currentScoringUnitIndex + 1
 
         if isEditMode {
             dismiss()
@@ -723,7 +816,7 @@ private extension LiveHoleScoringView {
             if needsSave {
                 Task.detached(priority: .background) {
                     await saveScore(
-                        participant: golfer,
+                        unit: unit,
                         value: score,
                         holeNumber: hole
                     )
@@ -738,7 +831,7 @@ private extension LiveHoleScoringView {
             if needsSave {
                 Task.detached(priority: .background) {
                     await saveScore(
-                        participant: golfer,
+                        unit: unit,
                         value: score,
                         holeNumber: hole
                     )
@@ -758,7 +851,7 @@ private extension LiveHoleScoringView {
 
         if needsSave && !simpleForward {
             await saveScore(
-                participant: golfer,
+                unit: unit,
                 value: score,
                 holeNumber: hole
             )
@@ -768,7 +861,7 @@ private extension LiveHoleScoringView {
         navigationDirection = .forward
 
         withAnimation(.easeInOut(duration: 0.2)) {
-            currentGolferIndex = nextIdx
+            currentScoringUnitIndex = nextIdx
         }
 
         guard needsSave else { return }
@@ -776,7 +869,7 @@ private extension LiveHoleScoringView {
         if simpleForward {
             Task.detached(priority: .background) {
                 await saveScore(
-                    participant: golfer,
+                    unit: unit,
                     value: score,
                     holeNumber: hole
                 )
@@ -790,25 +883,33 @@ private extension LiveHoleScoringView {
         return isDraftChanged
     }
 
-    private func currentSavedScore(for participant: RoundParticipant) -> Int? {
-        if isSharedEntry {
+    private func currentSavedScore(for unit: ScoringUnitItem) -> Int? {
+        if unit.isShared {
             return viewModel.scoringUnitScoreInputValue(
-                scoringUnitID: scoringSession.scoringUnitID,
+                scoringUnitID: unit.scoringUnitID,
                 holeNumber: holeNumber
             )
         }
-        return viewModel.scoreInputValue(for: participant.id, holeNumber: holeNumber)
+        return viewModel.scoreInputValue(for: unit.anchorParticipant.id, holeNumber: holeNumber)
     }
 }
 
 // MARK: - Preview
 
+private enum LiveHoleScoringPreviewMode {
+    case individual
+    case sharedPairs
+    case sharedAll
+}
+
 private struct LiveHoleScoringViewPreview: View {
     @StateObject private var viewModel: LiveRoundViewModel
     private let participant: RoundParticipant
+    private let mode: LiveHoleScoringPreviewMode
     
-    init(withScores: Bool = false) {
+    init(withScores: Bool = false, mode: LiveHoleScoringPreviewMode = .individual) {
         var snapshot = MockLiveRound2v2.snapshot
+        Self.configureSnapshot(&snapshot, mode: mode)
         
         // Add scoring data if requested
         if withScores {
@@ -827,24 +928,115 @@ private struct LiveHoleScoringViewPreview: View {
         
         _viewModel = StateObject(wrappedValue: vm)
         participant = snapshot.participants.first!
+        self.mode = mode
     }
     
     var body: some View {
-        LiveHoleScoringView(
-            viewModel: viewModel,
-            scoringSession: ScoringSession(
-                participant: participant,
-                holeNumber: viewModel.currentHoleNumber
+        switch mode {
+        case .individual:
+            LiveHoleScoringView(
+                viewModel: viewModel,
+                scoringSession: ScoringSession(
+                    participant: participant,
+                    holeNumber: viewModel.currentHoleNumber
+                )
             )
+        case .sharedPairs, .sharedAll:
+            if let subject = viewModel.visibleSharedScoringSubjects.first,
+               let session = viewModel.sharedScoringSession(for: subject, holeNumber: viewModel.currentHoleNumber) {
+                LiveHoleScoringView(viewModel: viewModel, scoringSession: session)
+            } else {
+                LiveHoleScoringView(
+                    viewModel: viewModel,
+                    scoringSession: ScoringSession(
+                        participant: participant,
+                        participants: [participant],
+                        scoringUnitID: participant.id,
+                        isSharedEntry: true,
+                        holeNumber: viewModel.currentHoleNumber
+                    )
+                )
+            }
+        }
+    }
+
+    private static func configureSnapshot(_ snapshot: inout RoundSnapshot, mode: LiveHoleScoringPreviewMode) {
+        switch mode {
+        case .individual:
+            return
+        case .sharedPairs:
+            var round = snapshot.round
+            var configuration = round.configuration
+            configuration.formatSummary = RoundFormatSummary(from: FormatTemplateRegistry.alternateShot)
+            configuration.scoreOwnerScope = .partnership
+            round.configuration = configuration
+            snapshot.round = round
+
+            let participants = snapshot.participants
+                .filter(\.isPresenceActive)
+                .sorted { ($0.teeOrder ?? Int.max) < ($1.teeOrder ?? Int.max) }
+            let firstPair = Array(participants.prefix(2))
+            let secondPair = Array(participants.dropFirst(2).prefix(2))
+            snapshot.scoringGroups = [
+                scoringGroup(id: "preview_pair_1", participants: firstPair, roundID: snapshot.round.id),
+                scoringGroup(id: "preview_pair_2", participants: secondPair, roundID: snapshot.round.id)
+            ].compactMap(\.self)
+        case .sharedAll:
+            var round = snapshot.round
+            var configuration = round.configuration
+            configuration.formatSummary = RoundFormatSummary(from: FormatTemplateRegistry.captainsChoice)
+            configuration.scoreOwnerScope = .individual
+            round.configuration = configuration
+            snapshot.round = round
+            snapshot.teams = []
+        }
+    }
+
+    private static func scoringGroup(
+        id: String,
+        participants: [RoundParticipant],
+        roundID: String
+    ) -> RoundScoringGroup? {
+        let memberIDs = participants.map(\.id)
+        guard memberIDs.count == 2 else { return nil }
+        return RoundScoringGroup(
+            id: id,
+            teamID: participants.compactMap(\.teamID).first,
+            teeGroupID: participants.compactMap(\.groupID).first,
+            kind: .partnership,
+            memberIDs: memberIDs,
+            parentID: roundID
         )
     }
-    
+
     private static func makePreviewScores(snapshot: RoundSnapshot) -> [ScoreEntry] {
         let holes = snapshot.defaultTee?.holes ?? snapshot.tees.first?.holes
         guard let holes else { return [] }
         let participants = snapshot.participants
         let segmentID = "segment_preview"
-        
+
+        if snapshot.isSharedScoreSource {
+            return snapshot.sharedPreviewScoreAnchors.flatMap { anchor in
+                holes.prefix(1).compactMap { hole in
+                    let strokes = max(1, hole.par + 1)
+                    return ScoreEntry(
+                        id: ScoreEntry.makeID(hole: hole.number, segment: segmentID, scoringUnit: anchor.scoringUnitID),
+                        holeNumber: hole.number,
+                        segmentID: segmentID,
+                        groupID: anchor.participants.first?.groupID ?? "group_1",
+                        scoringUnitID: anchor.scoringUnitID,
+                        participantIDs: anchor.participants.map(\.id),
+                        strokes: strokes,
+                        pickedUp: false,
+                        entryID: anchor.participants.first?.id ?? anchor.scoringUnitID,
+                        createdAt: .init(),
+                        lastUpdatedAt: .init(),
+                        parentID: snapshot.round.id
+                    )
+                }
+            }
+        }
+
         // Score holes 1-3 for variety:
         // - Hole 1: All players scored
         // - Hole 2: First 2 players scored
@@ -872,6 +1064,35 @@ private struct LiveHoleScoringViewPreview: View {
                 )
             }
         }
+    }
+}
+
+private extension RoundSnapshot {
+    var sharedPreviewScoreAnchors: [(scoringUnitID: String, participants: [RoundParticipant])] {
+        let activeParticipants = participants
+            .filter(\.isPresenceActive)
+            .sorted { ($0.teeOrder ?? Int.max) < ($1.teeOrder ?? Int.max) }
+
+        switch configuration.scoreOwnerScope {
+        case .partnership:
+            return scoringGroups.map { group in
+                (
+                    scoringUnitID: scoringUnitID(forPreviewScoringGroup: group),
+                    participants: group.memberIDs.compactMap { id in
+                        activeParticipants.first { $0.id == id }
+                    }
+                )
+            }
+        case .individual, .teeGroup:
+            return [("shared_all", activeParticipants)]
+        }
+    }
+
+    private func scoringUnitID(forPreviewScoringGroup group: RoundScoringGroup) -> String {
+        if let unit = roundSegment?.scoringUnits.first(where: { $0.id == group.id }) {
+            return unit.id
+        }
+        return group.id
     }
 }
 
@@ -946,6 +1167,26 @@ private struct LiveHoleScoringViewPreviewManyPlayers: View {
         BackgroundTheme(palette: .init(theme: .glass, scheme: .dark), theme: .purple)
             .sheet(isPresented: .true) {
                 LiveHoleScoringViewPreviewManyPlayers()
+                    .presentationDetents([.height(700)])
+            }
+    }
+}
+
+#Preview("Live Hole Scoring - Shared pairs") {
+    ZStack {
+        BackgroundTheme(palette: .init(theme: .glass, scheme: .dark), theme: .purple)
+            .sheet(isPresented: .true) {
+                LiveHoleScoringViewPreview(mode: .sharedPairs)
+                    .presentationDetents([.height(700)])
+            }
+    }
+}
+
+#Preview("Live Hole Scoring - Shared all") {
+    ZStack {
+        BackgroundTheme(palette: .init(theme: .glass, scheme: .dark), theme: .purple)
+            .sheet(isPresented: .true) {
+                LiveHoleScoringViewPreview(mode: .sharedAll)
                     .presentationDetents([.height(700)])
             }
     }

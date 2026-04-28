@@ -1830,6 +1830,15 @@ final class LiveRoundViewModel: ObservableObject, Loggable {
             }
         }
     }
+
+    func leaderboardModeLabel(for mode: LeaderboardMode) -> String {
+        if mode == .individual,
+           snapshot.isSharedScoreSource,
+           snapshot.configuration.scoreOwnerScope == .partnership {
+            return "Pairs"
+        }
+        return mode.label
+    }
     
     struct GroupedLeaderboardSection: Identifiable {
         let id: String
@@ -1935,18 +1944,34 @@ final class LiveRoundViewModel: ObservableObject, Loggable {
     }
     
     var availableLeaderboardModes: [LeaderboardMode] {
-        if snapshot.isSharedScoreSource {
-            return [.individual]
+        let rows = effectiveLeaderboardRows
+        let teamSections = teamLeaderboardSections
+        let teeGroupSections = teeGroupLeaderboardSections
+        let hasTeams = snapshot.requiresTeams
+            && snapshot.teams.isPopulated
+            && teamSections.isPopulated
+        let hasTeeGroups = snapshot.teeGroups.count > 1
+            && teeGroupSections.isPopulated
+
+        var modes: [LeaderboardMode] = [.individual]
+
+        let canShowTeam = hasTeams
+            && (!snapshot.isSharedScoreSource || groupedLeaderboardSectionsAreMeaningful(teamSections, rowCount: rows.count))
+        if canShowTeam {
+            modes.append(.team)
         }
-        let hasTeams = snapshot.requiresTeams && snapshot.teams.isPopulated
-        let hasMultipleGroups = snapshot.teeGroups.count > 1
-        
-        switch (hasTeams, hasMultipleGroups) {
-        case (true, true):   return [.individual, .team, .teeGroup]
-        case (true, false):  return [.individual, .team]
-        case (false, true):  return [.individual, .teeGroup]
-        case (false, false): return [.individual]
+
+        let canShowTeeGroup = hasTeeGroups
+            && (!snapshot.isSharedScoreSource || groupedLeaderboardSectionsAreMeaningful(teeGroupSections, rowCount: rows.count))
+        if canShowTeeGroup {
+            let duplicatesTeamGrouping = canShowTeam
+                && leaderboardPartitionSignature(teamSections) == leaderboardPartitionSignature(teeGroupSections)
+            if !duplicatesTeamGrouping {
+                modes.append(.teeGroup)
+            }
         }
+
+        return modes
     }
     
     struct LeaderboardRow: Identifiable {
@@ -2141,7 +2166,7 @@ final class LiveRoundViewModel: ObservableObject, Loggable {
     
     var teamLeaderboardSections: [GroupedLeaderboardSection] {
         let rows = effectiveLeaderboardRows
-        let grouped = Dictionary(grouping: rows) { $0.teamID ?? $0.participant.teamID }
+        let grouped = Dictionary(grouping: rows) { leaderboardTeamID(for: $0) }
         let orderedTeams = snapshot.teams.sorted { $0.index < $1.index }
         
         var sections: [GroupedLeaderboardSection] = []
@@ -2185,7 +2210,7 @@ final class LiveRoundViewModel: ObservableObject, Loggable {
 
     var teeGroupLeaderboardSections: [GroupedLeaderboardSection] {
         let rows = effectiveLeaderboardRows
-        let grouped = Dictionary(grouping: rows) { $0.participant.groupID }
+        let grouped = Dictionary(grouping: rows) { leaderboardTeeGroupID(for: $0) }
         let orderedGroups = snapshot.teeGroups.sorted { $0.index < $1.index }
         
         var sections: [GroupedLeaderboardSection] = []
@@ -2225,6 +2250,33 @@ final class LiveRoundViewModel: ObservableObject, Loggable {
         return sections.sorted {
             isHighestWins ? $0.bestScoreToPar > $1.bestScoreToPar : $0.bestScoreToPar < $1.bestScoreToPar
         }
+    }
+
+    private func leaderboardTeamID(for row: LeaderboardRow) -> String? {
+        if let teamID = row.teamID, teamID.isPopulated {
+            return teamID
+        }
+
+        let teamIDs = Set(row.participants.compactMap(\.teamID).filter(\.isPopulated))
+        return teamIDs.count == 1 ? teamIDs.first : nil
+    }
+
+    private func leaderboardTeeGroupID(for row: LeaderboardRow) -> String? {
+        let teeGroupIDs = Set(row.participants.compactMap(\.groupID).filter(\.isPopulated))
+        return teeGroupIDs.count == 1 ? teeGroupIDs.first : nil
+    }
+
+    private func groupedLeaderboardSectionsAreMeaningful(
+        _ sections: [GroupedLeaderboardSection],
+        rowCount: Int
+    ) -> Bool {
+        rowCount > sections.count && sections.contains { $0.rows.count > 1 }
+    }
+
+    private func leaderboardPartitionSignature(
+        _ sections: [GroupedLeaderboardSection]
+    ) -> Set<Set<String>> {
+        Set(sections.map { Set($0.rows.map(\.id)) })
     }
 
     private func makeGroupedSection(

@@ -113,66 +113,43 @@ struct SeriesHandicapScoreEditorSheet: View {
                             .fontStyle(kFontName, size: 14, weight: .regular)
                         }
                     }
-
-                    if canMutateScore {
-                        Button(role: .destructive) {
-                            showDeleteConfirmation = true
-                        } label: {
-                            Text(isDeleting ? "Deleting..." : "Delete score")
-                                .fontStyle(kFontName, size: 15, weight: .semibold)
-                                .frame(maxWidth: .infinity)
-                                .padding(.vertical, 12)
-                        }
-                        .disabled(isDeleting || isSaving)
-                        .buttonStyle(.plain)
-                    }
                 }
                 .padding(16)
             }
             .background(palette.backgroundColor)
 
             HStack(spacing: 12) {
-                Button {
-                    dismiss()
-                } label: {
-                    Chip(
-                        text: "Cancel",
-                        size: .small,
-                        foreground: palette.foregroundColor,
-                        background: palette.cardEmbeddedRowBackground
+                if canMutateScore {
+                    PrimaryButton(
+                        appearance: .fill,
+                        title: "Delete score",
+                        labelColor: .white,
+                        buttonColor: .systemError,
+                        theme: palette.theme,
+                        fillWidth: false,
+                        isDisabled: .constant(isSaving || isDeleting),
+                        isLoading: $isDeleting,
+                        onTap: { showDeleteConfirmation = true }
                     )
-                    .frame(maxWidth: .infinity)
                 }
-                .buttonStyle(.plain)
 
-                Button {
-                    Task { await save() }
-                } label: {
-                    Group {
-                        if isSaving {
-                            ProgressView()
-                                .tint(.white)
-                                .frame(maxWidth: .infinity)
-                                .padding(.vertical, 10)
-                        } else {
-                            Text("Save")
-                                .fontStyle(kFontName, size: 15, weight: .semibold)
-                                .foregroundStyle(.white)
-                                .frame(maxWidth: .infinity)
-                                .padding(.vertical, 10)
-                        }
-                    }
-                    .background(canSave ? Color.accentGreen : Color.neutral3)
-                    .clipShape(Capsule())
-                }
-                .disabled(!canSave || isSaving || isDeleting)
-                .buttonStyle(.plain)
+                PrimaryButton(
+                    appearance: .fill,
+                    title: "Save",
+                    labelColor: .white,
+                    buttonColor: Color.accentGreen,
+                    theme: palette.theme,
+                    fillWidth: true,
+                    isDisabled: .constant(!canSave || isSaving || isDeleting),
+                    isLoading: $isSaving,
+                    onTapAsync: { await save() }
+                )
             }
             .padding(16)
             .background(palette.backgroundColor)
         }
         .background(palette.backgroundColor.ignoresSafeArea())
-        .alert("Delete baseline score?", isPresented: $showDeleteConfirmation) {
+        .alert("Delete score?", isPresented: $showDeleteConfirmation) {
             Button("Delete", role: .destructive) {
                 Task {
                     isDeleting = true

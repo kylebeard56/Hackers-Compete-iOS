@@ -828,7 +828,7 @@ extension LiveRound {
     private func leaderboardModePicker(modes: [LiveRoundViewModel.LeaderboardMode]) -> some View {
         Picker("", selection: $viewModel.leaderboardMode) {
             ForEach(modes, id: \.self) { mode in
-                Text(mode.label).tag(mode)
+                Text(viewModel.leaderboardModeLabel(for: mode)).tag(mode)
             }
         }
         .pickerStyle(.segmented)

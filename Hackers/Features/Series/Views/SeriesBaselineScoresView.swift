@@ -19,6 +19,8 @@ struct SeriesBaselineScoresView: View {
     @State private var isAdding = false
     @State private var editingScore: SeriesHandicapScore?
     @State private var correctionRound: SeriesRound?
+    @State private var pendingDeleteScore: SeriesHandicapScore?
+    @State private var isDeletingScoreID: String?
     @State private var showMissingRoundAlert = false
     @State private var missingRoundAlertMessage = ""
     @FocusState private var focus: Bool
@@ -113,6 +115,27 @@ struct SeriesBaselineScoresView: View {
             Button("OK", role: .cancel) {}
         } message: {
             Text(missingRoundAlertMessage)
+        }
+        .alert(
+            "Delete score?",
+            isPresented: Binding(
+                get: { pendingDeleteScore != nil },
+                set: { isPresented in
+                    if !isPresented && isDeletingScoreID == nil {
+                        pendingDeleteScore = nil
+                    }
+                }
+            )
+        ) {
+            Button("Delete", role: .destructive) {
+                guard let score = pendingDeleteScore else { return }
+                Task { await deleteScore(score) }
+            }
+            Button("Cancel", role: .cancel) {
+                pendingDeleteScore = nil
+            }
+        } message: {
+            Text("This removes the score from \(member.name.fullName)'s handicap history and recalculates their index.")
         }
     }
 
@@ -384,6 +407,15 @@ struct SeriesBaselineScoresView: View {
                                     }
                                 }
                             }
+                            if showsDeleteMenuDivider(for: score) {
+                                Divider()
+                            }
+                            Button(role: .destructive) {
+                                pendingDeleteScore = score
+                            } label: {
+                                Text("Delete score")
+                            }
+                            .disabled(isDeletingScoreID == score.id)
                         } label: {
                             Icon(name: "ellipsis", size: 18, weight: .semibold)
                                 .foregroundStyle(palette.foregroundColor)
@@ -407,8 +439,18 @@ struct SeriesBaselineScoresView: View {
     }
 
     private func showsRowMenu(for score: SeriesHandicapScore) -> Bool {
-        guard viewModel.isCommissioner else { return false }
-        return score.source == .round || viewModel.series.handicapConfig.isEnabled
+        viewModel.isCommissioner
+    }
+
+    private func showsDeleteMenuDivider(for score: SeriesHandicapScore) -> Bool {
+        viewModel.series.handicapConfig.isEnabled || score.source == .round
+    }
+
+    private func deleteScore(_ score: SeriesHandicapScore) async {
+        isDeletingScoreID = score.id
+        _ = await viewModel.deleteHandicapScoreEntry(score)
+        isDeletingScoreID = nil
+        pendingDeleteScore = nil
     }
 
     @ViewBuilder
@@ -474,6 +516,8 @@ struct SeriesMemberHandicapBreakdownView: View {
     @State private var showAddScoreSheet = false
     @State private var editingScore: SeriesHandicapScore?
     @State private var correctionRound: SeriesRound?
+    @State private var pendingDeleteScore: SeriesHandicapScore?
+    @State private var isDeletingScoreID: String?
     @State private var showMissingRoundAlert = false
     @State private var missingRoundAlertMessage = ""
 
@@ -584,6 +628,27 @@ struct SeriesMemberHandicapBreakdownView: View {
             Button("OK", role: .cancel) {}
         } message: {
             Text(missingRoundAlertMessage)
+        }
+        .alert(
+            "Delete score?",
+            isPresented: Binding(
+                get: { pendingDeleteScore != nil },
+                set: { isPresented in
+                    if !isPresented && isDeletingScoreID == nil {
+                        pendingDeleteScore = nil
+                    }
+                }
+            )
+        ) {
+            Button("Delete", role: .destructive) {
+                guard let score = pendingDeleteScore else { return }
+                Task { await deleteScore(score) }
+            }
+            Button("Cancel", role: .cancel) {
+                pendingDeleteScore = nil
+            }
+        } message: {
+            Text("This removes the score from \(member.name.fullName)'s handicap history and recalculates their index.")
         }
     }
 
@@ -766,6 +831,15 @@ struct SeriesMemberHandicapBreakdownView: View {
                                     }
                                 }
                             }
+                            if showsDeleteMenuDivider(for: score) {
+                                Divider()
+                            }
+                            Button(role: .destructive) {
+                                pendingDeleteScore = score
+                            } label: {
+                                Text("Delete score")
+                            }
+                            .disabled(isDeletingScoreID == score.id)
                         } label: {
                             Icon(name: "ellipsis", size: 18, weight: .semibold)
                                 .foregroundStyle(palette.foregroundColor)
@@ -789,8 +863,18 @@ struct SeriesMemberHandicapBreakdownView: View {
     }
 
     private func showsRowMenu(for score: SeriesHandicapScore) -> Bool {
-        guard viewModel.isCommissioner else { return false }
-        return score.source == .round || viewModel.series.handicapConfig.isEnabled
+        viewModel.isCommissioner
+    }
+
+    private func showsDeleteMenuDivider(for score: SeriesHandicapScore) -> Bool {
+        viewModel.series.handicapConfig.isEnabled || score.source == .round
+    }
+
+    private func deleteScore(_ score: SeriesHandicapScore) async {
+        isDeletingScoreID = score.id
+        _ = await viewModel.deleteHandicapScoreEntry(score)
+        isDeletingScoreID = nil
+        pendingDeleteScore = nil
     }
 
     @ViewBuilder
