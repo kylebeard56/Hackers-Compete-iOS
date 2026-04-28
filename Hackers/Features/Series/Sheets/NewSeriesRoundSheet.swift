@@ -473,27 +473,27 @@ struct NewSeriesRoundSheet: View {
             if viewModel.usesTeams {
                 builderField(
                     title: "Score entry",
-                    subtitle: "Collect scores by player, partnership, or full tee group. Partnerships seed from fixed pairs and can be customized in the round lobby."
+                    subtitle: scoreEntryScopeSubtitle
                 ) {
                     HStack(spacing: 8) {
                         Button {
                             scoreOwnerScope = .individual
                         } label: {
-                            formChip("Individual", selected: scoreOwnerScope == .individual)
+                            formChip(scoreOwnerScopeTitle(for: .individual), selected: scoreOwnerScope == .individual)
                         }
                         .buttonStyle(.plain)
 
                         Button {
                             scoreOwnerScope = .partnership
                         } label: {
-                            formChip("Partnership", selected: scoreOwnerScope == .partnership)
+                            formChip(scoreOwnerScopeTitle(for: .partnership), selected: scoreOwnerScope == .partnership)
                         }
                         .buttonStyle(.plain)
 
                         Button {
                             scoreOwnerScope = .teeGroup
                         } label: {
-                            formChip("Tee group", selected: scoreOwnerScope == .teeGroup)
+                            formChip(scoreOwnerScopeTitle(for: .teeGroup), selected: scoreOwnerScope == .teeGroup)
                         }
                         .buttonStyle(.plain)
                     }
@@ -2257,6 +2257,31 @@ struct NewSeriesRoundSheet: View {
 
     private var templateName: String {
         FormatTemplateRegistry.template(for: selectedTemplateID).name
+    }
+
+    private var selectedTemplate: GameTemplate {
+        FormatTemplateRegistry.template(for: selectedTemplateID)
+    }
+
+    private var isSharedTeamTemplate: Bool {
+        selectedTemplate.scoreSource == .shared && selectedTemplate.requirements.requiresTeams
+    }
+
+    private var scoreEntryScopeSubtitle: String {
+        isSharedTeamTemplate
+            ? "Collect one shared score by team, partnership, or tee group. Partnerships seed from fixed pairs and can be customized in the round lobby."
+            : "Collect scores by player, partnership, or full tee group. Partnerships seed from fixed pairs and can be customized in the round lobby."
+    }
+
+    private func scoreOwnerScopeTitle(for scope: RoundScoreOwnerScope) -> String {
+        switch scope {
+        case .individual:
+            return isSharedTeamTemplate ? "Team" : "Individual"
+        case .partnership:
+            return "Partnership"
+        case .teeGroup:
+            return "Tee group"
+        }
     }
 
     private var sharedScoreAllowanceConfig: HandicapConfiguration? {

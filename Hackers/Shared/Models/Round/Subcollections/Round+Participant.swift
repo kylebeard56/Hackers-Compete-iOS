@@ -168,7 +168,7 @@ extension RoundParticipant {
     var isOnline: Bool { userID != nil }
     var isOffline: Bool { userID == nil }
     var resolvedPresenceStatus: RoundParticipantPresenceStatus { presenceStatus ?? .active }
-    var isPresenceActive: Bool { resolvedPresenceStatus == .active }
+    var isPresenceActive: Bool { resolvedPresenceStatus != .noShow }
 
     /// True when commissioner changed strokes vs series seed (commissioner-only orange hint).
     var isLeagueHandicapModifiedFromCreation: Bool {

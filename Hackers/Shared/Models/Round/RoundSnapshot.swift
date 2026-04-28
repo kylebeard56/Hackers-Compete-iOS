@@ -62,9 +62,8 @@ extension RoundSnapshot {
     var requiresTeams: Bool { configuration.primaryFormat.configuration.requiresTeams }
     var isSharedScoreSource: Bool { resolvedActiveTemplate.scoreSource == .shared }
     var shouldAutoMirrorTeeGroupsToTeams: Bool {
-        isSharedScoreSource
-            && requiresTeams
-            && configuration.scoreOwnerScope == .individual
+        guard isSharedScoreSource && requiresTeams else { return false }
+        return configuration.mirrorTeeGroupsAsTeams ?? (configuration.scoreOwnerScope == .individual)
     }
     var isVegasFormat: Bool { resolvedActiveTemplate.id == FormatTemplateRegistry.vegas.id }
     var isSecretScoring: Bool { configuration.isSecretScoring }

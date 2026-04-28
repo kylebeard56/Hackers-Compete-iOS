@@ -610,7 +610,7 @@ final class LiveRoundViewModel: ObservableObject, Loggable {
     }
 
     private func partnershipSharedScoringSubjects() -> [SharedScoringSubject] {
-        snapshot.scoringGroups
+        let persistedGroups = snapshot.scoringGroups
             .filter { $0.kind == .partnership && $0.memberIDs.isPopulated }
             .sorted { lhs, rhs in
                 let lhsOrder = participants(for: lhs).first?.teeOrder ?? Int.max
@@ -632,6 +632,22 @@ final class LiveRoundViewModel: ObservableObject, Loggable {
                     accentColor: scoringGroupAccentColor(group)
                 )
             }
+
+        if persistedGroups.isPopulated {
+            return persistedGroups
+        }
+
+        let scoringUnitSubjects = scoreOwnerScoringUnitSubjects(kind: .partnership, requiresExactPair: true)
+        if scoringUnitSubjects.isPopulated {
+            return scoringUnitSubjects
+        }
+
+        let teeGroupSubjects = teeGroupSharedScoringSubjects()
+        if teeGroupSubjects.isPopulated {
+            return teeGroupSubjects
+        }
+
+        return teamSharedScoringSubjects()
     }
 
     private func teeGroupSharedScoringSubjects() -> [SharedScoringSubject] {
@@ -664,6 +680,11 @@ final class LiveRoundViewModel: ObservableObject, Loggable {
             return groups
         }
 
+        let scoringUnitSubjects = scoreOwnerScoringUnitSubjects(kind: .teeGroup, requiresExactPair: false)
+        if scoringUnitSubjects.isPopulated {
+            return scoringUnitSubjects
+        }
+
         return snapshot.teeGroups
             .sorted { $0.index < $1.index }
             .compactMap { teeGroup -> SharedScoringSubject? in
@@ -686,6 +707,69 @@ final class LiveRoundViewModel: ObservableObject, Loggable {
                     accentColor: nil
                 )
             }
+    }
+
+    private func scoreOwnerScoringUnitSubjects(
+        kind: RoundScoringGroupKind,
+        requiresExactPair: Bool
+    ) -> [SharedScoringSubject] {
+        allScoringUnits
+            .filter { unit in
+                unit.owner == .scoreOwner
+                    && unit.ownerIDs.isPopulated
+                    && (!requiresExactPair || unit.ownerIDs.count == 2)
+            }
+            .compactMap { scoringUnitSubject(for: $0, kind: kind) }
+            .sorted { lhs, rhs in
+                let lhsOrder = lhs.participants.first?.teeOrder ?? Int.max
+                let rhsOrder = rhs.participants.first?.teeOrder ?? Int.max
+                if lhsOrder != rhsOrder { return lhsOrder < rhsOrder }
+                return lhs.title < rhs.title
+            }
+    }
+
+    private func scoringUnitSubject(
+        for scoringUnit: ScoringUnit,
+        kind: RoundScoringGroupKind
+    ) -> SharedScoringSubject? {
+        let memberByID = Dictionary(uniqueKeysWithValues: snapshot.participants.map { ($0.id, $0) })
+        let members = scoringUnit.ownerIDs
+            .compactMap { memberByID[$0] }
+            .filter(\.isPresenceActive)
+            .sorted(by: participantDisplaySort)
+        guard members.isPopulated else { return nil }
+
+        let teamIDs = Set(members.compactMap(\.teamID).filter(\.isPopulated))
+        let teamID = teamIDs.count == 1 ? teamIDs.first : nil
+        let team = teamID.flatMap { id in snapshot.teams.first { $0.id == id } }
+        let teeGroupIDs = Set(members.compactMap(\.groupID).filter(\.isPopulated))
+        let teeGroupID = teeGroupIDs.count == 1 ? teeGroupIDs.first : nil
+        let teeGroup = teeGroupID.flatMap { id in snapshot.teeGroups.first { $0.id == id } }
+        let memberNames = members
+            .map { formatDisplayName(for: $0) }
+            .filter(\.isPopulated)
+        let title: String
+        let subtitle: String?
+
+        switch kind {
+        case .partnership:
+            title = memberNames.isPopulated ? memberNames.joined(separator: " + ") : "Partnership"
+            subtitle = team?.name
+        case .teeGroup:
+            title = teeGroup?.name ?? "Group Score"
+            subtitle = memberNames.isPopulated ? memberNames.joined(separator: ", ") : nil
+        }
+
+        return SharedScoringSubject(
+            scoringUnitID: scoringUnit.id,
+            title: title,
+            subtitle: subtitle,
+            participants: members,
+            teamID: teamID,
+            scoringGroupID: snapshot.scoringGroup(id: scoringUnit.id)?.id,
+            teeGroupID: teeGroupID,
+            accentColor: team?.displaySwatchColor
+        )
     }
 
     private func sharedTeeGroupID(for participants: [RoundParticipant]) -> String? {
@@ -2700,7 +2784,7 @@ final class LiveRoundViewModel: ObservableObject, Loggable {
         return MatchupLeaderboardSection(
             id: section.id,
             matchup: section.matchup,
-            name: section.name,
+            name: matchupSectionName(for: section.matchup),
             rows: orderedRows
         )
     }
@@ -2901,17 +2985,17 @@ final class LiveRoundViewModel: ObservableObject, Loggable {
         switch matchup.mode ?? expectedMatchupMode {
         case .team:
             let teamMembers = snapshot.participants
-                .filter { $0.teamID == scoringUnitID }
+                .filter { $0.teamID == scoringUnitID && $0.isPresenceActive }
                 .sorted(by: participantDisplaySort)
             if teamMembers.isPopulated { return teamMembers }
             return sharedScoringSubject(matching: scoringUnitID)?.participants ?? []
         case .individual:
             return snapshot.participants
-                .filter { $0.id == scoringUnitID }
+                .filter { $0.id == scoringUnitID && $0.isPresenceActive }
                 .sorted(by: participantDisplaySort)
         case .scoreOwner:
             if let group = snapshot.scoringGroup(id: scoringUnitID) {
-                return participants(for: group)
+                return participants(for: group).filter(\.isPresenceActive)
             }
             return sharedScoringSubject(matching: scoringUnitID)?.participants ?? []
         }

@@ -149,7 +149,7 @@ extension GameLobby {
     private var scoreEntryScopeBlock: some View {
         configBuilderRow(
             title: "Score entry",
-            subtitle: "Choose whether scores are entered by player, partnership, or the whole tee group."
+            subtitle: scoreEntryScopeSubtitle
         ) {
             if isVegasFormat {
                 formatChipLabel("Individual")
@@ -531,10 +531,16 @@ extension GameLobby {
         scoreOwnerScopeTitle(for: snapshot.configuration.scoreOwnerScope)
     }
 
+    private var scoreEntryScopeSubtitle: String {
+        snapshot.isSharedScoreSource && snapshot.requiresTeams
+            ? "Choose whether one shared score is entered by team, partnership, or tee group."
+            : "Choose whether scores are entered by player, partnership, or the whole tee group."
+    }
+
     private func scoreOwnerScopeTitle(for scope: RoundScoreOwnerScope) -> String {
         switch scope {
         case .individual:
-            return "Individual"
+            return snapshot.isSharedScoreSource && snapshot.requiresTeams ? "Team" : "Individual"
         case .partnership:
             return "Partnership"
         case .teeGroup:

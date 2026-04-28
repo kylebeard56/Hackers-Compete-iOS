@@ -149,6 +149,50 @@ final class LiveRoundOutcomeHolePerformanceTests: XCTestCase {
         XCTAssertEqual(viewModel.scoringUnitGrossStrokes(scoringUnitID: "unit_pair_1", holeNumber: 1), 4)
     }
 
+    func testSharedScorePartnershipRowsRecoverFromSegmentUnitsWhenGroupsAreMissing() async throws {
+        var snapshot = Self.makeSharedPartnershipSnapshot()
+        snapshot.scoringGroups = []
+        snapshot.participants = snapshot.participants.map { participant in
+            var copy = participant
+            copy.presenceStatus = .unconfirmed
+            return copy
+        }
+        snapshot.segments[0].matchups = [
+            TeamMatchup(
+                id: "matchup_1",
+                teamIDs: [],
+                scoreOwnerIDs: ["pair_1", "pair_2"],
+                scoreOwnerScope: .partnership,
+                mode: .scoreOwner
+            )
+        ]
+
+        let viewModel = await boundViewModel(snapshot: snapshot, participantID: "p1")
+        let rows = viewModel.effectiveLeaderboardRows
+
+        XCTAssertEqual(rows.map(\.id), ["pair_1", "pair_2"])
+        XCTAssertEqual(rows[0].participants.map(\.id), ["p1", "p2"])
+        XCTAssertEqual(rows[1].participants.map(\.id), ["p3", "p4"])
+        XCTAssertEqual(viewModel.scorecardParticipants.map(\.id), ["pair_1", "pair_2"])
+        XCTAssertEqual(viewModel.scoringUnitGrossStrokes(scoringUnitID: "pair_1", holeNumber: 1), 4)
+        XCTAssertEqual(viewModel.matchupSections.first?.name, "John S. + Tyler D. vs Alice L. + Morgan R.")
+    }
+
+    func testSharedScorePartnershipWithoutPairsFallsBackToTeamRows() async throws {
+        var snapshot = Self.makeSharedTeamSnapshot(opaqueScoringUnitIDs: false)
+        snapshot.round.configuration.scoreOwnerScope = .partnership
+        snapshot.scoringGroups = []
+        snapshot.segments[0].scoringUnits = []
+        snapshot.scoring = []
+
+        let viewModel = await boundViewModel(snapshot: snapshot, participantID: "p1")
+        let rows = viewModel.effectiveLeaderboardRows
+
+        XCTAssertEqual(rows.map(\.id), ["blue", "red"])
+        XCTAssertTrue(rows.allSatisfy(\.isSharedScoreUnit))
+        XCTAssertEqual(Set(viewModel.scorecardParticipants.map(\.id)), Set(["red", "blue"]))
+    }
+
     func testSharedTeamRowsResolveOpaqueScoringUnitIDs() async throws {
         let snapshot = Self.makeSharedTeamSnapshot(opaqueScoringUnitIDs: true)
         let viewModel = await boundViewModel(snapshot: snapshot, participantID: "p1")

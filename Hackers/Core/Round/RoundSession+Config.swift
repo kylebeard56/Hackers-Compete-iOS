@@ -100,6 +100,33 @@ extension RoundSession {
         }
     }
 
+    func setMirrorTeeGroupsAsTeams(_ value: Bool) async {
+        addBreadcrumb()
+        let previousValue = snapshot.configuration.mirrorTeeGroupsAsTeams ?? false
+
+        do {
+            if snapshot.round.configuration.mirrorTeeGroupsAsTeams != value {
+                snapshot.round.configuration.mirrorTeeGroupsAsTeams = value
+                _ = try await snapshot.round.put().get()
+            }
+
+            if value {
+                try await syncTeamsToTeeGroups()
+            }
+
+            guard previousValue != value else { return }
+            emitRoundSetupEvent(
+                "round_setup.mirror_tee_groups_as_teams_toggled",
+                extra: [
+                    "enabled": value,
+                    "previous_value": previousValue
+                ]
+            )
+        } catch {
+            addBreadcrumb(level: .error, message: "Failed to set tee group team mirroring", error: error)
+        }
+    }
+
     func setMaxScoreOverPar(_ value: MaxScoreOverPar) async {
         addBreadcrumb()
         let previousValue = snapshot.gameFormat.configuration.maxScoreOverPar

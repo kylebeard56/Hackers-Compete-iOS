@@ -19,12 +19,12 @@ extension RoundSession {
         let existingTeams = snapshot.teams.sorted { $0.index < $1.index }
 
         var teamByGroupIndex: [Int: RoundTeam] = [:]
-        for team in existingTeams {
-            teamByGroupIndex[team.index - 1] = team
+        for (index, team) in existingTeams.enumerated() where index < groups.count {
+            teamByGroupIndex[index] = team
         }
 
         // Remove excess teams beyond group count (direct delete to avoid cascading participant unassignments)
-        for team in existingTeams where (team.index - 1) >= groups.count {
+        for team in existingTeams.dropFirst(groups.count) {
             snapshot.teams.removeAll { $0.id == team.id }
             _ = try? await team.delete().get()
         }
@@ -60,8 +60,7 @@ extension RoundSession {
     func mapTeeGroupsToTeams() async throws {
         addBreadcrumb()
 
-        guard snapshot.shouldAutoMirrorTeeGroupsToTeams,
-              snapshot.teams.isEmpty,
+        guard snapshot.teams.isEmpty,
               snapshot.teeGroups.isPopulated,
               snapshot.participants.count >= 2 else {
             return

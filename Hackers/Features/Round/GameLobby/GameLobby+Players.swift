@@ -571,20 +571,22 @@ extension GameLobby {
     // MARK: - Teams Content
     
     private var teamsContent: some View {
-        let isLocked = snapshot.isSharedScoreSource
+        let isMirroringTeeGroups = snapshot.shouldAutoMirrorTeeGroupsToTeams
 
         return VStack(spacing: 16) {
             if showsRoundPartnerships {
                 partnershipsOverviewCard
             }
 
-            if isLocked {
+            if snapshot.isSharedScoreSource && snapshot.requiresTeams {
                 sharedScoreTeamsBanner
-            } else if showTeamShortcuts {
+            }
+
+            if showTeamShortcuts {
                 teamShortcutsBanner
             }
 
-            if !isLocked {
+            if !isMirroringTeeGroups {
                 let unassigned = snapshot.participants.filter { $0.teamID == nil }
                 if !unassigned.isEmpty && !snapshot.teams.isEmpty {
                     unassignedTeamPlayers(for: unassigned)
@@ -592,10 +594,10 @@ extension GameLobby {
             }
             
             ForEach(snapshot.teams.sortedForGameLobbyDisplay(), id: \.self) { team in
-                teamTile(for: team, readOnly: isLocked)
+                teamTile(for: team, lockMembership: isMirroringTeeGroups)
             }
             
-            if !isLocked {
+            if !isMirroringTeeGroups {
                 HStack(spacing: 12) {
                     if snapshot.teams.count > 0 {
                         GlassButton(
@@ -641,9 +643,29 @@ extension GameLobby {
         HStack(spacing: 12) {
             Icon(name: "f05a", size: 16, weight: .solid)
                 .foregroundStyle(Color.neutral)
-            Text("Team roster is set to match tee groups")
-                .fontStyle(kFontName, size: 13, weight: .medium)
-                .foregroundStyle(Color.neutral)
+            VStack(alignment: .leading, spacing: 2) {
+                Text("Mirror tee groups as teams")
+                    .fontStyle(kFontName, size: 13, weight: .semibold)
+                    .foregroundStyle(palette.foregroundColor)
+                Text("Team membership follows tee groups while names and colors stay editable.")
+                    .fontStyle(kFontName, size: 12, weight: .regular)
+                    .foregroundStyle(Color.neutral)
+            }
+
+            Spacer(minLength: 0)
+
+            Toggle(
+                "",
+                isOn: Binding(
+                    get: { snapshot.shouldAutoMirrorTeeGroupsToTeams },
+                    set: { value in
+                        Haptics.fire(.light)
+                        Task { await roundSession.setMirrorTeeGroupsAsTeams(value) }
+                    }
+                )
+            )
+            .labelsHidden()
+            .tint(.accentGreen)
         }
         .padding(12)
         .frame(maxWidth: .infinity, alignment: .leading)
@@ -652,7 +674,6 @@ extension GameLobby {
 
     private var showTeamShortcuts: Bool {
         teamsEnabled
-            && snapshot.shouldAutoMirrorTeeGroupsToTeams
             && snapshot.teams.isEmpty
             && snapshot.participants.count >= 2
     }
@@ -1737,19 +1758,25 @@ private struct TeamSlotRow: View {
 
 extension GameLobby {
     @ViewBuilder
-    private func teamTile(for team: RoundTeam, readOnly: Bool = false) -> some View {
+    private func teamTile(for team: RoundTeam, lockMembership: Bool = false) -> some View {
         let players = teamPlayers(for: team)
 
         let totalHCP = handicapStrokes(forTeam: team, players: players)
-        let showTeamHandicap = readOnly && handicapsEnabled
+        let showTeamHandicap = lockMembership && handicapsEnabled
 
         VStack(spacing: 12) {
-            teamHeader(for: team, totalHCP: totalHCP, readOnly: readOnly, showTeamHandicap: showTeamHandicap)
+            teamHeader(
+                for: team,
+                totalHCP: totalHCP,
+                readOnly: false,
+                canDelete: !lockMembership,
+                showTeamHandicap: showTeamHandicap
+            )
 
             Line()
 
             ForEach(Array(players.enumerated()), id: \.element.id) { index, player in
-                let showHandicap = readOnly ? (index == 0 && handicapsEnabled) : handicapsEnabled
+                let showHandicap = lockMembership ? (index == 0 && handicapsEnabled) : handicapsEnabled
                 TeamSlotRow(
                     team: team,
                     player: player,
@@ -1758,7 +1785,7 @@ extension GameLobby {
                     handicapsEnabled: showHandicap,
                     snapshot: snapshot,
                     teamsEnabled: teamsEnabled,
-                    readOnly: readOnly,
+                    readOnly: lockMembership,
                     onAssign: assign(player:to:),
                     onRemove: remove(player:from:),
                     onShowAddPlayers: { showAddPlayersView = true },
@@ -1771,7 +1798,7 @@ extension GameLobby {
                 }
             }
 
-            if !readOnly {
+            if !lockMembership {
                 TeamSlotRow(
                     team: team,
                     player: nil,
@@ -1829,7 +1856,13 @@ extension GameLobby {
     }
 
     @ViewBuilder
-    private func teamHeader(for team: RoundTeam, totalHCP: Int, readOnly: Bool = false, showTeamHandicap: Bool = false) -> some View {
+    private func teamHeader(
+        for team: RoundTeam,
+        totalHCP: Int,
+        readOnly: Bool = false,
+        canDelete: Bool = true,
+        showTeamHandicap: Bool = false
+    ) -> some View {
         HStack(spacing: 12) {
             VStack(spacing: 2) {
                 Button {
@@ -1860,7 +1893,7 @@ extension GameLobby {
             }
             .frame(maxWidth: .infinity, alignment: .leading)
 
-            if !readOnly {
+            if !readOnly && canDelete {
                 Menu {
                     Button(role: .destructive) {
                         Haptics.fire(.light)

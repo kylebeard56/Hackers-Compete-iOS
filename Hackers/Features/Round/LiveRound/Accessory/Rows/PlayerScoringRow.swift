@@ -250,18 +250,12 @@ struct PlayerScoringRow: View {
     @ViewBuilder
     private var trailingControl: some View {
         switch presenceStatus {
-        case .active:
+        case .active, .unconfirmed:
             HStack(spacing: 8) {
                 enterScoreContent
-                if canShowActivePresenceMenu {
+                if canShowActivePresenceMenu || (presenceStatus == .unconfirmed && canEditPresence) {
                     presenceMenuIcon
                 }
-            }
-        case .unconfirmed:
-            if canEditPresence {
-                presenceMenuButton(title: "Mark here", tint: palette.whiteGlassButtonColor, foreground: palette.foregroundColor)
-            } else {
-                statusChip(title: "Mark here", tint: palette.whiteGlassButtonColor, foreground: palette.foregroundColor)
             }
         case .noShow:
             if canEditPresence {
@@ -274,6 +268,13 @@ struct PlayerScoringRow: View {
 
     private var presenceMenuIcon: some View {
         Menu {
+            if presenceStatus != .active {
+                Button {
+                    Task { await viewModel.markParticipantPlaying(participant) }
+                } label: {
+                    Label("They're here", systemImage: "checkmark.circle")
+                }
+            }
             Button {
                 Task { await viewModel.markParticipantNoShow(participant) }
             } label: {

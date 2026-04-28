@@ -243,6 +243,8 @@ struct RoundConfiguration: Hashable, Codable {
     var sharedScoreHandicapConfig: HandicapConfiguration?
     /// When false, team avatars and dots use neutral styling; team names follow indexed "Team N" when reset from lobby.
     var teamColorsEnabled: Bool
+    /// When true, round teams are kept in sync with tee groups for shared team formats.
+    var mirrorTeeGroupsAsTeams: Bool?
 
     var isSecretScoring: Bool { secretScoring == true }
     var areScoresRevealed: Bool { scoresRevealed == true }
@@ -270,7 +272,8 @@ struct RoundConfiguration: Hashable, Codable {
         scoresRevealed: Bool? = nil,
         handicapStrokeBasis: SeriesHandicapStrokeBasis? = nil,
         sharedScoreHandicapConfig: HandicapConfiguration? = nil,
-        teamColorsEnabled: Bool = true
+        teamColorsEnabled: Bool = true,
+        mirrorTeeGroupsAsTeams: Bool? = nil
     ) {
         self.primaryFormat = primaryFormat
         self.formatSummary = formatSummary
@@ -293,6 +296,7 @@ struct RoundConfiguration: Hashable, Codable {
         self.handicapStrokeBasis = handicapStrokeBasis
         self.sharedScoreHandicapConfig = sharedScoreHandicapConfig
         self.teamColorsEnabled = teamColorsEnabled
+        self.mirrorTeeGroupsAsTeams = mirrorTeeGroupsAsTeams
     }
 
     /// Resolved scope: config override or template default.
@@ -324,6 +328,7 @@ struct RoundConfiguration: Hashable, Codable {
         case handicapStrokeBasis = "handicap_stroke_basis"
         case sharedScoreHandicapConfig = "shared_score_handicap_config"
         case teamColorsEnabled = "team_colors_enabled"
+        case mirrorTeeGroupsAsTeams = "mirror_tee_groups_as_teams"
     }
 
     var useHandicaps: Bool {
@@ -404,6 +409,7 @@ struct RoundConfiguration: Hashable, Codable {
         handicapStrokeBasis = try c.decodeIfPresent(SeriesHandicapStrokeBasis.self, forKey: .handicapStrokeBasis)
         sharedScoreHandicapConfig = try c.decodeIfPresent(HandicapConfiguration.self, forKey: .sharedScoreHandicapConfig)
         teamColorsEnabled = try c.decodeIfPresent(Bool.self, forKey: .teamColorsEnabled) ?? true
+        mirrorTeeGroupsAsTeams = try c.decodeIfPresent(Bool.self, forKey: .mirrorTeeGroupsAsTeams)
         matchupResolutionStyle = try c.decodeIfPresent(RoundMatchupResolutionStyle.self, forKey: .matchupResolutionStyle) ?? .roundAggregate
 
         if let decodedTeamScoring = try c.decodeIfPresent(RoundTeamScoringConfiguration.self, forKey: .teamScoring) {
@@ -446,5 +452,6 @@ struct RoundConfiguration: Hashable, Codable {
         try c.encodeIfPresent(handicapStrokeBasis, forKey: .handicapStrokeBasis)
         try c.encodeIfPresent(sharedScoreHandicapConfig, forKey: .sharedScoreHandicapConfig)
         try c.encode(teamColorsEnabled, forKey: .teamColorsEnabled)
+        try c.encodeIfPresent(mirrorTeeGroupsAsTeams, forKey: .mirrorTeeGroupsAsTeams)
     }
 }
