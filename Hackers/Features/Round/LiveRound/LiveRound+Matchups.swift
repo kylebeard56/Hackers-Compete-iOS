@@ -495,10 +495,13 @@ private struct MatchupPlayerRowView: View {
     var body: some View {
         HStack(spacing: 12) {
             HStack(spacing: 8) {
-                Text(participant.name.fullName)
-                    .fontStyle(kFontName, size: 14, weight: .medium)
-                    .foregroundStyle(scoreCounts ? palette.foregroundColor : Color.neutral2)
-                    .lineLimit(1)
+                LiveRoundAdaptiveNameText(
+                    name: participant.name,
+                    format: viewModel.nameDisplayFormat,
+                    fontSize: 14,
+                    weight: .medium,
+                    color: scoreCounts ? palette.foregroundColor : Color.neutral2
+                )
                     .frame(maxWidth: .infinity, alignment: .leading)
 
                 if scoreCounts {

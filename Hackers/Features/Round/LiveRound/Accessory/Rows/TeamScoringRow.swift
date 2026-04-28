@@ -144,7 +144,7 @@ struct SharedScoreOwnerRow: View {
     @Environment(\.colorScheme) var colorScheme
     @CappedScaledMetric(relativeTo: .body) var pillSize: CGFloat = 44
     @CappedScaledMetric(relativeTo: .body) var rowSpacing: CGFloat = 12
-    @CappedScaledMetric(relativeTo: .body) var avatarSize: CGFloat = 30
+    @CappedScaledMetric(relativeTo: .caption) var dotSize: CGFloat = 8
     @CappedScaledMetric(relativeTo: .body) var buttonPaddingH: CGFloat = 16
     @CappedScaledMetric(relativeTo: .body) var buttonPaddingV: CGFloat = 8
 
@@ -173,6 +173,18 @@ struct SharedScoreOwnerRow: View {
         viewModel.scoringUnitScoreToPar(scoringUnitID: scoringUnitID, basis: viewModel.scoreBasis)
     }
 
+    private var strokesReceived: Int {
+        viewModel.scoringUnitStrokesReceived(scoringUnitID: scoringUnitID, holeNumber: holeNumber)
+    }
+
+    private var net: Int? {
+        viewModel.scoringUnitNetStrokes(scoringUnitID: scoringUnitID, holeNumber: holeNumber)
+    }
+
+    private var useHandicaps: Bool {
+        viewModel.snapshot.round.configuration.useHandicaps
+    }
+
     private var effectiveAccent: Color {
         accentColor
         ?? (viewModel.hasTeamColorMatchingTheme ? palette.foregroundColor : viewModel.theme.color)
@@ -198,64 +210,55 @@ struct SharedScoreOwnerRow: View {
     }
 
     private var ownerIdentity: some View {
-        HStack(alignment: .center, spacing: 10) {
-            memberAvatarStrip
+        HStack(alignment: .center, spacing: 12) {
+            RoundedRectangle(cornerRadius: 999, style: .continuous)
+                .fill(effectiveAccent.opacity(0.95))
+                .frame(width: 4, height: accentBarHeight)
 
             VStack(alignment: .leading, spacing: 4) {
-                Text(title)
-                    .fontStyle(kFontName, size: 17, weight: .semibold)
+                ForEach(participants) { participant in
+                    LiveRoundAdaptiveNameText(
+                        name: participant.name,
+                        format: viewModel.nameDisplayFormat,
+                        fontSize: 16,
+                        weight: .semibold,
+                        color: palette.foregroundColor
+                    )
+                }
+
+                if useHandicaps {
+                    handicapDots
+                }
+            }
+        }
+    }
+
+    private var accentBarHeight: CGFloat {
+        let nameHeight = CGFloat(max(participants.count, 1)) * 20
+        let handicapHeight: CGFloat = useHandicaps ? 16 : 0
+        return max(42, nameHeight + handicapHeight)
+    }
+
+    @ViewBuilder
+    private var handicapDots: some View {
+        HStack(spacing: 4) {
+            ForEach(0..<4, id: \.self) { index in
+                Circle()
+                    .strokeBorder(
+                        effectiveAccent,
+                        lineWidth: index < strokesReceived ? 0 : 1
+                    )
+                    .background(
+                        Circle()
+                            .fill(index < strokesReceived ? effectiveAccent : .clear)
+                    )
+                    .frame(width: dotSize, height: dotSize)
+            }
+
+            if let net, let gross, net != gross {
+                Text("Net \(net)")
+                    .fontStyle(kFontName, size: 13, weight: .semibold)
                     .foregroundStyle(effectiveAccent)
-                    .lineLimit(1)
-
-                if let subtitle, subtitle.isPopulated {
-                    Text(subtitleText(base: subtitle))
-                        .fontStyle(kFontName, size: 13, weight: .regular)
-                        .foregroundStyle(Color.neutral)
-                        .lineLimit(2)
-                } else if let handicapLabel = viewModel.scoringUnitHandicapLabel(scoringUnitID: scoringUnitID) {
-                    Text(handicapLabel)
-                        .fontStyle(kFontName, size: 13, weight: .regular)
-                        .foregroundStyle(Color.neutral)
-                        .lineLimit(1)
-                }
-            }
-        }
-    }
-
-    private func subtitleText(base: String) -> String {
-        guard let handicapLabel = viewModel.scoringUnitHandicapLabel(scoringUnitID: scoringUnitID) else {
-            return base
-        }
-        return "\(base) - \(handicapLabel)"
-    }
-
-    private var memberAvatarStrip: some View {
-        let visibleParticipants = Array(participants.prefix(4))
-
-        return HStack(spacing: -10) {
-            ForEach(Array(visibleParticipants.enumerated()), id: \.element.id) { index, participant in
-                PlayerAvatarView(
-                    initials: participant.name.initials,
-                    size: avatarSize,
-                    fillColor: viewModel.teamColor(for: participant)?.opacity(0.8),
-                    glassTint: Color.neutral6,
-                    initialsColor: viewModel.teamColor(for: participant) == nil ? palette.foregroundColor : .white
-                )
-                .overlay {
-                    Circle()
-                        .stroke(palette.backgroundColor, lineWidth: 2)
-                }
-                .zIndex(Double(visibleParticipants.count - index))
-            }
-
-            if participants.count > visibleParticipants.count {
-                Text("+\(participants.count - visibleParticipants.count)")
-                    .fontStyle(kFontName, size: 11, weight: .semibold)
-                    .foregroundStyle(palette.foregroundColor)
-                    .padding(.horizontal, 8)
-                    .padding(.vertical, 6)
-                    .glassCardEffect(shape: Capsule(), interactive: false, tint: palette.whiteGlassButtonColor, shadowOpacity: 0)
-                    .padding(.leading, 4)
             }
         }
     }

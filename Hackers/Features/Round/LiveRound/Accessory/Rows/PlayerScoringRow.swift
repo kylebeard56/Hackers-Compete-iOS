@@ -186,10 +186,6 @@ struct PlayerScoringRow: View {
         }
     }
 
-    private var compactParticipantName: String {
-        viewModel.formatDisplayName(for: participant)
-    }
-
     @ViewBuilder
     private var enterScoreContent: some View {
         let isScored = gross.exists
@@ -214,19 +210,13 @@ struct PlayerScoringRow: View {
     private var rowContent: some View {
         HStack(alignment: .center, spacing: rowSpacing) {
             VStack(alignment: .leading, spacing: 4) {
-                ViewThatFits(in: .horizontal) {
-                    Text(participant.name.fullName)
-                        .fontStyle(kFontName, size: 17, weight: .semibold)
-                        .foregroundStyle(nameColor)
-                        .layoutPriority(1)
-                        .lineLimit(1)
-                        .fixedSize(horizontal: true, vertical: false)
-
-                    Text(compactParticipantName)
-                        .fontStyle(kFontName, size: 17, weight: .semibold)
-                        .foregroundStyle(nameColor)
-                        .lineLimit(1)
-                }
+                LiveRoundAdaptiveNameText(
+                    name: participant.name,
+                    format: viewModel.nameDisplayFormat,
+                    fontSize: 17,
+                    weight: .semibold,
+                    color: nameColor
+                )
 
                 if useHandicaps {
                     handicapDots

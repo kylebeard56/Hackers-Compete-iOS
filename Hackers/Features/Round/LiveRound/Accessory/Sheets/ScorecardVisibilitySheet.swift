@@ -238,10 +238,13 @@ struct ScorecardVisibilitySheet: View {
                             .background(teamColor ?? Color.neutral6)
                             .clipShape(Circle())
 
-                        Text(row.participant.name.fullName)
-                            .fontStyle(kFontName, size: 17, weight: .medium)
-                            .foregroundStyle(palette.foregroundColor)
-                            .lineLimit(1)
+                        LiveRoundAdaptiveNameText(
+                            name: row.participant.name,
+                            format: viewModel.nameDisplayFormat,
+                            fontSize: 17,
+                            weight: .medium,
+                            color: palette.foregroundColor
+                        )
 
                         Spacer(minLength: 0)
 

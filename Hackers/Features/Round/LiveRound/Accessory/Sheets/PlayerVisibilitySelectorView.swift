@@ -80,24 +80,13 @@ struct PlayerVisibilitySelectorView: View {
                                 .fill(teamColor ?? Color.neutral6)
                                 .frame(width: 8, height: 8)
                             
-//                            Text(row.participant.name.fullName)
-//                                .fontStyle(kFontName, size: 15, weight: .medium)
-//                                .foregroundStyle(palette.foregroundColor)
-//                                .lineLimit(1)
-                            
-                            ViewThatFits(in: .horizontal) {
-                                Text(row.participant.name.fullName)
-                                    .fontStyle(kFontName, size: 15, weight: .medium)
-                                    .foregroundStyle(palette.foregroundColor)
-                                    .lineLimit(1)
-                                    .layoutPriority(1)
-                                    .fixedSize(horizontal: true, vertical: false)
-
-                                Text(viewModel.formatDisplayName(for: row.participant))
-                                    .fontStyle(kFontName, size: 15, weight: .medium)
-                                    .foregroundStyle(palette.foregroundColor)
-                                    .lineLimit(1)
-                            }
+                            LiveRoundAdaptiveNameText(
+                                name: row.participant.name,
+                                format: viewModel.nameDisplayFormat,
+                                fontSize: 15,
+                                weight: .medium,
+                                color: palette.foregroundColor
+                            )
                             
                             Spacer(minLength: 0)
                             

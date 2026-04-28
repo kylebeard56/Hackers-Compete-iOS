@@ -1395,10 +1395,7 @@ private extension FullScorecardView {
     }
     
     func shortName(for participant: RoundParticipant) -> String {
-        let given = participant.name.givenName
-        let family = participant.name.familyName
-        guard given.isPopulated, family.isPopulated else { return participant.name.fullName }
-        return "\(given) \(family.prefix(1))."
+        viewModel.formatDisplayName(for: participant)
     }
     
     private var tintedHeader: Color {

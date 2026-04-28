@@ -13,6 +13,68 @@ enum NameDisplayFormat: String, CaseIterable {
     case firstInitialLastName
     /// "John S."
     case firstNameLastInitial
+
+    func displayName(for name: Name) -> String {
+        let given = name.givenName.trimmingCharacters(in: .whitespacesAndNewlines)
+        let family = name.familyName.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard given.isPopulated || family.isPopulated else { return name.fullName }
+
+        switch self {
+        case .firstInitialLastName:
+            guard let g = given.first else { return family }
+            return "\(g). \(family)"
+        case .firstNameLastInitial:
+            guard let f = family.first else { return given }
+            return "\(given) \(f)."
+        }
+    }
+}
+
+struct LiveRoundAdaptiveNameText: View {
+    let name: Name
+    let format: NameDisplayFormat
+    let fontSize: CGFloat
+    let weight: FontModule.Weight
+    let color: Color
+
+    private var fullName: String {
+        name.fullName.trimmingCharacters(in: .whitespacesAndNewlines)
+    }
+
+    private var compactName: String {
+        format.displayName(for: name)
+    }
+
+    init(
+        name: Name,
+        format: NameDisplayFormat,
+        fontSize: CGFloat,
+        weight: FontModule.Weight,
+        color: Color
+    ) {
+        self.name = name
+        self.format = format
+        self.fontSize = fontSize
+        self.weight = weight
+        self.color = color
+    }
+
+    var body: some View {
+        ViewThatFits(in: .horizontal) {
+            nameText(fullName.isPopulated ? fullName : compactName)
+                .fixedSize(horizontal: true, vertical: false)
+
+            nameText(compactName)
+        }
+        .layoutPriority(1)
+    }
+
+    private func nameText(_ text: String) -> some View {
+        Text(text)
+            .fontStyle(kFontName, size: fontSize, weight: weight)
+            .foregroundStyle(color)
+            .lineLimit(1)
+    }
 }
 
 @MainActor
@@ -1124,17 +1186,7 @@ final class LiveRoundViewModel: ObservableObject, Loggable {
     }
 
     func formatDisplayName(for participant: RoundParticipant) -> String {
-        let given = participant.name.givenName.trimmingCharacters(in: .whitespacesAndNewlines)
-        let family = participant.name.familyName.trimmingCharacters(in: .whitespacesAndNewlines)
-        guard given.isPopulated || family.isPopulated else { return participant.name.fullName }
-        switch nameDisplayFormat {
-        case .firstInitialLastName:
-            guard let g = given.first else { return family }
-            return "\(g). \(family)"
-        case .firstNameLastInitial:
-            guard let f = family.first else { return given }
-            return "\(given) \(f)."
-        }
+        nameDisplayFormat.displayName(for: participant.name)
     }
     
     func hole(for holeNumber: Int) -> Hole? {
@@ -1484,6 +1536,18 @@ final class LiveRoundViewModel: ObservableObject, Loggable {
             return nil
         }
         return "HCP \(Int(unitStrokes.rounded(.toNearestOrAwayFromZero)))"
+    }
+
+    func scoringUnitHandicapDecimalLabel(scoringUnitID: String) -> String? {
+        guard snapshot.configuration.useHandicaps,
+              let unitStrokes = snapshot.roundSegment?.scoringUnits.first(where: { $0.id == scoringUnitID })?.handicapAllowance?.unitStrokes else {
+            return nil
+        }
+        let rounded = (unitStrokes * 10).rounded() / 10
+        let value = rounded.truncatingRemainder(dividingBy: 1) == 0
+            ? String(Int(rounded))
+            : String(format: "%.1f", rounded)
+        return "HCP \(value)"
     }
 
     func scoringUnitScoreToPar(scoringUnitID: String, basis: ScoreBasis) -> Int {
@@ -1899,6 +1963,7 @@ final class LiveRoundViewModel: ObservableObject, Loggable {
         let teamName: String?
         let teamColor: Color?
         let memberNames: String?
+        let sharedHandicapLabel: String?
         let isSharedScoreUnit: Bool
 
         init(
@@ -1914,6 +1979,7 @@ final class LiveRoundViewModel: ObservableObject, Loggable {
             teamName: String? = nil,
             teamColor: Color? = nil,
             memberNames: String? = nil,
+            sharedHandicapLabel: String? = nil,
             isSharedScoreUnit: Bool = false
         ) {
             self.participant = participant
@@ -1928,6 +1994,7 @@ final class LiveRoundViewModel: ObservableObject, Loggable {
             self.teamName = teamName
             self.teamColor = teamColor
             self.memberNames = memberNames
+            self.sharedHandicapLabel = sharedHandicapLabel
             self.isSharedScoreUnit = isSharedScoreUnit
         }
     }
@@ -2921,6 +2988,7 @@ final class LiveRoundViewModel: ObservableObject, Loggable {
                 teamName: row.teamName,
                 teamColor: row.teamColor,
                 memberNames: row.memberNames,
+                sharedHandicapLabel: row.sharedHandicapLabel,
                 isSharedScoreUnit: row.isSharedScoreUnit
             )
         }
@@ -2955,6 +3023,7 @@ final class LiveRoundViewModel: ObservableObject, Loggable {
             teamName: subject.title,
             teamColor: subject.accentColor,
             memberNames: memberNames.isPopulated ? memberNames : nil,
+            sharedHandicapLabel: scoringUnitHandicapDecimalLabel(scoringUnitID: subject.scoringUnitID),
             isSharedScoreUnit: true
         )
     }
