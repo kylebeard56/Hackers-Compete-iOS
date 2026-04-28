@@ -284,7 +284,7 @@ struct FormatTemplateRegistry {
                 teamSize: .exact(2),
                 requiresTeams: true,
                 requiresHandicaps: false,
-                defaultHandicapConfig: .individualStrokePlay,
+                defaultHandicapConfig: .foursomesAlternateShot,
                 defaultMaxScoreOverPar: .quad,
                 defaultScoreBasis: .gross
             )

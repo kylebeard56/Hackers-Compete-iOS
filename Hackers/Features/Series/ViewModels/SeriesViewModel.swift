@@ -4712,6 +4712,7 @@ final class SeriesViewModel: ObservableObject, Loggable {
             scoreOwnerScope: snapshot.configuration.scoreOwnerScope,
             scoringGroups: snapshot.scoringGroups,
             perHoleWinPoints: snapshot.configuration.resolvedHoleWinPoints,
+            sharedScoreHandicapConfig: snapshot.configuration.sharedScoreHandicapConfig,
             handicapStrokeBasis: snapshot.handicapStrokeBasis
         )
     }

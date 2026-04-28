@@ -166,6 +166,24 @@ final class LiveRoundOutcomeHolePerformanceTests: XCTestCase {
         XCTAssertEqual(rowsByID["pair_4"]?.scoreToPar, 0)
     }
 
+    func testSharedScoreRowsAllocateHandicapStrokesBeforeScoresExist() async throws {
+        var snapshot = Self.makeSharedPartnershipSnapshot()
+        snapshot.round.configuration.primaryFormat.configuration.basis = .net
+        snapshot.scoring = []
+        snapshot.participants = snapshot.participants.map { participant in
+            var copy = participant
+            copy.adjustedHandicap = participant.teamID == "red" ? 36 : 0
+            return copy
+        }
+
+        let viewModel = await boundViewModel(snapshot: snapshot, participantID: "p1")
+
+        XCTAssertEqual(viewModel.scoringUnitHandicapDecimalLabel(scoringUnitID: "pair_1"), "HCP 18")
+        XCTAssertEqual(viewModel.scoringUnitStrokesReceived(scoringUnitID: "pair_1", holeNumber: 1), 1)
+        XCTAssertEqual(viewModel.scoringUnitStrokesReceived(scoringUnitID: "pair_2", holeNumber: 1), 0)
+        XCTAssertNil(viewModel.scoringUnitNetStrokes(scoringUnitID: "pair_1", holeNumber: 1))
+    }
+
     func testSharedScoreFriendlyRelativeToParTotalsStayOnScoreOwnerRows() async throws {
         var snapshot = Self.makeSharedPartnershipSnapshot()
         let roundID = snapshot.round.id

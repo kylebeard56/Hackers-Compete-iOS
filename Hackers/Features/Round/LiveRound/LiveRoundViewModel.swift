@@ -1439,6 +1439,89 @@ final class LiveRoundViewModel: ObservableObject, Loggable {
             handicapStrokeBasis: snapshot.handicapStrokeBasis
         )
     }
+
+    private func resolvedScoringUnit(for scoringUnitID: String) -> ScoringUnit? {
+        if let scoringUnit = scoringUnit(id: scoringUnitID) {
+            return scoringUnit
+        }
+
+        if let team = snapshot.teams.first(where: { $0.id == scoringUnitID }) {
+            let resolvedID = self.scoringUnitID(forTeamID: team.id)
+            if resolvedID != scoringUnitID, let scoringUnit = scoringUnit(id: resolvedID) {
+                return scoringUnit
+            }
+            return ScoringUnit(
+                id: team.id,
+                owner: .team,
+                ownerIDs: [team.id],
+                scoringMethod: .aggregate
+            )
+        }
+
+        if let scoringGroup = snapshot.scoringGroup(id: scoringUnitID) {
+            let resolvedID = self.scoringUnitID(for: scoringGroup)
+            if resolvedID != scoringUnitID, let scoringUnit = scoringUnit(id: resolvedID) {
+                return scoringUnit
+            }
+            return ScoringUnit(
+                id: scoringGroup.id,
+                owner: .scoreOwner,
+                ownerIDs: scoringGroup.memberIDs,
+                scoringMethod: .aggregate
+            )
+        }
+
+        if let subject = sharedScoringSubject(matching: scoringUnitID) {
+            if let teamID = subject.teamID {
+                let resolvedID = self.scoringUnitID(forTeamID: teamID)
+                if resolvedID != scoringUnitID, let scoringUnit = scoringUnit(id: resolvedID) {
+                    return scoringUnit
+                }
+                return ScoringUnit(
+                    id: subject.scoringUnitID,
+                    owner: .team,
+                    ownerIDs: [teamID],
+                    scoringMethod: .aggregate
+                )
+            }
+            return ScoringUnit(
+                id: subject.scoringUnitID,
+                owner: .scoreOwner,
+                ownerIDs: subject.participants.map(\.id),
+                scoringMethod: .aggregate
+            )
+        }
+
+        return nil
+    }
+
+    private func scoringUnitParticipants(scoringUnitID: String) -> [RoundParticipant] {
+        let participantByID = Dictionary(uniqueKeysWithValues: snapshot.participants.map { ($0.id, $0) })
+        if let scoringUnit = resolvedScoringUnit(for: scoringUnitID) {
+            let participants = scoringParticipantIDs(for: scoringUnit).compactMap { participantByID[$0] }
+            if participants.isPopulated { return participants }
+        }
+        return sharedScoringSubject(matching: scoringUnitID)?.participants ?? []
+    }
+
+    private func sharedScoringHandicapConfig(for scoringUnit: ScoringUnit) -> HandicapConfiguration? {
+        guard scoringUnit.owner != .participant else { return nil }
+        return snapshot.configuration.sharedScoreHandicapConfig
+            ?? snapshot.resolvedActiveTemplate.requirements.defaultHandicapConfig
+    }
+
+    private func scoringUnitHandicapStrokes(scoringUnitID: String) -> Double? {
+        guard snapshot.configuration.useHandicaps,
+              let scoringUnit = resolvedScoringUnit(for: scoringUnitID) else {
+            return nil
+        }
+
+        return ScoringEngine.scoringUnitHandicapStrokes(
+            for: scoringUnit,
+            participants: scoringUnitParticipants(scoringUnitID: scoringUnitID),
+            sharedScoreHandicapConfig: sharedScoringHandicapConfig(for: scoringUnit)
+        )
+    }
     
     func netStrokesOnHole(participant: RoundParticipant, holeNumber: Int) -> Int? {
         guard let gross = grossStrokes(for: participant.id, holeNumber: holeNumber) else { return nil }
@@ -1522,31 +1605,48 @@ final class LiveRoundViewModel: ObservableObject, Loggable {
     }
 
     func scoringUnitNetStrokes(scoringUnitID: String, holeNumber: Int) -> Int? {
-        engineResult.rows
-            .first { $0.scoringUnitID == scoringUnitID }?
+        if let net = engineResult.rows
+            .first(where: { $0.scoringUnitID == scoringUnitID })?
             .holeValues[holeNumber]?
-            .netStrokes
+            .netStrokes {
+            return net
+        }
+
+        guard let gross = scoringUnitGrossStrokes(scoringUnitID: scoringUnitID, holeNumber: holeNumber) else {
+            return nil
+        }
+        return max(0, gross - scoringUnitStrokesReceived(scoringUnitID: scoringUnitID, holeNumber: holeNumber))
     }
 
     func scoringUnitStrokesReceived(scoringUnitID: String, holeNumber: Int) -> Int {
-        guard let gross = scoringUnitGrossStrokes(scoringUnitID: scoringUnitID, holeNumber: holeNumber),
-              let net = scoringUnitNetStrokes(scoringUnitID: scoringUnitID, holeNumber: holeNumber) else {
+        guard snapshot.configuration.useHandicaps,
+              let scoringUnit = resolvedScoringUnit(for: scoringUnitID) else {
             return 0
         }
-        return max(0, gross - net)
+        let handicap = ScoringEngine.scoringUnitHandicap(
+            for: scoringUnit,
+            participants: scoringUnitParticipants(scoringUnitID: scoringUnitID),
+            sharedScoreHandicapConfig: sharedScoringHandicapConfig(for: scoringUnit)
+        )
+        return ScoringEngine.strokesReceived(
+            handicap: handicap,
+            holeNumber: holeNumber,
+            holes: defaultTee?.holes ?? [],
+            playedHoleNumbers: snapshot.holeRange?.holeNumbers ?? Array(1...18),
+            useHandicaps: snapshot.configuration.useHandicaps,
+            handicapStrokeBasis: snapshot.handicapStrokeBasis
+        )
     }
 
     func scoringUnitHandicapLabel(scoringUnitID: String) -> String? {
-        guard snapshot.configuration.useHandicaps,
-              let unitStrokes = snapshot.roundSegment?.scoringUnits.first(where: { $0.id == scoringUnitID })?.handicapAllowance?.unitStrokes else {
+        guard let unitStrokes = scoringUnitHandicapStrokes(scoringUnitID: scoringUnitID) else {
             return nil
         }
         return "HCP \(Int(unitStrokes.rounded(.toNearestOrAwayFromZero)))"
     }
 
     func scoringUnitHandicapDecimalLabel(scoringUnitID: String) -> String? {
-        guard snapshot.configuration.useHandicaps,
-              let unitStrokes = snapshot.roundSegment?.scoringUnits.first(where: { $0.id == scoringUnitID })?.handicapAllowance?.unitStrokes else {
+        guard let unitStrokes = scoringUnitHandicapStrokes(scoringUnitID: scoringUnitID) else {
             return nil
         }
         let rounded = (unitStrokes * 10).rounded() / 10
@@ -1571,12 +1671,11 @@ final class LiveRoundViewModel: ObservableObject, Loggable {
                 }
                 sum += grossRelative
             } else {
-                guard let participantID = snapshot.participants.first(where: { $0.id == scoringUnitID })?.id,
-                      let participant = snapshot.participants.first(where: { $0.id == participantID }),
-                      let netRelative = netRelativeToParOnHole(participant: participant, holeNumber: holeNumber) else {
+                guard let grossRelative = scoreEntryForScoringUnit(scoringUnitID: scoringUnitID, holeNumber: holeNumber)
+                    .flatMap({ resolvedRelativeToPar(from: $0, holeNumber: holeNumber) }) else {
                     continue
                 }
-                sum += netRelative
+                sum += grossRelative - scoringUnitStrokesReceived(scoringUnitID: scoringUnitID, holeNumber: holeNumber)
             }
         }
         return sum
@@ -2826,6 +2925,7 @@ final class LiveRoundViewModel: ObservableObject, Loggable {
                 scoreOwnerScope: snapshot.configuration.scoreOwnerScope,
                 scoringGroups: snapshot.scoringGroups,
                 perHoleWinPoints: snapshot.configuration.resolvedHoleWinPoints,
+                sharedScoreHandicapConfig: snapshot.configuration.sharedScoreHandicapConfig,
                 handicapStrokeBasis: snapshot.handicapStrokeBasis
             )
         } else {

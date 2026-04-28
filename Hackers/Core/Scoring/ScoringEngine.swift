@@ -204,6 +204,7 @@ struct ScoringEngine {
         scoreOwnerScope: RoundScoreOwnerScope = .individual,
         scoringGroups: [RoundScoringGroup] = [],
         perHoleWinPoints: Double = 1.0,
+        sharedScoreHandicapConfig: HandicapConfiguration? = nil,
         handicapStrokeBasis: SeriesHandicapStrokeBasis = .eighteenHole
     ) -> ScoringResult {
         let holeNumbers = segment.holeRange.holeNumbers
@@ -237,6 +238,9 @@ struct ScoringEngine {
             basis: basis,
             scoreInputMode: scoreInputMode,
             allowParticipantFallback: !usesSharedScoreSource,
+            sharedScoreHandicapConfig: usesSharedScoreSource
+                ? (sharedScoreHandicapConfig ?? template.requirements.defaultHandicapConfig)
+                : nil,
             handicapStrokeBasis: handicapStrokeBasis
         )
 
@@ -776,6 +780,7 @@ struct ScoringEngine {
         basis: ScoreBasis,
         scoreInputMode: RoundScoreInputMode = .strokes,
         allowParticipantFallback: Bool = true,
+        sharedScoreHandicapConfig: HandicapConfiguration? = nil,
         handicapStrokeBasis: SeriesHandicapStrokeBasis = .eighteenHole
     ) -> [String: [Int: PipelineHoleValue]] {
         let participantByID = Dictionary(uniqueKeysWithValues: participants.map { ($0.id, $0) })
@@ -795,7 +800,12 @@ struct ScoringEngine {
             )
             let participantSet = Set(participantIDs)
             let memberParticipants = participantIDs.compactMap { participantByID[$0] }
-            let handicap = resolvedHandicap(for: scoringUnit, participants: memberParticipants, basis: basis)
+            let handicap = resolvedHandicap(
+                for: scoringUnit,
+                participants: memberParticipants,
+                basis: basis,
+                sharedScoreHandicapConfig: sharedScoreHandicapConfig
+            )
             var unitHoles: [Int: PipelineHoleValue] = [:]
 
             for holeNumber in holeNumbers {
@@ -1447,24 +1457,91 @@ struct ScoringEngine {
     private static func resolvedHandicap(
         for scoringUnit: ScoringUnit,
         participants: [RoundParticipant],
-        basis: ScoreBasis
+        basis: ScoreBasis,
+        sharedScoreHandicapConfig: HandicapConfiguration?
     ) -> Int {
         guard basis == .net else { return 0 }
 
+        return scoringUnitHandicap(
+            for: scoringUnit,
+            participants: participants,
+            sharedScoreHandicapConfig: sharedScoreHandicapConfig
+        )
+    }
+
+    static func scoringUnitHandicap(
+        for scoringUnit: ScoringUnit,
+        participants: [RoundParticipant],
+        sharedScoreHandicapConfig: HandicapConfiguration? = nil
+    ) -> Int {
+        Int(scoringUnitHandicapStrokes(
+            for: scoringUnit,
+            participants: participants,
+            sharedScoreHandicapConfig: sharedScoreHandicapConfig
+        ).rounded())
+    }
+
+    static func scoringUnitHandicapStrokes(
+        for scoringUnit: ScoringUnit,
+        participants: [RoundParticipant],
+        sharedScoreHandicapConfig: HandicapConfiguration? = nil
+    ) -> Double {
         switch scoringUnit.owner {
         case .participant:
-            return participants.first?.adjustedHandicap ?? 0
+            return Double(participants.first?.adjustedHandicap ?? 0)
         case .team, .scoreOwner:
             if let allowance = scoringUnit.handicapAllowance {
-                return Int(allowance.unitStrokes.rounded())
+                return allowance.unitStrokes
             }
             if let handicapAdjustments = scoringUnit.handicapAdjustments, handicapAdjustments.isPopulated {
-                return Int(handicapAdjustments.values.reduce(0.0, +).rounded())
+                return handicapAdjustments.values.reduce(0.0, +)
+            }
+            if let sharedScoreHandicapConfig,
+               let allowance = handicapAllowance(participants: participants, config: sharedScoreHandicapConfig) {
+                return allowance.unitStrokes
             }
             guard participants.isPopulated else { return 0 }
             let average = Double(participants.map(\.adjustedHandicap).reduce(0, +)) / Double(participants.count)
-            return Int(average.rounded())
+            return average
         }
+    }
+
+    static func handicapAllowance(
+        participants: [RoundParticipant],
+        config: HandicapConfiguration
+    ) -> ScoringUnitHandicapAllowance? {
+        let orderedMembers = participants.sorted {
+            if $0.adjustedHandicap != $1.adjustedHandicap {
+                return $0.adjustedHandicap < $1.adjustedHandicap
+            }
+            return $0.name.fullName.localizedCaseInsensitiveCompare($1.name.fullName) == .orderedAscending
+        }
+        guard orderedMembers.isPopulated else { return nil }
+
+        let memberStrokes: [String: Double]
+        if let percentages = config.positionPercentages, percentages.isPopulated {
+            var strokes: [String: Double] = [:]
+            for (index, participant) in orderedMembers.enumerated() {
+                guard index < percentages.count else { break }
+                strokes[participant.id] = Double(participant.adjustedHandicap) * percentages[index] * config.percentage
+            }
+            memberStrokes = strokes
+        } else if config.isTeamCombined {
+            memberStrokes = Dictionary(uniqueKeysWithValues: orderedMembers.map { participant in
+                (participant.id, Double(participant.adjustedHandicap) * config.percentage)
+            })
+        } else {
+            let average = Double(orderedMembers.map(\.adjustedHandicap).reduce(0, +)) / Double(orderedMembers.count)
+            let unitStrokes = average * config.percentage
+            let perMember = unitStrokes / Double(orderedMembers.count)
+            memberStrokes = Dictionary(uniqueKeysWithValues: orderedMembers.map { ($0.id, perMember) })
+        }
+
+        return ScoringUnitHandicapAllowance(
+            unitStrokes: memberStrokes.values.reduce(0.0, +),
+            memberStrokes: memberStrokes,
+            sourceConfig: config
+        )
     }
 
     private static func computeHoleStates(

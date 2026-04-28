@@ -169,13 +169,11 @@ struct LiveHoleScoringView: View, Loggable {
     }
 
     private var netScoreLabel: String? {
-        guard !currentScoringUnit.isShared else { return nil }
         guard viewModel.snapshot.configuration.useHandicaps else { return nil }
         guard draftScore != Self.clearScoreSentinel else { return nil }
-        let strokesReceived = viewModel.strokesReceivedOnHole(
-            participant: currentGolfer,
-            holeNumber: holeNumber
-        )
+        let strokesReceived = currentScoringUnit.isShared
+            ? viewModel.scoringUnitStrokesReceived(scoringUnitID: currentScoringUnit.scoringUnitID, holeNumber: holeNumber)
+            : viewModel.strokesReceivedOnHole(participant: currentGolfer, holeNumber: holeNumber)
         guard strokesReceived > 0 else { return nil }
         if viewModel.isFriendlyScoreInputMode {
             let netRelative = draftScore - strokesReceived

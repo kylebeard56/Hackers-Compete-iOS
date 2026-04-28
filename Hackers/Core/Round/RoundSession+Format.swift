@@ -860,38 +860,7 @@ extension RoundSession {
         participants: [RoundParticipant],
         config: HandicapConfiguration
     ) -> ScoringUnitHandicapAllowance? {
-        let orderedMembers = participants.sorted {
-            if $0.adjustedHandicap != $1.adjustedHandicap {
-                return $0.adjustedHandicap < $1.adjustedHandicap
-            }
-            return $0.name.fullName.localizedCaseInsensitiveCompare($1.name.fullName) == .orderedAscending
-        }
-        guard orderedMembers.isPopulated else { return nil }
-
-        let memberStrokes: [String: Double]
-        if let percentages = config.positionPercentages, percentages.isPopulated {
-            var strokes: [String: Double] = [:]
-            for (index, participant) in orderedMembers.enumerated() {
-                guard index < percentages.count else { break }
-                strokes[participant.id] = Double(participant.adjustedHandicap) * percentages[index] * config.percentage
-            }
-            memberStrokes = strokes
-        } else if config.isTeamCombined {
-            memberStrokes = Dictionary(uniqueKeysWithValues: orderedMembers.map { participant in
-                (participant.id, Double(participant.adjustedHandicap) * config.percentage)
-            })
-        } else {
-            let average = Double(orderedMembers.map(\.adjustedHandicap).reduce(0, +)) / Double(orderedMembers.count)
-            let unitStrokes = average * config.percentage
-            let perMember = unitStrokes / Double(orderedMembers.count)
-            memberStrokes = Dictionary(uniqueKeysWithValues: orderedMembers.map { ($0.id, perMember) })
-        }
-
-        return ScoringUnitHandicapAllowance(
-            unitStrokes: memberStrokes.values.reduce(0.0, +),
-            memberStrokes: memberStrokes,
-            sourceConfig: config
-        )
+        ScoringEngine.handicapAllowance(participants: participants, config: config)
     }
 
     private func rebuildMatchups(
