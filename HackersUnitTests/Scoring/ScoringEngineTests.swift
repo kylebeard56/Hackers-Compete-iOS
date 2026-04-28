@@ -74,6 +74,26 @@ final class ScoringEngineTests: XCTestCase {
         )
     }
 
+    private func makeSharedScoreEntry(
+        scoringUnitID: String,
+        participantIDs: [String],
+        holeNumber: Int,
+        strokes: Int,
+        segmentID: String = "seg1"
+    ) -> ScoreEntry {
+        ScoreEntry(
+            id: ScoreEntry.makeID(hole: holeNumber, segment: segmentID, scoringUnit: scoringUnitID),
+            holeNumber: holeNumber,
+            segmentID: segmentID,
+            scoringUnitID: scoringUnitID,
+            participantIDs: participantIDs,
+            strokes: strokes,
+            pickedUp: false,
+            entryID: participantIDs.first ?? scoringUnitID,
+            parentID: "round1"
+        )
+    }
+
     private func makePartnership(id: String, teamID: String, memberIDs: [String]) -> RoundScoringGroup {
         RoundScoringGroup(
             id: id,
@@ -692,6 +712,72 @@ final class ScoringEngineTests: XCTestCase {
         let row = result.rows[0]
         // Best 2 scores: 3(-1) + 4(0) = -1 total relative to par
         XCTAssertEqual(row.scoringUnitID, "t1")
+    }
+
+    // MARK: - Shared Score Owners
+
+    func testSharedScoreOwnerMatchupUsesCanonicalScoringUnitRows() {
+        let holes = [Hole(number: 1, par: 4, yardage: 400, handicap: 1)]
+        let participants = [
+            makeParticipant(id: "p1", name: "Alice", teamID: "red"),
+            makeParticipant(id: "p2", name: "Bob", teamID: "red"),
+            makeParticipant(id: "p3", name: "Cara", teamID: "blue"),
+            makeParticipant(id: "p4", name: "Drew", teamID: "blue"),
+        ]
+        let teams = [
+            RoundTeam(id: "red", name: "Red", color: "red", index: 0, createdAt: .init()),
+            RoundTeam(id: "blue", name: "Blue", color: "blue", index: 1, createdAt: .init()),
+        ]
+        let scoringGroups = [
+            makePartnership(id: "pair_red", teamID: "red", memberIDs: ["p1", "p2"]),
+            makePartnership(id: "pair_blue", teamID: "blue", memberIDs: ["p3", "p4"]),
+        ]
+        let segment = RoundSegment(
+            id: "seg1",
+            roundID: "round1",
+            holeRange: HoleRange(startHole: 1, endHole: 1),
+            templateID: FormatTemplateRegistry.captainsChoice.id,
+            scoringUnits: scoringGroups.map {
+                ScoringUnit(id: $0.id, owner: .scoreOwner, ownerIDs: $0.memberIDs, scoringMethod: .aggregate)
+            },
+            matchups: [
+                TeamMatchup(
+                    id: "match1",
+                    teamIDs: [],
+                    scoreOwnerIDs: ["pair_red", "pair_blue"],
+                    scoreOwnerScope: .partnership,
+                    mode: .scoreOwner
+                )
+            ],
+            competitionScope: .matchup
+        )
+        let scores = [
+            makeSharedScoreEntry(scoringUnitID: "pair_red", participantIDs: ["p1", "p2"], holeNumber: 1, strokes: 4),
+            makeSharedScoreEntry(scoringUnitID: "pair_blue", participantIDs: ["p3", "p4"], holeNumber: 1, strokes: 5),
+        ]
+
+        let result = ScoringEngine.computeWithPipeline(
+            scores: scores,
+            participants: participants,
+            teams: teams,
+            segment: segment,
+            holes: holes,
+            basis: .gross,
+            template: FormatTemplateRegistry.captainsChoice,
+            resolvedCompetitionScope: .matchup,
+            scoreOwnerScope: .partnership,
+            scoringGroups: scoringGroups
+        )
+
+        XCTAssertEqual(result.matchupResults.count, 1)
+        let rowMap = Dictionary(uniqueKeysWithValues: result.matchupResults[0].rows.map { ($0.scoringUnitID, $0) })
+        XCTAssertEqual(rowMap["pair_red"]?.owner, .scoreOwner)
+        XCTAssertEqual(rowMap["pair_red"]?.participantIDs, ["p1", "p2"])
+        XCTAssertEqual(rowMap["pair_red"]?.total, 0)
+        XCTAssertEqual(rowMap["pair_red"]?.holesPlayed, 1)
+        XCTAssertEqual(rowMap["pair_blue"]?.participantIDs, ["p3", "p4"])
+        XCTAssertEqual(rowMap["pair_blue"]?.total, 1)
+        XCTAssertEqual(rowMap["pair_blue"]?.holesPlayed, 1)
     }
 
     // MARK: - Match Play via Pipeline

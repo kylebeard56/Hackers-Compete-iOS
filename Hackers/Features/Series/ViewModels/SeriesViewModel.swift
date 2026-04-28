@@ -4668,7 +4668,7 @@ final class SeriesViewModel: ObservableObject, Loggable {
         let template = snapshot.resolvedActiveTemplate
         let usesScoreOwners = snapshot.configuration.scoreOwnerScope != .individual || snapshot.scoringGroups.isPopulated
 
-        if snapshot.configuration.primaryFormat.configuration.requiresTeams && !usesScoreOwners {
+        if snapshot.configuration.primaryFormat.configuration.requiresTeams && !usesScoreOwners && !snapshot.isSharedScoreSource {
             return ScoringEngine.computeWithTeamScoring(
                 scores: snapshot.scoring,
                 participants: snapshot.participants,

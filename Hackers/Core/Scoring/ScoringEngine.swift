@@ -208,9 +208,17 @@ struct ScoringEngine {
     ) -> ScoringResult {
         let holeNumbers = segment.holeRange.holeNumbers
         let holeMap = Dictionary(uniqueKeysWithValues: holes.map { ($0.number, $0) })
-        let scoreIndex = buildScoreIndex(scores: scores)
+        let usesSharedScoreSource = template.scoreSource == .shared
+        let scoreIndex = buildScoreIndex(scores: scores, includeParticipantAliases: !usesSharedScoreSource)
         let lookupSegmentIDs = scoreLookupSegmentIDs ?? resolvedScoreLookupSegmentIDs(primarySegment: segment, scores: scores)
-        let scoringUnits = resolvedScoringUnits(participants: participants, segment: segment)
+        let scoringUnits = resolvedScoringUnits(
+            participants: participants,
+            teams: teams,
+            scoringGroups: scoringGroups,
+            segment: segment,
+            template: template,
+            scoreOwnerScope: scoreOwnerScope
+        )
         let selectionGroups = resolvedSelectionGroups(
             participants: participants,
             scoringGroups: scoringGroups,
@@ -228,6 +236,7 @@ struct ScoringEngine {
             lookupSegmentIDs: lookupSegmentIDs,
             basis: basis,
             scoreInputMode: scoreInputMode,
+            allowParticipantFallback: !usesSharedScoreSource,
             handicapStrokeBasis: handicapStrokeBasis
         )
 
@@ -295,7 +304,7 @@ struct ScoringEngine {
 
         let holeStates = computeHoleStates(
             holeNumbers: holeNumbers,
-            participantIDs: participants.map(\.id),
+            participantIDs: usesSharedScoreSource ? scoringUnits.map(\.id) : participants.map(\.id),
             scoreIndex: scoreIndex,
             lookupSegmentIDs: lookupSegmentIDs
         )
@@ -766,6 +775,7 @@ struct ScoringEngine {
         lookupSegmentIDs: [String],
         basis: ScoreBasis,
         scoreInputMode: RoundScoreInputMode = .strokes,
+        allowParticipantFallback: Bool = true,
         handicapStrokeBasis: SeriesHandicapStrokeBasis = .eighteenHole
     ) -> [String: [Int: PipelineHoleValue]] {
         let participantByID = Dictionary(uniqueKeysWithValues: participants.map { ($0.id, $0) })
@@ -790,20 +800,23 @@ struct ScoringEngine {
 
             for holeNumber in holeNumbers {
                 let par = holeMap[holeNumber]?.par ?? 4
-                let directEntry = scoreEntry(
+                let directEntry = scoreOwnerEntry(
+                    for: scoringUnit,
+                    scoringGroups: scoringGroups,
                     scoreIndex: scoreIndex,
-                    scoringUnitID: scoringUnit.id,
                     holeNumber: holeNumber,
                     lookupSegmentIDs: lookupSegmentIDs
                 )
-                let fallbackEntry = participantIDs.lazy.compactMap { participantID in
-                    scoreEntry(
-                        scoreIndex: scoreIndex,
-                        scoringUnitID: participantID,
-                        holeNumber: holeNumber,
-                        lookupSegmentIDs: lookupSegmentIDs
-                    )
-                }.first
+                let fallbackEntry = allowParticipantFallback
+                    ? participantIDs.lazy.compactMap { participantID in
+                        scoreEntry(
+                            scoreIndex: scoreIndex,
+                            scoringUnitID: participantID,
+                            holeNumber: holeNumber,
+                            lookupSegmentIDs: lookupSegmentIDs
+                        )
+                    }.first
+                    : nil
                 guard let entry = directEntry ?? fallbackEntry else { continue }
                 guard let grossRelativeToPar = resolvedGrossRelativeToPar(entry: entry, par: par) else { continue }
 
@@ -838,6 +851,59 @@ struct ScoringEngine {
         return rawValues
     }
 
+    private static func scoreOwnerEntry(
+        for scoringUnit: ScoringUnit,
+        scoringGroups: [RoundScoringGroup],
+        scoreIndex: [String: ScoreEntry],
+        holeNumber: Int,
+        lookupSegmentIDs: [String]
+    ) -> ScoreEntry? {
+        for scoringUnitID in scoreLookupIDs(for: scoringUnit, scoringGroups: scoringGroups) {
+            if let entry = scoreEntry(
+                scoreIndex: scoreIndex,
+                scoringUnitID: scoringUnitID,
+                holeNumber: holeNumber,
+                lookupSegmentIDs: lookupSegmentIDs
+            ) {
+                return entry
+            }
+        }
+        return nil
+    }
+
+    private static func scoreLookupIDs(
+        for scoringUnit: ScoringUnit,
+        scoringGroups: [RoundScoringGroup]
+    ) -> [String] {
+        var ids: [String] = []
+        var seen = Set<String>()
+
+        func append(_ id: String) {
+            guard id.isPopulated, !seen.contains(id) else { return }
+            ids.append(id)
+            seen.insert(id)
+        }
+
+        append(scoringUnit.id)
+
+        switch scoringUnit.owner {
+        case .team:
+            scoringUnit.ownerIDs.forEach(append)
+        case .scoreOwner:
+            let ownerIDs = Set(scoringUnit.ownerIDs)
+            scoringGroups
+                .filter { group in
+                    group.memberIDs.isPopulated && Set(group.memberIDs) == ownerIDs
+                }
+                .map(\.id)
+                .forEach(append)
+        case .participant:
+            break
+        }
+
+        return ids
+    }
+
     static func buildRawValues(
         participants: [RoundParticipant],
         holeNumbers: [Int],
@@ -865,6 +931,7 @@ struct ScoringEngine {
             lookupSegmentIDs: lookupSegmentIDs,
             basis: basis,
             scoreInputMode: scoreInputMode,
+            allowParticipantFallback: true,
             handicapStrokeBasis: handicapStrokeBasis
         )
     }
@@ -1114,11 +1181,15 @@ struct ScoringEngine {
         return nil
     }
 
-    static func buildScoreIndex(scores: [ScoreEntry]) -> [String: ScoreEntry] {
+    static func buildScoreIndex(
+        scores: [ScoreEntry],
+        includeParticipantAliases: Bool = true
+    ) -> [String: ScoreEntry] {
         var index: [String: ScoreEntry] = [:]
         for entry in scores {
             let key = scoreIndexKey(scoringUnitID: entry.scoringUnitID, holeNumber: entry.holeNumber, segmentID: entry.segmentID)
             if index[key] == nil { index[key] = entry }
+            guard includeParticipantAliases else { continue }
             for pid in entry.participantIDs where pid != entry.scoringUnitID {
                 let pk = scoreIndexKey(scoringUnitID: pid, holeNumber: entry.holeNumber, segmentID: entry.segmentID)
                 if index[pk] == nil { index[pk] = entry }
@@ -1240,10 +1311,76 @@ struct ScoringEngine {
 
     private static func resolvedScoringUnits(
         participants: [RoundParticipant],
-        segment: RoundSegment
+        teams: [RoundTeam],
+        scoringGroups: [RoundScoringGroup],
+        segment: RoundSegment,
+        template: GameTemplate,
+        scoreOwnerScope: RoundScoreOwnerScope
     ) -> [ScoringUnit] {
         if segment.scoringUnits.isPopulated {
             return segment.scoringUnits
+        }
+
+        if template.scoreSource == .shared {
+            switch scoreOwnerScope {
+            case .partnership:
+                let units = scoringGroups
+                    .filter { $0.kind == .partnership && $0.memberIDs.isPopulated }
+                    .map { group in
+                        ScoringUnit(
+                            id: group.id,
+                            owner: .scoreOwner,
+                            ownerIDs: group.memberIDs,
+                            scoringMethod: .aggregate,
+                            aggregation: .init(mode: .sumAll, scope: .perHole)
+                        )
+                    }
+                if units.isPopulated { return units }
+            case .teeGroup:
+                let persisted = scoringGroups
+                    .filter { $0.kind == .teeGroup && $0.memberIDs.isPopulated }
+                    .map { group in
+                        ScoringUnit(
+                            id: group.id,
+                            owner: .scoreOwner,
+                            ownerIDs: group.memberIDs,
+                            scoringMethod: .aggregate,
+                            aggregation: .init(mode: .sumAll, scope: .perHole)
+                        )
+                    }
+                if persisted.isPopulated { return persisted }
+
+                let grouped = Dictionary(grouping: participants) { $0.groupID ?? "" }
+                let units = grouped.compactMap { groupID, members -> ScoringUnit? in
+                    guard groupID.isPopulated, members.isPopulated else { return nil }
+                    return ScoringUnit(
+                        id: groupID,
+                        owner: .scoreOwner,
+                        ownerIDs: members.map(\.id),
+                        scoringMethod: .aggregate,
+                        aggregation: .init(mode: .sumAll, scope: .perHole)
+                    )
+                }
+                if units.isPopulated { return units }
+            case .individual:
+                let participantsByTeam = Dictionary(grouping: participants) { $0.teamID ?? "" }
+                let orderedTeamIDs = teams.sorted { $0.index < $1.index }.map(\.id)
+                    + participantsByTeam.keys.filter { teamID in
+                        teamID.isPopulated && !teams.contains(where: { $0.id == teamID })
+                    }.sorted()
+                let units = orderedTeamIDs.compactMap { teamID -> ScoringUnit? in
+                    let memberIDs = participantsByTeam[teamID]?.map(\.id) ?? []
+                    guard memberIDs.isPopulated else { return nil }
+                    return ScoringUnit(
+                        id: teamID,
+                        owner: .team,
+                        ownerIDs: [teamID],
+                        scoringMethod: .aggregate,
+                        aggregation: .init(mode: .sumAll, scope: .perHole)
+                    )
+                }
+                if units.isPopulated { return units }
+            }
         }
 
         return participants.map { participant in

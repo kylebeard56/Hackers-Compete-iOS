@@ -779,7 +779,8 @@ private extension LiveHoleScoringView {
                 scoringUnitID: unit.scoringUnitID,
                 participant: unit.anchorParticipant,
                 holeNumber: holeNumber,
-                value: value
+                value: value,
+                participantIDs: unit.participants.map(\.id)
             )
         } else {
             await viewModel.setQuickScoreValue(participant: unit.anchorParticipant, value: value, holeNumber: holeNumber)

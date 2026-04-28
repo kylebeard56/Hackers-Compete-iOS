@@ -129,6 +129,62 @@ final class LiveRoundOutcomeHolePerformanceTests: XCTestCase {
         XCTAssertEqual(viewModel.scoringUnitGrossStrokes(scoringUnitID: "pair_1", holeNumber: 1), 4)
     }
 
+    func testSharedScoreLeaderboardOnlyCountsCanonicalScoredPairs() async throws {
+        var snapshot = Self.makeSharedPartnershipSnapshot()
+        let roundID = snapshot.round.id
+        let segmentID = try XCTUnwrap(snapshot.segments.first?.id)
+        let teeID = try XCTUnwrap(snapshot.defaultTee?.id)
+
+        snapshot.participants.append(contentsOf: [
+            Self.makeSharedParticipant(id: "p5", first: "Pat", last: "O'Meara", teamID: "blue", teeID: teeID, teeOrder: 5, roundID: roundID),
+            Self.makeSharedParticipant(id: "p6", first: "Mark", last: "O'Meara", teamID: "blue", teeID: teeID, teeOrder: 6, roundID: roundID),
+            Self.makeSharedParticipant(id: "p7", first: "Matt", last: "Kepic", teamID: "red", teeID: teeID, teeOrder: 7, roundID: roundID),
+            Self.makeSharedParticipant(id: "p8", first: "Connor", last: "Halloran", teamID: "red", teeID: teeID, teeOrder: 8, roundID: roundID),
+        ])
+        snapshot.scoringGroups.append(contentsOf: [
+            RoundScoringGroup(id: "pair_3", teamID: "blue", teeGroupID: "group_1", kind: .partnership, memberIDs: ["p5", "p6"], parentID: roundID),
+            RoundScoringGroup(id: "pair_4", teamID: "red", teeGroupID: "group_1", kind: .partnership, memberIDs: ["p7", "p8"], parentID: roundID),
+        ])
+        snapshot.segments[0].scoringUnits = snapshot.scoringGroups.map {
+            ScoringUnit(id: $0.id, owner: .scoreOwner, ownerIDs: $0.memberIDs, scoringMethod: .aggregate)
+        }
+        snapshot.scoring = [
+            Self.makeSharedScoreEntry(roundID: roundID, segmentID: segmentID, scoringUnitID: "pair_1", participantIDs: ["p1", "p2"], holeNumber: 1, strokes: 4),
+            Self.makeSharedScoreEntry(roundID: roundID, segmentID: segmentID, scoringUnitID: "pair_2", participantIDs: ["p3", "p4"], holeNumber: 1, strokes: 6),
+        ]
+
+        let viewModel = await boundViewModel(snapshot: snapshot, participantID: "p1")
+        let rowsByID = Dictionary(uniqueKeysWithValues: viewModel.effectiveLeaderboardRows.map { ($0.id, $0) })
+
+        XCTAssertEqual(rowsByID["pair_1"]?.thru, 1)
+        XCTAssertEqual(rowsByID["pair_1"]?.scoreToPar, 0)
+        XCTAssertEqual(rowsByID["pair_2"]?.thru, 1)
+        XCTAssertEqual(rowsByID["pair_2"]?.scoreToPar, 2)
+        XCTAssertEqual(rowsByID["pair_3"]?.thru, 0)
+        XCTAssertEqual(rowsByID["pair_3"]?.scoreToPar, 0)
+        XCTAssertEqual(rowsByID["pair_4"]?.thru, 0)
+        XCTAssertEqual(rowsByID["pair_4"]?.scoreToPar, 0)
+    }
+
+    func testSharedScoreFriendlyRelativeToParTotalsStayOnScoreOwnerRows() async throws {
+        var snapshot = Self.makeSharedPartnershipSnapshot()
+        let roundID = snapshot.round.id
+        let segmentID = try XCTUnwrap(snapshot.segments.first?.id)
+        snapshot.round.configuration.scoreInputMode = .friendlyRelativeToPar
+        snapshot.scoring = [
+            Self.makeSharedRelativeScoreEntry(roundID: roundID, segmentID: segmentID, scoringUnitID: "pair_1", participantIDs: ["p1", "p2"], holeNumber: 1, relativeToPar: 0),
+            Self.makeSharedRelativeScoreEntry(roundID: roundID, segmentID: segmentID, scoringUnitID: "pair_2", participantIDs: ["p3", "p4"], holeNumber: 1, relativeToPar: 2),
+        ]
+
+        let viewModel = await boundViewModel(snapshot: snapshot, participantID: "p1")
+        let rowsByID = Dictionary(uniqueKeysWithValues: viewModel.effectiveLeaderboardRows.map { ($0.id, $0) })
+
+        XCTAssertEqual(rowsByID["pair_1"]?.thru, 1)
+        XCTAssertEqual(rowsByID["pair_1"]?.scoreToPar, 0)
+        XCTAssertEqual(rowsByID["pair_2"]?.thru, 1)
+        XCTAssertEqual(rowsByID["pair_2"]?.scoreToPar, 2)
+    }
+
     func testSharedScorePartnershipRowsResolveOpaqueScoringUnitIDs() async throws {
         var snapshot = Self.makeSharedPartnershipSnapshot()
         snapshot.segments[0].scoringUnits = [
@@ -561,6 +617,32 @@ private extension LiveRoundOutcomeHolePerformanceTests {
             scoringUnitID: scoringUnitID,
             participantIDs: participantIDs,
             strokes: strokes,
+            pickedUp: false,
+            entryID: participantIDs.first ?? scoringUnitID,
+            createdAt: .init(),
+            lastUpdatedAt: .init(),
+            parentID: roundID
+        )
+    }
+
+    static func makeSharedRelativeScoreEntry(
+        roundID: String,
+        segmentID: String,
+        scoringUnitID: String,
+        participantIDs: [String],
+        holeNumber: Int,
+        relativeToPar: Int
+    ) -> ScoreEntry {
+        ScoreEntry(
+            id: ScoreEntry.makeID(hole: holeNumber, segment: segmentID, scoringUnit: scoringUnitID),
+            holeNumber: holeNumber,
+            segmentID: segmentID,
+            groupID: "group_1",
+            scoringUnitID: scoringUnitID,
+            participantIDs: participantIDs,
+            strokes: nil,
+            relativeToPar: relativeToPar,
+            entryMode: .relativeToPar,
             pickedUp: false,
             entryID: participantIDs.first ?? scoringUnitID,
             createdAt: .init(),

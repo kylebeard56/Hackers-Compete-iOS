@@ -1378,9 +1378,15 @@ final class LiveRoundViewModel: ObservableObject, Loggable {
     private func participantIDsForScoreEntry(
         participant: RoundParticipant,
         scoringUnitIDOverride: String?,
+        participantIDsOverride: [String]? = nil,
         explicitScoringUnit: ScoringUnit?,
         resolvedScoringUnit: ScoringUnit?
     ) -> [String] {
+        if let participantIDsOverride {
+            let normalized = participantIDsOverride.filter(\.isPopulated)
+            if normalized.isPopulated { return normalized }
+        }
+
         if let explicitScoringUnit {
             return scoringParticipantIDs(for: explicitScoringUnit)
         }
@@ -2789,7 +2795,7 @@ final class LiveRoundViewModel: ObservableObject, Loggable {
                 scoreLookupSegmentIDs: scoreLookupIDs.isEmpty ? nil : scoreLookupIDs,
                 handicapStrokeBasis: snapshot.handicapStrokeBasis
             )
-        } else if snapshot.configuration.primaryFormat.configuration.requiresTeams && !usesScoreOwners {
+        } else if snapshot.configuration.primaryFormat.configuration.requiresTeams && !usesScoreOwners && !snapshot.isSharedScoreSource {
             result = ScoringEngine.computeWithTeamScoring(
                 scores: snapshot.scoring,
                 participants: snapshot.participants,
@@ -3082,15 +3088,19 @@ final class LiveRoundViewModel: ObservableObject, Loggable {
 
     private func sharedSubject(_ subject: SharedScoringSubject, matches row: LeaderboardRow) -> Bool {
         if row.scoringUnitID == subject.scoringUnitID { return true }
-        if let teamID = subject.teamID, row.teamID == teamID || row.scoringUnitID == teamID {
-            return true
-        }
         if let scoringGroupID = subject.scoringGroupID, row.scoringUnitID == scoringGroupID {
             return true
         }
         let subjectMemberIDs = Set(subject.participants.map(\.id))
         let rowMemberIDs = Set(row.participants.map(\.id))
-        return subjectMemberIDs.isPopulated && subjectMemberIDs == rowMemberIDs
+        if subjectMemberIDs.isPopulated && subjectMemberIDs == rowMemberIDs {
+            return true
+        }
+        guard snapshot.configuration.scoreOwnerScope == .individual,
+              let teamID = subject.teamID else {
+            return false
+        }
+        return row.teamID == teamID || row.scoringUnitID == teamID
     }
 
     private func sharedScoringSubject(matching id: String) -> SharedScoringSubject? {
@@ -3380,6 +3390,7 @@ final class LiveRoundViewModel: ObservableObject, Loggable {
         participant: RoundParticipant,
         holeNumber: Int,
         value: Int,
+        participantIDs: [String]? = nil,
         entryMethod: LiveRoundEntryMethod = .quickPicker
     ) async {
         if isFriendlyScoreInputMode {
@@ -3388,6 +3399,7 @@ final class LiveRoundViewModel: ObservableObject, Loggable {
                 holeNumber: holeNumber,
                 relativeToPar: value,
                 scoringUnitID: scoringUnitID,
+                participantIDs: participantIDs,
                 entryMethod: entryMethod
             )
         } else {
@@ -3396,6 +3408,7 @@ final class LiveRoundViewModel: ObservableObject, Loggable {
                 holeNumber: holeNumber,
                 strokes: value,
                 scoringUnitID: scoringUnitID,
+                participantIDs: participantIDs,
                 entryMethod: entryMethod
             )
         }
@@ -3482,6 +3495,7 @@ final class LiveRoundViewModel: ObservableObject, Loggable {
         holeNumber: Int,
         strokes: Int,
         scoringUnitID scoringUnitIDOverride: String? = nil,
+        participantIDs participantIDsOverride: [String]? = nil,
         entryMethod: LiveRoundEntryMethod = .quickPicker
     ) async {
         addBreadcrumb()
@@ -3510,6 +3524,7 @@ final class LiveRoundViewModel: ObservableObject, Loggable {
         let participantIDs = participantIDsForScoreEntry(
             participant: participant,
             scoringUnitIDOverride: scoringUnitIDOverride,
+            participantIDsOverride: participantIDsOverride,
             explicitScoringUnit: explicitScoringUnit,
             resolvedScoringUnit: resolvedScoringUnit
         )
@@ -3549,16 +3564,23 @@ final class LiveRoundViewModel: ObservableObject, Loggable {
         let previousEntry = scoreEntryForScoringUnit(scoringUnitID: lookupKey, holeNumber: holeNumber)
         if previousEntry?.strokes == strokes,
            previousEntry?.relativeToPar == nil,
+           previousEntry?.id == entry.id,
            previousEntry?.pickedUp == false {
             return
         }
         
         var updatedSnapshot = roundSession.snapshot
+        if let previousEntry, previousEntry.id != entry.id {
+            updatedSnapshot.scoring.removeAll { $0.id == previousEntry.id }
+        }
         updatedSnapshot.scoring.upsert(entry)
         roundSession.snapshot = updatedSnapshot
         
         do {
             _ = try await entry.put().get()
+            if let previousEntry, previousEntry.id != entry.id {
+                _ = try? await previousEntry.delete().get()
+            }
             lastLocalScoreAt = Date()
             emitScoreSavedTelemetry(
                 participant: participant,
@@ -3572,6 +3594,7 @@ final class LiveRoundViewModel: ObservableObject, Loggable {
             addBreadcrumb(level: .error, message: "Failed to set score for participant \(participant.id)", error: error)
             var rollbackSnapshot = roundSession.snapshot
             if let prev = previousEntry {
+                rollbackSnapshot.scoring.removeAll { $0.id == entry.id }
                 rollbackSnapshot.scoring.upsert(prev)
             } else {
                 rollbackSnapshot.scoring.removeAll { $0.id == entry.id }
@@ -3585,6 +3608,7 @@ final class LiveRoundViewModel: ObservableObject, Loggable {
         holeNumber: Int,
         relativeToPar: Int,
         scoringUnitID scoringUnitIDOverride: String? = nil,
+        participantIDs participantIDsOverride: [String]? = nil,
         entryMethod: LiveRoundEntryMethod = .quickPicker
     ) async {
         addBreadcrumb()
@@ -3613,6 +3637,7 @@ final class LiveRoundViewModel: ObservableObject, Loggable {
         let participantIDs = participantIDsForScoreEntry(
             participant: participant,
             scoringUnitIDOverride: scoringUnitIDOverride,
+            participantIDsOverride: participantIDsOverride,
             explicitScoringUnit: explicitScoringUnit,
             resolvedScoringUnit: resolvedScoringUnit
         )
@@ -3652,16 +3677,23 @@ final class LiveRoundViewModel: ObservableObject, Loggable {
         let previousEntry = scoreEntryForScoringUnit(scoringUnitID: lookupKey, holeNumber: holeNumber)
         if previousEntry?.relativeToPar == relativeToPar,
            previousEntry?.resolvedEntryMode == .relativeToPar,
+           previousEntry?.id == entry.id,
            previousEntry?.pickedUp == false {
             return
         }
 
         var updatedSnapshot = roundSession.snapshot
+        if let previousEntry, previousEntry.id != entry.id {
+            updatedSnapshot.scoring.removeAll { $0.id == previousEntry.id }
+        }
         updatedSnapshot.scoring.upsert(entry)
         roundSession.snapshot = updatedSnapshot
 
         do {
             _ = try await entry.put().get()
+            if let previousEntry, previousEntry.id != entry.id {
+                _ = try? await previousEntry.delete().get()
+            }
             lastLocalScoreAt = Date()
             emitScoreSavedTelemetry(
                 participant: participant,
@@ -3676,6 +3708,7 @@ final class LiveRoundViewModel: ObservableObject, Loggable {
             addBreadcrumb(level: .error, message: "Failed to set relative score for participant \(participant.id)", error: error)
             var rollbackSnapshot = roundSession.snapshot
             if let prev = previousEntry {
+                rollbackSnapshot.scoring.removeAll { $0.id == entry.id }
                 rollbackSnapshot.scoring.upsert(prev)
             } else {
                 rollbackSnapshot.scoring.removeAll { $0.id == entry.id }
