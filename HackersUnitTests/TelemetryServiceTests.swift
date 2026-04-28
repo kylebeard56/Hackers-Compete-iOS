@@ -162,9 +162,46 @@ final class TelemetryServiceTests: XCTestCase {
         XCTAssertEqual(props["strokes"] as? Int, par + 2)
         XCTAssertEqual(props["score_relative_to_par"] as? Int, 2)
         XCTAssertEqual(props["entry_method"] as? String, LiveRoundEntryMethod.customPrompt.rawValue)
+        XCTAssertEqual(props["score_input_mode"] as? String, RoundScoreInputMode.strokes.rawValue)
+        XCTAssertEqual(props["score_entry_mode"] as? String, ScoreEntryMode.strokes.rawValue)
         XCTAssertEqual(props["participant_holes_scored_count"] as? Int, 5)
         XCTAssertEqual(props["total_holes"] as? Int, 18)
         XCTAssertEqual(props["participant_completion_pct"] as? Double ?? 0, 27.8, accuracy: 0.0001)
+        XCTAssertNil(props["friendly_relative_to_par"])
+        XCTAssertNil(props["friendly_score_label"])
+        XCTAssertNil(props["friendly_gross_strokes"])
+    }
+
+    func testScoringPropsIncludeFriendlyScoreMetadata() {
+        var snapshot = MockLiveRound2v2.snapshot
+        snapshot.round.configuration.scoreInputMode = .friendlyRelativeToPar
+        let participant = snapshot.participants[0]
+        let holeNumber = 1
+        let par = snapshot.defaultTee?.holes.first(where: { $0.number == holeNumber })?.par ?? 4
+        let relativeToPar = -1
+
+        let props = TelemetryEventProps.scoring(
+            snapshot: snapshot,
+            participant: participant,
+            entryParticipantID: participant.id,
+            holeNumber: holeNumber,
+            strokes: par + relativeToPar,
+            entryMethod: .quickPicker,
+            scoreEntryMode: .relativeToPar,
+            friendlyRelativeToPar: relativeToPar,
+            friendlyScoreLabel: "Birdie",
+            participantHolesScoredCount: 6,
+            totalHoles: 18,
+            participantCompletionPct: 33.3
+        )
+
+        XCTAssertEqual(props["score_input_mode"] as? String, RoundScoreInputMode.friendlyRelativeToPar.rawValue)
+        XCTAssertEqual(props["score_entry_mode"] as? String, ScoreEntryMode.relativeToPar.rawValue)
+        XCTAssertEqual(props["friendly_relative_to_par"] as? Int, relativeToPar)
+        XCTAssertEqual(props["friendly_score_label"] as? String, "Birdie")
+        XCTAssertEqual(props["friendly_gross_strokes"] as? Int, par - 1)
+        XCTAssertEqual(props["score_relative_to_par"] as? Int, relativeToPar)
+        XCTAssertEqual(props["strokes"] as? Int, par - 1)
     }
 
     func testHoleCompletionTransitionHelperDetectsCompletedAndReopened() {

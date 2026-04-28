@@ -3800,7 +3800,7 @@ final class SeriesViewModel: ObservableObject, Loggable {
         return await loadRoundSnapshot(roundID: roundID)
     }
 
-    func matchupHeadlines(for seriesRound: SeriesRound) async -> [SeriesMatchupHeadline] {
+    func matchupOutcomes(for seriesRound: SeriesRound) async -> [SeriesMatchupOutcome] {
         guard let roundID = seriesRound.roundID,
               let snapshot = await loadRoundSnapshot(roundID: roundID),
               let segment = snapshot.roundSegment else { return [] }
@@ -3810,41 +3810,108 @@ final class SeriesViewModel: ObservableObject, Loggable {
         guard result.matchupResults.isPopulated else { return [] }
 
         let highestWins = result.template.leaderboardSort == .highestWins
-        var headlines: [SeriesMatchupHeadline] = []
-        for matchupResult in result.matchupResults {
+        return result.matchupResults.enumerated().compactMap { index, matchupResult in
+            guard matchupResult.matchup.isValid else { return nil }
+            let mode = matchupResult.matchup.mode ?? expectedMatchupMode(for: snapshot)
+            let pairingIDs = matchupResult.matchup.pairingIDs()
+            let rowsBySide = Dictionary(uniqueKeysWithValues: pairingIDs.compactMap { sideID -> (String, ScoringRow)? in
+                guard let row = scoringRow(
+                    in: matchupResult.rows,
+                    matchesSideID: sideID,
+                    matchup: matchupResult.matchup,
+                    expectedMode: mode,
+                    snapshot: snapshot
+                ) else { return nil }
+                return (sideID, row)
+            })
             let sortedRows = matchupResult.rows.sorted {
                 if $0.total != $1.total {
                     return highestWins ? $0.total > $1.total : $0.total < $1.total
                 }
                 return $0.scoringUnitID < $1.scoringUnitID
             }
-            guard sortedRows.count == 2 else { continue }
-            let first = sortedRows[0]
-            let second = sortedRows[1]
-            let isTie = first.total == second.total
+            let first = sortedRows.first
+            let isTie = sortedRows.count >= 2 && first.map { row in
+                sortedRows.allSatisfy { $0.total == row.total }
+            } == true
+            let winningRow = isTie ? nil : first
+            let winningSideID = winningRow.flatMap { row in
+                pairingIDs.first {
+                    scoringRowIdentityMatches(
+                        scoringUnitID: row.scoringUnitID,
+                        owner: row.owner,
+                        participantIDs: row.participantIDs,
+                        sideID: $0,
+                        mode: mode,
+                        snapshot: snapshot
+                    )
+                }
+            }
+            let sides = pairingIDs.map { sideID in
+                let row = rowsBySide[sideID]
+                return SeriesMatchupOutcome.Side(
+                    id: sideID,
+                    title: matchupSideName(sideID: sideID, mode: mode, snapshot: snapshot),
+                    subtitle: matchupSideSubtitle(sideID: sideID, mode: mode, snapshot: snapshot),
+                    score: row.map { matchupScoreDisplayLabel(for: $0, snapshot: snapshot, segment: segment) } ?? "—",
+                    accentColor: matchupSideAccentColor(sideID: sideID, mode: mode, snapshot: snapshot)
+                )
+            }
+            guard sides.count == 2 else { return nil }
 
-            let name0 = ownerDisplayName(for: first, snapshot: snapshot)
-            let name1 = ownerDisplayName(for: second, snapshot: snapshot)
+            let sideParticipants = Dictionary(uniqueKeysWithValues: pairingIDs.map { sideID in
+                (sideID, matchupSideParticipants(sideID: sideID, mode: mode, snapshot: snapshot))
+            })
+            let players = pairingIDs.flatMap { sideID -> [SeriesMatchupOutcome.Player] in
+                let row = rowsBySide[sideID]
+                return (sideParticipants[sideID] ?? [])
+                    .sorted { matchupParticipantSort(lhs: $0, rhs: $1, highestWins: highestWins, snapshot: snapshot, segment: segment) }
+                    .map { participant in
+                        SeriesMatchupOutcome.Player(
+                            id: "\(sideID)_\(participant.id)",
+                            ownerID: sideID,
+                            name: participant.name.fullName,
+                            handicap: "\(participant.adjustedHandicap)",
+                            gross: participantScoreLabel(participantID: participant.id, snapshot: snapshot, segment: segment, basis: .gross),
+                            net: snapshot.configuration.useHandicaps ? participantScoreLabel(participantID: participant.id, snapshot: snapshot, segment: segment, basis: .net) : nil,
+                            scoreCounts: participantScoreCounts(participantID: participant.id, row: row),
+                            accentColor: participant.teamID.flatMap { teamID in snapshot.teams.first(where: { $0.id == teamID })?.displaySwatchColor }
+                                ?? matchupSideAccentColor(sideID: sideID, mode: mode, snapshot: snapshot)
+                        )
+                    }
+            }
+            let normalParticipantCounts = pairingIDs.map { sideParticipants[$0]?.count ?? 0 }
+            let showsResultChip = mode == .individual
+                ? normalParticipantCounts.allSatisfy { $0 == 1 }
+                : normalParticipantCounts.allSatisfy { $0 == 2 }
             let title: String
+            let detail: String
             if isTie {
-                title = "\(name0) tied \(name1)"
+                title = "Match tied"
+                detail = "Tied at \(sides[0].score)"
+            } else if let winningSideID,
+                      let winningSide = sides.first(where: { $0.id == winningSideID }),
+                      let losingSide = sides.first(where: { $0.id != winningSideID }) {
+                title = "\(winningSide.title) wins"
+                detail = "\(winningSide.score) to \(losingSide.score)"
             } else {
-                title = "\(name0) def. \(name1)"
+                title = "Match \(index + 1)"
+                detail = "Waiting for both sides to post scores"
             }
 
-            let ordered = [first, second]
-            let parts = ordered.map { matchupScoreDisplayLabel(for: $0, snapshot: snapshot, segment: segment) }
-            let scoreLine = parts.joined(separator: " to ")
-
-            headlines.append(
-                SeriesMatchupHeadline(
+            return SeriesMatchupOutcome(
                     id: matchupResult.matchup.id,
                     title: title,
-                    scoreLine: scoreLine
+                detail: detail,
+                mode: mode,
+                sides: sides,
+                players: players,
+                winningSideID: winningSideID,
+                isTie: isTie,
+                showsResultChip: showsResultChip,
+                usesNetScores: snapshot.configuration.useHandicaps
                 )
-            )
         }
-        return headlines
     }
 
     private func matchupScoreDisplayLabel(for row: ScoringRow, snapshot: RoundSnapshot, segment: RoundSegment) -> String {
@@ -3852,6 +3919,178 @@ final class SeriesViewModel: ObservableObject, Loggable {
             return Self.scoreReviewFormatRelative(rel)
         }
         return row.total.seriesPointsDisplayString
+    }
+
+    private func expectedMatchupMode(for snapshot: RoundSnapshot) -> MatchupMode {
+        snapshot.configuration.scoreOwnerScope == .individual
+            ? (snapshot.requiresTeams ? .team : .individual)
+            : .scoreOwner
+    }
+
+    private func scoringRow(
+        in rows: [ScoringRow],
+        matchesSideID sideID: String,
+        matchup: TeamMatchup,
+        expectedMode: MatchupMode,
+        snapshot: RoundSnapshot
+    ) -> ScoringRow? {
+        rows.first {
+            scoringRowIdentityMatches(
+                scoringUnitID: $0.scoringUnitID,
+                owner: $0.owner,
+                participantIDs: $0.participantIDs,
+                sideID: sideID,
+                mode: matchup.mode ?? expectedMode,
+                snapshot: snapshot
+            )
+        }
+    }
+
+    private func scoringRowIdentityMatches(
+        scoringUnitID: String,
+        owner: ScoringOwner,
+        participantIDs: [String],
+        sideID: String,
+        mode: MatchupMode,
+        snapshot: RoundSnapshot
+    ) -> Bool {
+        if scoringUnitID == sideID { return true }
+
+        switch mode {
+        case .individual:
+            return participantIDs.contains(sideID)
+        case .team:
+            let teamMemberIDs = Set(snapshot.participants.filter { $0.teamID == sideID }.map(\.id))
+            return teamMemberIDs.isPopulated && Set(participantIDs).isSubset(of: teamMemberIDs)
+        case .scoreOwner:
+            guard let group = snapshot.scoringGroup(id: sideID) else { return false }
+            return Set(participantIDs) == Set(group.memberIDs)
+        }
+    }
+
+    private func matchupSideName(sideID: String, mode: MatchupMode, snapshot: RoundSnapshot) -> String {
+        switch mode {
+        case .team:
+            return snapshot.teams.first(where: { $0.id == sideID })?.name ?? "Team"
+        case .individual:
+            return snapshot.participants.first(where: { $0.id == sideID })?.name.fullName ?? "Player"
+        case .scoreOwner:
+            if let scoringGroup = snapshot.scoringGroup(id: sideID) {
+                if let label = scoringGroup.label, label.isPopulated {
+                    return label
+                }
+                let names = matchupSideParticipants(sideID: sideID, mode: mode, snapshot: snapshot)
+                    .map(\.name.fullName)
+                    .filter(\.isPopulated)
+                return names.isPopulated ? names.joined(separator: " + ") : "Side"
+            }
+            return "Side"
+        }
+    }
+
+    private func matchupSideSubtitle(sideID: String, mode: MatchupMode, snapshot: RoundSnapshot) -> String? {
+        switch mode {
+        case .individual:
+            return nil
+        case .team, .scoreOwner:
+            let names = matchupSideParticipants(sideID: sideID, mode: mode, snapshot: snapshot)
+                .map(\.name.fullName)
+                .filter(\.isPopulated)
+            return names.isPopulated ? names.joined(separator: ", ") : nil
+        }
+    }
+
+    private func matchupSideAccentColor(sideID: String, mode: MatchupMode, snapshot: RoundSnapshot) -> Color? {
+        switch mode {
+        case .team:
+            return snapshot.teams.first(where: { $0.id == sideID })?.displaySwatchColor
+        case .individual:
+            return snapshot.participants
+                .first(where: { $0.id == sideID })?
+                .teamID
+                .flatMap { teamID in snapshot.teams.first(where: { $0.id == teamID })?.displaySwatchColor }
+        case .scoreOwner:
+            guard let group = snapshot.scoringGroup(id: sideID) else { return nil }
+            if let teamID = group.teamID {
+                return snapshot.teams.first(where: { $0.id == teamID })?.displaySwatchColor
+            }
+            return nil
+        }
+    }
+
+    private func matchupSideParticipants(sideID: String, mode: MatchupMode, snapshot: RoundSnapshot) -> [RoundParticipant] {
+        switch mode {
+        case .team:
+            return snapshot.participants
+                .filter { $0.teamID == sideID }
+                .sorted { ($0.teeOrder ?? Int.max) < ($1.teeOrder ?? Int.max) }
+        case .individual:
+            return snapshot.participants
+                .filter { $0.id == sideID }
+                .sorted { ($0.teeOrder ?? Int.max) < ($1.teeOrder ?? Int.max) }
+        case .scoreOwner:
+            guard let group = snapshot.scoringGroup(id: sideID) else { return [] }
+            let memberIDs = Set(group.memberIDs)
+            return snapshot.participants
+                .filter { memberIDs.contains($0.id) }
+                .sorted { ($0.teeOrder ?? Int.max) < ($1.teeOrder ?? Int.max) }
+        }
+    }
+
+    private func matchupParticipantSort(
+        lhs: RoundParticipant,
+        rhs: RoundParticipant,
+        highestWins: Bool,
+        snapshot: RoundSnapshot,
+        segment: RoundSegment
+    ) -> Bool {
+        let lhsScore = participantScoreToPar(participantID: lhs.id, snapshot: snapshot, segment: segment, basis: .gross) ?? 0
+        let rhsScore = participantScoreToPar(participantID: rhs.id, snapshot: snapshot, segment: segment, basis: .gross) ?? 0
+        if lhsScore != rhsScore {
+            return highestWins ? lhsScore > rhsScore : lhsScore < rhsScore
+        }
+        return (lhs.teeOrder ?? Int.max) < (rhs.teeOrder ?? Int.max)
+    }
+
+    private func participantScoreCounts(participantID: String, row: ScoringRow?) -> Bool {
+        guard let row else { return false }
+        if row.countingParticipantIDs.isPopulated {
+            return row.countingParticipantIDs.contains(participantID)
+        }
+        return row.participantIDs.contains(participantID)
+    }
+
+    private func participantScoreLabel(
+        participantID: String,
+        snapshot: RoundSnapshot,
+        segment: RoundSegment,
+        basis: ScoreBasis
+    ) -> String {
+        guard let score = participantScoreToPar(participantID: participantID, snapshot: snapshot, segment: segment, basis: basis) else {
+            return "—"
+        }
+        return Self.scoreReviewFormatRelative(score)
+    }
+
+    private func participantScoreToPar(
+        participantID: String,
+        snapshot: RoundSnapshot,
+        segment: RoundSegment,
+        basis: ScoreBasis
+    ) -> Int? {
+        let result = ScoringEngine.computeStrokePlay(
+            scores: snapshot.scoring,
+            participants: snapshot.participants,
+            segment: segment,
+            holes: holesForScoring(in: snapshot),
+            basis: basis,
+            template: snapshot.resolvedActiveTemplate,
+            scoreLookupSegmentIDs: snapshot.segmentScoreLookupSegmentIDs,
+            handicapStrokeBasis: snapshot.handicapStrokeBasis
+        )
+        guard let row = result.rows.first(where: { $0.scoringUnitID == participantID }),
+              row.holesPlayed > 0 else { return nil }
+        return Int(row.total.rounded())
     }
 
     private func matchupRelativeToPar(for row: ScoringRow, snapshot: RoundSnapshot, segment: RoundSegment) -> Int? {

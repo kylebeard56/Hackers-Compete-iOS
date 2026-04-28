@@ -2669,11 +2669,37 @@ extension SeriesStanding {
     }
 }
 
-/// Headline + score line for a linked matchup round (Round Awards sheet).
-struct SeriesMatchupHeadline: Identifiable, Equatable {
+/// Outcome summary for a linked matchup round (Round Awards sheet).
+struct SeriesMatchupOutcome: Identifiable {
     let id: String
     let title: String
-    let scoreLine: String
+    let detail: String
+    let mode: MatchupMode
+    let sides: [Side]
+    let players: [Player]
+    let winningSideID: String?
+    let isTie: Bool
+    let showsResultChip: Bool
+    let usesNetScores: Bool
+
+    struct Side: Identifiable {
+        let id: String
+        let title: String
+        let subtitle: String?
+        let score: String
+        let accentColor: Color?
+    }
+
+    struct Player: Identifiable {
+        let id: String
+        let ownerID: String
+        let name: String
+        let handicap: String
+        let gross: String
+        let net: String?
+        let scoreCounts: Bool
+        let accentColor: Color?
+    }
 }
 
 extension Double {

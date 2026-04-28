@@ -3464,7 +3464,8 @@ final class LiveRoundViewModel: ObservableObject, Loggable {
                 strokes: max(1, (hole(for: holeNumber)?.par ?? 4) + relativeToPar),
                 entryMethod: entryMethod,
                 beforeProgress: beforeProgress,
-                afterSnapshot: updatedSnapshot
+                afterSnapshot: updatedSnapshot,
+                relativeToPar: relativeToPar
             )
         } catch {
             addBreadcrumb(level: .error, message: "Failed to set relative score for participant \(participant.id)", error: error)
@@ -4279,6 +4280,7 @@ final class LiveRoundViewModel: ObservableObject, Loggable {
         entryMethod: LiveRoundEntryMethod,
         beforeProgress: Double,
         afterSnapshot: RoundSnapshot,
+        relativeToPar: Int? = nil,
         emitHoleTransition: Bool = true
     ) {
         let participantHolesScoredCount = holesPlayedCount(for: participant.id, in: afterSnapshot)
@@ -4288,6 +4290,14 @@ final class LiveRoundViewModel: ObservableObject, Loggable {
             totalCount: totalHoles
         )
         let entryParticipantID = actualParticipant?.id ?? participant.id
+        let scoreEntryMode: ScoreEntryMode = relativeToPar == nil ? .strokes : .relativeToPar
+        let friendlyLabel = relativeToPar.map {
+            friendlyScoreLabel(
+                relativeToPar: $0,
+                par: hole(for: holeNumber, teeID: participant.teeBoxID)?.par ?? 4,
+                format: .full
+            )
+        }
 
         addEvent(
             "live_round.score_saved",
@@ -4298,6 +4308,9 @@ final class LiveRoundViewModel: ObservableObject, Loggable {
                 holeNumber: holeNumber,
                 strokes: strokes,
                 entryMethod: entryMethod,
+                scoreEntryMode: scoreEntryMode,
+                friendlyRelativeToPar: relativeToPar,
+                friendlyScoreLabel: friendlyLabel,
                 participantHolesScoredCount: participantHolesScoredCount,
                 totalHoles: totalHoles,
                 participantCompletionPct: participantCompletionPct

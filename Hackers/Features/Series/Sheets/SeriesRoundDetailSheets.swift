@@ -13,7 +13,7 @@ struct SeriesRoundAwardsDetailSheet: View {
 
     @ObservedObject var viewModel: SeriesViewModel
     let seriesRound: SeriesRound
-    @State private var matchupHeadlines: [SeriesMatchupHeadline] = []
+    @State private var matchupOutcomes: [SeriesMatchupOutcome] = []
 
     private var palette: DesignPalette { .init(theme: .primary, scheme: colorScheme) }
 
@@ -51,7 +51,7 @@ struct SeriesRoundAwardsDetailSheet: View {
         }
         .background(palette.backgroundColor.ignoresSafeArea())
         .task(id: seriesRound.id) {
-            matchupHeadlines = await viewModel.matchupHeadlines(for: seriesRound)
+            matchupOutcomes = await viewModel.matchupOutcomes(for: seriesRound)
         }
     }
 
@@ -87,22 +87,18 @@ struct SeriesRoundAwardsDetailSheet: View {
                 .fontStyle(kFontName, size: 13, weight: .medium)
                 .foregroundStyle(Color.accentGreen)
 
-            if matchupHeadlines.isPopulated {
+            if matchupOutcomes.isPopulated {
                 VStack(alignment: .leading, spacing: 10) {
                     Text("Matchups".uppercased())
                         .fontStyle(kFontName, size: 12, weight: .semibold)
                         .foregroundStyle(Color.neutral)
 
-                    ForEach(matchupHeadlines) { headline in
-                        VStack(alignment: .leading, spacing: 4) {
-                            Text(headline.title)
-                                .fontStyle(kFontName, size: 15, weight: .semibold)
-                                .foregroundStyle(palette.foregroundColor)
-                            Text(headline.scoreLine)
-                                .fontStyle(kFontName, size: 14, weight: .medium)
-                                .foregroundStyle(Color.neutral)
-                        }
-                        .frame(maxWidth: .infinity, alignment: .leading)
+                    ForEach(Array(matchupOutcomes.enumerated()), id: \.element.id) { index, outcome in
+                        SeriesAwardMatchupOutcomeCard(
+                            outcome: outcome,
+                            matchIndex: index + 1,
+                            palette: palette
+                        )
                     }
                 }
                 .padding(.top, 4)
@@ -216,6 +212,184 @@ struct SeriesRoundAwardsDetailSheet: View {
             foreground: tint,
             background: tint.opacity(colorScheme.translucent * 0.85)
         )
+    }
+}
+
+private struct SeriesAwardMatchupOutcomeCard: View {
+    let outcome: SeriesMatchupOutcome
+    let matchIndex: Int
+    let palette: DesignPalette
+
+    private var scoreColumnWidth: CGFloat { outcome.usesNetScores ? 44 : 52 }
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 12) {
+            VStack(alignment: .leading, spacing: 4) {
+                Text("Match \(matchIndex)".uppercased())
+                    .fontStyle(kFontName, size: 11, weight: .semibold)
+                    .foregroundStyle(Color.neutral2)
+
+                Text(outcome.title)
+                    .fontStyle(kFontName, size: 17, weight: .semibold)
+                    .foregroundStyle(palette.foregroundColor)
+                    .lineLimit(2)
+
+                Text(outcome.detail)
+                    .fontStyle(kFontName, size: 13, weight: .medium)
+                    .foregroundStyle(Color.neutral)
+            }
+
+            VStack(spacing: 10) {
+                ForEach(outcome.sides) { side in
+                    sideRow(side)
+                }
+            }
+
+            if outcome.players.isPopulated {
+                playersTable
+            }
+        }
+        .padding(14)
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .background(palette.cardEmbeddedRowBackground)
+        .cornerRadius(16)
+    }
+
+    private func sideRow(_ side: SeriesMatchupOutcome.Side) -> some View {
+        let isWinner = outcome.winningSideID == side.id
+        let accent = side.accentColor ?? palette.foregroundColor
+
+        return HStack(spacing: 12) {
+            Text(side.score)
+                .fontStyle(kFontName, size: 19, weight: .semibold)
+                .foregroundStyle(isWinner ? accent : palette.foregroundColor)
+                .frame(width: 44, height: 44)
+                .glassCardEffect(
+                    shape: .circle,
+                    interactive: false,
+                    tint: palette.whiteGlassButtonColor,
+                    strokeOpacity: isWinner ? 0.42 : 0.24,
+                    shadowOpacity: 0.08
+                )
+
+            VStack(alignment: .leading, spacing: 3) {
+                HStack(alignment: .firstTextBaseline, spacing: 8) {
+                    Text(side.title)
+                        .fontStyle(kFontName, size: 15, weight: .semibold)
+                        .foregroundStyle(isWinner ? accent : palette.foregroundColor)
+                        .lineLimit(2)
+
+                    if outcome.showsResultChip && isWinner {
+                        resultChip("Winner", tint: accent)
+                    } else if outcome.showsResultChip && outcome.isTie {
+                        resultChip("Tie", tint: Color.neutral)
+                    }
+                }
+
+                if let subtitle = side.subtitle, subtitle.isPopulated {
+                    Text(subtitle)
+                        .fontStyle(kFontName, size: 12, weight: .regular)
+                        .foregroundStyle(Color.neutral)
+                        .lineLimit(3)
+                }
+            }
+
+            Spacer(minLength: 0)
+        }
+    }
+
+    private var playersTable: some View {
+        VStack(spacing: 0) {
+            Line(color: Color.neutral6.opacity(0.5))
+                .padding(.bottom, 8)
+
+            HStack(spacing: 8) {
+                Text("Player")
+                    .fontStyle(kFontName, size: 12, weight: .medium)
+                    .foregroundStyle(Color.neutral)
+                    .frame(maxWidth: .infinity, alignment: .leading)
+
+                Text("HCP")
+                    .fontStyle(kFontName, size: 12, weight: .medium)
+                    .foregroundStyle(Color.neutral)
+                    .frame(minWidth: scoreColumnWidth, alignment: .trailing)
+
+                Text("Gross")
+                    .fontStyle(kFontName, size: 12, weight: .medium)
+                    .foregroundStyle(Color.neutral)
+                    .frame(minWidth: scoreColumnWidth, alignment: .trailing)
+
+                if outcome.usesNetScores {
+                    Text("Net")
+                        .fontStyle(kFontName, size: 12, weight: .medium)
+                        .foregroundStyle(Color.neutral)
+                        .frame(minWidth: scoreColumnWidth, alignment: .trailing)
+                }
+            }
+            .padding(.bottom, 6)
+
+            ForEach(Array(outcome.players.enumerated()), id: \.element.id) { index, player in
+                playerRow(player)
+
+                if index != outcome.players.count - 1 {
+                    Divider().opacity(0.18)
+                }
+            }
+        }
+    }
+
+    private func playerRow(_ player: SeriesMatchupOutcome.Player) -> some View {
+        HStack(spacing: 8) {
+            HStack(spacing: 8) {
+                Text(player.name)
+                    .fontStyle(kFontName, size: 13, weight: .medium)
+                    .foregroundStyle(player.scoreCounts ? palette.foregroundColor : Color.neutral2)
+                    .lineLimit(1)
+                    .frame(maxWidth: .infinity, alignment: .leading)
+
+                if player.scoreCounts {
+                    Circle()
+                        .fill(player.accentColor ?? Color.accentGreen)
+                        .frame(width: 8, height: 8)
+                }
+            }
+
+            Text(player.handicap)
+                .fontStyle(kFontName, size: 13, weight: .medium)
+                .foregroundStyle(Color.neutral)
+                .frame(minWidth: scoreColumnWidth, alignment: .trailing)
+
+            Text(player.gross)
+                .fontStyle(kFontName, size: 13, weight: .medium)
+                .foregroundStyle(player.scoreCounts ? palette.foregroundColor : Color.neutral2)
+                .frame(minWidth: scoreColumnWidth, alignment: .trailing)
+
+            if outcome.usesNetScores {
+                Text(player.netLabel)
+                    .fontStyle(kFontName, size: 13, weight: .semibold)
+                    .foregroundStyle(player.scoreCounts ? (player.accentColor ?? palette.foregroundColor) : Color.neutral2)
+                    .frame(minWidth: scoreColumnWidth, alignment: .trailing)
+            }
+        }
+        .padding(.vertical, 8)
+    }
+
+    private func resultChip(_ title: String, tint: Color) -> some View {
+        Text(title.uppercased())
+            .fontStyle(kFontName, size: 10, weight: .semibold)
+            .foregroundStyle(tint)
+            .padding(.horizontal, 8)
+            .padding(.vertical, 5)
+            .background(
+                Capsule()
+                    .fill(tint.opacity(0.12))
+            )
+    }
+}
+
+private extension SeriesMatchupOutcome.Player {
+    var netLabel: String {
+        net ?? "—"
     }
 }
 

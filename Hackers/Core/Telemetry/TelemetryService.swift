@@ -217,6 +217,9 @@ enum TelemetryEventProps {
         holeNumber: Int,
         strokes: Int? = nil,
         entryMethod: LiveRoundEntryMethod,
+        scoreEntryMode: ScoreEntryMode = .strokes,
+        friendlyRelativeToPar: Int? = nil,
+        friendlyScoreLabel: String? = nil,
         participantHolesScoredCount: Int,
         totalHoles: Int,
         participantCompletionPct: Double,
@@ -231,6 +234,8 @@ enum TelemetryEventProps {
         props["is_self_scored"] = entryParticipantID == participant.id
         props["hole_number"] = holeNumber
         props["entry_method"] = entryMethod.rawValue
+        props["score_input_mode"] = snapshot.configuration.scoreInputMode.rawValue
+        props["score_entry_mode"] = scoreEntryMode.rawValue
         props["participant_holes_scored_count"] = participantHolesScoredCount
         props["total_holes"] = totalHoles
         props["participant_completion_pct"] = participantCompletionPct
@@ -240,10 +245,21 @@ enum TelemetryEventProps {
             if let strokes {
                 props["score_relative_to_par"] = strokes - par
             }
+
+            if snapshot.configuration.scoreInputMode == .friendlyRelativeToPar,
+               let friendlyRelativeToPar {
+                props["friendly_relative_to_par"] = friendlyRelativeToPar
+                props["friendly_gross_strokes"] = max(1, par + friendlyRelativeToPar)
+            }
         }
 
         if let strokes {
             props["strokes"] = strokes
+        }
+
+        if snapshot.configuration.scoreInputMode == .friendlyRelativeToPar,
+           let friendlyScoreLabel {
+            props["friendly_score_label"] = friendlyScoreLabel
         }
 
         extra.forEach { props[$0.key] = $0.value }
