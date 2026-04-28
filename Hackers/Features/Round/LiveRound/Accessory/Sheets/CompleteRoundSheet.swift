@@ -296,7 +296,7 @@ struct CompleteRoundSheet: View, Loggable {
         let isBusy = isSubmitting || viewModel.isApplyingMaxScores
         return GlassButton(
             title: "Sign scorecard",
-            labelColor: .white,
+            labelColor: palette.foregroundColor,
             tintColor: hasUnscoredHoles ? Color.systemError : Color.accentYellow,
             isDisabled: .false,
             isLoading: $isSubmitting,

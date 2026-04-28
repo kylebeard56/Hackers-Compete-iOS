@@ -11,6 +11,7 @@ struct HandicapTextField: View {
     let id: String
     let palette: DesignPalette
     let initialValue: Int
+    let maximumValue: Int
     let onDebouncedEdit: CallbackValue<Int>?
 
     /// When true (series league handicap context, non-commissioner), show locked grey value + lock icon.
@@ -31,6 +32,7 @@ struct HandicapTextField: View {
         initialValue: Int,
         focusedField: FocusState<String?>.Binding,
         palette: DesignPalette,
+        maximumValue: Int? = nil,
         onDebouncedEdit: CallbackValue<Int>? = nil,
         isSeriesHandicapLocked: Bool = false,
         leagueHandicapBaseline: Int? = nil
@@ -39,6 +41,7 @@ struct HandicapTextField: View {
         self._focusedField = focusedField
         self.initialValue = initialValue
         self.palette = palette
+        self.maximumValue = maximumValue ?? 36
         self.onDebouncedEdit = onDebouncedEdit
         self.isSeriesHandicapLocked = isSeriesHandicapLocked
         self.leagueHandicapBaseline = leagueHandicapBaseline
@@ -130,7 +133,7 @@ struct HandicapTextField: View {
                 text = filtered
 
                 let intValue = Int(filtered) ?? initialValue
-                debouncer.value = min(max(intValue, 0), 36)
+                debouncer.value = min(max(intValue, 0), maximumValue)
             }
         )
     }

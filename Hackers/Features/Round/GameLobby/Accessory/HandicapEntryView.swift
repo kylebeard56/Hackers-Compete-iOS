@@ -13,6 +13,7 @@ struct HandicapEntryView: View {
     
     @Binding var participant: RoundParticipant
     var holes: Int = 18
+    var maximumValue: Int = 36
     var onComplete: CallbackValue<Int>? = nil
     
     @FocusState private var focus: Bool
@@ -42,7 +43,7 @@ struct HandicapEntryView: View {
                 }
             }
             
-            Text("Enter the number of strokes \(participant.name.fullName) should get over \(holes) holes (max of 36).")
+            Text("Enter the number of strokes \(participant.name.fullName) should get over \(holes) holes (max of \(maximumValue)).")
                 .fontStyle(kFontName, size: 15, weight: .regular)
                 .foregroundStyle(Color.neutral)
                 .multilineTextAlignment(.leading)
@@ -61,7 +62,7 @@ struct HandicapEntryView: View {
         .background(palette.backgroundColor)
         .onAppear {
             let currentValue = participant.adjustedHandicap
-            handicapValue = min(max(currentValue, 0), 36)
+            handicapValue = min(max(currentValue, 0), maximumValue)
             handicapString = String(handicapValue)
         }
         .task(delay: 0.2) {
@@ -69,7 +70,7 @@ struct HandicapEntryView: View {
         }
         .onChange(of: handicapString) {
             if let value = Int(handicapString.filter(\.isNumber)) {
-                handicapValue = min(max(value, 0), 36)
+                handicapValue = min(max(value, 0), maximumValue)
                 handicapString = String(handicapValue)
             }
         }

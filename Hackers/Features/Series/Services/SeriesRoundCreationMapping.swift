@@ -464,13 +464,14 @@ enum SeriesRoundCreationMapping {
         teamMappings: [String: SeriesToRoundTeamLink],
         memberAssignments: [String: MemberAssignment],
         handicaps: [String: SeriesMemberHandicap],
+        maximumHandicap: Int? = nil,
         courseSegment: CourseSegment,
         hostPlayerID: String?,
         presenceStatusByMemberID: [String: RoundParticipantPresenceStatus] = [:]
     ) -> [RoundParticipant] {
         members.map { member in
             let assignment = memberAssignments[member.id]
-            let effectiveHandicap = Int((handicaps[member.id]?.effectiveIndex ?? 0).rounded())
+            let effectiveHandicap = handicaps[member.id]?.effectiveStrokes(maximumHandicap: maximumHandicap) ?? 0
             let teamMapping = member.teamID.flatMap { teamMappings[$0] }
             let teeBoxID = resolvedTeeBoxID(for: member, courseSegment: courseSegment)
             return RoundParticipant(

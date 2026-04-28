@@ -77,6 +77,7 @@ struct GameLobby: View, Loggable {
     /// Series context for league-handicap lobby lock (client-side only).
     @State var isSeriesCommissioner = false
     @State var seriesLeagueHandicapsEnabled = false
+    @State var seriesLeagueHandicapMaximum: Int?
 
     @State var teamRenameTarget: RoundTeam?
     @State var teamRenameDraft: String = ""
@@ -163,6 +164,7 @@ struct GameLobby: View, Loggable {
                 await MainActor.run {
                     isSeriesCommissioner = false
                     seriesLeagueHandicapsEnabled = false
+                    seriesLeagueHandicapMaximum = nil
                 }
                 return
             }
@@ -170,11 +172,14 @@ struct GameLobby: View, Loggable {
             async let members = FirebaseService.shared.fetchSeriesMembers(seriesID: sid)
             let user = await AppData.shared.user
             let handicapsOn: Bool
+            let handicapMaximum: Int?
             switch await seriesResult {
             case .success(let series):
                 handicapsOn = series.handicapConfig.isEnabled
+                handicapMaximum = series.handicapConfig.config.maximumHandicap
             case .failure:
                 handicapsOn = false
+                handicapMaximum = nil
             }
             let memberList = await members
             let isComm: Bool = {
@@ -183,6 +188,7 @@ struct GameLobby: View, Loggable {
             }()
             await MainActor.run {
                 seriesLeagueHandicapsEnabled = handicapsOn
+                seriesLeagueHandicapMaximum = handicapsOn ? handicapMaximum : nil
                 isSeriesCommissioner = isComm
             }
         }
@@ -311,7 +317,8 @@ struct GameLobby: View, Loggable {
             CourseSelectionView(
                 viewModel: .init(course: snapshot.course, tee: snapshot.defaultTee, holeSegment: snapshot.holeSegment),
                 presentationType: .sheet,
-                onModification: { s in setCourseSegment(to: s) }
+                onModification: { s in setCourseSegment(to: s) },
+                onRemoveModification: { unsetCourseSegment() }
             )
             .presentationDragIndicator(.visible)
         }
@@ -330,7 +337,8 @@ struct GameLobby: View, Loggable {
                 roundSession: roundSession,
                 participant: player,
                 seriesHandicapLockActive: seriesHandicapLobbyLockActive,
-                isSeriesCommissioner: isSeriesCommissioner
+                isSeriesCommissioner: isSeriesCommissioner,
+                seriesHandicapMaximum: seriesLeagueHandicapMaximum
             )
             .presentationDragIndicator(.visible)
         }

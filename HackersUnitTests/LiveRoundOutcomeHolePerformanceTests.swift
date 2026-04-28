@@ -166,6 +166,67 @@ final class LiveRoundOutcomeHolePerformanceTests: XCTestCase {
         XCTAssertEqual(viewModel.scoringUnitGrossStrokes(scoringUnitID: "unit_red", holeNumber: 1), 4)
         XCTAssertEqual(viewModel.scoringUnitScoreToPar(scoringUnitID: "unit_blue", basis: .gross), 1)
     }
+
+    func testSharedTeamRowsRenderBeforeAnyScoresExist() async throws {
+        var snapshot = Self.makeSharedTeamSnapshot(opaqueScoringUnitIDs: false)
+        snapshot.scoring = []
+
+        let viewModel = await boundViewModel(snapshot: snapshot, participantID: "p1")
+        let rows = viewModel.effectiveLeaderboardRows
+
+        XCTAssertEqual(rows.map(\.id), ["blue", "red"])
+        XCTAssertTrue(rows.allSatisfy(\.isSharedScoreUnit))
+        XCTAssertEqual(Set(viewModel.scorecardParticipants.map(\.id)), Set(["red", "blue"]))
+        XCTAssertNil(viewModel.scoringUnitGrossStrokes(scoringUnitID: "red", holeNumber: 1))
+    }
+
+    func testCaptainsChoiceWithoutTeamsFallsBackToTeeGroupSharedSubject() async throws {
+        var snapshot = Self.makeSharedTeamSnapshot(opaqueScoringUnitIDs: false)
+        snapshot.teams = []
+        snapshot.scoring = []
+        snapshot.segments[0].scoringUnits = []
+        snapshot.teeGroups = [
+            TeeTimeGroup(id: "group_1", index: 0, startingHole: 1, lastCompletedHole: nil, createdAt: .init(), parentID: snapshot.round.id)
+        ]
+        snapshot.participants = snapshot.participants.map { participant in
+            var copy = participant
+            copy.teamID = nil
+            copy.groupID = "group_1"
+            return copy
+        }
+
+        let viewModel = await boundViewModel(snapshot: snapshot, participantID: "p1")
+        let rows = viewModel.effectiveLeaderboardRows
+
+        XCTAssertEqual(rows.map(\.id), ["group_1"])
+        XCTAssertTrue(rows[0].isSharedScoreUnit)
+        XCTAssertEqual(rows[0].participants.map(\.id), ["p1", "p2", "p3", "p4"])
+        XCTAssertEqual(viewModel.visibleSharedScoringSubjects.map(\.scoringUnitID), ["group_1"])
+        XCTAssertEqual(viewModel.scorecardParticipants.map(\.id), ["group_1"])
+    }
+
+    func testLegacyMemberSharedScoreDisplaysOnTeeGroupFallbackSubject() async throws {
+        var snapshot = Self.makeSharedTeamSnapshot(opaqueScoringUnitIDs: false)
+        snapshot.teams = []
+        snapshot.segments[0].scoringUnits = []
+        snapshot.teeGroups = [
+            TeeTimeGroup(id: "group_1", index: 0, startingHole: 1, lastCompletedHole: nil, createdAt: .init(), parentID: snapshot.round.id)
+        ]
+        snapshot.participants = snapshot.participants.map { participant in
+            var copy = participant
+            copy.teamID = nil
+            copy.groupID = "group_1"
+            return copy
+        }
+        snapshot.scoring = [
+            Self.makeSharedScoreEntry(roundID: snapshot.round.id, segmentID: snapshot.segments[0].id, scoringUnitID: "p1", participantIDs: ["p1"], holeNumber: 1, strokes: 4)
+        ]
+
+        let viewModel = await boundViewModel(snapshot: snapshot, participantID: "p1")
+
+        XCTAssertEqual(viewModel.effectiveLeaderboardRows.map(\.id), ["group_1"])
+        XCTAssertEqual(viewModel.scoringUnitGrossStrokes(scoringUnitID: "group_1", holeNumber: 1), 4)
+    }
 }
 
 private extension LiveRoundOutcomeHolePerformanceTests {

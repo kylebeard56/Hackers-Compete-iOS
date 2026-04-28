@@ -69,7 +69,11 @@ extension RoundSession {
         }
 
         do {
-            snapshot.round.configuration.courses[0] = segmentToSave
+            if snapshot.round.configuration.courses.isEmpty {
+                snapshot.round.configuration.courses = [segmentToSave]
+            } else {
+                snapshot.round.configuration.courses[0] = segmentToSave
+            }
             _ = try await snapshot.round.put().get()
 
             if snapshot.configuration.usesSequentialTeeStarts {
@@ -99,6 +103,23 @@ extension RoundSession {
             )
         } catch {
             addBreadcrumb(level: .error, message: "Failed to set course segment", error: error)
+        }
+    }
+
+    func unsetCourseSegment() async {
+        addBreadcrumb()
+        guard snapshot.courseSegment != nil else { return }
+
+        do {
+            snapshot.round.configuration.courses = []
+            _ = try await snapshot.round.put().get()
+
+            emitRoundSetupEvent(
+                "round_setup.course_removed",
+                teeID: nil
+            )
+        } catch {
+            addBreadcrumb(level: .error, message: "Failed to unset course segment", error: error)
         }
     }
 }

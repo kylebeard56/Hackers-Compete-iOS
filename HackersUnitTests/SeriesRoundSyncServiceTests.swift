@@ -276,6 +276,64 @@ final class SeriesRoundSyncServiceTests: XCTestCase {
         XCTAssertEqual(out.first?.teeBoxID, "tee_white")
     }
 
+    func testParticipantsWithPlayerDataSync_capsSeriesHandicapWhenNotPreservingManualEdit() {
+        let p = RoundParticipant(
+            id: "part1",
+            userID: "u1",
+            playerID: "pl1",
+            name: Name("Old", "Name"),
+            teeBoxID: "tee_old",
+            originalHandicap: 12,
+            adjustedHandicap: 12,
+            leagueHandicapStrokesAtCreation: 12,
+            seriesMemberID: "mem1",
+            isHost: true,
+            createdAt: t0,
+            lastUpdatedAt: t0,
+            parentID: "round1"
+        )
+        let member = SeriesMember(
+            id: "mem1",
+            userID: "u1",
+            playerID: "pl1",
+            name: Name("New", "Name"),
+            defaultTeeBoxID: "tee_white",
+            createdAt: t0,
+            lastUpdatedAt: t0,
+            parentID: "series1"
+        )
+
+        let out = SeriesRoundSyncPlanning.participantsWithPlayerDataSync(
+            participants: [p],
+            roundID: "round1",
+            participatingMembers: [member],
+            teamLinks: [:],
+            memberAssignments: ["mem1": .init(groupID: "g1", teeOrder: 1)],
+            handicaps: [
+                "mem1": SeriesMemberHandicap(id: "mem1", memberID: "mem1", computedIndex: 27.7),
+            ],
+            maximumHandicap: 18,
+            courseSegment: CourseSegment(
+                courseInfo: CourseInfo(
+                    id: "c1",
+                    golfCourseApiID: nil,
+                    name: "C",
+                    totalHoles: 18,
+                    location: nil,
+                    tees: []
+                ),
+                holeRange: HoleRange(startHole: 1, endHole: 18),
+                defaultTee: "tee_white"
+            ),
+            hostPlayerID: "pl1",
+            preserveManualHandicapEdits: false
+        )
+
+        XCTAssertEqual(out.first?.originalHandicap, 18)
+        XCTAssertEqual(out.first?.adjustedHandicap, 18)
+        XCTAssertEqual(out.first?.leagueHandicapStrokesAtCreation, 18)
+    }
+
     func testResolvedPlanCarriesSeriesHandicapBasisForSync() {
         var settings = SeriesSettings()
         settings.handicapConfig = SeriesHandicapConfig(isEnabled: true, config: .league2025, strokeBasis: .nineHole)

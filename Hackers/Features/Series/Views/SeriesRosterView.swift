@@ -598,13 +598,9 @@ struct SeriesRosterView: View {
     @ViewBuilder
     private func memberRowHandicapChip(_ member: SeriesMember) -> some View {
         if viewModel.series.handicapConfig.isEnabled, member.role != .spectator {
-            let isOverridden = viewModel.memberHandicaps[member.id]?.isOverridden == true
-            let handicapText: String = {
-                if let handicap = viewModel.effectiveHandicap(for: member.id) {
-                    return String(format: "%.1f", handicap)
-                }
-                return "--"
-            }()
+            let memberHandicap = viewModel.memberHandicaps[member.id]
+            let isOverridden = memberHandicap?.isOverridden == true
+            let handicapText = memberHandicap?.cappedDisplayText(maximumHandicap: viewModel.series.handicapConfig.config.maximumHandicap) ?? "--"
             let chipValueColor: Color = {
                 if handicapText == "--" { return Color.neutral }
                 return isOverridden ? Color.orange : Color.accentGreen
@@ -1450,7 +1446,8 @@ private struct SeriesTeamEditorSheet: View {
     private func rosterAssignmentRow(_ member: SeriesMember) -> some View {
         let selected = isMemberSelectedForEditor(member)
         let hcpOn = viewModel.series.handicapConfig.isEnabled
-        let effectiveHcp = viewModel.effectiveHandicap(for: member.id)
+        let memberHandicap = viewModel.memberHandicaps[member.id]
+        let effectiveHcpText = memberHandicap?.cappedDisplayText(maximumHandicap: viewModel.series.handicapConfig.config.maximumHandicap)
         let hcpOverridden = viewModel.memberHandicaps[member.id]?.isOverridden == true
 
         HStack(spacing: 12) {
@@ -1467,8 +1464,8 @@ private struct SeriesTeamEditorSheet: View {
                         Text("HCP: ")
                             .fontStyle(kFontName, size: 12, weight: .regular)
                             .foregroundStyle(Color.neutral)
-                        if let effectiveHcp {
-                            Text(String(format: "%.1f", effectiveHcp))
+                        if let effectiveHcpText {
+                            Text(effectiveHcpText)
                                 .fontStyle(kFontName, size: 12, weight: .regular)
                                 .foregroundStyle(hcpOverridden ? Color.orange : Color.neutral)
                         } else {

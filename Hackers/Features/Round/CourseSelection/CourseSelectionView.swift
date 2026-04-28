@@ -31,6 +31,7 @@ struct CourseSelectionView: View, Loggable {
     var presentationType: CourseSelectionPresentationType = .fullscreen
     var onCreation: CallbackValue<String>? = nil
     var onModification: CallbackValue<CourseSegment>? = nil
+    var onRemoveModification: Callback? = nil
     
     @State private var searchText: String = ""
     @State private var didSearchNearby = false
@@ -45,6 +46,7 @@ struct CourseSelectionView: View, Loggable {
     @State private var scorecardScanNotes = ""
     @State private var didTrackCourseSelectionView = false
     @State private var locationSettingsAlertFlow: LocationAssistFlow?
+    @State private var showRemoveCourseAlert = false
     @AppStorage("scorecard_scan_vision_model") private var scorecardVisionModelRaw: String = ScorecardScanVisionModel.defaultSelection.rawValue
     @AppStorage("scorecard_scan_location_assist_enabled") private var scorecardLocationAssistEnabled: Bool = true
     @AppStorage("course_ask_ai_location_assist_enabled") private var askAILocationAssistEnabled: Bool = true
@@ -85,8 +87,10 @@ struct CourseSelectionView: View, Loggable {
                     }
                 }
 
-                fabButton
-                    .frame(maxWidth: .infinity, alignment: .bottom)
+                if !viewModel.isModifying {
+                    fabButton
+                        .frame(maxWidth: .infinity, alignment: .bottom)
+                }
             }
             .navigationDestination(isPresented: $viewModel.showConfirmation) {
                 CourseSelectionConfirmation(viewModel: viewModel)
@@ -216,8 +220,20 @@ struct CourseSelectionView: View, Loggable {
                 )
                 .presentationDragIndicator(.visible)
             }
+            .alert(
+                "Are you sure you want to unset \(viewModel.modifyingCourse?.prettyCourseName ?? "this course") from this round?",
+                isPresented: $showRemoveCourseAlert
+            ) {
+                Button("Remove", role: .destructive) {
+                    onRemoveModification?()
+                }
+                Button("Cancel", role: .cancel) { }
+            } message: {
+                Text("You'll need to re-add it to set again.")
+            }
         }
         .task {
+            viewModel.shouldCommitSelectionAsModification = onModification != nil
             let migrated = ScorecardScanVisionModel.fromStoredRawValue(scorecardVisionModelRaw)
             if migrated.rawValue != scorecardVisionModelRaw {
                 scorecardVisionModelRaw = migrated.rawValue
@@ -555,20 +571,35 @@ struct CourseSelectionView: View, Loggable {
                     .alignLeading()
                     .padding(.horizontal, 16)
                 
-                PrimaryButton(
-                    appearance: .fill,
-                    title: course.prettyCourseName,
-                    callToActionIcon: "f178",
-                    iconWeight: .solid,
-                    labelColor: .backgroundPrimary,
-                    buttonColor: .foregroundPrimary,
-                    fillWidth: true,
-                    isDisabled: .false,
-                    isLoading: .false,
-                    onTap: {
-                        viewModel.select(course: course, source: .existingRoundChange)
-                    }
-                )
+                HStack(spacing: 12) {
+                    PrimaryButton(
+                        appearance: .fill,
+                        title: course.prettyCourseName,
+                        callToActionIcon: "f178",
+                        iconWeight: .solid,
+                        labelColor: .backgroundPrimary,
+                        buttonColor: .foregroundPrimary,
+                        fillWidth: true,
+                        isDisabled: .false,
+                        isLoading: .false,
+                        onTap: {
+                            viewModel.select(course: course, source: .existingRoundChange)
+                        }
+                    )
+
+                    PrimaryButton(
+                        appearance: .fill,
+                        title: "Remove",
+                        labelColor: .white,
+                        buttonColor: .systemError,
+                        fillWidth: false,
+                        isDisabled: .false,
+                        isLoading: .false,
+                        onTap: {
+                            showRemoveCourseAlert = true
+                        }
+                    )
+                }
                 .padding(.horizontal, 16)
             }
         } else {

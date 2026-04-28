@@ -312,6 +312,7 @@ enum SeriesRoundSyncPlanning {
         teamLinks: [String: SeriesRoundCreationMapping.SeriesToRoundTeamLink],
         memberAssignments: [String: SeriesRoundCreationMapping.MemberAssignment],
         handicaps: [String: SeriesMemberHandicap],
+        maximumHandicap: Int? = nil,
         courseSegment: CourseSegment,
         hostPlayerID: String?,
         preserveManualHandicapEdits: Bool
@@ -322,6 +323,7 @@ enum SeriesRoundSyncPlanning {
             teamMappings: teamLinks,
             memberAssignments: memberAssignments,
             handicaps: handicaps,
+            maximumHandicap: maximumHandicap,
             courseSegment: courseSegment,
             hostPlayerID: hostPlayerID
         )

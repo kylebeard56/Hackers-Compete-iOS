@@ -322,7 +322,7 @@ struct CourseSelectionConfirmation: View, Loggable {
                             callback(courseID, cachedName, teeID, viewModel.holeSegment)
                         } else if viewModel.isSetSeriesRoundCourseMode, let callback = viewModel.onSetSeriesRoundCourse {
                             callback(viewModel.buildCourseSegment())
-                        } else if viewModel.isModifying {
+                        } else if viewModel.isModifying || viewModel.shouldCommitSelectionAsModification {
                             viewModel.confirmCourseModification()
                         } else {
                             Task { await viewModel.createRoundLobby() }

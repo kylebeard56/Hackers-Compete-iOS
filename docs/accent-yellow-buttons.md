@@ -33,7 +33,7 @@ Yellow appears as **`tintColor`** on a glass capsule (see `GlassButton` + `glass
 
 | File | Title | `tintColor` | Label color (`labelColor`) |
 |------|-------|-------------|----------------------------|
-| [`CompleteRoundSheet.swift`](../Hackers/Features/Round/LiveRound/Accessory/Sheets/CompleteRoundSheet.swift) (`ctaFooter`) | **Sign scorecard** | `Color.accentYellow` when all holes scored; else `Color.systemError` | `.white` (both branches) |
+| [`CompleteRoundSheet.swift`](../Hackers/Features/Round/LiveRound/Accessory/Sheets/CompleteRoundSheet.swift) (`ctaFooter`) | **Sign scorecard** | `Color.accentYellow` when all holes scored; else `Color.systemError` | `palette.foregroundColor` |
 | [`RoundCompletionPrompt.swift`](../Hackers/Features/Dashboard/RoundCompletionPrompt.swift) | **Finish** | `.accentYellow` | *Omitted* → defaults to **`labelColor ?? .primary`** (SwiftUI semantic primary per [`GlassButton`](../Hackers/Shared/Components/Buttons/GlassButton.swift)) |
 
 **Type:** **Glass** — dark mode appearance follows `glassCardEffect` / system glass rules as above.

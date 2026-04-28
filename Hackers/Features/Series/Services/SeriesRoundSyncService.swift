@@ -261,6 +261,7 @@ struct SeriesRoundSyncService: Loggable {
                 teamLinks: teamLinks,
                 memberAssignments: memberAssignments,
                 handicaps: handicaps,
+                maximumHandicap: series.handicapConfig.isEnabled ? series.handicapConfig.config.maximumHandicap : nil,
                 courseSegment: courseSegment,
                 hostPlayerID: hostPlayerID,
                 preserveManualHandicapEdits: options.preserveManualHandicapEdits

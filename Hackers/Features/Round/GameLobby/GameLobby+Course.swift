@@ -177,4 +177,12 @@ extension GameLobby {
             showCourseModificationView = false
         }
     }
+
+    func unsetCourseSegment() {
+        addBreadcrumb()
+        Task {
+            await roundSession.unsetCourseSegment()
+            showCourseModificationView = false
+        }
+    }
 }

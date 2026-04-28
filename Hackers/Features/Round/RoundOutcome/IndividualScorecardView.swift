@@ -33,6 +33,10 @@ struct IndividualScorecardView: View {
     private var holeNumbers: [Int] { viewModel.courseOrderHoleNumbers }
     private var handicapsEnabled: Bool { viewModel.handicapsEnabled }
     private var scoreBasis: ScoreBasis { viewModel.scoreBasis }
+    private var participantStartingHole: Int? {
+        guard let groupID = participant.groupID else { return nil }
+        return viewModel.snapshot.teeGroups.first { $0.id == groupID }?.startingHole
+    }
     private var effectiveAccent: Color {
         viewModel.teamColor(for: participant) ?? viewModel.theme.color
     }
@@ -290,10 +294,20 @@ struct IndividualScorecardView: View {
                 .foregroundStyle(palette.backgroundColor)
                 .frame(width: 36, alignment: .leading)
             ForEach(holes, id: \.self) { h in
-                Text("\(h)")
-                    .fontStyle(kFontName, size: 11, weight: .bold)
-                    .foregroundStyle(palette.backgroundColor)
-                    .frame(maxWidth: .infinity)
+                let isStartingHole = participantStartingHole == h
+                VStack(spacing: 2) {
+                    Circle()
+                        .fill(.white)
+                        .frame(width: 5, height: 5)
+                        .opacity(isStartingHole ? 1 : 0)
+                        .accessibilityHidden(true)
+
+                    Text("\(h)")
+                        .fontStyle(kFontName, size: 11, weight: .bold)
+                        .foregroundStyle(palette.backgroundColor)
+                }
+                .frame(maxWidth: .infinity)
+                .accessibilityLabel(isStartingHole ? "Hole \(h), starting hole" : "Hole \(h)")
             }
             Text(label.uppercased())
                 .fontStyle(kFontName, size: 11, weight: .bold)

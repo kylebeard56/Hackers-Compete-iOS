@@ -141,6 +141,7 @@ final class CourseSelectionViewModel: ObservableObject, Loggable {
     @Published var modificationRequested: Bool = false
     @Published var commitModification: Bool = false
     var isModifying: Bool { modifyingCourse.exists || modifyingTee.exists || modifiedSegment.exists }
+    var shouldCommitSelectionAsModification: Bool = false
     
     @Published var globalDismiss: Bool = false
     

@@ -17,6 +17,7 @@ struct ManagePlayerView: View {
     /// When true and user is not a series commissioner, strokes are read-only in the sheet.
     let seriesHandicapLockActive: Bool
     let isSeriesCommissioner: Bool
+    let seriesHandicapMaximum: Int?
 
     var snapshot: RoundSnapshot { roundSession.snapshot }
     @State var participant: RoundParticipant?
@@ -25,12 +26,14 @@ struct ManagePlayerView: View {
         roundSession: RoundSession,
         participant: RoundParticipant,
         seriesHandicapLockActive: Bool = false,
-        isSeriesCommissioner: Bool = false
+        isSeriesCommissioner: Bool = false,
+        seriesHandicapMaximum: Int? = nil
     ) {
         _roundSession = StateObject(wrappedValue: roundSession)
         _participant = State(initialValue: participant)
         self.seriesHandicapLockActive = seriesHandicapLockActive
         self.isSeriesCommissioner = isSeriesCommissioner
+        self.seriesHandicapMaximum = seriesHandicapMaximum
     }
     
     @State private var name = ""
@@ -66,6 +69,10 @@ struct ManagePlayerView: View {
             return palette.foregroundColor
         }
         return handicapValue != baseline ? Color.orange : palette.foregroundColor
+    }
+
+    private var maximumHandicapValue: Int {
+        seriesHandicapLockActive ? (seriesHandicapMaximum ?? 36) : 36
     }
     
     var body: some View {
@@ -246,7 +253,7 @@ extension ManagePlayerView {
                         .font(.system(size: 12, weight: .semibold))
                         .foregroundStyle(Color.neutral3)
                     Spacer(minLength: 0)
-                    Text("Max: 36")
+                    Text("Max: \(maximumHandicapValue)")
                         .fontStyle(kFontName, size: 15, weight: .regular)
                         .foregroundStyle(Color.neutral3)
                 }
@@ -275,14 +282,14 @@ extension ManagePlayerView {
                         ClearTextButton(theme: palette.theme, onTap: { handicapString = "" })
                     }
 
-                    Text("Max: 36")
+                    Text("Max: \(maximumHandicapValue)")
                         .fontStyle(kFontName, size: 15, weight: .regular)
                         .foregroundStyle(Color.neutral3)
                 }
                 .borderedContentStyle(isActive: focus == .handicap, theme: palette.theme)
                 .onChange(of: handicapString) {
                     if let value = Int(handicapString.filter(\.isNumber)) {
-                        handicapValue = min(max(value, 0), 36)
+                        handicapValue = min(max(value, 0), maximumHandicapValue)
                         handicapString = String(handicapValue)
                     }
                 }

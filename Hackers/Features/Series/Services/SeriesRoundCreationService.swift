@@ -118,6 +118,7 @@ struct SeriesRoundCreationService: Loggable {
                 teamMappings: teamMappings,
                 memberAssignments: memberAssignments,
                 handicaps: handicaps,
+                maximumHandicap: series.handicapConfig.isEnabled ? series.handicapConfig.config.maximumHandicap : nil,
                 courseSegment: courseSegment,
                 hostPlayerID: player.id,
                 presenceStatusByMemberID: presenceStatusByMemberID

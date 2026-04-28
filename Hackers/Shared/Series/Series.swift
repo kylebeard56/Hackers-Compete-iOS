@@ -3209,6 +3209,24 @@ struct SeriesMemberHandicap: Hashable, Codable, Identifiable {
     var effectiveIndex: Double? {
         isOverridden ? overrideIndex : computedIndex
     }
+
+    func effectiveStrokes(maximumHandicap: Int?) -> Int {
+        let rounded = Int((effectiveIndex ?? 0).rounded())
+        let nonNegative = max(rounded, 0)
+        guard let maximumHandicap else { return nonNegative }
+        return min(nonNegative, maximumHandicap)
+    }
+
+    func isCappedByMaximumHandicap(_ maximumHandicap: Int) -> Bool {
+        guard let effectiveIndex else { return false }
+        return max(Int(effectiveIndex.rounded()), 0) > maximumHandicap
+    }
+
+    func cappedDisplayText(maximumHandicap: Int) -> String? {
+        guard effectiveIndex != nil else { return nil }
+        let strokes = effectiveStrokes(maximumHandicap: maximumHandicap)
+        return isCappedByMaximumHandicap(maximumHandicap) ? "\(strokes)*" : "\(strokes)"
+    }
 }
 
 // MARK: - Helpers

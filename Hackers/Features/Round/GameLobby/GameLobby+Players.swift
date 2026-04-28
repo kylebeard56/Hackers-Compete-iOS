@@ -477,6 +477,7 @@ extension GameLobby {
                             initialValue: participant.adjustedHandicap,
                             focusedField: $focus,
                             palette: palette,
+                            maximumValue: seriesLock ? seriesLeagueHandicapMaximum : nil,
                             onDebouncedEdit: { newValue in
                                 if participant.adjustedHandicap == newValue { return }
                                 var updated = participant

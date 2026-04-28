@@ -318,60 +318,20 @@ extension LiveRound {
 
     @ViewBuilder
     private func teamSharedRows(for holeNumber: Int) -> some View {
-        ForEach(viewModel.teeGroupTeamSections) { section in
-            if let team = section.team,
-               !section.participants.isEmpty {
-                TeamScoringRow(
-                    palette: palette,
-                    viewModel: viewModel,
-                    team: team,
-                    participants: section.participants,
-                    holeNumber: holeNumber,
-                    scoringUnitID: viewModel.scoringUnitID(forTeamID: team.id),
-                    onEnterScoreTap: {
-                        viewModel.presentedScoringSession = viewModel.sharedTeamScoringSession(
-                            team: team,
-                            participants: section.participants,
-                            holeNumber: holeNumber
-                        )
-                    }
-                )
-            }
-        }
+        sharedSubjectRows(
+            subjects: viewModel.visibleSharedScoringSubjects,
+            holeNumber: holeNumber,
+            emptyMessage: "Waiting for tee group assignments before entering shared scores."
+        )
     }
 
     @ViewBuilder
     private func partnershipSharedRows(for holeNumber: Int) -> some View {
-        let groups = viewModel.teeGroupTeamSections.flatMap { section in
-            viewModel.partnershipGroups(in: section.participants)
-        }
-
-        if groups.isPopulated {
-            VStack(spacing: 12) {
-                ForEach(groups) { scoringGroup in
-                    if let session = viewModel.sharedScoringSession(for: scoringGroup, holeNumber: holeNumber) {
-                        SharedScoreOwnerRow(
-                            palette: palette,
-                            viewModel: viewModel,
-                            title: viewModel.scoringGroupLabel(scoringGroup),
-                            subtitle: viewModel.scoringGroupSubtitle(scoringGroup),
-                            participants: session.participants,
-                            holeNumber: holeNumber,
-                            scoringUnitID: session.scoringUnitID,
-                            accentColor: viewModel.scoringGroupAccentColor(scoringGroup),
-                            onEnterScoreTap: {
-                                viewModel.presentedScoringSession = session
-                            }
-                        )
-                    }
-                }
-            }
-        } else {
-            Text("Set up pair scoring groups in the lobby before entering scores.")
-                .fontStyle(kFontName, size: 14, weight: .regular)
-                .foregroundStyle(Color.neutral)
-                .padding(.vertical, 12)
-        }
+        sharedSubjectRows(
+            subjects: viewModel.visibleSharedScoringSubjects,
+            holeNumber: holeNumber,
+            emptyMessage: "Set up pair scoring groups in the lobby before entering scores."
+        )
     }
 
     @ViewBuilder
@@ -439,24 +399,41 @@ extension LiveRound {
 
     @ViewBuilder
     private func teeGroupSharedRows(for holeNumber: Int) -> some View {
-        if let scoringGroup = snapshot.scoringGroups.first(where: {
-            $0.kind == .teeGroup && $0.teeGroupID == viewModel.visibleTeeGroupID
-        }), let session = viewModel.sharedScoringSession(for: scoringGroup, holeNumber: holeNumber) {
-            SharedScoreOwnerRow(
-                palette: palette,
-                viewModel: viewModel,
-                title: viewModel.scoringGroupLabel(scoringGroup),
-                subtitle: viewModel.scoringGroupSubtitle(scoringGroup),
-                participants: session.participants,
-                holeNumber: holeNumber,
-                scoringUnitID: session.scoringUnitID,
-                accentColor: viewModel.scoringGroupAccentColor(scoringGroup),
-                onEnterScoreTap: {
-                    viewModel.presentedScoringSession = session
+        sharedSubjectRows(
+            subjects: viewModel.visibleSharedScoringSubjects,
+            holeNumber: holeNumber,
+            emptyMessage: "Set up a group scoring owner in the lobby before entering scores."
+        )
+    }
+
+    @ViewBuilder
+    private func sharedSubjectRows(
+        subjects: [LiveRoundViewModel.SharedScoringSubject],
+        holeNumber: Int,
+        emptyMessage: String
+    ) -> some View {
+        if subjects.isPopulated {
+            VStack(spacing: 12) {
+                ForEach(subjects) { subject in
+                    if let session = viewModel.sharedScoringSession(for: subject, holeNumber: holeNumber) {
+                        SharedScoreOwnerRow(
+                            palette: palette,
+                            viewModel: viewModel,
+                            title: subject.title,
+                            subtitle: subject.subtitle,
+                            participants: session.participants,
+                            holeNumber: holeNumber,
+                            scoringUnitID: session.scoringUnitID,
+                            accentColor: subject.accentColor,
+                            onEnterScoreTap: {
+                                viewModel.presentedScoringSession = session
+                            }
+                        )
+                    }
                 }
-            )
+            }
         } else {
-            Text("Set up a group scoring owner in the lobby before entering scores.")
+            Text(emptyMessage)
                 .fontStyle(kFontName, size: 14, weight: .regular)
                 .foregroundStyle(Color.neutral)
                 .padding(.vertical, 12)

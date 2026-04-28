@@ -600,16 +600,14 @@ struct OutcomeMatchupTileView: View {
         section.matchup.pairingIDs().flatMap { scoringUnitID -> [(participant: RoundParticipant, ownerID: String?)] in
             switch matchupMode {
             case .team:
-                return snapshot.participants
-                    .filter { $0.teamID == scoringUnitID }
+                return viewModel.matchupSideParticipants(scoringUnitID: scoringUnitID, matchup: section.matchup)
                     .sorted { participantSort(lhs: $0, rhs: $1) }
                     .map { ($0, Optional(scoringUnitID)) }
             case .individual:
                 guard let participant = participantMap[scoringUnitID] else { return [] }
                 return [(participant, participant.id)]
             case .scoreOwner:
-                guard let group = scoringGroupMap[scoringUnitID] else { return [] }
-                return viewModel.participants(for: group)
+                return viewModel.matchupSideParticipants(scoringUnitID: scoringUnitID, matchup: section.matchup)
                     .sorted { participantSort(lhs: $0, rhs: $1) }
                     .map { ($0, Optional(scoringUnitID)) }
             }
@@ -639,8 +637,7 @@ struct OutcomeMatchupTileView: View {
     private func subtitle(for scoringUnitID: String) -> String? {
         switch matchupMode {
         case .team:
-            let members = snapshot.participants
-                .filter { $0.teamID == scoringUnitID }
+            let members = viewModel.matchupSideParticipants(scoringUnitID: scoringUnitID, matchup: section.matchup)
                 .map { viewModel.formatDisplayName(for: $0) }
                 .filter(\.isPopulated)
             return members.isPopulated ? members.joined(separator: ", ") : nil

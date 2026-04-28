@@ -156,12 +156,18 @@ private struct MatchupTileView: View {
             if let team1 {
                 teamEntityRow(team: team1, total: viewModel.matchupTotal(in: section, sideID: team1.id), leadingPill: true)
                     .frame(maxWidth: .infinity, alignment: .leading)
+            } else if pairingIDs.count > 0 {
+                sharedEntityRow(scoringUnitID: pairingIDs[0], total: viewModel.matchupTotal(in: section, sideID: pairingIDs[0]), leadingPill: true)
+                    .frame(maxWidth: .infinity, alignment: .leading)
             }
             Text("vs")
                 .fontStyle(kFontName, size: 12, weight: .bold)
                 .foregroundStyle(Color.neutral)
             if let team2 {
                 teamEntityRow(team: team2, total: viewModel.matchupTotal(in: section, sideID: team2.id), leadingPill: true)
+                    .frame(maxWidth: .infinity, alignment: .leading)
+            } else if pairingIDs.count > 1 {
+                sharedEntityRow(scoringUnitID: pairingIDs[1], total: viewModel.matchupTotal(in: section, sideID: pairingIDs[1]), leadingPill: true)
                     .frame(maxWidth: .infinity, alignment: .leading)
             }
         }
@@ -177,12 +183,18 @@ private struct MatchupTileView: View {
             if let owner1 {
                 scoreOwnerEntityRow(owner: owner1, total: viewModel.matchupTotal(in: section, sideID: owner1.id), leadingPill: true)
                     .frame(maxWidth: .infinity, alignment: .leading)
+            } else if pairingIDs.count > 0 {
+                sharedEntityRow(scoringUnitID: pairingIDs[0], total: viewModel.matchupTotal(in: section, sideID: pairingIDs[0]), leadingPill: true)
+                    .frame(maxWidth: .infinity, alignment: .leading)
             }
             Text("vs")
                 .fontStyle(kFontName, size: 12, weight: .bold)
                 .foregroundStyle(Color.neutral)
             if let owner2 {
                 scoreOwnerEntityRow(owner: owner2, total: viewModel.matchupTotal(in: section, sideID: owner2.id), leadingPill: true)
+                    .frame(maxWidth: .infinity, alignment: .leading)
+            } else if pairingIDs.count > 1 {
+                sharedEntityRow(scoringUnitID: pairingIDs[1], total: viewModel.matchupTotal(in: section, sideID: pairingIDs[1]), leadingPill: true)
                     .frame(maxWidth: .infinity, alignment: .leading)
             }
         }
@@ -232,7 +244,11 @@ private struct MatchupTileView: View {
     }
 
     private func teamRosterSubtitle(teamID: String) -> String? {
-        let names = sortedTeamParticipants(teamID: teamID).map { viewModel.formatDisplayName(for: $0) }
+        let participants = sortedTeamParticipants(teamID: teamID)
+        let fallbackParticipants = participants.isPopulated
+            ? participants
+            : viewModel.matchupSideParticipants(scoringUnitID: teamID, matchup: section.matchup)
+        let names = fallbackParticipants.map { viewModel.formatDisplayName(for: $0) }
         guard names.isPopulated else { return nil }
         return names.joined(separator: ", ")
     }
@@ -268,6 +284,44 @@ private struct MatchupTileView: View {
             } else {
                 HStack(alignment: .top, spacing: 12) {
                     textColumn
+                    matchupScorePill(total: total)
+                }
+            }
+        }
+    }
+
+    private func sharedEntityRow(scoringUnitID: String, total: Double?, leadingPill: Bool) -> some View {
+        let title = viewModel.outcomeMatchupSideName(scoringUnitID: scoringUnitID, matchup: section.matchup)
+        let names = viewModel.matchupSideParticipants(scoringUnitID: scoringUnitID, matchup: section.matchup)
+            .map { viewModel.formatDisplayName(for: $0) }
+            .filter(\.isPopulated)
+            .joined(separator: ", ")
+        let entityContent = VStack(alignment: .leading, spacing: 3) {
+            Text(title)
+                .fontStyle(kFontName, size: 15, weight: .semibold)
+                .foregroundStyle(palette.foregroundColor)
+                .lineLimit(1)
+
+            if names.isPopulated {
+                Text(names)
+                    .fontStyle(kFontName, size: 12, weight: .regular)
+                    .foregroundStyle(Color.neutral)
+                    .lineLimit(3)
+                    .minimumScaleFactor(0.85)
+                    .multilineTextAlignment(.leading)
+            }
+        }
+        .frame(maxWidth: .infinity, alignment: .leading)
+
+        return Group {
+            if leadingPill {
+                HStack(alignment: .top, spacing: 12) {
+                    matchupScorePill(total: total)
+                    entityContent
+                }
+            } else {
+                HStack(alignment: .top, spacing: 12) {
+                    entityContent
                     matchupScorePill(total: total)
                 }
             }
@@ -333,7 +387,7 @@ private struct MatchupTileView: View {
 
     @ViewBuilder
     private func matchupScorePill(total: Double?) -> some View {
-        let label = total.map { viewModel.formattedMatchupTotal($0, isPointsFormat: isPointsFormat) } ?? "E"
+        let label = total.map { viewModel.formattedMatchupTotal($0, isPointsFormat: isPointsFormat) } ?? "—"
         Text(label)
             .fontStyle(kFontName, size: 20, weight: .semibold)
             .foregroundStyle(palette.foregroundColor)
@@ -350,10 +404,8 @@ private struct MatchupTileView: View {
     private var expandedPlayerList: some View {
         let pairingIDs = section.matchup.pairingIDs()
         let participants: [(participant: RoundParticipant, ownerID: String?)] = pairingIDs.flatMap { id in
-            if isScoreOwnerMode, let group = scoringGroupMap[id] {
-                return viewModel.participants(for: group).map { ($0, Optional(id)) }
-            }
-            return snapshot.participants.filter { $0.teamID == id }.map { ($0, Optional(id)) }
+            viewModel.matchupSideParticipants(scoringUnitID: id, matchup: section.matchup)
+                .map { ($0, Optional(id)) }
         }
 
         let sorted = participants.sorted { lhs, rhs in

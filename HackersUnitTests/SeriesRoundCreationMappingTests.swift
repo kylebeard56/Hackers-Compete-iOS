@@ -782,6 +782,36 @@ final class SeriesRoundCreationMappingTests: XCTestCase {
         XCTAssertEqual(payloads[0].leagueHandicapStrokesAtCreation, 0)
     }
 
+    func testBuildParticipantPayloads_capsSeriesHandicapForRoundStrokes() {
+        let member = makeMember(id: "m1", name: "High", playerID: "p1")
+        let payloads = SeriesRoundCreationMapping.buildParticipantPayloads(
+            members: [member],
+            roundID: "roundZ",
+            teamMappings: [:],
+            memberAssignments: [:],
+            handicaps: [
+                "m1": SeriesMemberHandicap(memberID: "m1", computedIndex: 27.7),
+            ],
+            maximumHandicap: 18,
+            courseSegment: makeCourseSegment(),
+            hostPlayerID: nil
+        )
+
+        XCTAssertEqual(payloads.first?.originalHandicap, 18)
+        XCTAssertEqual(payloads.first?.adjustedHandicap, 18)
+        XCTAssertEqual(payloads.first?.leagueHandicapStrokesAtCreation, 18)
+    }
+
+    func testSeriesMemberHandicapCappedDisplayTextUsesAsteriskOnlyWhenCapped() {
+        let capped = SeriesMemberHandicap(memberID: "m1", computedIndex: 27.7)
+        let uncapped = SeriesMemberHandicap(memberID: "m2", computedIndex: 17.4)
+        let missing = SeriesMemberHandicap(memberID: "m3")
+
+        XCTAssertEqual(capped.cappedDisplayText(maximumHandicap: 18), "18*")
+        XCTAssertEqual(uncapped.cappedDisplayText(maximumHandicap: 18), "17")
+        XCTAssertNil(missing.cappedDisplayText(maximumHandicap: 18))
+    }
+
     func testBuildParticipantPayloads_preservesNonContiguousTeeOrder() {
         let payloads = SeriesRoundCreationMapping.buildParticipantPayloads(
             members: [
