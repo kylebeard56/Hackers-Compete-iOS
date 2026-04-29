@@ -1040,6 +1040,79 @@ final class SeriesRoundCreationMappingTests: XCTestCase {
         XCTAssertEqual(Set(matchups[1].scoreOwnerIDs ?? []), Set(["g2_red", "g1_blue"]))
     }
 
+    func testBuildRoundMatchups_pairPlansResolveRoundScoringGroupsBySeriesPairMembers() {
+        var seriesRound = mirroredTeeGroupRound()
+        let members = [
+            makeMember(id: "r1", name: "Red 1", teamID: "red"),
+            makeMember(id: "r2", name: "Red 2", teamID: "red"),
+            makeMember(id: "b1", name: "Blue 1", teamID: "blue"),
+            makeMember(id: "b2", name: "Blue 2", teamID: "blue"),
+            makeMember(id: "r3", name: "Red 3", teamID: "red"),
+            makeMember(id: "r4", name: "Red 4", teamID: "red"),
+            makeMember(id: "b3", name: "Blue 3", teamID: "blue"),
+            makeMember(id: "b4", name: "Blue 4", teamID: "blue"),
+        ]
+        seriesRound.partnershipPlans = [
+            SeriesRoundPartnershipPlan(id: "red_pair_1", teamID: "red", memberIDs: ["r1", "r2"]),
+            SeriesRoundPartnershipPlan(id: "blue_pair_1", teamID: "blue", memberIDs: ["b1", "b2"]),
+            SeriesRoundPartnershipPlan(id: "red_pair_2", teamID: "red", memberIDs: ["r3", "r4"]),
+            SeriesRoundPartnershipPlan(id: "blue_pair_2", teamID: "blue", memberIDs: ["b3", "b4"]),
+        ]
+        let matchupPlans = [
+            SeriesRoundMatchupPlan(id: "mx_1", pairAID: "red_pair_1", pairBID: "blue_pair_2", index: 0),
+            SeriesRoundMatchupPlan(id: "mx_2", pairAID: "red_pair_2", pairBID: "blue_pair_1", index: 1),
+        ]
+        let teamMappings = mirrorTeamMappings()
+        let memberAssignments: [String: SeriesRoundCreationMapping.MemberAssignment] = [
+            "r1": .init(groupID: "round_group_1", teeOrder: 1),
+            "r2": .init(groupID: "round_group_1", teeOrder: 2),
+            "b1": .init(groupID: "round_group_1", teeOrder: 3),
+            "b2": .init(groupID: "round_group_1", teeOrder: 4),
+            "r3": .init(groupID: "round_group_2", teeOrder: 1),
+            "r4": .init(groupID: "round_group_2", teeOrder: 2),
+            "b3": .init(groupID: "round_group_2", teeOrder: 3),
+            "b4": .init(groupID: "round_group_2", teeOrder: 4),
+        ]
+        let participants = SeriesRoundCreationMapping.buildParticipantPayloads(
+            members: members,
+            roundID: "round1",
+            teamMappings: teamMappings,
+            memberAssignments: memberAssignments,
+            handicaps: [:],
+            courseSegment: makeCourseSegment(),
+            hostPlayerID: nil
+        )
+        let teeGroups = [
+            TeeTimeGroup(id: "round_group_1", index: 0, createdAt: t0, lastUpdatedAt: t0, parentID: "round1"),
+            TeeTimeGroup(id: "round_group_2", index: 1, createdAt: t0, lastUpdatedAt: t0, parentID: "round1"),
+        ]
+        let createdScoringGroups = SeriesRoundCreationMapping.buildRoundScoringGroups(
+            roundID: "round1",
+            seriesRound: seriesRound,
+            participants: participants,
+            partnershipPlans: seriesRound.partnershipPlans,
+            teeGroups: teeGroups
+        )
+        let scoringGroups = createdScoringGroups.map { group in
+            var rewritten = group
+            rewritten.id = "round_\(group.id)"
+            return rewritten
+        }
+
+        let matchups = SeriesRoundCreationMapping.buildRoundMatchups(
+            seriesRound: seriesRound,
+            matchupPlans: matchupPlans,
+            teamMappings: teamMappings,
+            participantIDsBySeriesMemberID: [:],
+            scoringGroups: scoringGroups,
+            participants: participants
+        )
+
+        XCTAssertEqual(matchups.map(\.id), ["mx_1", "mx_2"])
+        XCTAssertEqual(Set(matchups[0].scoreOwnerIDs ?? []), Set(["round_red_pair_1", "round_blue_pair_2"]))
+        XCTAssertEqual(Set(matchups[1].scoreOwnerIDs ?? []), Set(["round_red_pair_2", "round_blue_pair_1"]))
+    }
+
     func testBuildRoundMatchups_mirroredTeeGroupsSkipSameTeamAndExtraPairs() {
         let seriesRound = mirroredTeeGroupRound()
         let sameTeamGroups = [

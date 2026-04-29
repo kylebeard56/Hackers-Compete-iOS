@@ -586,11 +586,38 @@ enum SeriesRoundCreationMapping {
            scoringGroups.isPopulated {
             if seriesRound.roundConfig.matchupMode == .teeGroupPartnerships {
                 let scoringGroupsByID = Dictionary(uniqueKeysWithValues: scoringGroups.map { ($0.id, $0) })
+                let participantsBySeriesMemberID: [String: RoundParticipant] = participants.reduce(into: [:]) { partial, participant in
+                    guard let seriesMemberID = participant.seriesMemberID, partial[seriesMemberID] == nil else { return }
+                    partial[seriesMemberID] = participant
+                }
+                let partnershipPlansByID: [String: SeriesRoundPartnershipPlan] = seriesRound.partnershipPlans.reduce(into: [:]) { partial, plan in
+                    guard plan.isValid, plan.id.isPopulated, partial[plan.id] == nil else { return }
+                    partial[plan.id] = plan
+                }
+                let partnershipGroups = scoringGroups.filter { $0.kind == .partnership }
+
+                func scoringGroupID(forPairID pairID: String) -> String? {
+                    if scoringGroupsByID[pairID] != nil {
+                        return pairID
+                    }
+
+                    guard let partnershipPlan = partnershipPlansByID[pairID] else { return nil }
+                    let participantIDs = partnershipPlan.memberIDs.compactMap { seriesMemberID in
+                        participantIDsBySeriesMemberID[seriesMemberID] ?? participantsBySeriesMemberID[seriesMemberID]?.id
+                    }
+                    guard participantIDs.count == partnershipPlan.memberIDs.count else { return nil }
+
+                    let participantIDSet = Set(participantIDs)
+                    let matches = partnershipGroups.filter { Set($0.memberIDs) == participantIDSet }
+                    guard matches.count == 1 else { return nil }
+                    return matches[0].id
+                }
+
                 let plannedPairMatchups = matchupPlans.compactMap { plan -> TeamMatchup? in
                     guard let pairAID = plan.pairAID,
                           let pairBID = plan.pairBID,
-                          scoringGroupsByID[pairAID] != nil,
-                          scoringGroupsByID[pairBID] != nil,
+                          let scoreOwnerAID = scoringGroupID(forPairID: pairAID),
+                          let scoreOwnerBID = scoringGroupID(forPairID: pairBID),
                           pairAID != pairBID else {
                         return nil
                     }
@@ -598,7 +625,7 @@ enum SeriesRoundCreationMapping {
                         id: plan.id,
                         teamIDs: [],
                         participantIDs: nil,
-                        scoreOwnerIDs: [pairAID, pairBID],
+                        scoreOwnerIDs: [scoreOwnerAID, scoreOwnerBID],
                         scoreOwnerScope: .partnership,
                         mode: .scoreOwner
                     )
