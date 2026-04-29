@@ -2914,6 +2914,15 @@ final class LiveRoundViewModel: ObservableObject, Loggable {
     }
 
     func outcomeMatchupStatus(for section: MatchupLeaderboardSection) -> OutcomeMatchupStatus {
+        if let mismatch = snapshot.primarySegmentHoleRangeMismatch {
+            return OutcomeMatchupStatus(
+                title: mismatch.diagnosticTitle,
+                detail: mismatch.diagnosticDetail,
+                winningScoringUnitID: nil,
+                isTie: false
+            )
+        }
+
         let presentation = matchupPresentation(in: section)
         guard presentation.hasCompleteSides else {
             return OutcomeMatchupStatus(

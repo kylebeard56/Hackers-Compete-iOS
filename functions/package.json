@@ -9,7 +9,8 @@
     "deploy:sandbox": "firebase deploy --only functions --project hackers-compete-sandbox",
     "deploy:production": "firebase deploy --only functions --project hackers-compete",
     "deploy:all": "npm run deploy:sandbox && npm run deploy:production",
-    "logs": "firebase functions:log"
+    "logs": "firebase functions:log",
+    "repair:segment-range": "node repair-round-segment-hole-range.js"
   },
   "engines": {
     "node": "22"

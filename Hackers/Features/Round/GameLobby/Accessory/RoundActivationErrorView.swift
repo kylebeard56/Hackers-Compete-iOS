@@ -22,6 +22,7 @@ struct RoundActivationErrorView: View {
     private var showScoringGroupInvalidRefs: Bool { roundSession.roundActivationErrors.contains(.scoringGroupsInvalidReferences) }
     private var showMatchups: Bool { roundSession.roundActivationErrors.contains(.matchupsIncomplete) }
     private var showMatchupInvalidRefs: Bool { roundSession.roundActivationErrors.contains(.matchupInvalidReferences) }
+    private var showCourseSegmentMismatch: Bool { roundSession.roundActivationErrors.contains(.courseSegmentMismatch) }
     private var showVegasConfiguration: Bool { roundSession.roundActivationErrors.contains(.vegasConfigurationInvalid) }
     private var scoreOwnerLabel: String {
         switch roundSession.snapshot.configuration.scoreOwnerScope {
@@ -43,6 +44,9 @@ struct RoundActivationErrorView: View {
         }
         if showMatchupInvalidRefs && !showTeam && !showTeeGroup {
             return "Matchups Need Update"
+        }
+        if showCourseSegmentMismatch && !showTeam && !showTeeGroup {
+            return "Course Setup Needs Repair"
         }
         if showMatchups && !showTeam && !showTeeGroup {
             return "Matchups Incomplete"
@@ -71,6 +75,10 @@ struct RoundActivationErrorView: View {
         }
         if showMatchupInvalidRefs {
             return "One or more matchups reference teams or players that are no longer on this round. Open the Matchups tab and re-assign each pairing."
+        }
+        if showCourseSegmentMismatch {
+            return roundSession.snapshot.primarySegmentHoleRangeMismatch?.diagnosticDetail
+                ?? "The selected course holes do not match the scoring segment used for matchups and awards. Re-save the course selection before starting live play."
         }
         if showMatchups && !showTeam && !showTeeGroup {
             return "Set up at least one complete head-to-head matchup in the Matchups tab. Extra empty rows are fine. If a row has only one side assigned, pick a second side or clear that matchup."
@@ -197,4 +205,17 @@ private enum Mock {
             }
     }
     .environmentObject(Mock.roundSession([]))
+}
+
+#Preview("Course Segment Mismatch") {
+    ZStack {
+        Color.neutral6
+            .edgesIgnoringSafeArea(.all)
+            .sheet(isPresented: .true) {
+                RoundActivationErrorView()
+                    .presentationDetents([.medium])
+                    .presentationDragIndicator(.visible)
+            }
+    }
+    .environmentObject(Mock.roundSession([.courseSegmentMismatch]))
 }

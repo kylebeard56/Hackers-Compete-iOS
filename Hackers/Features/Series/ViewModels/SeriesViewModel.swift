@@ -4136,6 +4136,14 @@ final class SeriesViewModel: ObservableObject, Loggable {
               let segment = snapshot.roundSegment else { return [] }
         guard snapshot.configuration.resolvedCompetitionScope == .matchup else { return [] }
 
+        if let mismatch = snapshot.primarySegmentHoleRangeMismatch {
+            return diagnosticMatchupOutcomes(
+                mismatch: mismatch,
+                segment: segment,
+                snapshot: snapshot
+            )
+        }
+
         let result = scoringResult(from: snapshot, segment: segment)
         guard result.matchupResults.isPopulated else { return [] }
 
@@ -4187,6 +4195,56 @@ final class SeriesViewModel: ObservableObject, Loggable {
                 winningSideID: presentation.winningSideID,
                 isTie: presentation.isTie,
                 showsResultChip: showsResultChip,
+                usesNetScores: snapshot.configuration.useHandicaps
+            )
+        }
+    }
+
+    private func diagnosticMatchupOutcomes(
+        mismatch: RoundSegmentHoleRangeMismatch,
+        segment: RoundSegment,
+        snapshot: RoundSnapshot
+    ) -> [SeriesMatchupOutcome] {
+        let validMatchups = (segment.matchups ?? []).filter(\.isValid)
+        return validMatchups.enumerated().compactMap { index, matchup in
+            let mode = matchup.mode ?? expectedMatchupMode(for: snapshot)
+            let sides = matchup.pairingIDs().map { sideID in
+                SeriesMatchupOutcome.Side(
+                    id: sideID,
+                    title: matchupSideName(sideID: sideID, mode: mode, snapshot: snapshot),
+                    subtitle: matchupSideSubtitle(sideID: sideID, mode: mode, snapshot: snapshot),
+                    score: "—",
+                    accentColor: matchupSideAccentColor(sideID: sideID, mode: mode, snapshot: snapshot)
+                )
+            }
+            guard sides.count == 2 else { return nil }
+
+            let players = sides.flatMap { side in
+                matchupSideParticipants(sideID: side.id, mode: mode, snapshot: snapshot).map { participant in
+                    SeriesMatchupOutcome.Player(
+                        id: "\(side.id)_\(participant.id)",
+                        ownerID: side.id,
+                        name: participant.name.fullName,
+                        handicap: "\(participant.adjustedHandicap)",
+                        gross: "—",
+                        net: snapshot.configuration.useHandicaps ? "—" : nil,
+                        scoreCounts: false,
+                        accentColor: participant.teamID.flatMap { teamID in snapshot.teams.first(where: { $0.id == teamID })?.displaySwatchColor }
+                            ?? side.accentColor
+                    )
+                }
+            }
+
+            return SeriesMatchupOutcome(
+                id: matchup.id,
+                title: "\(mismatch.diagnosticTitle) - Match \(index + 1)",
+                detail: mismatch.diagnosticDetail,
+                mode: mode,
+                sides: sides,
+                players: players,
+                winningSideID: nil,
+                isTie: false,
+                showsResultChip: false,
                 usesNetScores: snapshot.configuration.useHandicaps
             )
         }

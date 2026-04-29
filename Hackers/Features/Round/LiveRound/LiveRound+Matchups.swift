@@ -101,6 +101,10 @@ private struct MatchupTileView: View {
         Dictionary(uniqueKeysWithValues: matchupPresentation.sides.map { ($0.id, $0) })
     }
 
+    private var rangeMismatch: RoundSegmentHoleRangeMismatch? {
+        snapshot.primarySegmentHoleRangeMismatch
+    }
+
     var body: some View {
         ZStack(alignment: .bottomTrailing) {
             VStack(spacing: 0) {
@@ -110,16 +114,20 @@ private struct MatchupTileView: View {
                     .alignLeading()
                     .padding(.bottom, 8)
 
-                matchupHeaderRow
+                if let rangeMismatch {
+                    matchupRangeMismatchView(rangeMismatch)
+                } else {
+                    matchupHeaderRow
 
-                if showsExpandedMembers && isExpanded {
-                    expandedPlayerList
+                    if showsExpandedMembers && isExpanded {
+                        expandedPlayerList
+                    }
                 }
             }
             .frame(maxWidth: .infinity, alignment: .leading)
-            .padding(.bottom, showsExpandedMembers ? 44 : 0)
+            .padding(.bottom, showsExpandedMembers && rangeMismatch == nil ? 44 : 0)
 
-            if showsExpandedMembers {
+            if showsExpandedMembers && rangeMismatch == nil {
                 NavButton(
                     style: .glass,
                     icon: isExpanded ? "chevron.down" : "chevron.right",
@@ -142,6 +150,23 @@ private struct MatchupTileView: View {
             strokeOpacity: 0.38,
             shadowOpacity: 0.16
         )
+    }
+
+    private func matchupRangeMismatchView(_ mismatch: RoundSegmentHoleRangeMismatch) -> some View {
+        VStack(alignment: .leading, spacing: 8) {
+            Text(mismatch.diagnosticTitle)
+                .fontStyle(kFontName, size: 16, weight: .semibold)
+                .foregroundStyle(palette.foregroundColor)
+                .lineLimit(2)
+                .fixedSize(horizontal: false, vertical: true)
+
+            Text(mismatch.diagnosticDetail)
+                .fontStyle(kFontName, size: 13, weight: .medium)
+                .foregroundStyle(Color.neutral)
+                .lineLimit(4)
+                .fixedSize(horizontal: false, vertical: true)
+        }
+        .frame(maxWidth: .infinity, alignment: .leading)
     }
 
     @ViewBuilder

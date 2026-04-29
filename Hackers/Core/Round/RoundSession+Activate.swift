@@ -14,6 +14,7 @@ enum RoundActivationError: String, CaseIterable {
     case scoringGroupsInvalidReferences
     case matchupsIncomplete
     case matchupInvalidReferences
+    case courseSegmentMismatch
     case vegasConfigurationInvalid
     case unknown
 }
@@ -57,6 +58,10 @@ extension RoundSession {
             if participant.teamID.doesNotExist && snapshot.requiresTeams {
                 errors.insert(.playerMissingFromTeam)
             }
+        }
+
+        if snapshot.primarySegmentHoleRangeMismatch != nil {
+            errors.insert(.courseSegmentMismatch)
         }
 
         if snapshot.isVegasFormat {

@@ -38,6 +38,32 @@ struct RoundSnapshot {
     }
 }
 
+struct RoundSegmentHoleRangeMismatch: Equatable {
+    let roundHoleRange: HoleRange
+    let segmentID: String
+    let segmentHoleRange: HoleRange
+    let observedScoreHoleNumbers: [Int]
+    let scoredOutsideSegmentHoleNumbers: [Int]
+
+    var diagnosticTitle: String {
+        "Setup needs repair"
+    }
+
+    var diagnosticDetail: String {
+        let base = "Course holes are \(roundHoleRange.displayRange), but the matchup segment is \(segmentHoleRange.displayRange)."
+        guard scoredOutsideSegmentHoleNumbers.isPopulated else {
+            return "\(base) Repair the segment before using matchup results or awards."
+        }
+        return "\(base) Scores exist on \(Self.displayHoleNumbers(scoredOutsideSegmentHoleNumbers)), so repair the segment before using matchup results or awards."
+    }
+
+    private static func displayHoleNumbers(_ holeNumbers: [Int]) -> String {
+        let sorted = holeNumbers.sorted()
+        guard let first = sorted.first, let last = sorted.last else { return "no holes" }
+        return first == last ? "hole \(first)" : "holes \(first)-\(last)"
+    }
+}
+
 extension RoundSnapshot {
     var configuration: RoundConfiguration { self.round.configuration }
     var roundSegment: RoundSegment? { self.segments.first }
@@ -179,6 +205,33 @@ extension RoundSnapshot {
         }
         return ordered
     }
+
+    var primarySegmentHoleRangeMismatch: RoundSegmentHoleRangeMismatch? {
+        guard let roundHoleRange = holeRange,
+              let segment = roundSegment,
+              roundHoleRange != segment.holeRange else {
+            return nil
+        }
+
+        let segmentID = segment.id
+        let observedScoreHoleNumbers = Set(
+            scoring
+                .filter { entry in
+                    entry.hasRecordedScore
+                        && (segmentID.isEmpty || entry.segmentID == segmentID)
+                }
+                .map(\.holeNumber)
+        )
+        let outsideSegment = observedScoreHoleNumbers.filter { !segment.holeRange.contains($0) }
+
+        return RoundSegmentHoleRangeMismatch(
+            roundHoleRange: roundHoleRange,
+            segmentID: segmentID,
+            segmentHoleRange: segment.holeRange,
+            observedScoreHoleNumbers: observedScoreHoleNumbers.sorted(),
+            scoredOutsideSegmentHoleNumbers: outsideSegment.sorted()
+        )
+    }
     
     func teamColor(for player: RoundParticipant) -> Color? {
         guard configuration.usesTeamColors else { return nil }
@@ -188,6 +241,12 @@ extension RoundSnapshot {
     func scoringGroup(id: String?) -> RoundScoringGroup? {
         guard let id, id.isPopulated else { return nil }
         return scoringGroups.first(where: { $0.id == id })
+    }
+}
+
+private extension HoleRange {
+    var displayRange: String {
+        "\(startHole)-\(endHole)"
     }
 }
 

@@ -93,6 +93,72 @@ final class LiveRoundHoleOrderingTests: XCTestCase {
         XCTAssertEqual(ordered, Array(1...9))
     }
 
+    func testPrimarySegmentHoleRangeMismatchReportsScoresOutsideSegment() throws {
+        let snapshot = makeRangeMismatchSnapshot(
+            courseRange: HoleRange(startHole: 10, endHole: 18),
+            segmentRange: HoleRange(startHole: 1, endHole: 9),
+            scoreHoles: [10, 11, 12]
+        )
+
+        let mismatch = try XCTUnwrap(snapshot.primarySegmentHoleRangeMismatch)
+
+        XCTAssertEqual(mismatch.roundHoleRange, HoleRange(startHole: 10, endHole: 18))
+        XCTAssertEqual(mismatch.segmentHoleRange, HoleRange(startHole: 1, endHole: 9))
+        XCTAssertEqual(mismatch.observedScoreHoleNumbers, [10, 11, 12])
+        XCTAssertEqual(mismatch.scoredOutsideSegmentHoleNumbers, [10, 11, 12])
+        XCTAssertTrue(mismatch.diagnosticDetail.contains("Course holes are 10-18"))
+    }
+
+    func testPrimarySegmentHoleRangeMismatchNilWhenRangesAlign() {
+        let snapshot = makeRangeMismatchSnapshot(
+            courseRange: HoleRange(startHole: 10, endHole: 18),
+            segmentRange: HoleRange(startHole: 10, endHole: 18),
+            scoreHoles: [10, 11, 12]
+        )
+
+        XCTAssertNil(snapshot.primarySegmentHoleRangeMismatch)
+    }
+
+    private func makeRangeMismatchSnapshot(
+        courseRange: HoleRange,
+        segmentRange: HoleRange,
+        scoreHoles: [Int]
+    ) -> RoundSnapshot {
+        let roundID = "range_mismatch_round"
+        let segmentID = "range_mismatch_segment"
+        let round = Round(
+            id: roundID,
+            configuration: RoundConfiguration(
+                courses: [
+                    CourseSegment(
+                        courseInfo: CourseInfo(),
+                        holeRange: courseRange
+                    ),
+                ]
+            )
+        )
+        let segment = RoundSegment(
+            id: segmentID,
+            roundID: roundID,
+            holeRange: segmentRange,
+            parentID: roundID
+        )
+        let scores = scoreHoles.map { hole in
+            ScoreEntry(
+                id: ScoreEntry.makeID(hole: hole, segment: segmentID, scoringUnit: "p1"),
+                holeNumber: hole,
+                segmentID: segmentID,
+                scoringUnitID: "p1",
+                participantIDs: ["p1"],
+                strokes: 4,
+                entryID: "p1",
+                parentID: roundID
+            )
+        }
+
+        return RoundSnapshot(round: round, segments: [segment], scoring: scores)
+    }
+
     // MARK: - Past / future in play order (error styling)
 
     func testIncompletePast_startOn9_current9_hole1IsFuture() {
@@ -608,6 +674,41 @@ final class LiveRoundViewModelHoleOrderingTests: XCTestCase {
         XCTAssertEqual(presentation.side(id: "team_blue")?.scoreLabel, "+2")
         XCTAssertTrue(presentation.side(id: "team_red")?.isParticipantActive(snapshot.participants[4]) == true)
         XCTAssertTrue(presentation.side(id: "team_blue")?.isParticipantActive(snapshot.participants[6]) == true)
+    }
+
+    func testOutcomeMatchupStatusReportsRangeMismatchInsteadOfResult() async throws {
+        var snapshot = MockLiveRoundBest2of4Matchup.snapshot
+        snapshot.scoringGroups = Self.best2ScoringGroups()
+        snapshot.segments[0].holeRange = HoleRange(startHole: 1, endHole: 9)
+        snapshot.segments[0].matchups = [
+            TeamMatchup(id: "m1", teamIDs: ["team_red", "team_blue"], mode: .team),
+        ]
+        if snapshot.round.configuration.courses.isEmpty {
+            snapshot.round.configuration.courses = [
+                CourseSegment(courseInfo: CourseInfo(), holeRange: HoleRange(startHole: 10, endHole: 18)),
+            ]
+        } else {
+            snapshot.round.configuration.courses[0].holeRange = HoleRange(startHole: 10, endHole: 18)
+        }
+        snapshot.scoring = snapshot.scoring.map { entry in
+            var updated = entry
+            updated.holeNumber += 9
+            updated.id = ScoreEntry.makeID(
+                hole: updated.holeNumber,
+                segment: updated.segmentID,
+                scoringUnit: updated.scoringUnitID
+            )
+            return updated
+        }
+
+        let vm = await boundViewModel(snapshot: snapshot, participantID: "p01")
+        let section = try XCTUnwrap(vm.matchupSections.first)
+        let status = vm.outcomeMatchupStatus(for: section)
+
+        XCTAssertEqual(status.title, "Setup needs repair")
+        XCTAssertTrue(status.detail.contains("Course holes are 10-18"))
+        XCTAssertNil(status.winningScoringUnitID)
+        XCTAssertFalse(status.isTie)
     }
 
     // MARK: - Snapshot factory

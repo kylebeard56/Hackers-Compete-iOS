@@ -76,11 +76,13 @@ extension RoundSession {
             }
             _ = try await snapshot.round.put().get()
 
+            let didSyncSegment = try await syncPrimarySegmentHoleRange(to: segmentToSave.holeRange)
+
             if snapshot.configuration.usesSequentialTeeStarts {
                 try await resequenceTeeGroupsForSequentialStarts()
             }
 
-            guard previousSegment != segmentToSave else { return }
+            guard previousSegment != segmentToSave || didSyncSegment else { return }
 
             var props: [String: Any] = [:]
             if let previousCourse, let previousSegment {
@@ -104,6 +106,32 @@ extension RoundSession {
         } catch {
             addBreadcrumb(level: .error, message: "Failed to set course segment", error: error)
         }
+    }
+
+    @discardableResult
+    private func syncPrimarySegmentHoleRange(to holeRange: HoleRange) async throws -> Bool {
+        guard var mainSegment = snapshot.segments.first,
+              mainSegment.holeRange != holeRange else {
+            return false
+        }
+
+        let previousHoleRange = mainSegment.holeRange
+        mainSegment.holeRange = holeRange
+        mainSegment.lastUpdatedAt = .init()
+        snapshot.segments[0] = mainSegment
+        _ = try await mainSegment.put().get()
+
+        addBreadcrumb(
+            message: "Synced primary segment hole range",
+            parameters: [
+                "previous_start_hole": previousHoleRange.startHole,
+                "previous_end_hole": previousHoleRange.endHole,
+                "start_hole": holeRange.startHole,
+                "end_hole": holeRange.endHole,
+                "segment_id": mainSegment.id
+            ]
+        )
+        return true
     }
 
     func unsetCourseSegment() async {
