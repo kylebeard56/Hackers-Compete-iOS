@@ -420,30 +420,49 @@ extension LiveRound {
                 }
                 
                 Menu {
-                    Button {
-                        Haptics.fire(.light)
-                        viewModel.nameDisplayFormat = .firstInitialLastName
-                    } label: {
-                        HStack {
-                            Text("J. Smith")
-                            if viewModel.nameDisplayFormat == .firstInitialLastName {
-                                Image(systemName: "checkmark")
+                    Menu {
+                        Button {
+                            Haptics.fire(.light)
+                            viewModel.nameDisplayFormat = .firstInitialLastName
+                        } label: {
+                            HStack {
+                                Text("J. Smith")
+                                if viewModel.nameDisplayFormat == .firstInitialLastName {
+                                    Image(systemName: "checkmark")
+                                }
                             }
                         }
-                    }
-                    Button {
-                        Haptics.fire(.light)
-                        viewModel.nameDisplayFormat = .firstNameLastInitial
-                    } label: {
-                        HStack {
-                            Text("John S.")
-                            if viewModel.nameDisplayFormat == .firstNameLastInitial {
-                                Image(systemName: "checkmark")
+                        Button {
+                            Haptics.fire(.light)
+                            viewModel.nameDisplayFormat = .firstNameLastInitial
+                        } label: {
+                            HStack {
+                                Text("John S.")
+                                if viewModel.nameDisplayFormat == .firstNameLastInitial {
+                                    Image(systemName: "checkmark")
+                                }
                             }
                         }
+                    } label: {
+                        Label("Name display", systemImage: "person.text.rectangle")
                     }
+                    .menuActionDismissBehavior(.disabled)
+
+                    Button {
+                        Haptics.fire(.light)
+                        viewModel.showScorelessLeaderboardRows.toggle()
+                    } label: {
+                        Label(
+                            "Show scoreless",
+                            systemImage: viewModel.showScorelessLeaderboardRows
+                            ? "checkmark.circle.fill"
+                            : "circle"
+                        )
+                        Text("Choose leaderboard visibility for those who have no scores")
+                    }
+                    .menuActionDismissBehavior(.disabled)
                 } label: {
-                    Label("Name display", systemImage: "person.text.rectangle")
+                    Label("More", systemImage: "ellipsis.circle")
                 }
                 .menuActionDismissBehavior(.disabled)
                 .onTapGesture {

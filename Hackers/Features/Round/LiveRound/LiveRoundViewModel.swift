@@ -103,6 +103,7 @@ final class LiveRoundViewModel: ObservableObject, Loggable {
     @Published var nameDisplayFormat: NameDisplayFormat = .firstNameLastInitial
     @Published var theme: GolfTheme = .purple
     @Published var isSpectator: Bool = false
+    @Published var showScorelessLeaderboardRows: Bool = true
     
     /// The hole last explicitly selected (tap on HoleWindowSelector or navigateToNextUnscoredHole).
     /// Used for programmatic pager scroll. Does not sync with user scroll—scoringPageHole is the
@@ -215,10 +216,17 @@ final class LiveRoundViewModel: ObservableObject, Loggable {
 
                 self.resetRoundScopedStateIfNeeded(for: s.round.id)
 
+                let previousVisibleGroupID = self.visibleTeeGroupID
+                let previousStartingHole = self.visibleGroupStartingHole
+
                 self.snapshot = s
                 self.rebuildScoreIndex()
                 self.syncVisibleTeeGroupIfNeeded()
                 self.ensureHoleIndexInBounds()
+                self.selectVisibleGroupStartingHoleIfNeeded(
+                    previousVisibleGroupID: previousVisibleGroupID,
+                    previousStartingHole: previousStartingHole
+                )
                 self.updateSelectedTeeIfNeeded()
                 self.refreshSeriesScoreboardProjection()
 
@@ -330,6 +338,28 @@ final class LiveRoundViewModel: ObservableObject, Loggable {
     func selectHole(_ holeNumber: Int) {
         guard let idx = holeNumbers.firstIndex(of: holeNumber) else { return }
         currentHoleIndex = idx
+    }
+
+    private var visibleGroupStartingHole: Int? {
+        guard let visibleTeeGroupID else { return nil }
+        return orderedTeeGroups.first(where: { $0.id == visibleTeeGroupID })?.startingHole
+    }
+
+    private func selectVisibleGroupStartingHoleIfNeeded(
+        previousVisibleGroupID: String?,
+        previousStartingHole: Int?
+    ) {
+        let currentStartingHole = visibleGroupStartingHole
+
+        guard let visibleTeeGroupID,
+              previousVisibleGroupID == visibleTeeGroupID,
+              let currentStartingHole,
+              currentStartingHole != previousStartingHole,
+              holeNumbers.contains(currentStartingHole) else {
+            return
+        }
+
+        selectHole(currentStartingHole)
     }
 
     var nextUnscoredHoleNumber: Int? {
@@ -541,7 +571,6 @@ final class LiveRoundViewModel: ObservableObject, Loggable {
         
         let grouped = Dictionary(grouping: players, by: { $0.teamID })
         
-        // Order by team index, with unassigned last.
         let orderedTeams = snapshot.teams.sorted(by: { $0.index < $1.index })
         var sections: [TeamSection] = []
         
@@ -551,6 +580,13 @@ final class LiveRoundViewModel: ObservableObject, Loggable {
             if members.isPopulated {
                 sections.append(TeamSection(id: team.id, team: team, participants: members))
             }
+        }
+
+        sections.sort {
+            let lhsOrder = $0.participants.map { $0.teeOrder ?? Int.max }.min() ?? Int.max
+            let rhsOrder = $1.participants.map { $0.teeOrder ?? Int.max }.min() ?? Int.max
+            if lhsOrder != rhsOrder { return lhsOrder < rhsOrder }
+            return ($0.team?.index ?? Int.max) < ($1.team?.index ?? Int.max)
         }
         
         if let unassigned = grouped[nil], unassigned.isPopulated {
@@ -1735,6 +1771,11 @@ final class LiveRoundViewModel: ObservableObject, Loggable {
     /// Whether this participant's score contributes to the team total (e.g. best ball count, best 2 of 4).
     /// For best ball, all players can contribute per hole. For best 2 of 4, only top 2 per hole count.
     func doesParticipantScoreCount(participantID: String, teamID: String, matchup: TeamMatchup) -> Bool {
+        if snapshot.configuration.teamScoring.mode != .all,
+           snapshot.configuration.teamScoring.scope == .perHole {
+            return true
+        }
+
         if (matchup.mode ?? expectedMatchupMode) == .scoreOwner {
             if let row = engineResult.matchupResults
                 .first(where: { $0.matchup.id == matchup.id })?
@@ -1794,6 +1835,56 @@ final class LiveRoundViewModel: ObservableObject, Loggable {
         }
 
         return false
+    }
+
+    func scoringParticipants(for session: ScoringSession) -> [RoundParticipant] {
+        let sessionIDs = Set(session.participants.map(\.id))
+        let visibleIDs = Set(teeGroupParticipants.map(\.id))
+
+        if sessionIDs.isPopulated,
+           sessionIDs != visibleIDs,
+           session.participants.count > 1 {
+            return session.participants
+                .filter(\.isPresenceActive)
+                .sorted(by: participantDisplaySort)
+        }
+
+        let orderedRows = teeGroupTeamSections.flatMap(\.participants).filter(\.isPresenceActive)
+        if orderedRows.isPopulated {
+            return orderedRows
+        }
+
+        let fallback = session.participants.filter(\.isPresenceActive)
+        return (fallback.isPopulated ? fallback : session.participants)
+            .sorted(by: participantDisplaySort)
+    }
+
+    func matchupSidePresentation(
+        in section: MatchupLeaderboardSection,
+        sideID: String
+    ) -> MatchupSidePresentation {
+        let scoringRow = scoringRow(in: engineResult.matchupResults.first(where: { $0.matchup.id == section.matchup.id })?.rows ?? [], matchesSideID: sideID, matchup: section.matchup)
+            ?? scoringRow(in: engineResult.rows, matchesSideID: sideID, matchup: section.matchup)
+        let participants = matchupSideParticipants(scoringUnitID: sideID, matchup: section.matchup)
+        let scoring = snapshot.configuration.teamScoring
+        let scope: AggregationScope? = scoring.mode == .all ? nil : scoring.scope
+
+        return MatchupSidePresentation(
+            sideID: sideID,
+            total: scoringRow?.total ?? matchupTotal(in: section, sideID: sideID),
+            participants: participants,
+            countingParticipantIDs: Set(scoringRow?.countingParticipantIDs ?? []),
+            countingScope: scope,
+            teamScoringMode: scoring.mode
+        )
+    }
+
+    var matchupCountingScopeLabel: String? {
+        let scoring = snapshot.configuration.teamScoring
+        guard scoring.mode != .all else { return nil }
+        let qualifier = scoring.mode == .worstN ? "Worst" : "Best"
+        let scope = scoring.scope == .perRound ? "round" : "hole"
+        return "\(qualifier) \(scoring.count) per \(scope)"
     }
 
     enum FriendlyScoreFormat {
@@ -2128,6 +2219,24 @@ final class LiveRoundViewModel: ObservableObject, Loggable {
             self.isSharedScoreUnit = isSharedScoreUnit
         }
     }
+
+    struct MatchupSidePresentation {
+        let sideID: String
+        let total: Double?
+        let participants: [RoundParticipant]
+        let countingParticipantIDs: Set<String>
+        let countingScope: AggregationScope?
+        let teamScoringMode: RoundTeamScoringMode
+
+        var countsByRoundTotal: Bool {
+            teamScoringMode != .all && countingScope == .perRound
+        }
+
+        func isParticipantActive(_ participant: RoundParticipant) -> Bool {
+            guard countsByRoundTotal else { return true }
+            return countingParticipantIDs.contains(participant.id)
+        }
+    }
     
     /// Rows to display in the leaderboard; switches between stroke play and format-specific based on selected chip.
     var effectiveLeaderboardRows: [LeaderboardRow] {
@@ -2135,6 +2244,46 @@ final class LiveRoundViewModel: ObservableObject, Loggable {
             return sharedLeaderboardRows
         }
         return effectiveLeaderboardChip == .strokes ? leaderboardRows : engineLeaderboardRows
+    }
+
+    var displayLeaderboardRows: [LeaderboardRow] {
+        guard !showScorelessLeaderboardRows else { return effectiveLeaderboardRows }
+        return effectiveLeaderboardRows.filter { $0.thru > 0 }
+    }
+
+    var displayTeamLeaderboardSections: [GroupedLeaderboardSection] {
+        filterScorelessRows(in: teamLeaderboardSections)
+    }
+
+    var displayTeeGroupLeaderboardSections: [GroupedLeaderboardSection] {
+        filterScorelessRows(in: teeGroupLeaderboardSections)
+    }
+
+    var rowsEligibleForAverageDisplay: [LeaderboardRow] {
+        displayLeaderboardRows.filter { $0.thru > 0 }
+    }
+
+    func averageForDisplay(rows: [LeaderboardRow]) -> Double? {
+        guard rows.isPopulated else { return nil }
+        if effectiveLeaderboardChip == .strokes {
+            return Double(rows.map(\.scoreToPar).reduce(0, +)) / Double(rows.count)
+        }
+        let values = rows.map { $0.totalPoints ?? Double($0.scoreToPar) }
+        return values.reduce(0, +) / Double(values.count)
+    }
+
+    private func filterScorelessRows(in sections: [GroupedLeaderboardSection]) -> [GroupedLeaderboardSection] {
+        guard !showScorelessLeaderboardRows else { return sections }
+        return sections.compactMap { section in
+            let rows = section.rows.filter { $0.thru > 0 }
+            guard rows.isPopulated else { return nil }
+            return makeGroupedSection(
+                id: section.id,
+                name: section.name,
+                color: section.color,
+                rows: rows
+            )
+        }
     }
 
     var leaderboardRows: [LeaderboardRow] {

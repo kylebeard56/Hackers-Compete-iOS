@@ -658,9 +658,9 @@ extension LiveRound {
                 case .individual:
                     individualLeaderboardList
                 case .team:
-                    groupedLeaderboardList(sections: viewModel.teamLeaderboardSections)
+                    groupedLeaderboardList(sections: viewModel.displayTeamLeaderboardSections)
                 case .teeGroup:
-                    groupedLeaderboardList(sections: viewModel.teeGroupLeaderboardSections)
+                    groupedLeaderboardList(sections: viewModel.displayTeeGroupLeaderboardSections)
                 }
             }
             
@@ -847,12 +847,14 @@ extension LiveRound {
     // MARK: - Individual List
     
     private var individualLeaderboardList: some View {
-        let rows = viewModel.effectiveLeaderboardRows
+        let rows = viewModel.displayLeaderboardRows
         let isHighestWins = viewModel.snapshot.resolvedActiveTemplate.leaderboardSort == .highestWins
-        let avg = viewModel.overallAvgForDisplay
+        let avgRows = viewModel.rowsEligibleForAverageDisplay
+        let avg = viewModel.averageForDisplay(rows: avgRows)
         let isSecretActive = snapshot.isSecretScoring && !snapshot.areScoresRevealed
         let myTeamID = viewModel.currentParticipant?.teamID
         let avgBreakParticipantID: String? = {
+            guard let avg else { return nil }
             let scoreOrdered = rows.filter { !$0.isPinned }.sorted {
                 let a = $0.totalPoints ?? Double($0.scoreToPar)
                 let b = $1.totalPoints ?? Double($1.scoreToPar)
@@ -864,11 +866,11 @@ extension LiveRound {
                 return isHighestWins ? score <= avg : score >= avg
             })?.participant.id
         }()
-        let showAvgLineAfterLast = avgBreakParticipantID == nil && viewModel.snapshot.scoring.isPopulated
+        let showAvgLineAfterLast = avgBreakParticipantID == nil && avg != nil
 
         return VStack(spacing: 10) {
             ForEach(Array(rows.enumerated()), id: \.element.id) { index, row in
-                if let id = avgBreakParticipantID, row.participant.id == id, viewModel.snapshot.scoring.isPopulated {
+                if let id = avgBreakParticipantID, let avg, row.participant.id == id {
                     avgBreaklineDivider(avg)
                 }
 
@@ -896,7 +898,7 @@ extension LiveRound {
 
                 if row.id != rows.last?.id {
                     Divider().opacity(0.25)
-                } else if showAvgLineAfterLast {
+                } else if showAvgLineAfterLast, let avg {
                     avgBreaklineDivider(avg)
                 }
             }

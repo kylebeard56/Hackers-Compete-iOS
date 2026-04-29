@@ -4171,7 +4171,7 @@ final class SeriesViewModel: ObservableObject, Loggable {
                     id: sideID,
                     title: matchupSideName(sideID: sideID, mode: mode, snapshot: snapshot),
                     subtitle: matchupSideSubtitle(sideID: sideID, mode: mode, snapshot: snapshot),
-                    score: row.map { matchupScoreDisplayLabel(for: $0, snapshot: snapshot, segment: segment) } ?? "—",
+                    score: row.map { matchupScoreDisplayLabel(for: $0, highestWins: highestWins) } ?? "—",
                     accentColor: matchupSideAccentColor(sideID: sideID, mode: mode, snapshot: snapshot)
                 )
             }
@@ -4232,11 +4232,15 @@ final class SeriesViewModel: ObservableObject, Loggable {
         }
     }
 
-    private func matchupScoreDisplayLabel(for row: ScoringRow, snapshot: RoundSnapshot, segment: RoundSegment) -> String {
-        if let rel = matchupRelativeToPar(for: row, snapshot: snapshot, segment: segment) {
-            return Self.scoreReviewFormatRelative(rel)
+    func matchupScoreDisplayLabel(for row: ScoringRow, highestWins: Bool) -> String {
+        Self.matchupScoreDisplayLabel(for: row, highestWins: highestWins)
+    }
+
+    nonisolated static func matchupScoreDisplayLabel(for row: ScoringRow, highestWins: Bool) -> String {
+        if highestWins {
+            return row.total.seriesPointsDisplayString
         }
-        return row.total.seriesPointsDisplayString
+        return scoreReviewFormatRelative(Int(row.total.rounded()))
     }
 
     private func expectedMatchupMode(for snapshot: RoundSnapshot) -> MatchupMode {
@@ -4411,49 +4415,6 @@ final class SeriesViewModel: ObservableObject, Loggable {
         return Int(row.total.rounded())
     }
 
-    private func matchupRelativeToPar(for row: ScoringRow, snapshot: RoundSnapshot, segment: RoundSegment) -> Int? {
-        switch row.owner {
-        case .participant:
-            return participantStrokePlayVsPar(participantID: row.scoringUnitID, snapshot: snapshot, segment: segment)
-        case .team:
-            return teamBestBallVsPar(teamRoundID: row.scoringUnitID, snapshot: snapshot, segment: segment)
-        case .scoreOwner:
-            var best: Int?
-            for pid in row.participantIDs {
-                guard let v = participantStrokePlayVsPar(participantID: pid, snapshot: snapshot, segment: segment) else { continue }
-                if best == nil || v < best! { best = v }
-            }
-            return best
-        }
-    }
-
-    private func participantStrokePlayVsPar(participantID: String, snapshot: RoundSnapshot, segment: RoundSegment) -> Int? {
-        let holes = holesForScoring(in: snapshot)
-        let result = ScoringEngine.computeStrokePlay(
-            scores: snapshot.scoring,
-            participants: snapshot.participants,
-            segment: segment,
-            holes: holes,
-            basis: snapshot.configuration.primaryFormat.configuration.basis,
-            template: snapshot.resolvedActiveTemplate,
-            scoreLookupSegmentIDs: snapshot.segmentScoreLookupSegmentIDs,
-            handicapStrokeBasis: snapshot.handicapStrokeBasis
-        )
-        guard let r = result.rows.first(where: { $0.scoringUnitID == participantID }), r.holesPlayed > 0 else { return nil }
-        return Int(r.total.rounded())
-    }
-
-    private func teamBestBallVsPar(teamRoundID: String, snapshot: RoundSnapshot, segment: RoundSegment) -> Int? {
-        let memberIDs = snapshot.participants.filter { $0.teamID == teamRoundID }.map(\.id)
-        guard memberIDs.isPopulated else { return nil }
-        var best: Int?
-        for pid in memberIDs {
-            guard let v = participantStrokePlayVsPar(participantID: pid, snapshot: snapshot, segment: segment) else { continue }
-            if best == nil || v < best! { best = v }
-        }
-        return best
-    }
-
     /// Relative to par and gross total, e.g. `+4 / 45`, for commissioner score review rows.
     func scoreReviewTrailingLabel(playerID: String, snapshot: RoundSnapshot) -> String? {
         guard let segment = snapshot.roundSegment else { return nil }
@@ -4475,7 +4436,7 @@ final class SeriesViewModel: ObservableObject, Loggable {
         return gross > 0 ? "\(relStr) / \(gross)" : "\(relStr) / —"
     }
 
-    private static func scoreReviewFormatRelative(_ value: Int) -> String {
+    nonisolated private static func scoreReviewFormatRelative(_ value: Int) -> String {
         if value == 0 { return "E" }
         if value > 0 { return "+\(value)" }
         return "\(value)"

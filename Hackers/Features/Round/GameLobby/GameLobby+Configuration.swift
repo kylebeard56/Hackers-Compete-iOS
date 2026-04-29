@@ -112,6 +112,7 @@ extension GameLobby {
     @ViewBuilder
     private var maxScoreRow: some View {
         let current = snapshot.gameFormat.configuration.maxScoreOverPar
+        let hasCoursePars = snapshot.defaultTee?.holes.contains { $0.par > 0 } == true
 
         HStack {
             VStack(alignment: .leading, spacing: 4) {
@@ -129,7 +130,7 @@ extension GameLobby {
             Spacer(minLength: 0)
             
             Menu {
-                ForEach(MaxScoreOverPar.allCases, id: \.self) { option in
+                ForEach(MaxScoreOverPar.selectableCases(hasCoursePars: hasCoursePars), id: \.self) { option in
                     Button {
                         Haptics.fire(.light)
                         Task {

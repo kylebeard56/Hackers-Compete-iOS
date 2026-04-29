@@ -95,7 +95,7 @@ struct LiveHoleScoringView: View, Loggable {
             ]
         }
 
-        let participants = sessionParticipants.filter(\.isPresenceActive)
+        let participants = viewModel.scoringParticipants(for: scoringSession)
         let resolvedParticipants = participants.isPopulated ? participants : sessionParticipants
         return resolvedParticipants.map { participant in
             ScoringUnitItem(
@@ -283,57 +283,32 @@ private extension LiveHoleScoringView {
 
     var scoringGroupSelector: some View {
         let units = scoringUnits
-        let showNavigation = units.count > 1
 
         return GeometryReader { geo in
-            HStack(spacing: 12) {
-                if showNavigation {
-                    NavButton(
-                        style: .glass,
-                        icon: "f053",
-                        size: 18,
-                        color: palette.foregroundColor,
-                        background: palette.glassButtonColor,
-                        onTap: { moveToAdjacentUnit(direction: -1) }
+            ScrollViewReader { proxy in
+                ScrollView(.horizontal, showsIndicators: false) {
+                    HStack(spacing: 20) {
+                        ForEach(Array(units.enumerated()), id: \.element.id) { index, unit in
+                            scoringUnitDot(for: unit, index: index)
+                                .id(unit.id)
+                        }
+                    }
+                    .padding(.horizontal, 16)
+                    .frame(
+                        minWidth: max(0, geo.size.width),
+                        maxWidth: .infinity,
+                        minHeight: geo.size.height,
+                        alignment: .center
                     )
                 }
-
-                ScrollViewReader { proxy in
-                    ScrollView(.horizontal, showsIndicators: false) {
-                        HStack(spacing: 20) {
-                            ForEach(Array(units.enumerated()), id: \.element.id) { index, unit in
-                                scoringUnitDot(for: unit, index: index)
-                                    .id(unit.id)
-                            }
-                        }
-                        .padding(.horizontal, 16)
-                        .frame(
-                            minWidth: max(0, geo.size.width - (showNavigation ? 112 : 0)),
-                            maxWidth: .infinity,
-                            minHeight: geo.size.height,
-                            alignment: .center
-                        )
-                    }
-                    .scrollClipDisabled()
-                    .onAppear {
+                .scrollClipDisabled()
+                .onAppear {
+                    proxy.scrollTo(currentScoringUnit.id, anchor: .center)
+                }
+                .onChange(of: currentScoringUnitIndex) { _, _ in
+                    withAnimation(.easeInOut(duration: 0.2)) {
                         proxy.scrollTo(currentScoringUnit.id, anchor: .center)
                     }
-                    .onChange(of: currentScoringUnitIndex) { _, _ in
-                        withAnimation(.easeInOut(duration: 0.2)) {
-                            proxy.scrollTo(currentScoringUnit.id, anchor: .center)
-                        }
-                    }
-                }
-
-                if showNavigation {
-                    NavButton(
-                        style: .glass,
-                        icon: "f054",
-                        size: 18,
-                        color: palette.foregroundColor,
-                        background: palette.glassButtonColor,
-                        onTap: { moveToAdjacentUnit(direction: 1) }
-                    )
                 }
             }
         }

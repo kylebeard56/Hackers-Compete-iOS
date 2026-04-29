@@ -83,22 +83,26 @@ final class LiveRoundLeaderboardGroupingTests: XCTestCase {
         teams: [RoundTeam],
         teeGroups: [TeeTimeGroup],
         participants: [RoundParticipant],
-        scoringGroups: [RoundScoringGroup] = []
+        scoringGroups: [RoundScoringGroup] = [],
+        scoring: [ScoreEntry] = [],
+        template: GameTemplate = FormatTemplateRegistry.captainsChoice,
+        gameConfiguration: GameConfiguration? = nil
     ) -> RoundSnapshot {
+        let resolvedGameConfiguration = gameConfiguration ?? GameConfiguration(
+            method: .aggregate,
+            aggregation: .init(mode: .sumAll, scope: .perHole),
+            basis: .gross,
+            handicap: .individualStrokePlay,
+            requiresTeams: true,
+            teeGroupOnly: false,
+            minPlayers: 2
+        )
         let configuration = RoundConfiguration(
             primaryFormat: GameFormat(
                 type: .strokePlay,
-                configuration: GameConfiguration(
-                    method: .aggregate,
-                    aggregation: .init(mode: .sumAll, scope: .perHole),
-                    basis: .gross,
-                    handicap: .individualStrokePlay,
-                    requiresTeams: true,
-                    teeGroupOnly: false,
-                    minPlayers: 2
-                )
+                configuration: resolvedGameConfiguration
             ),
-            formatSummary: RoundFormatSummary(from: FormatTemplateRegistry.captainsChoice),
+            formatSummary: RoundFormatSummary(from: template),
             courses: [courseSegment],
             competitionScope: .field,
             teamScoring: .init(),
@@ -122,7 +126,7 @@ final class LiveRoundLeaderboardGroupingTests: XCTestCase {
             id: segmentID,
             roundID: roundID,
             holeRange: HoleRange(startHole: 1, endHole: 18),
-            templateID: FormatTemplateRegistry.captainsChoice.id,
+            templateID: template.id,
             createdAt: .init(),
             lastUpdatedAt: .init(),
             parentID: roundID
@@ -135,7 +139,21 @@ final class LiveRoundLeaderboardGroupingTests: XCTestCase {
             teeGroups: teeGroups,
             scoringGroups: scoringGroups,
             segments: [segment],
-            scoring: []
+            scoring: scoring
+        )
+    }
+
+    private func makeScore(participantID: String, holeNumber: Int, strokes: Int) -> ScoreEntry {
+        ScoreEntry(
+            id: ScoreEntry.makeID(hole: holeNumber, segment: segmentID, scoringUnit: participantID),
+            holeNumber: holeNumber,
+            segmentID: segmentID,
+            scoringUnitID: participantID,
+            participantIDs: [participantID],
+            strokes: strokes,
+            pickedUp: false,
+            entryID: participantID,
+            parentID: roundID
         )
     }
 
@@ -178,6 +196,67 @@ final class LiveRoundLeaderboardGroupingTests: XCTestCase {
         XCTAssertEqual(viewModel.availableLeaderboardModes, [.individual, .team, .teeGroup])
         XCTAssertEqual(viewModel.teamLeaderboardSections.map(\.rows.count), [2, 2])
         XCTAssertEqual(viewModel.teeGroupLeaderboardSections.map(\.rows.count), [2, 2])
+    }
+
+    func testDisplayLeaderboardRowsCanHideScorelessRowsAndAverageUsesScoredRows() {
+        let teams = [
+            makeTeam(id: "t1", name: "Red", color: "red", index: 0)
+        ]
+        let teeGroups = [
+            makeTeeGroup(id: "g1", index: 0)
+        ]
+        let participants = [
+            makeParticipant(id: "p1", first: "Alice", last: "Adams", teamID: "t1", groupID: "g1", teeOrder: 1),
+            makeParticipant(id: "p2", first: "Bea", last: "Baker", teamID: "t1", groupID: "g1", teeOrder: 2)
+        ]
+        let viewModel = LiveRoundViewModel()
+        viewModel.set(snapshot: makeSnapshot(
+            scoreOwnerScope: .individual,
+            teams: teams,
+            teeGroups: teeGroups,
+            participants: participants,
+            scoring: [makeScore(participantID: "p1", holeNumber: 1, strokes: 5)],
+            template: FormatTemplateRegistry.strokePlay,
+            gameConfiguration: .strokePlay
+        ))
+
+        XCTAssertEqual(viewModel.displayLeaderboardRows.map(\.id), ["p2", "p1"])
+
+        viewModel.showScorelessLeaderboardRows = false
+
+        XCTAssertEqual(viewModel.displayLeaderboardRows.map(\.id), ["p1"])
+        XCTAssertEqual(viewModel.rowsEligibleForAverageDisplay.map(\.id), ["p1"])
+        XCTAssertEqual(viewModel.averageForDisplay(rows: viewModel.rowsEligibleForAverageDisplay) ?? .nan, 1, accuracy: 0.01)
+    }
+
+    func testScoringParticipantsFollowTeeGroupScoringRowOrderAcrossTeams() {
+        let teams = [
+            makeTeam(id: "t1", name: "Red", color: "red", index: 0),
+            makeTeam(id: "t2", name: "Blue", color: "blue", index: 1)
+        ]
+        let teeGroups = [
+            makeTeeGroup(id: "g1", index: 0)
+        ]
+        let participants = [
+            makeParticipant(id: "mike", first: "Mike", last: "Arnett", teamID: "t2", groupID: "g1", teeOrder: 1),
+            makeParticipant(id: "kyle", first: "Kyle", last: "Beard", teamID: "t1", groupID: "g1", teeOrder: 2),
+            makeParticipant(id: "andrew", first: "Andrew", last: "McCartney", teamID: "t1", groupID: "g1", teeOrder: 3)
+        ]
+        let viewModel = LiveRoundViewModel()
+        viewModel.set(snapshot: makeSnapshot(
+            scoreOwnerScope: .individual,
+            teams: teams,
+            teeGroups: teeGroups,
+            participants: participants
+        ))
+        let session = ScoringSession(
+            participant: participants[0],
+            participants: participants,
+            holeNumber: 1
+        )
+
+        XCTAssertEqual(viewModel.teeGroupTeamSections.flatMap(\.participants).map(\.id), ["mike", "kyle", "andrew"])
+        XCTAssertEqual(viewModel.scoringParticipants(for: session).map(\.id), ["mike", "kyle", "andrew"])
     }
 
     func testSharedPartnershipLeaderboardHidesDuplicateTeeGroupModeWhenTeamsMirrorGroups() {

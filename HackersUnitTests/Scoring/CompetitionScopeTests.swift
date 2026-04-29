@@ -293,6 +293,67 @@ final class CompetitionScopeTests: XCTestCase {
         XCTAssertEqual(rowMap["t2"]?.total ?? 0, 1.5, accuracy: 0.01, "Team 2 should lose 1.5-2.5")
     }
 
+    func testRoundAwardsMatchupScoreLabels_UseBestNPerRoundTeamTotals() throws {
+        let holes = makeHoles(count: 2)
+        let participants = [
+            makeParticipant(id: "p1", name: "Colton", teamID: "t1"),
+            makeParticipant(id: "p2", name: "Aaron", teamID: "t1"),
+            makeParticipant(id: "p3", name: "John", teamID: "t10"),
+            makeParticipant(id: "p4", name: "Blake", teamID: "t10"),
+            makeParticipant(id: "p5", name: "Dongjai", teamID: "t10"),
+        ]
+        let teams = [
+            RoundTeam(id: "t1", name: "Team 1", color: "red", index: 0, createdAt: .init()),
+            RoundTeam(id: "t10", name: "Team 10", color: "blue", index: 1, createdAt: .init()),
+        ]
+        let matchups = [TeamMatchup(id: "m1", teamIDs: ["t1", "t10"])]
+        let segment = makeSegment(
+            holeRange: HoleRange(startHole: 1, endHole: 2),
+            matchups: matchups,
+            competitionScope: .matchup
+        )
+
+        // Player totals: Team 1 = +3, +3; Team 10 = +4, +5, +6.
+        // Best 2 per round should display team totals of +6 and +9, not the best player scores +3 and +4.
+        let scores = [
+            makeScore(pid: "p1", hole: 1, strokes: holes[0].par + 1),
+            makeScore(pid: "p1", hole: 2, strokes: holes[1].par + 2),
+            makeScore(pid: "p2", hole: 1, strokes: holes[0].par + 2),
+            makeScore(pid: "p2", hole: 2, strokes: holes[1].par + 1),
+            makeScore(pid: "p3", hole: 1, strokes: holes[0].par + 2),
+            makeScore(pid: "p3", hole: 2, strokes: holes[1].par + 2),
+            makeScore(pid: "p4", hole: 1, strokes: holes[0].par + 2),
+            makeScore(pid: "p4", hole: 2, strokes: holes[1].par + 3),
+            makeScore(pid: "p5", hole: 1, strokes: holes[0].par + 3),
+            makeScore(pid: "p5", hole: 2, strokes: holes[1].par + 3),
+        ]
+
+        let result = ScoringEngine.computeWithTeamScoring(
+            scores: scores,
+            participants: participants,
+            teams: teams,
+            segment: segment,
+            holes: holes,
+            basis: .gross,
+            template: FormatTemplateRegistry.strokePlayGross,
+            teamScoring: RoundTeamScoringConfiguration(mode: .bestN, count: 2, scope: .perRound),
+            matchupResolutionStyle: .roundAggregate,
+            resolvedCompetitionScope: .matchup
+        )
+
+        XCTAssertEqual(result.matchupResults.count, 1)
+        let rowMap = Dictionary(uniqueKeysWithValues: result.matchupResults[0].rows.map { ($0.scoringUnitID, $0) })
+        let team1 = try XCTUnwrap(rowMap["t1"])
+        let team10 = try XCTUnwrap(rowMap["t10"])
+
+        XCTAssertEqual(team1.total, 6, accuracy: 0.01)
+        XCTAssertEqual(team10.total, 9, accuracy: 0.01)
+        XCTAssertEqual(team1.countingParticipantIDs, ["p1", "p2"])
+        XCTAssertEqual(team10.countingParticipantIDs, ["p3", "p4"])
+        XCTAssertEqual(SeriesViewModel.matchupScoreDisplayLabel(for: team1, highestWins: false), "+6")
+        XCTAssertEqual(SeriesViewModel.matchupScoreDisplayLabel(for: team10, highestWins: false), "+9")
+    }
+
     // MARK: - Matchup Scope: Best Ball with Net Handicaps
 
     func testMatchupScope_BestBallNet_WithHandicaps() {

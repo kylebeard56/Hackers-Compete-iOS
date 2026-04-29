@@ -1055,6 +1055,115 @@ final class ScoringEngineTests: XCTestCase {
         XCTAssertEqual(total, 4)
     }
 
+    func testTeamScoringMatchupBestTwoPerRoundCountsBestRoundTotals() {
+        let holes = [Hole(number: 1, par: 4, yardage: 400, handicap: 1)]
+        let participants = [
+            makeParticipant(id: "david", name: "David", teamID: "team3"),
+            makeParticipant(id: "michael", name: "Michael", teamID: "team3"),
+            makeParticipant(id: "karis", name: "Karis", teamID: "team3"),
+            makeParticipant(id: "abby", name: "Abby", teamID: "team3"),
+            makeParticipant(id: "andrew", name: "Andrew", teamID: "team8"),
+            makeParticipant(id: "kyle", name: "Kyle", teamID: "team8"),
+            makeParticipant(id: "joey", name: "Joey", teamID: "team8"),
+            makeParticipant(id: "greg", name: "Greg", teamID: "team8")
+        ]
+        let teams = [
+            RoundTeam(id: "team8", name: "Team 8", color: "blue", index: 0, createdAt: .init()),
+            RoundTeam(id: "team3", name: "Team 3", color: "orange", index: 1, createdAt: .init())
+        ]
+        let segment = RoundSegment(
+            id: "seg1",
+            roundID: "round1",
+            holeRange: HoleRange(startHole: 1, endHole: 1),
+            matchups: [TeamMatchup(id: "match1", teamIDs: ["team8", "team3"])],
+            competitionScope: .matchup
+        )
+        let scores = [
+            makeScoreEntry(participantID: "david", holeNumber: 1, strokes: 4),
+            makeScoreEntry(participantID: "michael", holeNumber: 1, strokes: 12),
+            makeScoreEntry(participantID: "karis", holeNumber: 1, strokes: 11),
+            makeScoreEntry(participantID: "abby", holeNumber: 1, strokes: 13),
+            makeScoreEntry(participantID: "andrew", holeNumber: 1, strokes: 9),
+            makeScoreEntry(participantID: "kyle", holeNumber: 1, strokes: 9),
+            makeScoreEntry(participantID: "joey", holeNumber: 1, strokes: 10),
+            makeScoreEntry(participantID: "greg", holeNumber: 1, strokes: 11)
+        ]
+
+        let result = ScoringEngine.computeWithTeamScoring(
+            scores: scores,
+            participants: participants,
+            teams: teams,
+            segment: segment,
+            holes: holes,
+            basis: .gross,
+            template: FormatTemplateRegistry.strokePlayGross,
+            teamScoring: RoundTeamScoringConfiguration(mode: .bestN, count: 2, scope: .perRound),
+            matchupResolutionStyle: .roundAggregate,
+            resolvedCompetitionScope: .matchup
+        )
+
+        let row = result.matchupResults.first?.rows.first { $0.scoringUnitID == "team3" }
+        XCTAssertEqual(row?.total, 7)
+        XCTAssertEqual(Set(row?.countingParticipantIDs ?? []), Set(["david", "karis"]))
+    }
+
+    func testTeamScoringMatchupBestTwoPerHoleAggregatesEachHoleSelection() {
+        let holes = [
+            Hole(number: 1, par: 4, yardage: 400, handicap: 1),
+            Hole(number: 2, par: 4, yardage: 410, handicap: 2)
+        ]
+        let participants = [
+            makeParticipant(id: "p1", name: "One", teamID: "team1"),
+            makeParticipant(id: "p2", name: "Two", teamID: "team1"),
+            makeParticipant(id: "p3", name: "Three", teamID: "team1"),
+            makeParticipant(id: "p4", name: "Four", teamID: "team1"),
+            makeParticipant(id: "o1", name: "Opp One", teamID: "team2"),
+            makeParticipant(id: "o2", name: "Opp Two", teamID: "team2")
+        ]
+        let teams = [
+            RoundTeam(id: "team1", name: "Team 1", color: "blue", index: 0, createdAt: .init()),
+            RoundTeam(id: "team2", name: "Team 2", color: "orange", index: 1, createdAt: .init())
+        ]
+        let segment = RoundSegment(
+            id: "seg1",
+            roundID: "round1",
+            holeRange: HoleRange(startHole: 1, endHole: 2),
+            matchups: [TeamMatchup(id: "match1", teamIDs: ["team1", "team2"])],
+            competitionScope: .matchup
+        )
+        let scores = [
+            makeScoreEntry(participantID: "p1", holeNumber: 1, strokes: 4),
+            makeScoreEntry(participantID: "p2", holeNumber: 1, strokes: 13),
+            makeScoreEntry(participantID: "p3", holeNumber: 1, strokes: 11),
+            makeScoreEntry(participantID: "p4", holeNumber: 1, strokes: 12),
+            makeScoreEntry(participantID: "p1", holeNumber: 2, strokes: 13),
+            makeScoreEntry(participantID: "p2", holeNumber: 2, strokes: 4),
+            makeScoreEntry(participantID: "p3", holeNumber: 2, strokes: 11),
+            makeScoreEntry(participantID: "p4", holeNumber: 2, strokes: 12),
+            makeScoreEntry(participantID: "o1", holeNumber: 1, strokes: 5),
+            makeScoreEntry(participantID: "o2", holeNumber: 1, strokes: 5),
+            makeScoreEntry(participantID: "o1", holeNumber: 2, strokes: 5),
+            makeScoreEntry(participantID: "o2", holeNumber: 2, strokes: 5)
+        ]
+
+        let result = ScoringEngine.computeWithTeamScoring(
+            scores: scores,
+            participants: participants,
+            teams: teams,
+            segment: segment,
+            holes: holes,
+            basis: .gross,
+            template: FormatTemplateRegistry.strokePlayGross,
+            teamScoring: RoundTeamScoringConfiguration(mode: .bestN, count: 2, scope: .perHole),
+            matchupResolutionStyle: .roundAggregate,
+            resolvedCompetitionScope: .matchup
+        )
+
+        let row = result.matchupResults.first?.rows.first { $0.scoringUnitID == "team1" }
+        XCTAssertEqual(row?.total, 14)
+        XCTAssertEqual(Set(row?.countingParticipantIDs ?? []), Set(["p1", "p2", "p3"]))
+    }
+
     func testMaxScoreOverParSelectableCasesIncludeQuintAndSext() {
         XCTAssertEqual(
             MaxScoreOverPar.allCases,
@@ -1062,6 +1171,23 @@ final class ScoringEngineTests: XCTestCase {
         )
         XCTAssertEqual(MaxScoreOverPar.quint.friendlyMaxRelativeValue(for: 4), 5)
         XCTAssertEqual(MaxScoreOverPar.sext.friendlyMaxRelativeValue(for: 4), 6)
+    }
+
+    func testMaxScoreOverParSelectableCasesIncludeTwoTimesParOnlyWithCoursePars() {
+        XCTAssertEqual(
+            MaxScoreOverPar.selectableCases(hasCoursePars: false),
+            [.bogey, .double, .triple, .quad, .quint, .sext, .none]
+        )
+        XCTAssertEqual(
+            MaxScoreOverPar.selectableCases(hasCoursePars: true),
+            [.bogey, .double, .triple, .quad, .quint, .sext, .twoTimesPar, .twoTimesParPlusOne, .none]
+        )
+        XCTAssertEqual(MaxScoreOverPar.twoTimesPar.maxScore(for: 3), 6)
+        XCTAssertEqual(MaxScoreOverPar.twoTimesPar.maxScore(for: 4), 8)
+        XCTAssertEqual(MaxScoreOverPar.twoTimesPar.maxScore(for: 5), 10)
+        XCTAssertEqual(MaxScoreOverPar.twoTimesParPlusOne.maxScore(for: 3), 7)
+        XCTAssertEqual(MaxScoreOverPar.twoTimesParPlusOne.maxScore(for: 4), 9)
+        XCTAssertEqual(MaxScoreOverPar.twoTimesParPlusOne.maxScore(for: 5), 11)
     }
 
     func testMaxScoreOverParLegacyCasesRemainDecodable() throws {

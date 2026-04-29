@@ -27,6 +27,13 @@ enum MaxScoreOverPar: String, CaseIterable, Codable {
     static var selectableCases: [MaxScoreOverPar] {
         [.bogey, .double, .triple, .quad, .quint, .sext, .none]
     }
+
+    static func selectableCases(hasCoursePars: Bool) -> [MaxScoreOverPar] {
+        if hasCoursePars {
+            return [.bogey, .double, .triple, .quad, .quint, .sext, .twoTimesPar, .twoTimesParPlusOne, .none]
+        }
+        return selectableCases
+    }
     
     var displayName: String {
         switch self {
