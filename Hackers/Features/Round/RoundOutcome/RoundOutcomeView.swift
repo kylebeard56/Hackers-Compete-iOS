@@ -5,6 +5,7 @@
 //  Empty state outcome view for completed golf rounds.
 //
 
+import Flow
 import SwiftUI
 
 struct RoundOutcomeView: View {
@@ -31,42 +32,45 @@ struct RoundOutcomeView: View {
         ZStack {
             BackgroundTheme(palette: palette, theme: .yellow)
 
-            ScrollView(showsIndicators: false) {
-                VStack(spacing: 16) {
-                    if let summary = viewModel.outcomePersonalSummary {
-                        OutcomeSummaryTilesView(
-                            palette: palette,
-                            summary: summary,
-                            adjustedIndexSubtitle: viewModel.outcomeAdjustedIndexSubtitle(for: summary.participant),
-                            scoreFormatter: { viewModel.scoreToParLabel($0) }
-                        )
-                    }
+            GeometryReader { proxy in
+                ScrollView(showsIndicators: false) {
+                    VStack(spacing: 16) {
+                        if let summary = viewModel.outcomePersonalSummary {
+                            OutcomeSummaryTilesView(
+                                palette: palette,
+                                summary: summary,
+                                adjustedIndexSubtitle: viewModel.outcomeAdjustedIndexSubtitle(for: summary.participant),
+                                scoreFormatter: { viewModel.scoreToParLabel($0) }
+                            )
+                        }
 
-                    courseTile
-                    outcomeScoringChips
-                    viewFullScorecardButton
-                    leaderboardTile
+                        courseTile
+                        outcomeScoringChips
+                        viewFullScorecardButton
+                        leaderboardTile
 
-                    ForEach(viewModel.outcomeGroupedSectionSets) { set in
-                        OutcomeGroupedLeaderboardTileView(
-                            title: set.title,
-                            sections: set.sections,
-                            palette: palette,
-                            nameDisplayFormat: viewModel.nameDisplayFormat,
-                            showsSectionTotal: viewModel.showsGroupedLeaderboardSectionTotal,
-                            formattedGroupedSectionSum: viewModel.formattedGroupedSectionSum(_:),
-                            formattedAvgScore: viewModel.formattedAvgScore(_:),
-                            onRowTap: { handleOutcomeRowTap($0) }
-                        )
-                    }
+                        ForEach(viewModel.outcomeGroupedSectionSets) { set in
+                            OutcomeGroupedLeaderboardTileView(
+                                title: set.title,
+                                sections: set.sections,
+                                palette: palette,
+                                nameDisplayFormat: viewModel.nameDisplayFormat,
+                                showsSectionTotal: viewModel.showsGroupedLeaderboardSectionTotal,
+                                formattedGroupedSectionSum: viewModel.formattedGroupedSectionSum(_:),
+                                formattedAvgScore: viewModel.formattedAvgScore(_:),
+                                onRowTap: { handleOutcomeRowTap($0) }
+                            )
+                        }
 
-                    if viewModel.matchupSections.isPopulated {
-                        matchupsSection
+                        if viewModel.matchupSections.isPopulated {
+                            matchupsSection
+                        }
                     }
+                    .padding(.horizontal, 16)
+                    .padding(.top, UIApplication.shared.topSafeAreaInset)
+                    .padding(.bottom, 100)
+                    .frame(width: proxy.size.width, alignment: .top)
                 }
-                .padding(.horizontal, 16)
-                .padding(.top, UIApplication.shared.topSafeAreaInset)
-                .padding(.bottom, 100)
             }
 
             outcomeNavHeader
@@ -217,28 +221,28 @@ struct RoundOutcomeView: View {
         if chips.count > 1 || showsScoreBasis {
             VStack(alignment: .leading, spacing: 10) {
                 if chips.count > 1 {
-                    ScrollView(.horizontal, showsIndicators: false) {
-                        HStack(spacing: 8) {
-                            ForEach(chips, id: \.rawValue) { chip in
-                                let isSelected = viewModel.effectiveLeaderboardChip == chip
-                                Button {
-                                    Haptics.fire(.light)
-                                    viewModel.selectedLeaderboardChip = chip
-                                } label: {
-                                    Text(chip.label)
-                                        .fontStyle(kFontName, size: 13, weight: isSelected ? .semibold : .medium)
-                                        .foregroundStyle(isSelected ? palette.foregroundColor : Color.neutral2)
-                                        .padding(.horizontal, 12)
-                                        .padding(.vertical, 6)
-                                }
-                                .buttonStyle(.plain)
-                                .background(
-                                    RoundedRectangle(cornerRadius: 8)
-                                        .fill(isSelected ? palette.foregroundColor.opacity(colorScheme.translucent) : Color.clear)
-                                )
+                    HFlow(spacing: 8) {
+                        ForEach(chips, id: \.rawValue) { chip in
+                            let isSelected = viewModel.effectiveLeaderboardChip == chip
+                            Button {
+                                Haptics.fire(.light)
+                                viewModel.selectedLeaderboardChip = chip
+                            } label: {
+                                Text(chip.label)
+                                    .fontStyle(kFontName, size: 13, weight: isSelected ? .semibold : .medium)
+                                    .foregroundStyle(isSelected ? palette.foregroundColor : Color.neutral2)
+                                    .lineLimit(1)
+                                    .padding(.horizontal, 12)
+                                    .padding(.vertical, 6)
                             }
+                            .buttonStyle(.plain)
+                            .background(
+                                RoundedRectangle(cornerRadius: 8)
+                                    .fill(isSelected ? palette.foregroundColor.opacity(colorScheme.translucent) : Color.clear)
+                            )
                         }
                     }
+                    .frame(maxWidth: .infinity, alignment: .leading)
                 }
 
                 if showsScoreBasis {

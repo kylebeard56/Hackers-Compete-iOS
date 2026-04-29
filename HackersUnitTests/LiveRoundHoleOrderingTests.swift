@@ -411,10 +411,54 @@ final class LiveRoundViewModelHoleOrderingTests: XCTestCase {
         XCTAssertEqual(status.detail, "Won by 1 stroke")
         XCTAssertEqual(status.winningScoringUnitID, "team_red")
 
+        let fallbackTieMatchup = TeamMatchup(
+            id: "fallback_tie",
+            teamIDs: ["fallback_red", "fallback_blue"],
+            mode: .team
+        )
         let tieSection = MatchupLeaderboardSection(
             id: "tie",
-            matchup: section.matchup,
+            matchup: fallbackTieMatchup,
             name: "Tie",
+            rows: [
+                LeaderboardRow(
+                    scoringUnitID: "fallback_red",
+                    participantIDs: ["p01", "p02"],
+                    owner: .team,
+                    total: 0,
+                    holesPlayed: 18,
+                    placeLabel: "T1",
+                    isPinned: false
+                ),
+                LeaderboardRow(
+                    scoringUnitID: "fallback_blue",
+                    participantIDs: ["p03", "p04"],
+                    owner: .team,
+                    total: 0,
+                    holesPlayed: 18,
+                    placeLabel: "T1",
+                    isPinned: false
+                ),
+            ]
+        )
+
+        let tieStatus = vm.outcomeMatchupStatus(for: tieSection)
+        XCTAssertFalse(tieStatus.isTie)
+        XCTAssertEqual(tieStatus.title, "Matchup pending")
+        XCTAssertEqual(tieStatus.detail, "Waiting for both sides to post scores")
+        XCTAssertNil(tieStatus.winningScoringUnitID)
+    }
+
+    func testOutcomeMatchupStatusUsesEngineAggregateWhenSectionRowsDrift() async throws {
+        let vm = await boundViewModel(
+            snapshot: MockLiveRoundBest2of4Matchup.snapshot,
+            participantID: "p01"
+        )
+        let section = try XCTUnwrap(vm.matchupSections.first)
+        let staleTieSection = MatchupLeaderboardSection(
+            id: section.id,
+            matchup: section.matchup,
+            name: section.name,
             rows: [
                 LeaderboardRow(
                     scoringUnitID: "team_red",
@@ -437,10 +481,41 @@ final class LiveRoundViewModelHoleOrderingTests: XCTestCase {
             ]
         )
 
-        let tieStatus = vm.outcomeMatchupStatus(for: tieSection)
-        XCTAssertTrue(tieStatus.isTie)
-        XCTAssertEqual(tieStatus.title, "Match tied")
-        XCTAssertEqual(tieStatus.detail, "Tied at E")
+        let status = vm.outcomeMatchupStatus(for: staleTieSection)
+
+        XCTAssertEqual(status.title, "Red Team wins")
+        XCTAssertEqual(status.detail, "Won by 1 stroke")
+        XCTAssertEqual(status.winningScoringUnitID, "team_red")
+    }
+
+    func testTeamMatchupBestNUsesTeamAggregatesWhenPrimaryFormatIsIndividual() async throws {
+        var snapshot = MockLiveRoundBest2of4Matchup.snapshot
+        snapshot.round.configuration.primaryFormat.configuration.requiresTeams = false
+        snapshot.segments[0].gameFormat.configuration.requiresTeams = false
+
+        XCTAssertFalse(snapshot.requiresTeams)
+        XCTAssertEqual(snapshot.expectedMatchupMode, .team)
+        XCTAssertTrue(snapshot.usesTeamScoringAggregates)
+
+        let vm = await boundViewModel(snapshot: snapshot, participantID: "p01")
+        let result = vm.engineResult
+        let matchupResult = try XCTUnwrap(result.matchupResults.first)
+        let rowMap = Dictionary(uniqueKeysWithValues: matchupResult.rows.map { ($0.scoringUnitID, $0) })
+
+        XCTAssertNotNil(rowMap["team_red"])
+        XCTAssertNotNil(rowMap["team_blue"])
+
+        let section = try XCTUnwrap(vm.matchupSections.first)
+        let presentation = vm.matchupPresentation(in: section)
+        let status = vm.outcomeMatchupStatus(for: section)
+
+        XCTAssertTrue(presentation.hasCompleteSides)
+        XCTAssertFalse(presentation.isTie)
+        XCTAssertEqual(status.title, "Red Team wins")
+        XCTAssertEqual(status.detail, "Won by 1 stroke")
+        XCTAssertEqual(status.winningScoringUnitID, "team_red")
+        XCTAssertEqual(presentation.side(id: "team_red")?.scoreLabel, "+1")
+        XCTAssertEqual(presentation.side(id: "team_blue")?.scoreLabel, "+2")
     }
 
     // MARK: - Snapshot factory

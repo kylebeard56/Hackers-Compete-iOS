@@ -439,6 +439,10 @@ struct OutcomeMatchupTileView: View {
         viewModel.outcomeMatchupStatus(for: section)
     }
 
+    private var presentation: MatchupResultPresentation {
+        viewModel.matchupPresentation(in: section)
+    }
+
     private var isPointsFormat: Bool {
         viewModel.engineResult.template.leaderboardSort == .highestWins
     }
@@ -470,11 +474,16 @@ struct OutcomeMatchupTileView: View {
                     Text(status.title)
                         .fontStyle(kFontName, size: 18, weight: .semibold)
                         .foregroundStyle(palette.foregroundColor)
+                        .lineLimit(2)
+                        .fixedSize(horizontal: false, vertical: true)
 
                     Text(status.detail)
                         .fontStyle(kFontName, size: 13, weight: .medium)
                         .foregroundStyle(Color.neutral)
+                        .lineLimit(2)
+                        .fixedSize(horizontal: false, vertical: true)
                 }
+                .frame(maxWidth: .infinity, alignment: .leading)
 
                 Spacer(minLength: 0)
             }
@@ -488,17 +497,19 @@ struct OutcomeMatchupTileView: View {
             outcomeMembersTable
         }
         .padding(16)
-        .frame(maxWidth: .infinity)
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .fixedSize(horizontal: false, vertical: true)
         .glassCardEffect(interactive: false)
     }
 
     @ViewBuilder
     private func matchupSideRow(scoringUnitID: String) -> some View {
-        let resolvedScoringUnitID = viewModel.matchupScoringUnitID(in: section, sideID: scoringUnitID)
-        let total = viewModel.matchupTotal(in: section, sideID: scoringUnitID)
-        let isWinner = status.winningScoringUnitID == resolvedScoringUnitID
-        let accent = accentColor(for: scoringUnitID)
-        let totalText = formattedMatchupTotal(total)
+        let side = presentation.side(id: scoringUnitID)
+        let isWinner = status.winningScoringUnitID == side?.id
+        let accent = side?.accentColor ?? accentColor(for: scoringUnitID)
+        let totalText = side?.scoreLabel ?? formattedMatchupTotal(nil)
+        let sideTitle = side.map(\.title) ?? viewModel.outcomeMatchupSideName(scoringUnitID: scoringUnitID, matchup: section.matchup)
+        let sideSubtitle = side.flatMap(\.subtitle) ?? subtitle(for: scoringUnitID)
 
         HStack(spacing: 12) {
             Text(totalText)
@@ -514,25 +525,28 @@ struct OutcomeMatchupTileView: View {
                 )
 
             VStack(alignment: .leading, spacing: 4) {
-                Text(viewModel.outcomeMatchupSideName(scoringUnitID: scoringUnitID, matchup: section.matchup))
+                Text(sideTitle)
                     .fontStyle(kFontName, size: 16, weight: .semibold)
                     .foregroundStyle(isWinner ? (accent ?? palette.foregroundColor) : palette.foregroundColor)
                     .lineLimit(2)
+                    .fixedSize(horizontal: false, vertical: true)
 
-                if let subtitle = subtitle(for: scoringUnitID), subtitle.isPopulated {
+                if let subtitle = sideSubtitle, subtitle.isPopulated {
                     Text(subtitle)
                         .fontStyle(kFontName, size: 12, weight: .regular)
                         .foregroundStyle(Color.neutral)
                         .lineLimit(3)
+                        .fixedSize(horizontal: false, vertical: true)
                 }
             }
-
-            Spacer(minLength: 0)
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .layoutPriority(1)
 
             if isWinner {
                 Text("Winner".uppercased())
                     .fontStyle(kFontName, size: 11, weight: .semibold)
                     .foregroundStyle(accent ?? palette.foregroundColor)
+                    .lineLimit(1)
                     .padding(.horizontal, 10)
                     .padding(.vertical, 6)
                     .background(
@@ -543,6 +557,7 @@ struct OutcomeMatchupTileView: View {
                 Text("Tie".uppercased())
                     .fontStyle(kFontName, size: 11, weight: .semibold)
                     .foregroundStyle(Color.neutral)
+                    .lineLimit(1)
                     .padding(.horizontal, 10)
                     .padding(.vertical, 6)
                     .background(
@@ -551,6 +566,7 @@ struct OutcomeMatchupTileView: View {
                     )
             }
         }
+        .frame(maxWidth: .infinity, alignment: .leading)
     }
 
     private var outcomeMembersTable: some View {
@@ -581,10 +597,9 @@ struct OutcomeMatchupTileView: View {
                 let item = memberItems[index]
                 OutcomeMatchupPlayerRowView(
                     participant: item.participant,
-                    ownerID: item.ownerID,
+                    isActive: item.side.isParticipantActive(item.participant),
                     viewModel: viewModel,
                     palette: palette,
-                    matchup: section.matchup,
                     scoreColumnWidth: scoreColumnWidth,
                     onTap: { onParticipantTap(item.participant) }
                 )
@@ -596,21 +611,11 @@ struct OutcomeMatchupTileView: View {
         }
     }
 
-    private var matchupMemberItems: [(participant: RoundParticipant, ownerID: String?)] {
-        section.matchup.pairingIDs().flatMap { scoringUnitID -> [(participant: RoundParticipant, ownerID: String?)] in
-            switch matchupMode {
-            case .team:
-                return viewModel.matchupSideParticipants(scoringUnitID: scoringUnitID, matchup: section.matchup)
-                    .sorted { participantSort(lhs: $0, rhs: $1) }
-                    .map { ($0, Optional(scoringUnitID)) }
-            case .individual:
-                guard let participant = participantMap[scoringUnitID] else { return [] }
-                return [(participant, participant.id)]
-            case .scoreOwner:
-                return viewModel.matchupSideParticipants(scoringUnitID: scoringUnitID, matchup: section.matchup)
-                    .sorted { participantSort(lhs: $0, rhs: $1) }
-                    .map { ($0, Optional(scoringUnitID)) }
-            }
+    private var matchupMemberItems: [(participant: RoundParticipant, side: MatchupResultPresentation.Side)] {
+        presentation.sides.flatMap { side in
+            side.participants
+                .sorted { participantSort(lhs: $0, rhs: $1) }
+                .map { ($0, side) }
         }
     }
 
@@ -703,20 +708,14 @@ private struct OutcomeSummaryTile<Content: View>: View {
 
 private struct OutcomeMatchupPlayerRowView: View {
     let participant: RoundParticipant
-    let ownerID: String?
+    let isActive: Bool
     @ObservedObject var viewModel: LiveRoundViewModel
     let palette: DesignPalette
-    let matchup: TeamMatchup
     let scoreColumnWidth: CGFloat
     let onTap: () -> Void
 
     private var teamColor: Color? {
         viewModel.teamColor(for: participant)
-    }
-
-    private var scoreCounts: Bool {
-        guard let ownerID else { return false }
-        return viewModel.doesParticipantScoreCount(participantID: participant.id, teamID: ownerID, matchup: matchup)
     }
 
     var body: some View {
@@ -725,11 +724,12 @@ private struct OutcomeMatchupPlayerRowView: View {
                 HStack(spacing: 8) {
                     Text(participant.name.fullName)
                         .fontStyle(kFontName, size: 14, weight: .medium)
-                        .foregroundStyle(scoreCounts ? palette.foregroundColor : Color.neutral2)
+                        .foregroundStyle(isActive ? palette.foregroundColor : Color.neutral2)
                         .lineLimit(1)
+                        .minimumScaleFactor(0.82)
                         .frame(maxWidth: .infinity, alignment: .leading)
 
-                    if scoreCounts {
+                    if isActive {
                         Circle()
                             .fill(teamColor ?? Color.accentGreen)
                             .frame(width: 8, height: 8)
@@ -743,13 +743,13 @@ private struct OutcomeMatchupPlayerRowView: View {
 
                 Text(viewModel.scoreToParLabel(viewModel.scoreToPar(for: participant, basis: .gross)))
                     .fontStyle(kFontName, size: 14, weight: .medium)
-                    .foregroundStyle(scoreCounts ? palette.foregroundColor : Color.neutral2)
+                    .foregroundStyle(isActive ? palette.foregroundColor : Color.neutral2)
                     .frame(minWidth: scoreColumnWidth, alignment: .trailing)
 
                 if viewModel.handicapsEnabled {
                     Text(viewModel.scoreToParLabel(viewModel.scoreToPar(for: participant, basis: .net)))
                         .fontStyle(kFontName, size: 14, weight: .semibold)
-                        .foregroundStyle(scoreCounts ? (teamColor ?? palette.foregroundColor) : Color.neutral2)
+                        .foregroundStyle(isActive ? (teamColor ?? palette.foregroundColor) : Color.neutral2)
                         .frame(minWidth: scoreColumnWidth, alignment: .trailing)
                 }
             }

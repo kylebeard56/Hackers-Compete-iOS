@@ -200,6 +200,7 @@ final class LiveRoundViewModel: ObservableObject, Loggable {
         lastSnapshotReceivedAt = roundSession.lastSnapshotReceivedAt
         usedMaxScoreFill = false
         rebuildScoreIndex()
+        applySeriesAccessOverrideIfAvailable()
         syncVisibleTeeGroupIfNeeded()
         updateSelectedTeeIfNeeded()
         
@@ -221,6 +222,7 @@ final class LiveRoundViewModel: ObservableObject, Loggable {
 
                 self.snapshot = s
                 self.rebuildScoreIndex()
+                self.applySeriesAccessOverrideIfAvailable()
                 self.syncVisibleTeeGroupIfNeeded()
                 self.ensureHoleIndexInBounds()
                 self.selectVisibleGroupStartingHoleIfNeeded(
@@ -291,6 +293,7 @@ final class LiveRoundViewModel: ObservableObject, Loggable {
         resetRoundScopedStateIfNeeded(for: snapshot.round.id)
         self.snapshot = snapshot
         rebuildScoreIndex()
+        applySeriesAccessOverrideIfAvailable()
         syncVisibleTeeGroupIfNeeded()
         updateSelectedTeeIfNeeded()
         refreshSeriesScoreboardProjection()
@@ -541,9 +544,7 @@ final class LiveRoundViewModel: ObservableObject, Loggable {
     }
 
     var expectedMatchupMode: MatchupMode {
-        snapshot.configuration.scoreOwnerScope == .individual
-            ? (snapshot.requiresTeams ? .team : .individual)
-            : .scoreOwner
+        snapshot.expectedMatchupMode
     }
     
     func team(for participant: RoundParticipant) -> RoundTeam? {
@@ -1758,14 +1759,7 @@ final class LiveRoundViewModel: ObservableObject, Loggable {
 
     /// Formats a matchup total (points or score to par) for display.
     func formattedMatchupTotal(_ total: Double, isPointsFormat: Bool) -> String {
-        if isPointsFormat {
-            let formatted = String(format: "%.1f", total)
-            return formatted.hasSuffix(".0") ? String(formatted.dropLast(2)) : formatted
-        }
-        let intVal = Int(total)
-        if intVal == 0 { return "E" }
-        if intVal > 0 { return "+\(intVal)" }
-        return "\(intVal)"
+        MatchupResultPresentationBuilder.scoreLabel(for: total, isPointsFormat: isPointsFormat)
     }
 
     /// Whether this participant's score contributes to the team total (e.g. best ball count, best 2 of 4).
@@ -1797,7 +1791,7 @@ final class LiveRoundViewModel: ObservableObject, Loggable {
             return false
         }
 
-        guard snapshot.configuration.primaryFormat.configuration.requiresTeams else {
+        guard expectedMatchupMode == .team || snapshot.usesTeamScoringAggregates else {
             return participantID == teamID
         }
 
@@ -1862,20 +1856,16 @@ final class LiveRoundViewModel: ObservableObject, Loggable {
     func matchupSidePresentation(
         in section: MatchupLeaderboardSection,
         sideID: String
-    ) -> MatchupSidePresentation {
-        let scoringRow = scoringRow(in: engineResult.matchupResults.first(where: { $0.matchup.id == section.matchup.id })?.rows ?? [], matchesSideID: sideID, matchup: section.matchup)
-            ?? scoringRow(in: engineResult.rows, matchesSideID: sideID, matchup: section.matchup)
-        let participants = matchupSideParticipants(scoringUnitID: sideID, matchup: section.matchup)
-        let scoring = snapshot.configuration.teamScoring
-        let scope: AggregationScope? = scoring.mode == .all ? nil : scoring.scope
+    ) -> MatchupResultPresentation.Side? {
+        matchupPresentation(in: section).side(id: sideID)
+    }
 
-        return MatchupSidePresentation(
-            sideID: sideID,
-            total: scoringRow?.total ?? matchupTotal(in: section, sideID: sideID),
-            participants: participants,
-            countingParticipantIDs: Set(scoringRow?.countingParticipantIDs ?? []),
-            countingScope: scope,
-            teamScoringMode: scoring.mode
+    func matchupPresentation(in section: MatchupLeaderboardSection) -> MatchupResultPresentation {
+        MatchupResultPresentationBuilder.build(
+            snapshot: snapshot,
+            result: engineResult,
+            section: section,
+            basis: scoreBasis
         )
     }
 
@@ -2065,8 +2055,7 @@ final class LiveRoundViewModel: ObservableObject, Loggable {
         let title: String
         let detail: String
         let winningScoringUnitID: String?
-
-        var isTie: Bool { winningScoringUnitID == nil }
+        let isTie: Bool
     }
 
     enum OutcomeHoleSort: String, CaseIterable {
@@ -2220,24 +2209,6 @@ final class LiveRoundViewModel: ObservableObject, Loggable {
         }
     }
 
-    struct MatchupSidePresentation {
-        let sideID: String
-        let total: Double?
-        let participants: [RoundParticipant]
-        let countingParticipantIDs: Set<String>
-        let countingScope: AggregationScope?
-        let teamScoringMode: RoundTeamScoringMode
-
-        var countsByRoundTotal: Bool {
-            teamScoringMode != .all && countingScope == .perRound
-        }
-
-        func isParticipantActive(_ participant: RoundParticipant) -> Bool {
-            guard countsByRoundTotal else { return true }
-            return countingParticipantIDs.contains(participant.id)
-        }
-    }
-    
     /// Rows to display in the leaderboard; switches between stroke play and format-specific based on selected chip.
     var effectiveLeaderboardRows: [LeaderboardRow] {
         if snapshot.isSharedScoreSource {
@@ -2941,41 +2912,21 @@ final class LiveRoundViewModel: ObservableObject, Loggable {
     }
 
     func outcomeMatchupStatus(for section: MatchupLeaderboardSection) -> OutcomeMatchupStatus {
-        guard section.rows.count >= 2 else {
+        let presentation = matchupPresentation(in: section)
+        guard presentation.hasCompleteSides else {
             return OutcomeMatchupStatus(
                 title: "Matchup pending",
                 detail: "Waiting for both sides to post scores",
-                winningScoringUnitID: nil
+                winningScoringUnitID: nil,
+                isTie: false
             )
         }
 
-        let isPointsFormat = engineResult.template.leaderboardSort == .highestWins
-        let lhs = section.rows[0]
-        let rhs = section.rows[1]
-        let lhsTotal = lhs.total
-        let rhsTotal = rhs.total
-
-        if lhsTotal == rhsTotal {
-            let tiedAt = formattedMatchupTotal(lhsTotal, isPointsFormat: isPointsFormat)
-            let detail = isPointsFormat ? "Tied at \(tiedAt) pts" : "Tied at \(tiedAt)"
-            return OutcomeMatchupStatus(title: "Match tied", detail: detail, winningScoringUnitID: nil)
-        }
-
-        let matchupRows = isPointsFormat ? (lhsTotal > rhsTotal ? (lhs, rhs) : (rhs, lhs)) :
-            (lhsTotal < rhsTotal ? (lhs, rhs) : (rhs, lhs))
-        let winningRow = matchupRows.0
-        let losingRow = matchupRows.1
-
-        let winningName = outcomeMatchupSideName(scoringUnitID: winningRow.scoringUnitID, matchup: section.matchup)
-        let margin = abs(winningRow.total - losingRow.total)
-        let formattedMargin = String(format: isPointsFormat ? "%.1f" : "%.0f", margin)
-        let trimmedMargin = formattedMargin.hasSuffix(".0") ? String(formattedMargin.dropLast(2)) : formattedMargin
-        let unit = isPointsFormat ? (margin == 1 ? "pt" : "pts") : (margin == 1 ? "stroke" : "strokes")
-
         return OutcomeMatchupStatus(
-            title: "\(winningName) wins",
-            detail: "Won by \(trimmedMargin) \(unit)",
-            winningScoringUnitID: winningRow.scoringUnitID
+            title: presentation.title,
+            detail: presentation.marginDetail,
+            winningScoringUnitID: presentation.winningSideID,
+            isTie: presentation.isTie
         )
     }
 
@@ -3043,7 +2994,7 @@ final class LiveRoundViewModel: ObservableObject, Loggable {
                 scoreLookupSegmentIDs: scoreLookupIDs.isEmpty ? nil : scoreLookupIDs,
                 handicapStrokeBasis: snapshot.handicapStrokeBasis
             )
-        } else if snapshot.configuration.primaryFormat.configuration.requiresTeams && !usesScoreOwners && !snapshot.isSharedScoreSource {
+        } else if snapshot.usesTeamScoringAggregates && !usesScoreOwners && !snapshot.isSharedScoreSource {
             result = ScoringEngine.computeWithTeamScoring(
                 scores: snapshot.scoring,
                 participants: snapshot.participants,
@@ -3097,9 +3048,7 @@ final class LiveRoundViewModel: ObservableObject, Loggable {
     /// Matchup sections for the Matchups tab. Empty when not matchup scope or no valid matchups. Only includes sections matching the current mode (requiresTeams).
     var matchupSections: [MatchupLeaderboardSection] {
         let result = engineResult
-        let expectedMode: MatchupMode = snapshot.configuration.scoreOwnerScope == .individual
-            ? (snapshot.requiresTeams ? .team : .individual)
-            : .scoreOwner
+        let expectedMode = expectedMatchupMode
         let builtSections = LeaderboardBuilder.buildMatchupSections(
             result: result,
             teams: snapshot.teams,
@@ -3164,27 +3113,11 @@ final class LiveRoundViewModel: ObservableObject, Loggable {
     }
 
     func matchupTotal(in section: MatchupLeaderboardSection, sideID: String) -> Double? {
-        section.rows.first {
-            matchupLeaderboardRowMatches(
-                scoringUnitID: $0.scoringUnitID,
-                owner: $0.owner,
-                participantIDs: $0.participantIDs,
-                sideID: sideID,
-                matchup: section.matchup
-            )
-        }?.total
+        matchupPresentation(in: section).side(id: sideID)?.total
     }
 
     func matchupScoringUnitID(in section: MatchupLeaderboardSection, sideID: String) -> String? {
-        section.rows.first {
-            matchupLeaderboardRowMatches(
-                scoringUnitID: $0.scoringUnitID,
-                owner: $0.owner,
-                participantIDs: $0.participantIDs,
-                sideID: sideID,
-                matchup: section.matchup
-            )
-        }?.scoringUnitID
+        matchupPresentation(in: section).side(id: sideID)?.id
     }
 
     private func matchupLeaderboardRowMatches(
@@ -4089,6 +4022,12 @@ final class LiveRoundViewModel: ObservableObject, Loggable {
         }
 
         return nil
+    }
+
+    private func applySeriesAccessOverrideIfAvailable() {
+        guard let seriesAccessOverride else { return }
+        resolvedSeriesID = seriesAccessOverride.seriesID
+        isSeriesCommissioner = seriesAccessOverride.isCommissioner
     }
 
     private func syncVisibleTeeGroupIfNeeded() {

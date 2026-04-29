@@ -93,10 +93,12 @@ private struct MatchupTileView: View {
         Dictionary(uniqueKeysWithValues: snapshot.scoringGroups.map { ($0.id, $0) })
     }
 
-    private var sidePresentations: [String: LiveRoundViewModel.MatchupSidePresentation] {
-        Dictionary(uniqueKeysWithValues: section.matchup.pairingIDs().map { sideID in
-            (sideID, viewModel.matchupSidePresentation(in: section, sideID: sideID))
-        })
+    private var matchupPresentation: MatchupResultPresentation {
+        viewModel.matchupPresentation(in: section)
+    }
+
+    private var sidePresentations: [String: MatchupResultPresentation.Side] {
+        Dictionary(uniqueKeysWithValues: matchupPresentation.sides.map { ($0.id, $0) })
     }
 
     var body: some View {
@@ -187,7 +189,7 @@ private struct MatchupTileView: View {
 
         return VStack(alignment: .leading, spacing: 8) {
             if let owner1 {
-                scoreOwnerEntityRow(owner: owner1, total: sidePresentations[owner1.id]?.total, leadingPill: true)
+                scoreOwnerEntityRow(owner: owner1, side: sidePresentations[owner1.id], leadingPill: true)
                     .frame(maxWidth: .infinity, alignment: .leading)
             } else if pairingIDs.count > 0 {
                 sharedEntityRow(scoringUnitID: pairingIDs[0], total: sidePresentations[pairingIDs[0]]?.total, leadingPill: true)
@@ -197,7 +199,7 @@ private struct MatchupTileView: View {
                 .fontStyle(kFontName, size: 12, weight: .bold)
                 .foregroundStyle(Color.neutral)
             if let owner2 {
-                scoreOwnerEntityRow(owner: owner2, total: sidePresentations[owner2.id]?.total, leadingPill: true)
+                scoreOwnerEntityRow(owner: owner2, side: sidePresentations[owner2.id], leadingPill: true)
                     .frame(maxWidth: .infinity, alignment: .leading)
             } else if pairingIDs.count > 1 {
                 sharedEntityRow(scoringUnitID: pairingIDs[1], total: sidePresentations[pairingIDs[1]]?.total, leadingPill: true)
@@ -360,15 +362,22 @@ private struct MatchupTileView: View {
         }
     }
 
-    private func scoreOwnerEntityRow(owner: RoundScoringGroup, total: Double?, leadingPill: Bool) -> some View {
-        let accent = viewModel.scoringGroupAccentColor(owner) ?? palette.foregroundColor
+    private func scoreOwnerEntityRow(
+        owner: RoundScoringGroup,
+        side: MatchupResultPresentation.Side?,
+        leadingPill: Bool
+    ) -> some View {
+        let accent = side?.accentColor ?? viewModel.scoringGroupAccentColor(owner) ?? palette.foregroundColor
+        let total = side?.total
+        let title = side.map(\.title) ?? viewModel.scoringGroupLabel(owner)
+        let subtitle = side.flatMap(\.subtitle) ?? viewModel.scoringGroupSubtitle(owner)
         let entityContent = VStack(alignment: .leading, spacing: 3) {
-            Text(viewModel.scoringGroupLabel(owner))
+            Text(title)
                 .fontStyle(kFontName, size: 15, weight: .semibold)
                 .foregroundStyle(accent)
                 .lineLimit(1)
 
-            if let subtitle = viewModel.scoringGroupSubtitle(owner) {
+            if let subtitle {
                 Text(subtitle)
                     .fontStyle(kFontName, size: 12, weight: .regular)
                     .foregroundStyle(Color.neutral)
@@ -410,9 +419,9 @@ private struct MatchupTileView: View {
     private var expandedPlayerList: some View {
         let pairingIDs = section.matchup.pairingIDs()
         let sideMap = sidePresentations
-        let participants: [(participant: RoundParticipant, side: LiveRoundViewModel.MatchupSidePresentation)] = pairingIDs.flatMap { id in
+        let participants: [(participant: RoundParticipant, side: MatchupResultPresentation.Side)] = pairingIDs.flatMap { id in
             guard let side = sideMap[id] else {
-                return [(participant: RoundParticipant, side: LiveRoundViewModel.MatchupSidePresentation)]()
+                return [(participant: RoundParticipant, side: MatchupResultPresentation.Side)]()
             }
             return side.participants.map { ($0, side) }
         }
@@ -465,7 +474,6 @@ private struct MatchupTileView: View {
                     participant: item.participant,
                     viewModel: viewModel,
                     palette: palette,
-                    matchup: section.matchup,
                     isActive: item.side.isParticipantActive(item.participant),
                     isPointsFormat: isPointsFormat,
                     scoreColumnWidth: scoreColumnWidth
@@ -485,7 +493,6 @@ private struct MatchupPlayerRowView: View {
     let participant: RoundParticipant
     @ObservedObject var viewModel: LiveRoundViewModel
     let palette: DesignPalette
-    let matchup: TeamMatchup
     let isActive: Bool
     let isPointsFormat: Bool
     var scoreColumnWidth: CGFloat = 44

@@ -354,6 +354,366 @@ final class CompetitionScopeTests: XCTestCase {
         XCTAssertEqual(SeriesViewModel.matchupScoreDisplayLabel(for: team10, highestWins: false), "+9")
     }
 
+    func testMatchupPresentationUsesEngineAggregateTotalsForBestNPerRound() throws {
+        let holes = makeHoles(count: 2)
+        let participants = [
+            makeParticipant(id: "purple1", name: "Gavin", teamID: "purple"),
+            makeParticipant(id: "purple2", name: "Aristotle", teamID: "purple"),
+            makeParticipant(id: "purple3", name: "Andrew", teamID: "purple"),
+            makeParticipant(id: "purple4", name: "Evan", teamID: "purple"),
+            makeParticipant(id: "red1", name: "Colton", teamID: "red"),
+            makeParticipant(id: "red2", name: "Aaron", teamID: "red"),
+            makeParticipant(id: "red3", name: "Karis", teamID: "red"),
+            makeParticipant(id: "red4", name: "Abby", teamID: "red"),
+        ]
+        let teams = [
+            RoundTeam(id: "purple", name: "Team 9", color: "purple", index: 0, createdAt: .init()),
+            RoundTeam(id: "red", name: "Team 1", color: "red", index: 1, createdAt: .init()),
+        ]
+        let matchups = [TeamMatchup(id: "m1", teamIDs: ["red", "purple"])]
+        let segment = makeSegment(
+            holeRange: HoleRange(startHole: 1, endHole: 2),
+            matchups: matchups,
+            competitionScope: .matchup
+        )
+        let teamScoring = RoundTeamScoringConfiguration(mode: .bestN, count: 2, scope: .perRound)
+        let scores = [
+            makeScore(pid: "purple1", hole: 1, strokes: holes[0].par - 2),
+            makeScore(pid: "purple1", hole: 2, strokes: holes[1].par - 1),
+            makeScore(pid: "purple2", hole: 1, strokes: holes[0].par),
+            makeScore(pid: "purple2", hole: 2, strokes: holes[1].par + 1),
+            makeScore(pid: "purple3", hole: 1, strokes: holes[0].par + 2),
+            makeScore(pid: "purple3", hole: 2, strokes: holes[1].par + 3),
+            makeScore(pid: "purple4", hole: 1, strokes: holes[0].par + 3),
+            makeScore(pid: "purple4", hole: 2, strokes: holes[1].par + 4),
+            makeScore(pid: "red1", hole: 1, strokes: holes[0].par + 1),
+            makeScore(pid: "red1", hole: 2, strokes: holes[1].par + 1),
+            makeScore(pid: "red2", hole: 1, strokes: holes[0].par + 5),
+            makeScore(pid: "red2", hole: 2, strokes: holes[1].par + 5),
+            makeScore(pid: "red3", hole: 1, strokes: holes[0].par + 7),
+            makeScore(pid: "red3", hole: 2, strokes: holes[1].par + 7),
+            makeScore(pid: "red4", hole: 1, strokes: holes[0].par + 8),
+            makeScore(pid: "red4", hole: 2, strokes: holes[1].par + 8),
+        ]
+
+        let configuration = RoundConfiguration(
+            primaryFormat: GameFormat(
+                type: .strokePlay,
+                configuration: GameConfiguration(
+                    method: .individual,
+                    aggregation: nil,
+                    basis: .gross,
+                    handicap: .individualStrokePlay,
+                    requiresTeams: true,
+                    teeGroupOnly: false
+                )
+            ),
+            formatSummary: RoundFormatSummary(from: FormatTemplateRegistry.strokePlayGross),
+            competitionScope: .matchup,
+            teamScoring: teamScoring,
+            matchupResolutionStyle: .roundAggregate
+        )
+        let snapshot = RoundSnapshot(
+            round: Round(id: "round1", shareCode: "MATCH", createdBy: "host", configuration: configuration),
+            participants: participants,
+            teams: teams,
+            segments: [segment],
+            scoring: scores
+        )
+        let result = ScoringEngine.computeWithTeamScoring(
+            scores: scores,
+            participants: participants,
+            teams: teams,
+            segment: segment,
+            holes: holes,
+            basis: .gross,
+            template: FormatTemplateRegistry.strokePlayGross,
+            teamScoring: teamScoring,
+            matchupResolutionStyle: .roundAggregate,
+            resolvedCompetitionScope: .matchup
+        )
+        let matchupResult = try XCTUnwrap(result.matchupResults.first)
+
+        let presentation = MatchupResultPresentationBuilder.build(
+            snapshot: snapshot,
+            result: result,
+            matchupResult: matchupResult
+        )
+
+        XCTAssertFalse(presentation.isTie)
+        XCTAssertEqual(presentation.winningSideID, "purple")
+        XCTAssertEqual(presentation.title, "Team 9 wins")
+        XCTAssertEqual(presentation.side(id: "purple")?.total ?? 0, -2, accuracy: 0.01)
+        XCTAssertEqual(presentation.side(id: "red")?.total ?? 0, 12, accuracy: 0.01)
+        XCTAssertEqual(presentation.side(id: "purple")?.scoreLabel, "-2")
+        XCTAssertEqual(presentation.side(id: "red")?.scoreLabel, "+12")
+        XCTAssertTrue(presentation.side(id: "purple")?.isParticipantActive(participants[0]) == true)
+        XCTAssertTrue(presentation.side(id: "purple")?.isParticipantActive(participants[1]) == true)
+        XCTAssertTrue(presentation.side(id: "purple")?.isParticipantActive(participants[2]) == false)
+    }
+
+    func testScoreOwnerPartnershipMatchupAggregatesResolvedSideRosterForBestNPerRound() throws {
+        let holes = makeHoles(count: 1)
+        let participants = [
+            makeParticipant(id: "gavin", name: "Gavin", teamID: "purple"),
+            makeParticipant(id: "aristotle", name: "Aristotle", teamID: "purple"),
+            makeParticipant(id: "andrew", name: "Andrew", teamID: "purple"),
+            makeParticipant(id: "evan", name: "Evan", teamID: "purple"),
+            makeParticipant(id: "colton", name: "Colton", teamID: "red"),
+            makeParticipant(id: "aaron", name: "Aaron", teamID: "red"),
+        ]
+        let teams = [
+            RoundTeam(id: "red", name: "Team 1", color: "red", index: 0, createdAt: .init()),
+            RoundTeam(id: "purple", name: "Team 9", color: "purple", index: 1, createdAt: .init()),
+        ]
+        let scoringGroups = [
+            RoundScoringGroup(
+                id: "red_pair",
+                teamID: "red",
+                kind: .partnership,
+                memberIDs: ["colton", "aaron"],
+                label: "Red Pair"
+            ),
+            RoundScoringGroup(
+                id: "purple_pair",
+                teamID: "purple",
+                kind: .partnership,
+                memberIDs: ["gavin", "aristotle", "andrew", "evan"],
+                label: "Purple Pair"
+            ),
+        ]
+        let matchup = TeamMatchup(
+            id: "match1",
+            teamIDs: [],
+            scoreOwnerIDs: ["red_pair", "purple_pair"],
+            scoreOwnerScope: .partnership,
+            mode: .scoreOwner
+        )
+        let segment = makeSegment(
+            holeRange: HoleRange(startHole: 1, endHole: 1),
+            matchups: [matchup],
+            competitionScope: .matchup
+        )
+        let teamScoring = RoundTeamScoringConfiguration(mode: .bestN, count: 2, scope: .perRound)
+        let configuration = RoundConfiguration(
+            primaryFormat: .strokePlay,
+            formatSummary: RoundFormatSummary(from: FormatTemplateRegistry.strokePlayGross),
+            competitionScope: .matchup,
+            teamScoring: teamScoring,
+            scoreOwnerScope: .partnership
+        )
+        let snapshot = RoundSnapshot(
+            round: Round(id: "round1", shareCode: "MATCH", createdBy: "host", configuration: configuration),
+            participants: participants,
+            teams: teams,
+            scoringGroups: scoringGroups,
+            segments: [segment],
+            scoring: [
+                makeScore(pid: "gavin", hole: 1, strokes: holes[0].par - 3),
+                makeScore(pid: "aristotle", hole: 1, strokes: holes[0].par),
+                makeScore(pid: "andrew", hole: 1, strokes: holes[0].par + 5),
+                makeScore(pid: "evan", hole: 1, strokes: holes[0].par + 7),
+                makeScore(pid: "colton", hole: 1, strokes: holes[0].par + 2),
+                makeScore(pid: "aaron", hole: 1, strokes: holes[0].par + 10),
+            ]
+        )
+        let result = ScoringEngine.computeWithPipeline(
+            scores: snapshot.scoring,
+            participants: participants,
+            teams: teams,
+            segment: segment,
+            holes: holes,
+            basis: .gross,
+            template: FormatTemplateRegistry.strokePlayGross,
+            resolvedCompetitionScope: .matchup,
+            scoreOwnerScope: .partnership,
+            scoringGroups: scoringGroups
+        )
+        let section = MatchupLeaderboardSection(id: matchup.id, matchup: matchup, name: "Match 1", rows: [])
+
+        let presentation = MatchupResultPresentationBuilder.build(
+            snapshot: snapshot,
+            result: result,
+            section: section,
+            basis: .gross
+        )
+
+        XCTAssertFalse(presentation.isTie)
+        XCTAssertEqual(presentation.winningSideID, "purple_pair")
+        XCTAssertEqual(presentation.title, "Team 9 wins")
+        XCTAssertEqual(presentation.side(id: "purple_pair")?.scoreLabel, "-3")
+        XCTAssertEqual(presentation.side(id: "red_pair")?.scoreLabel, "+12")
+        XCTAssertEqual(presentation.side(id: "purple_pair")?.title, "Team 9")
+        XCTAssertEqual(presentation.side(id: "red_pair")?.title, "Team 1")
+        XCTAssertEqual(Set(presentation.side(id: "purple_pair")?.countingParticipantIDs ?? []), Set(["gavin", "aristotle"]))
+        XCTAssertTrue(presentation.side(id: "purple_pair")?.isParticipantActive(participants[2]) == false)
+    }
+
+    func testScoreOwnerPartnershipMatchupProjectsFromPartialCurrentScores() throws {
+        let holes = makeHoles(count: 18)
+        let participants = [
+            makeParticipant(id: "gavin", name: "Gavin", teamID: "purple"),
+            makeParticipant(id: "aristotle", name: "Aristotle", teamID: "purple"),
+            makeParticipant(id: "andrew", name: "Andrew", teamID: "purple"),
+            makeParticipant(id: "evan", name: "Evan", teamID: "purple"),
+            makeParticipant(id: "colton", name: "Colton", teamID: "red"),
+            makeParticipant(id: "aaron", name: "Aaron", teamID: "red"),
+        ]
+        let teams = [
+            RoundTeam(id: "red", name: "Team 1", color: "red", index: 0, createdAt: .init()),
+            RoundTeam(id: "purple", name: "Team 9", color: "purple", index: 1, createdAt: .init()),
+        ]
+        let scoringGroups = [
+            RoundScoringGroup(id: "red_pair", teamID: "red", kind: .partnership, memberIDs: ["colton", "aaron"], label: "Red Pair"),
+            RoundScoringGroup(id: "purple_pair", teamID: "purple", kind: .partnership, memberIDs: ["gavin", "aristotle", "andrew", "evan"], label: "Purple Pair"),
+        ]
+        let matchup = TeamMatchup(
+            id: "match1",
+            teamIDs: [],
+            scoreOwnerIDs: ["red_pair", "purple_pair"],
+            scoreOwnerScope: .partnership,
+            mode: .scoreOwner
+        )
+        let segment = makeSegment(matchups: [matchup], competitionScope: .matchup)
+        let teamScoring = RoundTeamScoringConfiguration(mode: .bestN, count: 2, scope: .perRound)
+        let configuration = RoundConfiguration(
+            primaryFormat: .strokePlay,
+            formatSummary: RoundFormatSummary(from: FormatTemplateRegistry.strokePlayGross),
+            competitionScope: .matchup,
+            teamScoring: teamScoring,
+            scoreOwnerScope: .partnership
+        )
+        let snapshot = RoundSnapshot(
+            round: Round(id: "round1", shareCode: "MATCH", createdBy: "host", configuration: configuration),
+            participants: participants,
+            teams: teams,
+            scoringGroups: scoringGroups,
+            segments: [segment],
+            scoring: [
+                makeScore(pid: "gavin", hole: 1, strokes: holes[0].par - 3),
+                makeScore(pid: "andrew", hole: 1, strokes: holes[0].par + 5),
+                makeScore(pid: "evan", hole: 1, strokes: holes[0].par + 7),
+                makeScore(pid: "colton", hole: 1, strokes: holes[0].par + 2),
+                makeScore(pid: "aaron", hole: 1, strokes: holes[0].par + 10),
+            ]
+        )
+        let result = ScoringEngine.computeWithPipeline(
+            scores: snapshot.scoring,
+            participants: participants,
+            teams: teams,
+            segment: segment,
+            holes: holes,
+            basis: .gross,
+            template: FormatTemplateRegistry.strokePlayGross,
+            resolvedCompetitionScope: .matchup,
+            scoreOwnerScope: .partnership,
+            scoringGroups: scoringGroups
+        )
+        let section = MatchupLeaderboardSection(id: matchup.id, matchup: matchup, name: "Match 1", rows: [])
+
+        let presentation = MatchupResultPresentationBuilder.build(snapshot: snapshot, result: result, section: section, basis: .gross)
+
+        XCTAssertTrue(presentation.hasCompleteSides)
+        XCTAssertEqual(presentation.title, "Team 9 wins")
+        XCTAssertEqual(presentation.side(id: "purple_pair")?.scoreLabel, "+2")
+        XCTAssertEqual(presentation.side(id: "red_pair")?.scoreLabel, "+12")
+        XCTAssertEqual(Set(presentation.side(id: "purple_pair")?.countingParticipantIDs ?? []), Set(["gavin", "andrew"]))
+        XCTAssertTrue(presentation.side(id: "purple_pair")?.isParticipantActive(participants[1]) == false)
+    }
+
+    func testScoreOwnerPartnershipDirectSideScoreCountsSharedScoreOnce() throws {
+        let holes = makeHoles(count: 18)
+        let participants = [
+            makeParticipant(id: "gavin", name: "Gavin", teamID: "purple"),
+            makeParticipant(id: "aristotle", name: "Aristotle", teamID: "purple"),
+            makeParticipant(id: "colton", name: "Colton", teamID: "red"),
+            makeParticipant(id: "aaron", name: "Aaron", teamID: "red"),
+        ]
+        let teams = [
+            RoundTeam(id: "red", name: "Team 1", color: "red", index: 0, createdAt: .init()),
+            RoundTeam(id: "purple", name: "Team 9", color: "purple", index: 1, createdAt: .init()),
+        ]
+        let scoringGroups = [
+            RoundScoringGroup(id: "red_pair", teamID: "red", kind: .partnership, memberIDs: ["colton", "aaron"], label: "Red Pair"),
+            RoundScoringGroup(id: "purple_pair", teamID: "purple", kind: .partnership, memberIDs: ["gavin", "aristotle"], label: "Purple Pair"),
+        ]
+        let matchup = TeamMatchup(
+            id: "match1",
+            teamIDs: [],
+            scoreOwnerIDs: ["red_pair", "purple_pair"],
+            scoreOwnerScope: .partnership,
+            mode: .scoreOwner
+        )
+        let segment = RoundSegment(
+            id: "seg1",
+            roundID: "round1",
+            holeRange: HoleRange(startHole: 1, endHole: 18),
+            scoringUnits: [
+                ScoringUnit(id: "red_unit", owner: .scoreOwner, ownerIDs: ["colton", "aaron"], scoringMethod: .aggregate),
+                ScoringUnit(id: "purple_unit", owner: .scoreOwner, ownerIDs: ["gavin", "aristotle"], scoringMethod: .aggregate),
+            ],
+            matchups: [matchup],
+            competitionScope: .matchup
+        )
+        let teamScoring = RoundTeamScoringConfiguration(mode: .bestN, count: 2, scope: .perRound)
+        let configuration = RoundConfiguration(
+            primaryFormat: .strokePlay,
+            formatSummary: RoundFormatSummary(from: FormatTemplateRegistry.strokePlayGross),
+            competitionScope: .matchup,
+            teamScoring: teamScoring,
+            scoreOwnerScope: .partnership
+        )
+        let snapshot = RoundSnapshot(
+            round: Round(id: "round1", shareCode: "MATCH", createdBy: "host", configuration: configuration),
+            participants: participants,
+            teams: teams,
+            scoringGroups: scoringGroups,
+            segments: [segment],
+            scoring: [
+                ScoreEntry(
+                    id: ScoreEntry.makeID(hole: 1, segment: "seg1", scoringUnit: "purple_unit"),
+                    holeNumber: 1,
+                    segmentID: "seg1",
+                    scoringUnitID: "purple_unit",
+                    participantIDs: ["gavin", "aristotle"],
+                    relativeToPar: -2,
+                    entryID: "gavin",
+                    parentID: "round1"
+                ),
+                ScoreEntry(
+                    id: ScoreEntry.makeID(hole: 1, segment: "seg1", scoringUnit: "red_unit"),
+                    holeNumber: 1,
+                    segmentID: "seg1",
+                    scoringUnitID: "red_unit",
+                    participantIDs: ["colton", "aaron"],
+                    relativeToPar: 12,
+                    entryID: "colton",
+                    parentID: "round1"
+                ),
+            ]
+        )
+        let result = ScoringEngine.computeWithPipeline(
+            scores: snapshot.scoring,
+            participants: participants,
+            teams: teams,
+            segment: segment,
+            holes: holes,
+            basis: .gross,
+            template: FormatTemplateRegistry.strokePlayGross,
+            resolvedCompetitionScope: .matchup,
+            scoreOwnerScope: .partnership,
+            scoringGroups: scoringGroups
+        )
+        let section = MatchupLeaderboardSection(id: matchup.id, matchup: matchup, name: "Match 1", rows: [])
+
+        let presentation = MatchupResultPresentationBuilder.build(snapshot: snapshot, result: result, section: section, basis: .gross)
+
+        XCTAssertTrue(presentation.hasCompleteSides)
+        XCTAssertEqual(presentation.title, "Team 9 wins")
+        XCTAssertEqual(presentation.side(id: "purple_pair")?.scoreLabel, "-2")
+        XCTAssertEqual(presentation.side(id: "red_pair")?.scoreLabel, "+12")
+    }
+
     // MARK: - Matchup Scope: Best Ball with Net Handicaps
 
     func testMatchupScope_BestBallNet_WithHandicaps() {

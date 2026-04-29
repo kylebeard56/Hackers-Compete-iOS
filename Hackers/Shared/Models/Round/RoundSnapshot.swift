@@ -61,6 +61,36 @@ extension RoundSnapshot {
     var gameFormat: GameFormat { self.round.configuration.primaryFormat }
     var requiresTeams: Bool { configuration.primaryFormat.configuration.requiresTeams }
     var isSharedScoreSource: Bool { resolvedActiveTemplate.scoreSource == .shared }
+    var hasScheduledTeamMatchups: Bool {
+        let teamIDs = Set(teams.map(\.id))
+        return roundSegment?.matchups?.contains { matchup in
+            guard (matchup.mode ?? .team) == .team, matchup.isValid else { return false }
+            let pairingIDs = matchup.pairingIDs()
+            return pairingIDs.allSatisfy { teamIDs.contains($0) }
+        } == true
+    }
+    var expectedMatchupMode: MatchupMode {
+        if configuration.scoreOwnerScope != .individual {
+            return .scoreOwner
+        }
+        if requiresTeams || hasScheduledTeamMatchups || (teams.isPopulated && configuration.teamScoring.isCountedSelection) {
+            return .team
+        }
+        return .individual
+    }
+    var usesTeamScoringAggregates: Bool {
+        guard !isVegasFormat,
+              !isSharedScoreSource,
+              configuration.scoreOwnerScope == .individual,
+              scoringGroups.isEmpty,
+              teams.isPopulated else {
+            return false
+        }
+
+        return requiresTeams
+            || hasScheduledTeamMatchups
+            || configuration.teamScoring.isCountedSelection
+    }
     var shouldAutoMirrorTeeGroupsToTeams: Bool {
         guard isSharedScoreSource && requiresTeams else { return false }
         return configuration.mirrorTeeGroupsAsTeams ?? (configuration.scoreOwnerScope == .individual)

@@ -4130,105 +4130,56 @@ final class SeriesViewModel: ObservableObject, Loggable {
         let highestWins = result.template.leaderboardSort == .highestWins
         return result.matchupResults.enumerated().compactMap { index, matchupResult in
             guard matchupResult.matchup.isValid else { return nil }
-            let mode = matchupResult.matchup.mode ?? expectedMatchupMode(for: snapshot)
-            let pairingIDs = matchupResult.matchup.pairingIDs()
-            let rowsBySide = Dictionary(uniqueKeysWithValues: pairingIDs.compactMap { sideID -> (String, ScoringRow)? in
-                guard let row = scoringRow(
-                    in: matchupResult.rows,
-                    matchesSideID: sideID,
-                    matchup: matchupResult.matchup,
-                    expectedMode: mode,
-                    snapshot: snapshot
-                ) else { return nil }
-                return (sideID, row)
-            })
-            let sortedRows = matchupResult.rows.sorted {
-                if $0.total != $1.total {
-                    return highestWins ? $0.total > $1.total : $0.total < $1.total
-                }
-                return $0.scoringUnitID < $1.scoringUnitID
-            }
-            let first = sortedRows.first
-            let isTie = sortedRows.count >= 2 && first.map { row in
-                sortedRows.allSatisfy { $0.total == row.total }
-            } == true
-            let winningRow = isTie ? nil : first
-            let winningSideID = winningRow.flatMap { row in
-                pairingIDs.first {
-                    scoringRowIdentityMatches(
-                        scoringUnitID: row.scoringUnitID,
-                        owner: row.owner,
-                        participantIDs: row.participantIDs,
-                        sideID: $0,
-                        mode: mode,
-                        snapshot: snapshot
-                    )
-                }
-            }
-            let sides = pairingIDs.map { sideID in
-                let row = rowsBySide[sideID]
+            let presentation = MatchupResultPresentationBuilder.build(
+                snapshot: snapshot,
+                result: result,
+                matchupResult: matchupResult
+            )
+            let sides = presentation.sides.map { side in
                 return SeriesMatchupOutcome.Side(
-                    id: sideID,
-                    title: matchupSideName(sideID: sideID, mode: mode, snapshot: snapshot),
-                    subtitle: matchupSideSubtitle(sideID: sideID, mode: mode, snapshot: snapshot),
-                    score: row.map { matchupScoreDisplayLabel(for: $0, highestWins: highestWins) } ?? "—",
-                    accentColor: matchupSideAccentColor(sideID: sideID, mode: mode, snapshot: snapshot)
+                    id: side.id,
+                    title: side.title,
+                    subtitle: side.subtitle,
+                    score: side.scoreLabel,
+                    accentColor: side.accentColor
                 )
             }
             guard sides.count == 2 else { return nil }
 
-            let sideParticipants = Dictionary(uniqueKeysWithValues: pairingIDs.map { sideID in
-                (sideID, matchupSideParticipants(sideID: sideID, mode: mode, snapshot: snapshot))
-            })
-            let players = pairingIDs.flatMap { sideID -> [SeriesMatchupOutcome.Player] in
-                let row = rowsBySide[sideID]
-                return (sideParticipants[sideID] ?? [])
+            let players = presentation.sides.flatMap { side -> [SeriesMatchupOutcome.Player] in
+                side.participants
                     .sorted { matchupParticipantSort(lhs: $0, rhs: $1, highestWins: highestWins, snapshot: snapshot, segment: segment) }
                     .map { participant in
                         SeriesMatchupOutcome.Player(
-                            id: "\(sideID)_\(participant.id)",
-                            ownerID: sideID,
+                            id: "\(side.id)_\(participant.id)",
+                            ownerID: side.id,
                             name: participant.name.fullName,
                             handicap: "\(participant.adjustedHandicap)",
                             gross: participantScoreLabel(participantID: participant.id, snapshot: snapshot, segment: segment, basis: .gross),
                             net: snapshot.configuration.useHandicaps ? participantScoreLabel(participantID: participant.id, snapshot: snapshot, segment: segment, basis: .net) : nil,
-                            scoreCounts: participantScoreCounts(participantID: participant.id, row: row),
+                            scoreCounts: side.isParticipantActive(participant),
                             accentColor: participant.teamID.flatMap { teamID in snapshot.teams.first(where: { $0.id == teamID })?.displaySwatchColor }
-                                ?? matchupSideAccentColor(sideID: sideID, mode: mode, snapshot: snapshot)
+                                ?? side.accentColor
                         )
                     }
             }
-            let normalParticipantCounts = pairingIDs.map { sideParticipants[$0]?.count ?? 0 }
-            let showsResultChip = mode == .individual
+            let normalParticipantCounts = presentation.sides.map { $0.participants.count }
+            let showsResultChip = presentation.mode == .individual
                 ? normalParticipantCounts.allSatisfy { $0 == 1 }
                 : normalParticipantCounts.allSatisfy { $0 == 2 }
-            let title: String
-            let detail: String
-            if isTie {
-                title = "Match tied"
-                detail = "Tied at \(sides[0].score)"
-            } else if let winningSideID,
-                      let winningSide = sides.first(where: { $0.id == winningSideID }),
-                      let losingSide = sides.first(where: { $0.id != winningSideID }) {
-                title = "\(winningSide.title) wins"
-                detail = "\(winningSide.score) to \(losingSide.score)"
-            } else {
-                title = "Match \(index + 1)"
-                detail = "Waiting for both sides to post scores"
-            }
 
             return SeriesMatchupOutcome(
-                    id: matchupResult.matchup.id,
-                    title: title,
-                detail: detail,
-                mode: mode,
+                id: matchupResult.matchup.id,
+                title: presentation.hasCompleteSides ? presentation.title : "Match \(index + 1)",
+                detail: presentation.hasCompleteSides ? presentation.scorelineDetail : presentation.scorelineDetail,
+                mode: presentation.mode,
                 sides: sides,
                 players: players,
-                winningSideID: winningSideID,
-                isTie: isTie,
+                winningSideID: presentation.winningSideID,
+                isTie: presentation.isTie,
                 showsResultChip: showsResultChip,
                 usesNetScores: snapshot.configuration.useHandicaps
-                )
+            )
         }
     }
 
@@ -4237,16 +4188,11 @@ final class SeriesViewModel: ObservableObject, Loggable {
     }
 
     nonisolated static func matchupScoreDisplayLabel(for row: ScoringRow, highestWins: Bool) -> String {
-        if highestWins {
-            return row.total.seriesPointsDisplayString
-        }
-        return scoreReviewFormatRelative(Int(row.total.rounded()))
+        MatchupResultPresentationBuilder.scoreLabel(for: row.total, isPointsFormat: highestWins)
     }
 
     private func expectedMatchupMode(for snapshot: RoundSnapshot) -> MatchupMode {
-        snapshot.configuration.scoreOwnerScope == .individual
-            ? (snapshot.requiresTeams ? .team : .individual)
-            : .scoreOwner
+        snapshot.expectedMatchupMode
     }
 
     private func scoringRow(
@@ -4629,7 +4575,7 @@ final class SeriesViewModel: ObservableObject, Loggable {
         let template = snapshot.resolvedActiveTemplate
         let usesScoreOwners = snapshot.configuration.scoreOwnerScope != .individual || snapshot.scoringGroups.isPopulated
 
-        if snapshot.configuration.primaryFormat.configuration.requiresTeams && !usesScoreOwners && !snapshot.isSharedScoreSource {
+        if snapshot.usesTeamScoringAggregates && !usesScoreOwners && !snapshot.isSharedScoreSource {
             return ScoringEngine.computeWithTeamScoring(
                 scores: snapshot.scoring,
                 participants: snapshot.participants,

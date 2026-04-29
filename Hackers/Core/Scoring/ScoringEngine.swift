@@ -567,6 +567,58 @@ struct ScoringEngine {
         )
     }
 
+    static func computeParticipantGroupAggregateRow(
+        scoringUnitID: String,
+        owner: ScoringOwner,
+        participantIDs: [String],
+        scores: [ScoreEntry],
+        participants: [RoundParticipant],
+        segment: RoundSegment,
+        holes: [Hole],
+        basis: ScoreBasis,
+        scoreInputMode: RoundScoreInputMode = .strokes,
+        template: GameTemplate,
+        teamScoring: RoundTeamScoringConfiguration,
+        scoreLookupSegmentIDs: [String]? = nil,
+        handicapStrokeBasis: SeriesHandicapStrokeBasis = .eighteenHole
+    ) -> ScoringRow? {
+        let participantByID = Dictionary(uniqueKeysWithValues: participants.map { ($0.id, $0) })
+        let groupParticipants = participantIDs.compactMap { participantByID[$0] }
+        guard groupParticipants.isPopulated else { return nil }
+
+        let holeNumbers = segment.holeRange.holeNumbers
+        let holeMap = Dictionary(uniqueKeysWithValues: holes.map { ($0.number, $0) })
+        let scoreIndex = buildScoreIndex(scores: scores)
+        let lookupSegmentIDs = scoreLookupSegmentIDs ?? resolvedScoreLookupSegmentIDs(primarySegment: segment, scores: scores)
+
+        let rawValues = buildRawValues(
+            participants: groupParticipants,
+            holeNumbers: holeNumbers,
+            holeMap: holeMap,
+            scoreIndex: scoreIndex,
+            lookupSegmentIDs: lookupSegmentIDs,
+            basis: basis,
+            scoreInputMode: scoreInputMode,
+            handicapStrokeBasis: handicapStrokeBasis
+        )
+
+        let baseValues = applyBaseScoringStages(
+            values: rawValues,
+            pipeline: template.pipeline,
+            holeNumbers: holeNumbers
+        )
+
+        return buildParticipantGroupAggregateRow(
+            scoringUnitID: scoringUnitID,
+            owner: owner,
+            values: baseValues,
+            participants: groupParticipants,
+            holeNumbers: holeNumbers,
+            leaderboardSort: template.leaderboardSort,
+            teamScoring: teamScoring
+        )
+    }
+
     // MARK: - Pipeline Helpers
 
     static func applyBaseScoringStages(
@@ -661,6 +713,59 @@ struct ScoringEngine {
         }
     }
 
+    private static func buildParticipantGroupAggregateRow(
+        scoringUnitID: String,
+        owner: ScoringOwner,
+        values: [String: [Int: PipelineHoleValue]],
+        participants: [RoundParticipant],
+        holeNumbers: [Int],
+        leaderboardSort: LeaderboardSort,
+        teamScoring: RoundTeamScoringConfiguration
+    ) -> ScoringRow? {
+        let participantIDs = participants.map(\.id)
+        guard participantIDs.isPopulated else { return nil }
+
+        let isHighestWins = leaderboardSort == .highestWins
+        let countingIDs: [String]
+        let holeValues: [Int: ScoringRow.HoleValue]
+
+        switch teamScoring.scope {
+        case .perHole:
+            let built = buildPerHoleTeamValues(
+                values: values,
+                participants: participants,
+                holeNumbers: holeNumbers,
+                isHighestWins: isHighestWins,
+                teamScoring: teamScoring
+            )
+            countingIDs = Array(built.countingParticipantIDs).sorted()
+            holeValues = built.holeValues
+        case .perRound:
+            let built = buildPerRoundTeamValues(
+                values: values,
+                participants: participants,
+                holeNumbers: holeNumbers,
+                isHighestWins: isHighestWins,
+                teamScoring: teamScoring
+            )
+            countingIDs = built.countingParticipantIDs
+            holeValues = built.holeValues
+        }
+
+        guard holeValues.isPopulated else { return nil }
+        let total = holeNumbers.compactMap { holeValues[$0]?.points }.reduce(0, +)
+
+        return ScoringRow(
+            scoringUnitID: scoringUnitID,
+            participantIDs: participantIDs,
+            countingParticipantIDs: countingIDs.isEmpty ? participantIDs : countingIDs,
+            owner: owner,
+            holeValues: holeValues,
+            total: total,
+            holesPlayed: holeValues.count
+        )
+    }
+
     private static func buildPerHoleTeamValues(
         values: [String: [Int: PipelineHoleValue]],
         participants: [RoundParticipant],
@@ -702,9 +807,15 @@ struct ScoringEngine {
         isHighestWins: Bool,
         teamScoring: RoundTeamScoringConfiguration
     ) -> (holeValues: [Int: ScoringRow.HoleValue], countingParticipantIDs: [String]) {
-        let participantTotals: [(String, Double)] = participants.map { participant in
-            let total = holeNumbers.compactMap { values[participant.id]?[$0]?.points }.reduce(0, +)
+        let participantTotals: [(String, Double)] = participants.compactMap { participant in
+            let playedValues = holeNumbers.compactMap { values[participant.id]?[$0]?.points }
+            guard playedValues.isPopulated else { return nil }
+            let total = playedValues.reduce(0, +)
             return (participant.id, total)
+        }
+
+        guard participantTotals.isPopulated else {
+            return ([:], [])
         }
 
         let ordered = participantTotals.sorted { lhs, rhs in
