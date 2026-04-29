@@ -518,7 +518,136 @@ final class LiveRoundViewModelHoleOrderingTests: XCTestCase {
         XCTAssertEqual(presentation.side(id: "team_blue")?.scoreLabel, "+2")
     }
 
+    func testTeamMatchupBestNUsesTeamAggregatesWhenScoringGroupsExist() async throws {
+        var snapshot = MockLiveRoundBest2of4Matchup.snapshot
+        snapshot.scoringGroups = Self.best2ScoringGroups()
+        snapshot.segments[0].matchups = [
+            TeamMatchup(id: "m1", teamIDs: ["team_red", "team_blue"], mode: .team),
+        ]
+
+        XCTAssertFalse(snapshot.usesTeamScoringAggregates)
+        XCTAssertTrue(ScoringEngine.shouldUseTeamAggregateScoring(snapshot: snapshot, segment: snapshot.segments[0]))
+
+        let vm = await boundViewModel(snapshot: snapshot, participantID: "p01")
+        let result = vm.engineResult
+        let matchupResult = try XCTUnwrap(result.matchupResults.first)
+        let rowMap = Dictionary(uniqueKeysWithValues: matchupResult.rows.map { ($0.scoringUnitID, $0) })
+        let red = try XCTUnwrap(rowMap["team_red"])
+        let blue = try XCTUnwrap(rowMap["team_blue"])
+
+        XCTAssertEqual(red.total, 1, accuracy: 0.01)
+        XCTAssertEqual(blue.total, 2, accuracy: 0.01)
+        XCTAssertEqual(red.countingParticipantIDs, ["p05", "p01"])
+        XCTAssertEqual(blue.countingParticipantIDs, ["p03", "p07"])
+
+        let section = try XCTUnwrap(vm.matchupSections.first)
+        let presentation = vm.matchupPresentation(in: section)
+        let status = vm.outcomeMatchupStatus(for: section)
+
+        XCTAssertTrue(presentation.hasCompleteSides)
+        XCTAssertEqual(presentation.winningSideID, "team_red")
+        XCTAssertEqual(status.title, "Red Team wins")
+        XCTAssertEqual(status.detail, "Won by 1 stroke")
+        XCTAssertEqual(status.winningScoringUnitID, "team_red")
+        XCTAssertEqual(presentation.side(id: "team_red")?.scoreLabel, "+1")
+        XCTAssertEqual(presentation.side(id: "team_blue")?.scoreLabel, "+2")
+    }
+
+    func testTeamMatchupBestNProjectsPartialStandingsWhenScoringGroupsExist() async throws {
+        var snapshot = MockLiveRoundBest2of4Matchup.snapshot
+        snapshot.scoringGroups = Self.best2ScoringGroups()
+        snapshot.scoring = snapshot.scoring.filter { $0.holeNumber == 1 }
+        snapshot.segments[0].matchups = [
+            TeamMatchup(id: "m1", teamIDs: ["team_red", "team_blue"], mode: .team),
+        ]
+
+        let vm = await boundViewModel(snapshot: snapshot, participantID: "p01")
+        let section = try XCTUnwrap(vm.matchupSections.first)
+        let presentation = vm.matchupPresentation(in: section)
+        let status = vm.outcomeMatchupStatus(for: section)
+
+        XCTAssertTrue(presentation.hasCompleteSides)
+        XCTAssertTrue(presentation.isTie)
+        XCTAssertEqual(status.title, "Match tied")
+        XCTAssertEqual(status.detail, "Tied at E")
+        XCTAssertNil(status.winningScoringUnitID)
+        XCTAssertEqual(presentation.side(id: "team_red")?.scoreLabel, "E")
+        XCTAssertEqual(presentation.side(id: "team_blue")?.scoreLabel, "E")
+        XCTAssertTrue(presentation.side(id: "team_red")?.isParticipantActive(snapshot.participants[0]) == true)
+        XCTAssertTrue(presentation.side(id: "team_red")?.isParticipantActive(snapshot.participants[4]) == true)
+        XCTAssertTrue(presentation.side(id: "team_red")?.isParticipantActive(snapshot.participants[1]) == false)
+        XCTAssertTrue(presentation.side(id: "team_blue")?.isParticipantActive(snapshot.participants[2]) == true)
+        XCTAssertTrue(presentation.side(id: "team_blue")?.isParticipantActive(snapshot.participants[6]) == true)
+        XCTAssertTrue(presentation.side(id: "team_blue")?.isParticipantActive(snapshot.participants[7]) == false)
+    }
+
+    func testOutcomeMatchupsResolveScoresSavedUnderObservedSegmentID() async throws {
+        var snapshot = MockLiveRoundBest2of4Matchup.snapshot
+        snapshot.scoringGroups = Self.best2ScoringGroups()
+        snapshot.segments[0].matchups = [
+            TeamMatchup(id: "m1", teamIDs: ["team_red", "team_blue"], mode: .team),
+        ]
+        snapshot.scoring = snapshot.scoring.map { entry in
+            var updated = entry
+            updated.segmentID = "persisted_score_segment"
+            return updated
+        }
+
+        XCTAssertTrue(snapshot.segmentScoreLookupSegmentIDs.contains("persisted_score_segment"))
+
+        let vm = await boundViewModel(snapshot: snapshot, participantID: "p01")
+        let section = try XCTUnwrap(vm.matchupSections.first)
+        let presentation = vm.matchupPresentation(in: section)
+        let status = vm.outcomeMatchupStatus(for: section)
+
+        XCTAssertTrue(presentation.hasCompleteSides)
+        XCTAssertEqual(status.title, "Red Team wins")
+        XCTAssertEqual(status.detail, "Won by 1 stroke")
+        XCTAssertEqual(status.winningScoringUnitID, "team_red")
+        XCTAssertEqual(presentation.side(id: "team_red")?.scoreLabel, "+1")
+        XCTAssertEqual(presentation.side(id: "team_blue")?.scoreLabel, "+2")
+        XCTAssertTrue(presentation.side(id: "team_red")?.isParticipantActive(snapshot.participants[4]) == true)
+        XCTAssertTrue(presentation.side(id: "team_blue")?.isParticipantActive(snapshot.participants[6]) == true)
+    }
+
     // MARK: - Snapshot factory
+
+    private static func best2ScoringGroups() -> [RoundScoringGroup] {
+        [
+            RoundScoringGroup(
+                id: "red_group_1",
+                teamID: "team_red",
+                teeGroupID: "group_1",
+                kind: .partnership,
+                memberIDs: ["p01", "p02"],
+                parentID: MockLiveRoundBest2of4Matchup.roundID
+            ),
+            RoundScoringGroup(
+                id: "red_group_2",
+                teamID: "team_red",
+                teeGroupID: "group_2",
+                kind: .partnership,
+                memberIDs: ["p05", "p06"],
+                parentID: MockLiveRoundBest2of4Matchup.roundID
+            ),
+            RoundScoringGroup(
+                id: "blue_group_1",
+                teamID: "team_blue",
+                teeGroupID: "group_1",
+                kind: .partnership,
+                memberIDs: ["p03", "p04"],
+                parentID: MockLiveRoundBest2of4Matchup.roundID
+            ),
+            RoundScoringGroup(
+                id: "blue_group_2",
+                teamID: "team_blue",
+                teeGroupID: "group_2",
+                kind: .partnership,
+                memberIDs: ["p07", "p08"],
+                parentID: MockLiveRoundBest2of4Matchup.roundID
+            ),
+        ]
+    }
 
     private static func makeSnapshotNineHolesStarting(
         groupStartingHole: Int,

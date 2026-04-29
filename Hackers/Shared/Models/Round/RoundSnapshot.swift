@@ -173,11 +173,9 @@ extension RoundSnapshot {
             ordered.append(seg.id)
             seen.insert(seg.id)
         }
-        if ordered.isEmpty {
-            for entry in scoring where !entry.segmentID.isEmpty && !seen.contains(entry.segmentID) {
-                ordered.append(entry.segmentID)
-                seen.insert(entry.segmentID)
-            }
+        for entry in scoring where !entry.segmentID.isEmpty && !seen.contains(entry.segmentID) {
+            ordered.append(entry.segmentID)
+            seen.insert(entry.segmentID)
         }
         return ordered
     }

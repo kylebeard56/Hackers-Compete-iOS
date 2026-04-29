@@ -4584,60 +4584,29 @@ final class SeriesViewModel: ObservableObject, Loggable {
     }
 
     private func scoringResult(from snapshot: RoundSnapshot, segment: RoundSegment) -> ScoringResult {
-        let holes = holesForScoring(in: snapshot)
-        let template = snapshot.resolvedActiveTemplate
-        let usesScoreOwners = snapshot.configuration.scoreOwnerScope != .individual || snapshot.scoringGroups.isPopulated
+        Self.buildScoringResult(from: snapshot, segment: segment)
+    }
 
-        if snapshot.usesTeamScoringAggregates && !usesScoreOwners && !snapshot.isSharedScoreSource {
-            return ScoringEngine.computeWithTeamScoring(
-                scores: snapshot.scoring,
-                participants: snapshot.participants,
-                teams: snapshot.teams,
-                segment: segment,
-                holes: holes,
-                basis: snapshot.configuration.primaryFormat.configuration.basis,
-                template: template,
-                teamScoring: snapshot.configuration.teamScoring,
-                matchupResolutionStyle: snapshot.configuration.matchupResolutionStyle,
-                scoreLookupSegmentIDs: snapshot.segmentScoreLookupSegmentIDs,
-                resolvedCompetitionScope: snapshot.configuration.resolvedCompetitionScope,
-                handicapStrokeBasis: snapshot.handicapStrokeBasis
-            )
-        }
-
-        if template.id == FormatTemplateRegistry.strokePlay.id,
-           snapshot.configuration.resolvedCompetitionScope != .matchup {
-            return ScoringEngine.computeStrokePlay(
-                scores: snapshot.scoring,
-                participants: snapshot.participants,
-                segment: segment,
-                holes: holes,
-                basis: snapshot.configuration.primaryFormat.configuration.basis,
-                template: template,
-                scoreLookupSegmentIDs: snapshot.segmentScoreLookupSegmentIDs,
-                handicapStrokeBasis: snapshot.handicapStrokeBasis
-            )
-        }
-
-        return ScoringEngine.computeWithPipeline(
-            scores: snapshot.scoring,
-            participants: snapshot.participants,
-            teams: snapshot.teams,
+    nonisolated static func buildScoringResult(from snapshot: RoundSnapshot, segment: RoundSegment) -> ScoringResult {
+        let holes = scoringHoles(in: snapshot)
+        return ScoringEngine.computeSnapshotResult(
+            snapshot: snapshot,
             segment: segment,
             holes: holes,
             basis: snapshot.configuration.primaryFormat.configuration.basis,
-            template: template,
-            scoreLookupSegmentIDs: snapshot.segmentScoreLookupSegmentIDs,
-            resolvedCompetitionScope: snapshot.configuration.resolvedCompetitionScope,
-            scoreOwnerScope: snapshot.configuration.scoreOwnerScope,
-            scoringGroups: snapshot.scoringGroups,
-            perHoleWinPoints: snapshot.configuration.resolvedHoleWinPoints,
-            sharedScoreHandicapConfig: snapshot.configuration.sharedScoreHandicapConfig,
-            handicapStrokeBasis: snapshot.handicapStrokeBasis
+            scoreLookupSegmentIDs: snapshot.segmentScoreLookupSegmentIDs
         )
     }
 
     private func holesForScoring(in snapshot: RoundSnapshot) -> [Hole] {
+        Self.scoringHoles(in: snapshot)
+    }
+
+    nonisolated static func shouldUseTeamAggregateScoring(snapshot: RoundSnapshot, segment: RoundSegment) -> Bool {
+        ScoringEngine.shouldUseTeamAggregateScoring(snapshot: snapshot, segment: segment)
+    }
+
+    private nonisolated static func scoringHoles(in snapshot: RoundSnapshot) -> [Hole] {
         let preferredTeeID = snapshot.courseSegment?.defaultTee
         let tee = preferredTeeID.flatMap { snapshot.courseSegment?.tee(from: $0) }
             ?? snapshot.courseSegment?.courseInfo.tees.first

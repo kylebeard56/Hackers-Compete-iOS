@@ -90,6 +90,117 @@ struct VegasPairDetail: Hashable, Identifiable {
 /// and returns a fully computed ScoringResult.
 struct ScoringEngine {
 
+    // MARK: - Snapshot Routing
+
+    static func computeSnapshotResult(
+        snapshot: RoundSnapshot,
+        segment: RoundSegment,
+        holes: [Hole],
+        basis: ScoreBasis,
+        scoreLookupSegmentIDs: [String]? = nil
+    ) -> ScoringResult {
+        let template = snapshot.resolvedActiveTemplate
+        let lookupSegmentIDs = scoreLookupSegmentIDs ?? snapshot.segmentScoreLookupSegmentIDs
+
+        if snapshot.isVegasFormat {
+            return computeVegas(
+                scores: snapshot.scoring,
+                participants: snapshot.participants,
+                teams: snapshot.teams,
+                scoringGroups: snapshot.scoringGroups,
+                segment: segment,
+                holes: holes,
+                basis: basis,
+                scoreInputMode: snapshot.configuration.scoreInputMode,
+                template: template,
+                vegasMode: snapshot.configuration.resolvedVegasMode,
+                selectionRule: snapshot.configuration.resolvedVegasSelectionRule,
+                selectionScope: snapshot.configuration.resolvedVegasSelectionScope,
+                scoreLookupSegmentIDs: lookupSegmentIDs.isEmpty ? nil : lookupSegmentIDs,
+                handicapStrokeBasis: snapshot.handicapStrokeBasis
+            )
+        }
+
+        if shouldUseTeamAggregateScoring(snapshot: snapshot, segment: segment) {
+            return computeWithTeamScoring(
+                scores: snapshot.scoring,
+                participants: snapshot.participants,
+                teams: snapshot.teams,
+                segment: segment,
+                holes: holes,
+                basis: basis,
+                scoreInputMode: snapshot.configuration.scoreInputMode,
+                template: template,
+                teamScoring: snapshot.configuration.teamScoring,
+                matchupResolutionStyle: snapshot.configuration.matchupResolutionStyle,
+                scoreLookupSegmentIDs: lookupSegmentIDs.isEmpty ? nil : lookupSegmentIDs,
+                resolvedCompetitionScope: snapshot.configuration.resolvedCompetitionScope,
+                handicapStrokeBasis: snapshot.handicapStrokeBasis
+            )
+        }
+
+        if template.id == FormatTemplateRegistry.strokePlay.id,
+           snapshot.configuration.resolvedCompetitionScope != .matchup {
+            return computeStrokePlay(
+                scores: snapshot.scoring,
+                participants: snapshot.participants,
+                segment: segment,
+                holes: holes,
+                basis: basis,
+                scoreInputMode: snapshot.configuration.scoreInputMode,
+                template: template,
+                scoreLookupSegmentIDs: lookupSegmentIDs.isEmpty ? nil : lookupSegmentIDs,
+                handicapStrokeBasis: snapshot.handicapStrokeBasis
+            )
+        }
+
+        return computeWithPipeline(
+            scores: snapshot.scoring,
+            participants: snapshot.participants,
+            teams: snapshot.teams,
+            segment: segment,
+            holes: holes,
+            basis: basis,
+            scoreInputMode: snapshot.configuration.scoreInputMode,
+            template: template,
+            scoreLookupSegmentIDs: lookupSegmentIDs.isEmpty ? nil : lookupSegmentIDs,
+            resolvedCompetitionScope: snapshot.configuration.resolvedCompetitionScope,
+            scoreOwnerScope: snapshot.configuration.scoreOwnerScope,
+            scoringGroups: snapshot.scoringGroups,
+            perHoleWinPoints: snapshot.configuration.resolvedHoleWinPoints,
+            sharedScoreHandicapConfig: snapshot.configuration.sharedScoreHandicapConfig,
+            handicapStrokeBasis: snapshot.handicapStrokeBasis
+        )
+    }
+
+    static func shouldUseTeamAggregateScoring(snapshot: RoundSnapshot, segment: RoundSegment) -> Bool {
+        guard !snapshot.isVegasFormat,
+              !snapshot.isSharedScoreSource,
+              snapshot.configuration.scoreOwnerScope == .individual,
+              snapshot.teams.isPopulated else {
+            return false
+        }
+
+        let hasTeamAggregateShape = snapshot.requiresTeams
+            || snapshot.hasScheduledTeamMatchups
+            || snapshot.configuration.teamScoring.isCountedSelection
+        guard hasTeamAggregateShape else { return false }
+
+        let matchups = (segment.matchups ?? []).filter(\.isValid)
+        let isMatchupScope = snapshot.configuration.resolvedCompetitionScope == .matchup
+            || segment.competitionScope == .matchup
+        guard isMatchupScope else { return true }
+
+        let matchupModes = matchups.map { $0.mode ?? snapshot.expectedMatchupMode }
+        if matchupModes.contains(.scoreOwner) || matchupModes.contains(.individual) {
+            return false
+        }
+        if matchupModes.contains(.team) {
+            return true
+        }
+        return snapshot.expectedMatchupMode == .team
+    }
+
     // MARK: - Stroke Play Computation
 
     /// Computes a ScoringResult for stroke play (the Phase 0 fast path).

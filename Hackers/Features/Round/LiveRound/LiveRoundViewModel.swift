@@ -1791,7 +1791,9 @@ final class LiveRoundViewModel: ObservableObject, Loggable {
             return false
         }
 
-        guard expectedMatchupMode == .team || snapshot.usesTeamScoringAggregates else {
+        let segment = snapshot.roundSegment ?? RoundSegment()
+        guard expectedMatchupMode == .team
+            || ScoringEngine.shouldUseTeamAggregateScoring(snapshot: snapshot, segment: segment) else {
             return participantID == teamID
         }
 
@@ -2971,76 +2973,15 @@ final class LiveRoundViewModel: ObservableObject, Loggable {
     var engineResult: ScoringResult {
         if let cached = cachedEngineResult { return cached }
         let segment = snapshot.roundSegment ?? RoundSegment()
-        let template = snapshot.resolvedActiveTemplate
         let holes = defaultTee?.holes ?? []
         let scoreLookupIDs = snapshot.segmentScoreLookupSegmentIDs
-        let usesScoreOwners = snapshot.configuration.scoreOwnerScope != .individual || snapshot.scoringGroups.isPopulated
-
-        let result: ScoringResult
-        if snapshot.isVegasFormat {
-            result = ScoringEngine.computeVegas(
-                scores: snapshot.scoring,
-                participants: snapshot.participants,
-                teams: snapshot.teams,
-                scoringGroups: snapshot.scoringGroups,
-                segment: segment,
-                holes: holes,
-                basis: scoreBasis,
-                scoreInputMode: snapshot.configuration.scoreInputMode,
-                template: template,
-                vegasMode: snapshot.configuration.resolvedVegasMode,
-                selectionRule: snapshot.configuration.resolvedVegasSelectionRule,
-                selectionScope: snapshot.configuration.resolvedVegasSelectionScope,
-                scoreLookupSegmentIDs: scoreLookupIDs.isEmpty ? nil : scoreLookupIDs,
-                handicapStrokeBasis: snapshot.handicapStrokeBasis
-            )
-        } else if snapshot.usesTeamScoringAggregates && !usesScoreOwners && !snapshot.isSharedScoreSource {
-            result = ScoringEngine.computeWithTeamScoring(
-                scores: snapshot.scoring,
-                participants: snapshot.participants,
-                teams: snapshot.teams,
-                segment: segment,
-                holes: holes,
-                basis: scoreBasis,
-                scoreInputMode: snapshot.configuration.scoreInputMode,
-                template: template,
-                teamScoring: snapshot.configuration.teamScoring,
-                matchupResolutionStyle: snapshot.configuration.matchupResolutionStyle,
-                scoreLookupSegmentIDs: scoreLookupIDs.isEmpty ? nil : scoreLookupIDs,
-                resolvedCompetitionScope: snapshot.configuration.resolvedCompetitionScope,
-                handicapStrokeBasis: snapshot.handicapStrokeBasis
-            )
-        } else if !template.pipeline.isEmpty {
-            result = ScoringEngine.computeWithPipeline(
-                scores: snapshot.scoring,
-                participants: snapshot.participants,
-                teams: snapshot.teams,
-                segment: segment,
-                holes: holes,
-                basis: scoreBasis,
-                scoreInputMode: snapshot.configuration.scoreInputMode,
-                template: template,
-                scoreLookupSegmentIDs: scoreLookupIDs.isEmpty ? nil : scoreLookupIDs,
-                resolvedCompetitionScope: snapshot.configuration.resolvedCompetitionScope,
-                scoreOwnerScope: snapshot.configuration.scoreOwnerScope,
-                scoringGroups: snapshot.scoringGroups,
-                perHoleWinPoints: snapshot.configuration.resolvedHoleWinPoints,
-                sharedScoreHandicapConfig: snapshot.configuration.sharedScoreHandicapConfig,
-                handicapStrokeBasis: snapshot.handicapStrokeBasis
-            )
-        } else {
-            result = ScoringEngine.computeStrokePlay(
-                scores: snapshot.scoring,
-                participants: snapshot.participants,
-                segment: segment,
-                holes: holes,
-                basis: scoreBasis,
-                scoreInputMode: snapshot.configuration.scoreInputMode,
-                template: template,
-                scoreLookupSegmentIDs: scoreLookupIDs.isEmpty ? nil : scoreLookupIDs,
-                handicapStrokeBasis: snapshot.handicapStrokeBasis
-            )
-        }
+        let result = ScoringEngine.computeSnapshotResult(
+            snapshot: snapshot,
+            segment: segment,
+            holes: holes,
+            basis: scoreBasis,
+            scoreLookupSegmentIDs: scoreLookupIDs.isEmpty ? nil : scoreLookupIDs
+        )
         cachedEngineResult = result
         return result
     }

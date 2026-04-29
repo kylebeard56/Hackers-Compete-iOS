@@ -278,6 +278,7 @@ private struct SeriesAwardMatchupOutcomeCard: View {
                         .fontStyle(kFontName, size: 15, weight: .semibold)
                         .foregroundStyle(isWinner ? accent : palette.foregroundColor)
                         .lineLimit(2)
+                        .layoutPriority(1)
 
                     if outcome.showsResultChip && isWinner {
                         resultChip("Winner", tint: accent)
@@ -384,6 +385,9 @@ private struct SeriesAwardMatchupOutcomeCard: View {
                 Capsule()
                     .fill(tint.opacity(0.12))
             )
+            .lineLimit(1)
+            .fixedSize(horizontal: true, vertical: false)
+            .layoutPriority(2)
     }
 }
 
