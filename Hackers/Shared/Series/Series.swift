@@ -2758,6 +2758,12 @@ struct SeriesScoreboardSnapshot: Equatable {
     }
 }
 
+enum SeriesScoreboardEligibility {
+    static func isEligible(teams: [SeriesTeam]) -> Bool {
+        teams.count == 2
+    }
+}
+
 enum SeriesScoreboardCalculator {
     static func snapshot(
         series: Series,

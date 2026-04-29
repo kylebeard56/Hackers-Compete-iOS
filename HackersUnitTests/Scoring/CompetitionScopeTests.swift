@@ -450,6 +450,76 @@ final class CompetitionScopeTests: XCTestCase {
         XCTAssertTrue(presentation.side(id: "purple")?.isParticipantActive(participants[0]) == true)
         XCTAssertTrue(presentation.side(id: "purple")?.isParticipantActive(participants[1]) == true)
         XCTAssertTrue(presentation.side(id: "purple")?.isParticipantActive(participants[2]) == false)
+        XCTAssertTrue(SeriesViewModel.shouldShowMatchupResultChip(for: presentation))
+        XCTAssertEqual(presentation.side(id: "purple")?.participants.count, 4)
+    }
+
+    func testMatchupPresentationDoesNotFabricateCompleteBestNPerRoundSidesWhenAggregateRowsAreMissing() throws {
+        let participants = [
+            makeParticipant(id: "purple1", name: "Gavin", teamID: "purple"),
+            makeParticipant(id: "purple2", name: "Aristotle", teamID: "purple"),
+            makeParticipant(id: "purple3", name: "Andrew", teamID: "purple"),
+            makeParticipant(id: "purple4", name: "Evan", teamID: "purple"),
+            makeParticipant(id: "red1", name: "Colton", teamID: "red"),
+            makeParticipant(id: "red2", name: "Aaron", teamID: "red"),
+            makeParticipant(id: "red3", name: "Karis", teamID: "red"),
+            makeParticipant(id: "red4", name: "Abby", teamID: "red"),
+        ]
+        let teams = [
+            RoundTeam(id: "purple", name: "Team 9", color: "purple", index: 0, createdAt: .init()),
+            RoundTeam(id: "red", name: "Team 1", color: "red", index: 1, createdAt: .init()),
+        ]
+        let matchup = TeamMatchup(id: "m1", teamIDs: ["red", "purple"])
+        let segment = makeSegment(
+            holeRange: HoleRange(startHole: 1, endHole: 2),
+            matchups: [matchup],
+            competitionScope: .matchup
+        )
+        let configuration = RoundConfiguration(
+            primaryFormat: GameFormat(
+                type: .strokePlay,
+                configuration: GameConfiguration(
+                    method: .individual,
+                    aggregation: nil,
+                    basis: .gross,
+                    handicap: .individualStrokePlay,
+                    requiresTeams: true,
+                    teeGroupOnly: false
+                )
+            ),
+            formatSummary: RoundFormatSummary(from: FormatTemplateRegistry.strokePlayGross),
+            competitionScope: .matchup,
+            teamScoring: RoundTeamScoringConfiguration(mode: .bestN, count: 2, scope: .perRound),
+            matchupResolutionStyle: .roundAggregate
+        )
+        let snapshot = RoundSnapshot(
+            round: Round(id: "round1", shareCode: "MATCH", createdBy: "host", configuration: configuration),
+            participants: participants,
+            teams: teams,
+            segments: [segment],
+            scoring: []
+        )
+        let result = ScoringResult(
+            rows: [],
+            holeStates: [:],
+            template: FormatTemplateRegistry.strokePlayGross,
+            matchupResults: [MatchupScoringResult(matchup: matchup, rows: [])]
+        )
+
+        let presentation = MatchupResultPresentationBuilder.build(
+            snapshot: snapshot,
+            result: result,
+            matchupResult: try XCTUnwrap(result.matchupResults.first)
+        )
+
+        XCTAssertFalse(presentation.hasCompleteSides)
+        XCTAssertFalse(presentation.isTie)
+        XCTAssertNil(presentation.winningSideID)
+        XCTAssertFalse(SeriesViewModel.shouldShowMatchupResultChip(for: presentation))
+        XCTAssertEqual(presentation.title, "Matchup pending")
+        XCTAssertEqual(presentation.side(id: "purple")?.scoreLabel, "—")
+        XCTAssertEqual(presentation.side(id: "red")?.scoreLabel, "—")
+        XCTAssertTrue(presentation.side(id: "purple")?.isParticipantActive(participants[0]) == false)
     }
 
     func testScoreOwnerPartnershipMatchupAggregatesResolvedSideRosterForBestNPerRound() throws {

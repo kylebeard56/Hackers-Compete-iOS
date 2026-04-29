@@ -119,26 +119,26 @@ extension LiveRound {
             HStack {
                 Text(liveScoreboardTitle(scoreboard))
                     .fontStyle(kFontName, size: 12, weight: .semibold)
-                    .foregroundStyle(.white.opacity(0.62))
+                    .foregroundStyle(Color.neutral)
                     .textCase(.uppercase)
                 Spacer(minLength: 12)
                 if scoreboard.usesProjectedTotals {
                     Text("Live")
                         .fontStyle(kFontName, size: 11, weight: .semibold)
-                        .foregroundStyle(Color.green)
+                        .foregroundStyle(Color.accentGreen)
                         .padding(.horizontal, 10)
                         .padding(.vertical, 4)
-                        .background(Capsule().fill(Color.green.opacity(0.14)))
+                        .background(Capsule().fill(Color.accentGreen.opacity(0.14)))
                 }
             }
 
-            HStack(spacing: 18) {
+            HStack(spacing: 16) {
                 if let first = scoreboard.entries.first {
                     liveScoreboardEntryColumn(first, isTrailing: false)
                 }
 
                 Rectangle()
-                    .fill(.white.opacity(0.18))
+                    .fill(Color.neutral.opacity(0.28))
                     .frame(width: 1, height: 54)
 
                 if scoreboard.entries.count > 1 {
@@ -148,19 +148,14 @@ extension LiveRound {
 
             Text(liveScoreboardFooter(scoreboard))
                 .fontStyle(kFontName, size: 12, weight: .medium)
-                .foregroundStyle(.white.opacity(0.58))
+                .foregroundStyle(Color.neutral)
                 .frame(maxWidth: .infinity)
+                .lineLimit(1)
+                .minimumScaleFactor(0.8)
         }
-        .padding(18)
+        .padding(16)
         .frame(maxWidth: .infinity)
-        .background(
-            RoundedRectangle(cornerRadius: 14, style: .continuous)
-                .fill(Color(red: 0.07, green: 0.07, blue: 0.12))
-        )
-        .overlay(
-            RoundedRectangle(cornerRadius: 14, style: .continuous)
-                .stroke(.white.opacity(0.08), lineWidth: 1)
-        )
+        .glassCardEffect(interactive: false, forceMaterial: true, tint: palette.cardColor)
         .accessibilityElement(children: .ignore)
         .accessibilityLabel(liveScoreboardAccessibilityLabel(scoreboard))
     }
@@ -185,10 +180,15 @@ extension LiveRound {
 
                 Text(entry.competitorName)
                     .fontStyle(kFontName, size: 13, weight: .semibold)
-                    .foregroundStyle(.white.opacity(0.88))
+                    .foregroundStyle(palette.foregroundColor)
                     .lineLimit(1)
                     .minimumScaleFactor(0.8)
             }
+
+            Text("Start \(entry.officialPoints.seriesPointsDisplayString)")
+                .fontStyle(kFontName, size: 11, weight: .regular)
+                .foregroundStyle(Color.neutral)
+                .lineLimit(1)
         }
         .frame(maxWidth: .infinity, alignment: isTrailing ? .trailing : .leading)
     }
@@ -202,27 +202,26 @@ extension LiveRound {
     }
 
     private func liveScoreboardFooter(_ scoreboard: SeriesScoreboardSnapshot) -> String {
-        let remaining = scoreboard.pointsRemaining.map { "\($0.seriesPointsDisplayString) pts remaining" }
-        if let remaining {
-            return "\(remaining) · \(scoreboard.leaderText)"
-        }
-        return scoreboard.leaderText
+        let startingScores = scoreboard.entries
+            .prefix(2)
+            .map { "\($0.competitorName) \($0.officialPoints.seriesPointsDisplayString)" }
+            .joined(separator: " · ")
+        return "Starting score: \(startingScores)"
     }
 
     private func liveScoreboardAccessibilityLabel(_ scoreboard: SeriesScoreboardSnapshot) -> String {
         let entries = scoreboard.entries
-            .map { "\($0.competitorName) \($0.projectedPoints.seriesPointsDisplayString) points" }
+            .map { "\($0.competitorName) projected \($0.projectedPoints.seriesPointsDisplayString) points, starting \($0.officialPoints.seriesPointsDisplayString)" }
             .joined(separator: ", ")
-        return "Series scoreboard. \(entries). \(scoreboard.leaderText)."
+        return "Series scoreboard. \(entries). \(liveScoreboardFooter(scoreboard))."
     }
 
     private func liveScoreboardAccentColor(for entry: SeriesScoreboardEntry) -> Color {
         guard entry.competitorType == .team,
-              let team = viewModel.snapshot.teams.first(where: { $0.id == entry.competitorID }),
-              let teamColor = TeamColor(rawValue: team.color) else {
+              let team = viewModel.snapshot.teams.first(where: { $0.id == entry.competitorID }) else {
             return palette.foregroundColor
         }
-        return teamColor.value
+        return team.displaySwatchColor ?? palette.foregroundColor
     }
 
     @ViewBuilder

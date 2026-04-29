@@ -4112,10 +4112,16 @@ final class LiveRoundViewModel: ObservableObject, Loggable {
             return
         }
 
+        let teams = await FirebaseService.shared.fetchSeriesTeams(seriesID: seriesID)
+        guard SeriesScoreboardEligibility.isEligible(teams: teams) else {
+            liveSeriesScoreboardContext = nil
+            seriesScoreboardSnapshot = nil
+            return
+        }
+
         let rounds = await FirebaseService.shared.fetchSeriesRounds(seriesID: seriesID)
         let scoringProfiles = await FirebaseService.shared.fetchScoringProfiles(seriesID: seriesID)
         let pointAwards = await FirebaseService.shared.fetchPointAwards(seriesID: seriesID)
-        let teams = await FirebaseService.shared.fetchSeriesTeams(seriesID: seriesID)
         let members: [SeriesMember]
         if let resolvedMembers {
             members = resolvedMembers
@@ -4148,7 +4154,8 @@ final class LiveRoundViewModel: ObservableObject, Loggable {
 
     private func refreshSeriesScoreboardProjection() {
         guard let context = liveSeriesScoreboardContext,
-              context.series.settings.showScoreboardTile else {
+              context.series.settings.showScoreboardTile,
+              SeriesScoreboardEligibility.isEligible(teams: context.teams) else {
             seriesScoreboardSnapshot = nil
             return
         }

@@ -270,6 +270,7 @@ private struct MatchupTileView: View {
                 .fontStyle(kFontName, size: 15, weight: .semibold)
                 .foregroundStyle(palette.foregroundColor)
                 .lineLimit(1)
+            resultChip(for: team.id, accent: team.displaySwatchColor)
         }
         let textColumn = VStack(alignment: .leading, spacing: 3) {
             nameRow
@@ -305,10 +306,13 @@ private struct MatchupTileView: View {
             .filter(\.isPopulated)
             .joined(separator: ", ")
         let entityContent = VStack(alignment: .leading, spacing: 3) {
-            Text(title)
-                .fontStyle(kFontName, size: 15, weight: .semibold)
-                .foregroundStyle(palette.foregroundColor)
-                .lineLimit(1)
+            HStack(alignment: .center, spacing: 6) {
+                Text(title)
+                    .fontStyle(kFontName, size: 15, weight: .semibold)
+                    .foregroundStyle(palette.foregroundColor)
+                    .lineLimit(1)
+                resultChip(for: scoringUnitID, accent: sidePresentations[scoringUnitID]?.accentColor)
+            }
 
             if names.isPopulated {
                 Text(names)
@@ -342,10 +346,18 @@ private struct MatchupTileView: View {
                 .fontStyle(kFontName, size: 13, weight: .regular)
                 .foregroundStyle(palette.foregroundColor)
                 .lineLimit(1)
-            Text(participant.name.familyName)
-                .fontStyle(kFontName, size: 15, weight: .semibold)
-                .foregroundStyle(palette.foregroundColor)
-                .lineLimit(1)
+            HStack(alignment: .center, spacing: 6) {
+                if !leadingPill {
+                    resultChip(for: participant.id, accent: viewModel.teamColor(for: participant))
+                }
+                Text(participant.name.familyName)
+                    .fontStyle(kFontName, size: 15, weight: .semibold)
+                    .foregroundStyle(palette.foregroundColor)
+                    .lineLimit(1)
+                if leadingPill {
+                    resultChip(for: participant.id, accent: viewModel.teamColor(for: participant))
+                }
+            }
         }
         return Group {
             if leadingPill {
@@ -372,10 +384,13 @@ private struct MatchupTileView: View {
         let title = side.map(\.title) ?? viewModel.scoringGroupLabel(owner)
         let subtitle = side.flatMap(\.subtitle) ?? viewModel.scoringGroupSubtitle(owner)
         let entityContent = VStack(alignment: .leading, spacing: 3) {
-            Text(title)
-                .fontStyle(kFontName, size: 15, weight: .semibold)
-                .foregroundStyle(accent)
-                .lineLimit(1)
+            HStack(alignment: .center, spacing: 6) {
+                Text(title)
+                    .fontStyle(kFontName, size: 15, weight: .semibold)
+                    .foregroundStyle(accent)
+                    .lineLimit(1)
+                resultChip(for: owner.id, accent: accent)
+            }
 
             if let subtitle {
                 Text(subtitle)
@@ -398,6 +413,33 @@ private struct MatchupTileView: View {
                 }
             }
         }
+    }
+
+    @ViewBuilder
+    private func resultChip(for sideID: String, accent: Color?) -> some View {
+        if matchupPresentation.hasCompleteSides, matchupPresentation.winningSideID == sideID {
+            liveResultChip("Winner", tint: accent ?? palette.foregroundColor)
+        } else if matchupPresentation.hasCompleteSides, matchupPresentation.isTie {
+            liveResultChip("Tie", tint: Color.neutral)
+        }
+    }
+
+    private func liveResultChip(_ title: String, tint: Color) -> some View {
+        Text(title)
+            .fontStyle(kFontName, size: 9, weight: .bold)
+            .foregroundStyle(tint)
+            .padding(.horizontal, 7)
+            .padding(.vertical, 3)
+            .background(
+                Capsule()
+                    .fill(tint.opacity(0.12))
+            )
+            .overlay(
+                Capsule()
+                    .stroke(tint.opacity(0.32), lineWidth: 0.8)
+            )
+            .lineLimit(1)
+            .fixedSize(horizontal: true, vertical: false)
     }
 
     @ViewBuilder

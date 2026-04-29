@@ -159,8 +159,15 @@ struct MatchupResultPresentationBuilder {
                 participants: participants,
                 basis: resolvedBasis
             )
-            let total = row?.total ?? (participants.isPopulated ? 0 : nil)
-            let countingParticipantIDs = row?.countingParticipantIDs ?? participants.map(\.id)
+            let total = row?.total
+            let countingParticipantIDs: [String]
+            if let row {
+                countingParticipantIDs = row.countingParticipantIDs
+            } else if teamScoring.mode == .all || teamScoring.scope == .perHole {
+                countingParticipantIDs = participants.map(\.id)
+            } else {
+                countingParticipantIDs = []
+            }
 
             return MatchupResultPresentation.Side(
                 id: sideID,

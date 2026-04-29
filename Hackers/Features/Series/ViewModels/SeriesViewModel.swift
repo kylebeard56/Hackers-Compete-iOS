@@ -516,8 +516,11 @@ final class SeriesViewModel: ObservableObject, Loggable {
     var hasScheduledRound: Bool { rounds.isPopulated }
     var hasScoringRules: Bool { isLeagueRulesConfirmed(for: series.settings) }
     var hasDefaultCourse: Bool { series.settings.defaultCourse?.isConfigured == true }
+    var isSeriesScoreboardEligible: Bool {
+        SeriesScoreboardEligibility.isEligible(teams: teams)
+    }
     var scoreboardSnapshot: SeriesScoreboardSnapshot? {
-        guard series.settings.showScoreboardTile else { return nil }
+        guard series.settings.showScoreboardTile, isSeriesScoreboardEligible else { return nil }
         return SeriesScoreboardCalculator.snapshot(
             series: series,
             rounds: rounds,
@@ -1253,15 +1256,16 @@ final class SeriesViewModel: ObservableObject, Loggable {
     }
 
     func setScoreboardVisible(_ isVisible: Bool) async {
-        guard series.settings.showScoreboardTile != isVisible else { return }
+        let resolvedVisibility = isSeriesScoreboardEligible ? isVisible : false
+        guard series.settings.showScoreboardTile != resolvedVisibility else { return }
         let previousSettings = series.settings
-        series.settings.showScoreboardTile = isVisible
+        series.settings.showScoreboardTile = resolvedVisibility
         invalidateLeagueRulesConfirmationIfNeeded(previousSettings: previousSettings, newSettings: series.settings)
         series.lastUpdatedAt = .init()
         _ = await FirebaseService.shared.updateSeries(series)
         addEvent(
             "series.scoreboard_visibility_changed",
-            eventProps: seriesTelemetryProps(["visible": isVisible])
+            eventProps: seriesTelemetryProps(["visible": resolvedVisibility])
         )
     }
 
@@ -4171,10 +4175,7 @@ final class SeriesViewModel: ObservableObject, Loggable {
                         )
                     }
             }
-            let normalParticipantCounts = presentation.sides.map { $0.participants.count }
-            let showsResultChip = presentation.mode == .individual
-                ? normalParticipantCounts.allSatisfy { $0 == 1 }
-                : normalParticipantCounts.allSatisfy { $0 == 2 }
+            let showsResultChip = Self.shouldShowMatchupResultChip(for: presentation)
 
             return SeriesMatchupOutcome(
                 id: matchupResult.matchup.id,
@@ -4197,6 +4198,10 @@ final class SeriesViewModel: ObservableObject, Loggable {
 
     nonisolated static func matchupScoreDisplayLabel(for row: ScoringRow, highestWins: Bool) -> String {
         MatchupResultPresentationBuilder.scoreLabel(for: row.total, isPointsFormat: highestWins)
+    }
+
+    nonisolated static func shouldShowMatchupResultChip(for presentation: MatchupResultPresentation) -> Bool {
+        presentation.hasCompleteSides && (presentation.winningSideID != nil || presentation.isTie)
     }
 
     private func expectedMatchupMode(for snapshot: RoundSnapshot) -> MatchupMode {

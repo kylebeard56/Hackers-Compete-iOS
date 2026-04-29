@@ -44,17 +44,19 @@ struct SeriesLeaderboardView: View {
             )
             settingsRow(label: "Handicaps", value: viewModel.series.handicapConfig.mode.displayName)
             settingsRow(label: "Teams", value: viewModel.usesTeams ? "Enabled" : "Off")
-            Toggle(isOn: Binding(
-                get: { viewModel.series.settings.showScoreboardTile },
-                set: { value in
-                    Task { await viewModel.setScoreboardVisible(value) }
+            if viewModel.isSeriesScoreboardEligible {
+                Toggle(isOn: Binding(
+                    get: { viewModel.series.settings.showScoreboardTile },
+                    set: { value in
+                        Task { await viewModel.setScoreboardVisible(value) }
+                    }
+                )) {
+                    Text("Scoreboard")
+                        .fontStyle(kFontName, size: 15, weight: .semibold)
+                        .foregroundStyle(palette.foregroundColor)
                 }
-            )) {
-                Text("Scoreboard")
-                    .fontStyle(kFontName, size: 15, weight: .semibold)
-                    .foregroundStyle(palette.foregroundColor)
+                .tint(Color.accentGreen)
             }
-            .tint(Color.accentGreen)
 
             if let onManageLeagueSettings {
                 Button {

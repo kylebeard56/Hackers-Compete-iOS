@@ -2,6 +2,25 @@
 import XCTest
 
 final class SeriesScoreboardCalculatorTests: XCTestCase {
+    func testScoreboardEligibilityRequiresExactlyTwoTeams() {
+        XCTAssertFalse(SeriesScoreboardEligibility.isEligible(teams: []))
+        XCTAssertFalse(SeriesScoreboardEligibility.isEligible(teams: [
+            SeriesTeam(id: "one", name: "One", color: "red", index: 0),
+        ]))
+        XCTAssertTrue(SeriesScoreboardEligibility.isEligible(teams: [
+            SeriesTeam(id: "red", name: "Red", color: "red", index: 0),
+            SeriesTeam(id: "blue", name: "Blue", color: "blue", index: 1),
+        ]))
+        XCTAssertFalse(SeriesScoreboardEligibility.isEligible(teams: [
+            SeriesTeam(id: "one", name: "One", color: "red", index: 0),
+            SeriesTeam(id: "two", name: "Two", color: "blue", index: 1),
+            SeriesTeam(id: "three", name: "Three", color: "green", index: 2),
+        ]))
+        XCTAssertFalse(SeriesScoreboardEligibility.isEligible(teams: (0..<10).map {
+            SeriesTeam(id: "team_\($0)", name: "Team \($0)", color: TeamColor.teamValue(for: $0).0.rawValue, index: $0)
+        }))
+    }
+
     func testRTJStyleTripDerivesSixHundredFortyAvailablePoints() {
         let teams = [
             SeriesTeam(id: "red", name: "Red", color: "red", index: 0, isLocked: true),
