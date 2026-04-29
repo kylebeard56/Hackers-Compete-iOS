@@ -393,7 +393,7 @@ private extension SeriesMatchupOutcome.Player {
     }
 }
 
-private enum ScoreCorrectionEditorMode: String, CaseIterable {
+enum ScoreCorrectionEditorMode: String, CaseIterable {
     case holeByHole = "Hole by hole"
     case totalGross = "Total gross"
 }
@@ -405,7 +405,8 @@ struct SeriesRoundScoreCorrectionSheet: View {
     @ObservedObject var viewModel: SeriesViewModel
     let seriesRound: SeriesRound
     /// When set (e.g. from handicap history), selects that series member’s participant row after load.
-    var initialSeriesMemberID: String? = nil
+    let initialSeriesMemberID: String?
+    let initialParticipantID: String?
 
     @State private var context: SeriesRoundCorrectionContext?
     @State private var selectedParticipantID: String = ""
@@ -415,6 +416,20 @@ struct SeriesRoundScoreCorrectionSheet: View {
     @State private var grossTargetText: String = ""
 
     private var palette: DesignPalette { .init(theme: .primary, scheme: colorScheme) }
+
+    init(
+        viewModel: SeriesViewModel,
+        seriesRound: SeriesRound,
+        initialSeriesMemberID: String? = nil,
+        initialParticipantID: String? = nil,
+        initialEditorMode: ScoreCorrectionEditorMode = .holeByHole
+    ) {
+        self.viewModel = viewModel
+        self.seriesRound = seriesRound
+        self.initialSeriesMemberID = initialSeriesMemberID
+        self.initialParticipantID = initialParticipantID
+        _editorMode = State(initialValue: initialEditorMode)
+    }
 
     var body: some View {
         VStack(spacing: 0) {
@@ -459,7 +474,10 @@ struct SeriesRoundScoreCorrectionSheet: View {
         .task {
             guard context == nil else { return }
             context = await viewModel.loadCorrectionContext(for: seriesRound)
-            if let ctx = context, let mid = initialSeriesMemberID,
+            if let ctx = context, let initialParticipantID,
+               ctx.snapshot.participants.contains(where: { $0.id == initialParticipantID }) {
+                selectedParticipantID = initialParticipantID
+            } else if let ctx = context, let mid = initialSeriesMemberID,
                let pid = viewModel.preferredRoundParticipantID(seriesMemberID: mid, snapshot: ctx.snapshot) {
                 selectedParticipantID = pid
             } else {
@@ -1707,10 +1725,17 @@ struct SeriesCompletionReviewSheet: View {
     @State private var scorecardOverlayLoadComplete = false
     @State private var scorecardOverlayScale: CGFloat = 1
     @State private var scorecardOverlayOffset: CGSize = .zero
+    @State private var scoreCorrectionLaunch: ScoreCorrectionLaunch?
 
     private var palette: DesignPalette { .init(theme: .glass, scheme: colorScheme) }
 
     private var linked: Round? { viewModel.linkedRound(for: seriesRound) }
+
+    private struct ScoreCorrectionLaunch: Identifiable {
+        let participantID: String
+
+        var id: String { participantID }
+    }
 
     private var completedIDs: Set<String> {
         Set(linked?.completedPlayers.map(\.playerID) ?? [])
@@ -1960,6 +1985,16 @@ struct SeriesCompletionReviewSheet: View {
             reviewSnapshot = await viewModel.loadLinkedRoundSnapshot(for: seriesRound)
             isLoadingReviewSnapshot = false
         }
+        .sheet(item: $scoreCorrectionLaunch) { launch in
+            SeriesRoundScoreCorrectionSheet(
+                viewModel: viewModel,
+                seriesRound: seriesRound,
+                initialParticipantID: launch.participantID,
+                initialEditorMode: .totalGross
+            )
+            .presentationDetents([.large])
+            .presentationDragIndicator(.visible)
+        }
     }
 
     private var scoreReviewSkeletonRow: some View {
@@ -2048,6 +2083,23 @@ struct SeriesCompletionReviewSheet: View {
                         }
                         .buttonStyle(.plain)
                         .accessibilityLabel("View scorecard photo")
+                    }
+
+                    if viewModel.isCommissioner,
+                       let participantID = reviewParticipantsByPlayerID[playerID]?.id {
+                        Button {
+                            Haptics.fire(.light)
+                            scoreCorrectionLaunch = ScoreCorrectionLaunch(participantID: participantID)
+                        } label: {
+                            Chip(
+                                text: "Set total",
+                                size: .tiny,
+                                foreground: palette.foregroundColor,
+                                background: palette.whiteGlassButtonColor
+                            )
+                        }
+                        .buttonStyle(.plain)
+                        .accessibilityLabel("Set total score for \(name)")
                     }
                 }
 

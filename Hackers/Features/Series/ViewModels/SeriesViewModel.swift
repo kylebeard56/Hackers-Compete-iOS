@@ -658,6 +658,14 @@ final class SeriesViewModel: ObservableObject, Loggable {
         return linked.players.allSatisfy { completedIDs.contains($0) }
     }
 
+    /// Returns `true` once a live linked round has at least one completed player available for score review.
+    func canReviewScores(for seriesRound: SeriesRound) -> Bool {
+        guard effectiveStatus(for: seriesRound) == .live,
+              let roundID = seriesRound.roundID,
+              let linked = linkedRounds[roundID] else { return false }
+        return linked.completedPlayers.contains { $0.playerID.isPopulated }
+    }
+
     /// Linked round for a given series round, if available.
     func linkedRound(for seriesRound: SeriesRound) -> Round? {
         guard let roundID = seriesRound.roundID else { return nil }

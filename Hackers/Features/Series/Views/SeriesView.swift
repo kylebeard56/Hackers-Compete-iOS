@@ -1348,7 +1348,7 @@ struct SeriesView: View {
                         )
                     }
                 }
-            } else if status == .lobby || status == .live {
+            } else if status == .lobby {
                 HStack(alignment: .center, spacing: 10) {
                     if viewModel.isRSVPEligible(for: round) {
                         let rsvp = viewModel.currentAttendanceStatus(for: round.id)
@@ -1369,7 +1369,28 @@ struct SeriesView: View {
                             onTap: { roundToAttendance = round }
                         )
                     }
-                    if viewModel.isCommissioner, round.roundID != nil {
+                    if round.roundID != nil {
+                        PrimaryButton(
+                            appearance: .fill,
+                            title: viewModel.openLinkedRoundButtonTitle(for: round),
+                            labelColor: .white,
+                            buttonColor: viewModel.openLinkedRoundButtonColor(for: round),
+                            theme: palette.theme,
+                            height: SeriesRoundTileButtonMetrics.height,
+                            fontSize: SeriesRoundTileButtonMetrics.fontSize,
+                            isDisabled: .constant(false),
+                            isLoading: .constant(false),
+                            onTap: { openRound(round) }
+                        )
+                        .frame(maxWidth: .infinity, alignment: .trailing)
+                    } else if viewModel.isCommissioner {
+                        commissionerActionButton(for: round, status: status)
+                            .frame(maxWidth: .infinity, alignment: .trailing)
+                    }
+                }
+            } else if status == .live {
+                HStack(alignment: .center, spacing: 10) {
+                    if viewModel.isCommissioner, viewModel.canReviewScores(for: round) {
                         PrimaryButton(
                             appearance: .fill,
                             title: "Review scores",
@@ -1384,26 +1405,7 @@ struct SeriesView: View {
                             onTap: { roundForCompletionReview = round }
                         )
                     }
-                    if viewModel.isCommissioner {
-                        if round.roundID != nil {
-                            PrimaryButton(
-                                appearance: .fill,
-                                title: viewModel.openLinkedRoundButtonTitle(for: round),
-                                labelColor: .white,
-                                buttonColor: viewModel.openLinkedRoundButtonColor(for: round),
-                                theme: palette.theme,
-                                height: SeriesRoundTileButtonMetrics.height,
-                                fontSize: SeriesRoundTileButtonMetrics.fontSize,
-                                isDisabled: .constant(false),
-                                isLoading: .constant(false),
-                                onTap: { openRound(round) }
-                            )
-                            .frame(maxWidth: .infinity, alignment: .trailing)
-                        } else {
-                            commissionerActionButton(for: round, status: status)
-                                .frame(maxWidth: .infinity, alignment: .trailing)
-                        }
-                    } else if round.roundID != nil {
+                    if round.roundID != nil {
                         PrimaryButton(
                             appearance: .fill,
                             title: viewModel.openLinkedRoundButtonTitle(for: round),
@@ -1416,6 +1418,7 @@ struct SeriesView: View {
                             isLoading: .false,
                             onTap: { openRound(round) }
                         )
+                        .frame(maxWidth: .infinity, alignment: .trailing)
                     }
                 }
             } else if status == .complete, round.roundID != nil {

@@ -227,4 +227,54 @@ struct SeriesHandicapHistoryTests {
         #expect(byHole[2] == 4)
         #expect(byHole[3] == 7)
     }
+
+    @Test("Series round score review CTA only unlocks for live rounds with a completed player")
+    func scoreReviewGateRequiresLiveRoundWithCompletedPlayer() {
+        let viewModel = SeriesViewModel()
+        let completed = CompletedPlayer(
+            playerID: "player1",
+            playerDisplayName: nil,
+            completedAt: .init(),
+            type: .signedScorecard,
+            scorecardStorageID: nil
+        )
+
+        let planned = SeriesRound(id: "planned", status: .planned, parentID: "series1")
+        #expect(viewModel.canReviewScores(for: planned) == false)
+
+        let lobby = SeriesRound(id: "lobby", status: .lobby, roundID: "round_lobby", parentID: "series1")
+        viewModel.linkedRounds["round_lobby"] = Round(
+            id: "round_lobby",
+            status: .lobby,
+            players: ["player1"],
+            completedPlayers: [completed]
+        )
+        #expect(viewModel.canReviewScores(for: lobby) == false)
+
+        let live = SeriesRound(id: "live", status: .live, roundID: "round_live", parentID: "series1")
+        viewModel.linkedRounds["round_live"] = Round(
+            id: "round_live",
+            status: .live,
+            players: ["player1"],
+            completedPlayers: []
+        )
+        #expect(viewModel.canReviewScores(for: live) == false)
+
+        viewModel.linkedRounds["round_live"] = Round(
+            id: "round_live",
+            status: .live,
+            players: ["player1"],
+            completedPlayers: [completed]
+        )
+        #expect(viewModel.canReviewScores(for: live) == true)
+
+        let complete = SeriesRound(id: "complete", status: .complete, roundID: "round_complete", parentID: "series1")
+        viewModel.linkedRounds["round_complete"] = Round(
+            id: "round_complete",
+            status: .complete,
+            players: ["player1"],
+            completedPlayers: [completed]
+        )
+        #expect(viewModel.canReviewScores(for: complete) == false)
+    }
 }
