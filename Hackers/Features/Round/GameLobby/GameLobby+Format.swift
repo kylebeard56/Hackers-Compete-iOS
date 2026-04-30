@@ -391,76 +391,64 @@ extension GameLobby {
                     }
                     .buttonStyle(.plain)
                 } else {
-                    VStack(alignment: .trailing, spacing: 6) {
-                        HStack(spacing: 6) {
-                            Menu {
-                                countScoresButtons
-                            } label: {
-                                formatChipLabel(teamScoringModeTitle, minWidth: 76)
-                            }
-                            .buttonStyle(.plain)
-
-                            Text("per")
-                                .fontStyle(kFontName, size: 12, weight: .regular)
-                                .foregroundStyle(Color.neutral)
-
-                            Menu {
-                                ForEach(AggregationScope.allCases, id: \.self) { scope in
-                                    Button {
-                                        Haptics.fire(.light)
-                                        Task { await roundSession.setTeamScoringScope(scope) }
-                                    } label: {
-                                        HStack {
-                                            Text(scope == .perRound ? "Round" : "Hole")
-                                            if snapshot.configuration.teamScoring.scope == scope {
-                                                Icon(name: "f00c", size: 12, weight: .solid)
-                                            }
-                                        }
-                                    }
-                                }
-                            } label: {
-                                formatChipLabel(teamScoringScopeTitle, minWidth: 76)
-                            }
-                            .buttonStyle(.plain)
+                    VStack(alignment: .trailing, spacing: 8) {
+                        Menu {
+                            countScoresButtons
+                        } label: {
+                            formatChipLabel(teamScoringModeTitle, minWidth: 110)
                         }
+                        .buttonStyle(.plain)
 
-                        HStack(spacing: 6) {
-                            Text("from")
-                                .fontStyle(kFontName, size: 12, weight: .regular)
-                                .foregroundStyle(Color.neutral)
-
-                            Menu {
+                        Menu {
+                            ForEach(AggregationScope.allCases, id: \.self) { scope in
                                 Button {
                                     Haptics.fire(.light)
-                                    Task { await roundSession.setSelectionDomain(nil) }
+                                    Task { await roundSession.setTeamScoringScope(scope) }
                                 } label: {
                                     HStack {
-                                        Text("Auto")
-                                        if snapshot.configuration.selectionDomain == nil {
+                                        Text(scope == .perRound ? "Round" : "Hole")
+                                        if snapshot.configuration.teamScoring.scope == scope {
                                             Icon(name: "f00c", size: 12, weight: .solid)
                                         }
                                     }
                                 }
-                                ForEach(ScoringSelectionDomain.allCases, id: \.self) { domain in
-                                    Button {
-                                        Haptics.fire(.light)
-                                        Task { await roundSession.setSelectionDomain(domain) }
-                                    } label: {
-                                        HStack {
-                                            Text(selectionDomainTitle(for: domain))
-                                            if snapshot.configuration.selectionDomain == domain {
-                                                Icon(name: "f00c", size: 12, weight: .solid)
-                                            }
+                            }
+                        } label: {
+                            formatChipLabel(teamScoringScopeChipTitle, minWidth: 110)
+                        }
+                        .buttonStyle(.plain)
+
+                        Menu {
+                            Button {
+                                Haptics.fire(.light)
+                                Task { await roundSession.setSelectionDomain(nil) }
+                            } label: {
+                                HStack {
+                                    Text("Auto")
+                                    if snapshot.configuration.selectionDomain == nil {
+                                        Icon(name: "f00c", size: 12, weight: .solid)
+                                    }
+                                }
+                            }
+                            ForEach(ScoringSelectionDomain.allCases, id: \.self) { domain in
+                                Button {
+                                    Haptics.fire(.light)
+                                    Task { await roundSession.setSelectionDomain(domain) }
+                                } label: {
+                                    HStack {
+                                        Text(selectionDomainTitle(for: domain))
+                                        if snapshot.configuration.selectionDomain == domain {
+                                            Icon(name: "f00c", size: 12, weight: .solid)
                                         }
                                     }
                                 }
-                            } label: {
-                                formatChipLabel(selectionDomainMenuTitle, minWidth: 122)
                             }
-                            .buttonStyle(.plain)
+                        } label: {
+                            formatChipLabel(selectionDomainChipTitle, minWidth: 136)
                         }
+                        .buttonStyle(.plain)
                     }
-                    .frame(minWidth: 178, alignment: .trailing)
+                    .frame(minWidth: 136, alignment: .trailing)
                 }
             }
 
@@ -626,8 +614,8 @@ extension GameLobby {
         }
     }
 
-    private var teamScoringScopeTitle: String {
-        snapshot.configuration.teamScoring.scope == .perRound ? "Round" : "Hole"
+    private var teamScoringScopeChipTitle: String {
+        snapshot.configuration.teamScoring.scope == .perRound ? "Per round" : "Per hole"
     }
 
     private var teamScoringSummaryText: String? {
@@ -641,9 +629,20 @@ extension GameLobby {
         return "\(qualifier) \(scoring.count) \(scope) from \(resolvedSelectionDomainSummary) count toward the score."
     }
 
-    private var selectionDomainMenuTitle: String {
-        guard let domain = snapshot.configuration.selectionDomain else { return "Auto" }
-        return selectionDomainTitle(for: domain)
+    private var selectionDomainChipTitle: String {
+        guard let domain = snapshot.configuration.selectionDomain else { return "From auto" }
+        switch domain {
+        case .participant:
+            return "From each player"
+        case .team:
+            return "From each team"
+        case .partnership:
+            return "From each pair"
+        case .teeGroup:
+            return "From each tee group"
+        case .matchupSide:
+            return "From each matchup side"
+        }
     }
 
     private var resolvedSelectionDomainSummary: String {

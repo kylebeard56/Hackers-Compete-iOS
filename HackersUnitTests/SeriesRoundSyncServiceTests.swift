@@ -200,8 +200,61 @@ final class SeriesRoundSyncServiceTests: XCTestCase {
         XCTAssertEqual(updated.matchups?.first?.scoreOwnerIDs, ["pair_red", "pair_blue"])
     }
 
+    func testBuildUpdatedSegment_matchupsOnlyUsesExistingRoundMatchupMode() {
+        let context = pairMatchupContext()
+        let existingSegment = RoundSegment(
+            id: "seg1",
+            gameFormat: context.seriesRound.roundConfig.legacyGameFormat,
+            scoringUnits: [
+                ScoringUnit(id: "p1", owner: .participant, ownerIDs: ["p1"]),
+                ScoringUnit(id: "p2", owner: .participant, ownerIDs: ["p2"]),
+            ],
+            matchups: [],
+            competitionScope: .matchup,
+            parentID: "round1"
+        )
+        let existingRoundConfiguration = RoundConfiguration(
+            primaryFormat: context.seriesRound.roundConfig.legacyGameFormat,
+            competitionScope: .matchup,
+            scoreOwnerScope: .individual
+        )
+        let scoringSeriesRound = SeriesRoundSyncPlanning.scoringSeriesRoundForExistingRound(
+            context.seriesRound,
+            roundConfiguration: existingRoundConfiguration,
+            existingSegment: existingSegment
+        )
+
+        let updated = SeriesRoundSyncPlanning.buildUpdatedSegment(
+            series: context.series,
+            seriesRound: context.seriesRound,
+            scoringSeriesRound: scoringSeriesRound,
+            courseSegment: testCourseSegment(),
+            participants: context.participants,
+            scoringGroups: context.scoringGroups,
+            existingSegment: existingSegment,
+            teams: context.teams,
+            pods: [],
+            participatingMembers: context.members,
+            teamLinks: context.teamLinks,
+            updateFormat: false,
+            updateScoringUnits: false,
+            updateMatchups: true
+        )
+
+        XCTAssertEqual(scoringSeriesRound.roundConfig.scoreOwnerScope, .individual)
+        XCTAssertEqual(scoringSeriesRound.roundConfig.matchupMode, .teamVsTeam)
+        XCTAssertEqual(updated.matchups?.count, 1)
+        XCTAssertEqual(updated.matchups?.first?.mode, .team)
+        XCTAssertEqual(updated.matchups?.first?.teamIDs, ["round_red", "round_blue"])
+        XCTAssertNil(updated.matchups?.first?.scoreOwnerIDs)
+    }
+
     func testScoringSeriesRoundForExistingRoundCopiesSelectionDomain() {
         var roundConfiguration = RoundConfiguration(selectionDomain: .matchupSide)
+        roundConfiguration.competitionScope = .matchup
+        var teamFormat = GameFormat.strokePlay
+        teamFormat.configuration.requiresTeams = true
+        roundConfiguration.primaryFormat = teamFormat
         roundConfiguration.teamScoring = .init(mode: .bestN, count: 1, scope: .perHole)
         let seriesRound = SeriesRound(id: "sr1", parentID: "series1")
         let existingSegment = RoundSegment(id: "seg1", templateID: FormatTemplateRegistry.strokePlay.id)
@@ -214,6 +267,7 @@ final class SeriesRoundSyncServiceTests: XCTestCase {
 
         XCTAssertEqual(updated.roundConfig.selectionDomain, .matchupSide)
         XCTAssertEqual(updated.roundConfig.teamScoring, roundConfiguration.teamScoring)
+        XCTAssertEqual(updated.roundConfig.matchupMode, .teamVsTeam)
     }
 
     @MainActor

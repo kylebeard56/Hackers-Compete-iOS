@@ -892,10 +892,7 @@ extension RoundSession {
     ) -> [TeamMatchup] {
         guard snapshot.configuration.resolvedCompetitionScope == .matchup else { return [] }
 
-        let expectedMode: MatchupMode =
-            snapshot.configuration.scoreOwnerScope == .individual
-            ? (snapshot.requiresTeams ? .team : .individual)
-            : .scoreOwner
+        let expectedMode = snapshot.expectedMatchupMode
 
         let otherModes = current.filter { ($0.mode ?? .team) != expectedMode }
         let currentModeMatchups = current.filter { ($0.mode ?? .team) == expectedMode }

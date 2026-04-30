@@ -116,8 +116,11 @@ extension RoundSession {
             }
         }
 
-        // 3. If competitionScope is matchup, require valid matchups for the current mode
-        if snapshot.configuration.scoreOwnerScope != .individual {
+        let allMatchups = snapshot.roundSegment?.matchups ?? []
+        let hasExplicitScoreOwnerMatchups = allMatchups.contains { ($0.mode ?? .team) == .scoreOwner }
+
+        // 3. Validate score-owner group setup whenever the round config or explicit matchups depend on it.
+        if snapshot.configuration.scoreOwnerScope != .individual || hasExplicitScoreOwnerMatchups {
             let participantIDs = Set(snapshot.participants.map(\.id))
             let participantByID = Dictionary(uniqueKeysWithValues: snapshot.participants.map { ($0.id, $0) })
 
@@ -163,11 +166,7 @@ extension RoundSession {
         }
 
         if snapshot.configuration.resolvedCompetitionScope == .matchup {
-            let allMatchups = snapshot.roundSegment?.matchups ?? []
-            let currentMode: MatchupMode =
-                snapshot.configuration.scoreOwnerScope == .individual
-                ? (snapshot.requiresTeams ? .team : .individual)
-                : .scoreOwner
+            let currentMode = snapshot.expectedMatchupMode
             let matchupsForMode = allMatchups.filter { ($0.mode ?? .team) == currentMode }
             let validMatchups = matchupsForMode.filter(\.isValid)
             let hasSingleSidedMatchup = matchupsForMode.contains { $0.pairingIDs().count == 1 }

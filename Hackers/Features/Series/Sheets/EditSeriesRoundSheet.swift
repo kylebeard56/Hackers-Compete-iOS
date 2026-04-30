@@ -531,111 +531,67 @@ struct EditSeriesRoundSheet: View {
                     title: "Count scores",
                     subtitle: "Choose which scores count and how they're computed for leaderboard."
                 ) {
-                    VStack(alignment: .leading, spacing: 8) {
-                        HStack(spacing: 10) {
+                    VStack(alignment: .trailing, spacing: 8) {
+                        Menu {
+                            countScoresMenuButtons
+                        } label: {
+                            menuChipLabel(teamScoringModeLabel)
+                        }
+                        .buttonStyle(.plain)
+
+                        if teamScoring.mode == .bestN || teamScoring.mode == .worstN {
+                            Text("per")
+                                .fontStyle(kFontName, size: 15, weight: .regular)
+                                .foregroundStyle(Color.secondary)
+                                .frame(maxWidth: .infinity, alignment: .trailing)
+
                             Menu {
-                                Button {
-                                    teamScoring.mode = .all
-                                } label: {
-                                    HStack {
-                                        Text("All")
-                                        if teamScoring.mode == .all { Image(systemName: "checkmark") }
-                                    }
-                                }
-                                Button {
-                                    teamScoring.mode = .bestN
-                                    if teamScoring.count < 1 || teamScoring.count > 4 { teamScoring.count = 2 }
-                                } label: {
-                                    HStack {
-                                        Text("Best")
-                                        if teamScoring.mode == .bestN { Image(systemName: "checkmark") }
-                                    }
-                                }
-                                Button {
-                                    teamScoring.mode = .worstN
-                                    if teamScoring.count < 1 || teamScoring.count > 4 { teamScoring.count = 2 }
-                                } label: {
-                                    HStack {
-                                        Text("Worst")
-                                        if teamScoring.mode == .worstN { Image(systemName: "checkmark") }
+                                ForEach(AggregationScope.allCases, id: \.self) { scope in
+                                    Button {
+                                        teamScoring.scope = scope
+                                    } label: {
+                                        HStack {
+                                            Text(scope == .perRound ? "Round" : "Hole")
+                                            if teamScoring.scope == scope { Image(systemName: "checkmark") }
+                                        }
                                     }
                                 }
                             } label: {
-                                menuChipLabel(teamScoringKindLabel)
+                                menuChipLabel(teamScoring.scope == .perRound ? "Round" : "Hole")
                             }
                             .buttonStyle(.plain)
 
-                            if teamScoring.mode == .bestN || teamScoring.mode == .worstN {
-                                Menu {
-                                    ForEach(1...4, id: \.self) { n in
-                                        Button {
-                                            teamScoring.count = n
-                                        } label: {
-                                            HStack {
-                                                Text("\(n)")
-                                                if teamScoring.count == n { Image(systemName: "checkmark") }
-                                            }
-                                        }
-                                    }
+                            Text("from")
+                                .fontStyle(kFontName, size: 15, weight: .regular)
+                                .foregroundStyle(Color.secondary)
+                                .frame(maxWidth: .infinity, alignment: .trailing)
+
+                            Menu {
+                                Button {
+                                    selectionDomain = nil
                                 } label: {
-                                    menuChipLabel("\(teamScoring.count)")
-                                }
-                                .buttonStyle(.plain)
-
-                                Text("per")
-                                    .fontStyle(kFontName, size: 15, weight: .regular)
-                                    .foregroundStyle(Color.secondary)
-
-                                Menu {
-                                    ForEach(AggregationScope.allCases, id: \.self) { scope in
-                                        Button {
-                                            teamScoring.scope = scope
-                                        } label: {
-                                            HStack {
-                                                Text(scope == .perRound ? "Round" : "Hole")
-                                                if teamScoring.scope == scope { Image(systemName: "checkmark") }
-                                            }
-                                        }
+                                    HStack {
+                                        Text("Auto")
+                                        if selectionDomain == nil { Image(systemName: "checkmark") }
                                     }
-                                } label: {
-                                    menuChipLabel(teamScoring.scope == .perRound ? "Round" : "Hole")
                                 }
-                                .buttonStyle(.plain)
-                            }
-                        }
-
-                        if teamScoring.mode == .bestN || teamScoring.mode == .worstN {
-                            HStack(spacing: 10) {
-                                Text("from")
-                                    .fontStyle(kFontName, size: 15, weight: .regular)
-                                    .foregroundStyle(Color.secondary)
-
-                                Menu {
+                                ForEach(ScoringSelectionDomain.allCases, id: \.self) { domain in
                                     Button {
-                                        selectionDomain = nil
+                                        selectionDomain = domain
                                     } label: {
                                         HStack {
-                                            Text("Auto")
-                                            if selectionDomain == nil { Image(systemName: "checkmark") }
+                                            Text(selectionDomainTitle(for: domain))
+                                            if selectionDomain == domain { Image(systemName: "checkmark") }
                                         }
                                     }
-                                    ForEach(ScoringSelectionDomain.allCases, id: \.self) { domain in
-                                        Button {
-                                            selectionDomain = domain
-                                        } label: {
-                                            HStack {
-                                                Text(selectionDomainTitle(for: domain))
-                                                if selectionDomain == domain { Image(systemName: "checkmark") }
-                                            }
-                                        }
-                                    }
-                                } label: {
-                                    menuChipLabel(selectionDomainLabel)
                                 }
-                                .buttonStyle(.plain)
+                            } label: {
+                                menuChipLabel(selectionDomainLabel)
                             }
+                            .buttonStyle(.plain)
                         }
                     }
+                    .frame(maxWidth: .infinity, alignment: .trailing)
                 }
             }
 
@@ -2436,6 +2392,50 @@ struct EditSeriesRoundSheet: View {
             return "Best \(teamScoring.count)"
         case .worstN:
             return "Worst \(teamScoring.count)"
+        }
+    }
+
+    @ViewBuilder
+    private var countScoresMenuButtons: some View {
+        Button {
+            teamScoring.mode = .all
+        } label: {
+            HStack {
+                Text("All scores")
+                if teamScoring.mode == .all { Image(systemName: "checkmark") }
+            }
+        }
+
+        Divider()
+
+        ForEach(1...4, id: \.self) { count in
+            Button {
+                teamScoring.mode = .bestN
+                teamScoring.count = count
+            } label: {
+                HStack {
+                    Text("Best \(count)")
+                    if teamScoring.mode == .bestN, teamScoring.count == count {
+                        Image(systemName: "checkmark")
+                    }
+                }
+            }
+        }
+
+        Divider()
+
+        ForEach(1...4, id: \.self) { count in
+            Button {
+                teamScoring.mode = .worstN
+                teamScoring.count = count
+            } label: {
+                HStack {
+                    Text("Worst \(count)")
+                    if teamScoring.mode == .worstN, teamScoring.count == count {
+                        Image(systemName: "checkmark")
+                    }
+                }
+            }
         }
     }
 

@@ -720,6 +720,7 @@ enum SeriesRoundSyncPlanning {
             )
         }
         if updateMatchups {
+            let matchupSeriesRound = scoringSeriesRound ?? seriesRound
             let participantIDs = Dictionary(
                 uniqueKeysWithValues: participants.compactMap { p -> (String, String)? in
                     guard let m = p.seriesMemberID else { return nil }
@@ -727,7 +728,7 @@ enum SeriesRoundSyncPlanning {
                 }
             )
             let resolvedMatchups = SeriesRoundCreationMapping.buildRoundMatchups(
-                seriesRound: seriesRound,
+                seriesRound: matchupSeriesRound,
                 matchupPlans: resolvedPlan.matchupPlans,
                 teamMappings: teamLinks,
                 participantIDsBySeriesMemberID: participantIDs,
@@ -761,7 +762,35 @@ enum SeriesRoundSyncPlanning {
         config.selectionDomain = roundConfiguration.selectionDomain
         config.sequentialTeeStartsEnabled = roundConfiguration.sequentialTeeStartsEnabled
         config.sharedScoreHandicapConfig = roundConfiguration.sharedScoreHandicapConfig
+        config.matchupMode = seriesMatchupMode(
+            from: roundConfiguration,
+            segment: existingSegment,
+            fallback: config.matchupMode
+        )
         copy.roundConfig = config
         return copy
+    }
+
+    static func seriesMatchupMode(
+        from configuration: RoundConfiguration,
+        segment: RoundSegment?,
+        fallback: SeriesMatchupMode
+    ) -> SeriesMatchupMode {
+        guard configuration.resolvedCompetitionScope == .matchup else { return .field }
+
+        let matchups = segment?.matchups ?? []
+        if matchups.contains(where: { ($0.mode ?? .team) == .scoreOwner && ($0.scoreOwnerScope ?? configuration.scoreOwnerScope) == .partnership }) {
+            return .teeGroupPartnerships
+        }
+        if matchups.contains(where: { ($0.mode ?? .team) == .team }) {
+            return .teamVsTeam
+        }
+        if matchups.contains(where: { ($0.mode ?? .team) == .individual }) {
+            return .individualVsIndividual
+        }
+        if configuration.scoreOwnerScope == .partnership && fallback == .teeGroupPartnerships {
+            return .teeGroupPartnerships
+        }
+        return configuration.primaryFormat.configuration.requiresTeams ? .teamVsTeam : .individualVsIndividual
     }
 }
