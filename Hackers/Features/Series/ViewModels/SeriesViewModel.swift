@@ -4148,6 +4148,7 @@ final class SeriesViewModel: ObservableObject, Loggable {
         guard result.matchupResults.isPopulated else { return [] }
 
         let highestWins = result.template.leaderboardSort == .highestWins
+        let participantSortBasis: ScoreBasis = snapshot.configuration.useHandicaps ? .net : .gross
         return result.matchupResults.enumerated().compactMap { index, matchupResult in
             guard matchupResult.matchup.isValid else { return nil }
             let presentation = MatchupResultPresentationBuilder.build(
@@ -4166,23 +4167,33 @@ final class SeriesViewModel: ObservableObject, Loggable {
             }
             guard sides.count == 2 else { return nil }
 
-            let players = presentation.sides.flatMap { side -> [SeriesMatchupOutcome.Player] in
-                side.participants
-                    .sorted { matchupParticipantSort(lhs: $0, rhs: $1, highestWins: highestWins, snapshot: snapshot, segment: segment) }
-                    .map { participant in
-                        SeriesMatchupOutcome.Player(
-                            id: "\(side.id)_\(participant.id)",
-                            ownerID: side.id,
-                            name: participant.name.fullName,
-                            handicap: "\(participant.adjustedHandicap)",
-                            gross: participantScoreLabel(participantID: participant.id, snapshot: snapshot, segment: segment, basis: .gross),
-                            net: snapshot.configuration.useHandicaps ? participantScoreLabel(participantID: participant.id, snapshot: snapshot, segment: segment, basis: .net) : nil,
-                            scoreCounts: side.isParticipantActive(participant),
-                            accentColor: participant.teamID.flatMap { teamID in snapshot.teams.first(where: { $0.id == teamID })?.displaySwatchColor }
-                                ?? side.accentColor
-                        )
-                    }
+            let playerItems = presentation.sides.flatMap { side in
+                side.participants.map { (participant: $0, side: side) }
             }
+            let players = playerItems
+                .sorted {
+                    matchupParticipantSort(
+                        lhs: $0.participant,
+                        rhs: $1.participant,
+                        highestWins: highestWins,
+                        sortBasis: participantSortBasis,
+                        snapshot: snapshot,
+                        segment: segment
+                    )
+                }
+                .map { item in
+                    SeriesMatchupOutcome.Player(
+                        id: "\(item.side.id)_\(item.participant.id)",
+                        ownerID: item.side.id,
+                        name: item.participant.name.fullName,
+                        handicap: "\(item.participant.adjustedHandicap)",
+                        gross: participantScoreLabel(participantID: item.participant.id, snapshot: snapshot, segment: segment, basis: .gross),
+                        net: snapshot.configuration.useHandicaps ? participantScoreLabel(participantID: item.participant.id, snapshot: snapshot, segment: segment, basis: .net) : nil,
+                        scoreCounts: item.side.isParticipantActive(item.participant),
+                        accentColor: item.participant.teamID.flatMap { teamID in snapshot.teams.first(where: { $0.id == teamID })?.displaySwatchColor }
+                            ?? item.side.accentColor
+                    )
+                }
             let showsResultChip = Self.shouldShowMatchupResultChip(for: presentation)
 
             return SeriesMatchupOutcome(
@@ -4380,15 +4391,24 @@ final class SeriesViewModel: ObservableObject, Loggable {
         lhs: RoundParticipant,
         rhs: RoundParticipant,
         highestWins: Bool,
+        sortBasis: ScoreBasis,
         snapshot: RoundSnapshot,
         segment: RoundSegment
     ) -> Bool {
-        let lhsScore = participantScoreToPar(participantID: lhs.id, snapshot: snapshot, segment: segment, basis: .gross) ?? 0
-        let rhsScore = participantScoreToPar(participantID: rhs.id, snapshot: snapshot, segment: segment, basis: .gross) ?? 0
+        let basis: ScoreBasis = highestWins ? .gross : sortBasis
+        let lhsScore = participantScoreToPar(participantID: lhs.id, snapshot: snapshot, segment: segment, basis: basis) ?? 0
+        let rhsScore = participantScoreToPar(participantID: rhs.id, snapshot: snapshot, segment: segment, basis: basis) ?? 0
         if lhsScore != rhsScore {
             return highestWins ? lhsScore > rhsScore : lhsScore < rhsScore
         }
-        return (lhs.teeOrder ?? Int.max) < (rhs.teeOrder ?? Int.max)
+        if (lhs.teeOrder ?? Int.max) != (rhs.teeOrder ?? Int.max) {
+            return (lhs.teeOrder ?? Int.max) < (rhs.teeOrder ?? Int.max)
+        }
+        let nameComparison = lhs.name.fullName.localizedCaseInsensitiveCompare(rhs.name.fullName)
+        if nameComparison != .orderedSame {
+            return nameComparison == .orderedAscending
+        }
+        return lhs.id < rhs.id
     }
 
     private func participantScoreCounts(participantID: String, row: ScoringRow?) -> Bool {

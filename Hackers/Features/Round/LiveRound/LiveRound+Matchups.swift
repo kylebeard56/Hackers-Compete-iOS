@@ -494,10 +494,11 @@ private struct MatchupTileView: View {
         }
 
         let sorted = participants.sorted { lhs, rhs in
-            let s1 = viewModel.scoreToPar(for: lhs.participant, basis: viewModel.scoreBasis)
-            let s2 = viewModel.scoreToPar(for: rhs.participant, basis: viewModel.scoreBasis)
-            if isPointsFormat { return s1 > s2 }
-            return s1 < s2
+            viewModel.matchupParticipantDisplaySort(
+                lhs: lhs.participant,
+                rhs: rhs.participant,
+                isPointsFormat: isPointsFormat
+            )
         }
 
         let scoreColumnWidth: CGFloat = 44

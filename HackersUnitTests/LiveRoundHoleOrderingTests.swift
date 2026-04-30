@@ -554,6 +554,53 @@ final class LiveRoundViewModelHoleOrderingTests: XCTestCase {
         XCTAssertEqual(status.winningScoringUnitID, "team_red")
     }
 
+    func testMatchupParticipantDisplaySortUsesNetWhenHandicapsAreEnabled() async throws {
+        var snapshot = MockLiveRoundBest2of4Matchup.snapshot
+        snapshot.round.configuration.primaryFormat.configuration.basis = .net
+        let vm = await boundViewModel(snapshot: snapshot, participantID: "p01")
+        let section = try XCTUnwrap(vm.matchupSections.first)
+        let presentation = vm.matchupPresentation(in: section)
+        let participants = presentation.sides.flatMap(\.participants)
+
+        let sorted = participants.sorted {
+            vm.matchupParticipantDisplaySort(lhs: $0, rhs: $1, isPointsFormat: false)
+        }
+        let netScores = sorted.map { vm.scoreToPar(for: $0, basis: .net) }
+
+        XCTAssertEqual(netScores, netScores.sorted())
+    }
+
+    func testMatchupParticipantDisplaySortUsesGrossWhenHandicapsAreDisabled() async throws {
+        var snapshot = MockLiveRoundBest2of4Matchup.snapshot
+        snapshot.round.configuration.primaryFormat.configuration.basis = .gross
+        let vm = await boundViewModel(snapshot: snapshot, participantID: "p01")
+        let section = try XCTUnwrap(vm.matchupSections.first)
+        let presentation = vm.matchupPresentation(in: section)
+        let participants = presentation.sides.flatMap(\.participants)
+
+        let sorted = participants.sorted {
+            vm.matchupParticipantDisplaySort(lhs: $0, rhs: $1, isPointsFormat: false)
+        }
+        let grossScores = sorted.map { vm.scoreToPar(for: $0, basis: .gross) }
+
+        XCTAssertEqual(grossScores, grossScores.sorted())
+    }
+
+    func testMatchupParticipantDisplaySortFallsBackToStableParticipantOrderForTies() async throws {
+        var snapshot = MockLiveRoundBest2of4Matchup.snapshot
+        snapshot.scoring = []
+        let vm = await boundViewModel(snapshot: snapshot, participantID: "p01")
+        let section = try XCTUnwrap(vm.matchupSections.first)
+        let presentation = vm.matchupPresentation(in: section)
+        let participants = presentation.sides.flatMap(\.participants)
+
+        let sortedIDs = participants
+            .sorted { vm.matchupParticipantDisplaySort(lhs: $0, rhs: $1, isPointsFormat: false) }
+            .map(\.id)
+
+        XCTAssertEqual(sortedIDs, ["p01", "p05", "p06", "p02", "p03", "p07", "p08", "p04"])
+    }
+
     func testTeamMatchupBestNUsesTeamAggregatesWhenPrimaryFormatIsIndividual() async throws {
         var snapshot = MockLiveRoundBest2of4Matchup.snapshot
         snapshot.round.configuration.primaryFormat.configuration.requiresTeams = false

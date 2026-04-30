@@ -525,11 +525,15 @@ struct OutcomeMatchupTileView: View {
                 )
 
             VStack(alignment: .leading, spacing: 4) {
-                Text(sideTitle)
-                    .fontStyle(kFontName, size: 16, weight: .semibold)
-                    .foregroundStyle(isWinner ? (accent ?? palette.foregroundColor) : palette.foregroundColor)
-                    .lineLimit(2)
-                    .fixedSize(horizontal: false, vertical: true)
+                HStack(alignment: .firstTextBaseline, spacing: 8) {
+                    Text(sideTitle)
+                        .fontStyle(kFontName, size: 16, weight: .semibold)
+                        .foregroundStyle(isWinner ? (accent ?? palette.foregroundColor) : palette.foregroundColor)
+                        .lineLimit(2)
+                        .fixedSize(horizontal: false, vertical: true)
+
+                    resultChip(isWinner: isWinner, accent: accent)
+                }
 
                 if let subtitle = sideSubtitle, subtitle.isPopulated {
                     Text(subtitle)
@@ -541,32 +545,31 @@ struct OutcomeMatchupTileView: View {
             }
             .frame(maxWidth: .infinity, alignment: .leading)
             .layoutPriority(1)
-
-            if isWinner {
-                Text("Winner".uppercased())
-                    .fontStyle(kFontName, size: 11, weight: .semibold)
-                    .foregroundStyle(accent ?? palette.foregroundColor)
-                    .lineLimit(1)
-                    .padding(.horizontal, 10)
-                    .padding(.vertical, 6)
-                    .background(
-                        Capsule()
-                            .fill((accent ?? palette.foregroundColor).opacity(0.12))
-                    )
-            } else if status.isTie {
-                Text("Tie".uppercased())
-                    .fontStyle(kFontName, size: 11, weight: .semibold)
-                    .foregroundStyle(Color.neutral)
-                    .lineLimit(1)
-                    .padding(.horizontal, 10)
-                    .padding(.vertical, 6)
-                    .background(
-                        Capsule()
-                            .fill(Color.neutral6.opacity(0.35))
-                    )
-            }
         }
         .frame(maxWidth: .infinity, alignment: .leading)
+    }
+
+    @ViewBuilder
+    private func resultChip(isWinner: Bool, accent: Color?) -> some View {
+        if isWinner {
+            resultChip("Winner", tint: accent ?? palette.foregroundColor)
+        } else if status.isTie {
+            resultChip("Tie", tint: Color.neutral)
+        }
+    }
+
+    private func resultChip(_ title: String, tint: Color) -> some View {
+        Text(title.uppercased())
+            .fontStyle(kFontName, size: 11, weight: .semibold)
+            .foregroundStyle(tint)
+            .lineLimit(1)
+            .padding(.horizontal, 10)
+            .padding(.vertical, 6)
+            .background(
+                Capsule()
+                    .fill(tint.opacity(0.12))
+            )
+            .fixedSize(horizontal: true, vertical: false)
     }
 
     private var outcomeMembersTable: some View {
@@ -613,19 +616,15 @@ struct OutcomeMatchupTileView: View {
 
     private var matchupMemberItems: [(participant: RoundParticipant, side: MatchupResultPresentation.Side)] {
         presentation.sides.flatMap { side in
-            side.participants
-                .sorted { participantSort(lhs: $0, rhs: $1) }
-                .map { ($0, side) }
+            side.participants.map { ($0, side) }
         }
-    }
-
-    private func participantSort(lhs: RoundParticipant, rhs: RoundParticipant) -> Bool {
-        let lhsScore = viewModel.scoreToPar(for: lhs, basis: viewModel.scoreBasis)
-        let rhsScore = viewModel.scoreToPar(for: rhs, basis: viewModel.scoreBasis)
-        if lhsScore != rhsScore {
-            return isPointsFormat ? lhsScore > rhsScore : lhsScore < rhsScore
+        .sorted {
+            viewModel.matchupParticipantDisplaySort(
+                lhs: $0.participant,
+                rhs: $1.participant,
+                isPointsFormat: isPointsFormat
+            )
         }
-        return (lhs.teeOrder ?? Int.max) < (rhs.teeOrder ?? Int.max)
     }
 
     private func accentColor(for scoringUnitID: String) -> Color? {

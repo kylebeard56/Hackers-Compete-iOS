@@ -1750,6 +1750,30 @@ final class LiveRoundViewModel: ObservableObject, Loggable {
         
         return sum
     }
+
+    func matchupParticipantDisplaySort(
+        lhs: RoundParticipant,
+        rhs: RoundParticipant,
+        isPointsFormat: Bool
+    ) -> Bool {
+        let basis: ScoreBasis = isPointsFormat
+            ? scoreBasis
+            : (handicapsEnabled ? .net : .gross)
+        let lhsScore = scoreToPar(for: lhs, basis: basis)
+        let rhsScore = scoreToPar(for: rhs, basis: basis)
+
+        if lhsScore != rhsScore {
+            return isPointsFormat ? lhsScore > rhsScore : lhsScore < rhsScore
+        }
+        if (lhs.teeOrder ?? Int.max) != (rhs.teeOrder ?? Int.max) {
+            return (lhs.teeOrder ?? Int.max) < (rhs.teeOrder ?? Int.max)
+        }
+        let nameComparison = lhs.name.fullName.localizedCaseInsensitiveCompare(rhs.name.fullName)
+        if nameComparison != .orderedSame {
+            return nameComparison == .orderedAscending
+        }
+        return lhs.id < rhs.id
+    }
     
     func formattedScoreToPar(_ value: Int) -> String {
         if value == 0 { return "E" }
