@@ -7,6 +7,19 @@
 
 import SwiftUI
 
+private struct LobbyPlayerSlot: Identifiable {
+    let index: Int
+    let participant: RoundParticipant
+
+    var id: String { participant.id }
+}
+
+private struct LobbyPlayerDisplayItem: Identifiable {
+    let id: String
+    let partnership: RoundScoringGroup?
+    let slots: [LobbyPlayerSlot]
+}
+
 // MARK: - Tee Group Slot Row
 
 private struct TeeGroupSlotRow: View {
@@ -339,21 +352,62 @@ extension GameLobby {
         }
     }
 
-    private func partnerChainLabel(after participant: RoundParticipant, nextParticipant: RoundParticipant) -> String? {
-        guard let group = partnershipGroup(for: participant.id),
-              group.id == partnershipGroup(for: nextParticipant.id)?.id else { return nil }
-        guard let roundedHandicap = roundedSharedHandicap(for: group) else {
-            return partnershipLabel(for: group)
+    private func partnershipDisplayItems(for players: [RoundParticipant]) -> [LobbyPlayerDisplayItem] {
+        var items: [LobbyPlayerDisplayItem] = []
+        var index = 0
+
+        while index < players.count {
+            let player = players[index]
+
+            if let partnership = partnershipGroup(for: player.id),
+               let nextPlayer = players[safe: index + 1],
+               partnershipGroup(for: nextPlayer.id)?.id == partnership.id {
+                items.append(
+                    LobbyPlayerDisplayItem(
+                        id: "pair-\(partnership.id)-\(player.id)",
+                        partnership: partnership,
+                        slots: [
+                            LobbyPlayerSlot(index: index, participant: player),
+                            LobbyPlayerSlot(index: index + 1, participant: nextPlayer)
+                        ]
+                    )
+                )
+                index += 2
+            } else {
+                items.append(
+                    LobbyPlayerDisplayItem(
+                        id: player.id,
+                        partnership: nil,
+                        slots: [LobbyPlayerSlot(index: index, participant: player)]
+                    )
+                )
+                index += 1
+            }
         }
-        return "\(partnershipLabel(for: group)) - HCP \(roundedHandicap)"
+
+        return items
     }
 
-    private func roundedSharedHandicap(for group: RoundScoringGroup) -> Int? {
+    private func pairHandicapLabel(for group: RoundScoringGroup) -> String? {
         guard snapshot.configuration.useHandicaps,
               let unitStrokes = snapshot.roundSegment?.scoringUnits.first(where: { $0.id == group.id })?.handicapAllowance?.unitStrokes else {
             return nil
         }
-        return Int(unitStrokes.rounded(.toNearestOrAwayFromZero))
+        return "Pair HCP \(String(format: "%.1f", unitStrokes))"
+    }
+
+    private func partnershipTint(for group: RoundScoringGroup, firstPlayer: RoundParticipant?) -> Color {
+        if let teamID = group.teamID,
+           let team = snapshot.teams.first(where: { $0.id == teamID }),
+           let color = team.displaySwatchColor {
+            return color
+        }
+
+        if let firstPlayer, teamsEnabled, let color = snapshot.teamColor(for: firstPlayer) {
+            return color
+        }
+
+        return Color.neutral3
     }
 
     // MARK: - Roster Content
@@ -1252,16 +1306,26 @@ extension GameLobby {
             
             Line()
             
-            ForEach(Array(players.enumerated()), id: \.element.id) { index, player in
-                teeGroupSlotRow(
-                    group: group,
-                    slotIndex: index,
-                    player: player
-                )
-
-                if let nextPlayer = players[safe: index + 1],
-                   let label = partnerChainLabel(after: player, nextParticipant: nextPlayer) {
-                    partnershipLinkIndicator(label: label)
+            ForEach(partnershipDisplayItems(for: players)) { item in
+                if let partnership = item.partnership, item.slots.count > 1 {
+                    partnershipPlayerBlock(
+                        for: partnership,
+                        firstPlayer: item.slots.first?.participant
+                    ) {
+                        ForEach(item.slots) { slot in
+                            teeGroupSlotRow(
+                                group: group,
+                                slotIndex: slot.index,
+                                player: slot.participant
+                            )
+                        }
+                    }
+                } else if let slot = item.slots.first {
+                    teeGroupSlotRow(
+                        group: group,
+                        slotIndex: slot.index,
+                        player: slot.participant
+                    )
                 }
             }
 
@@ -1479,21 +1543,34 @@ extension GameLobby {
     }
 
     @ViewBuilder
-    private func partnershipLinkIndicator(label: String) -> some View {
-        HStack(spacing: 10) {
-            Line()
-                .frame(height: 1)
-            HStack(spacing: 6) {
-                Icon(name: "link", size: 11, weight: .semibold)
-                    .foregroundStyle(Color.neutral)
+    private func partnershipPlayerBlock<Rows: View>(
+        for partnership: RoundScoringGroup,
+        firstPlayer: RoundParticipant?,
+        @ViewBuilder rows: () -> Rows
+    ) -> some View {
+        let tint = partnershipTint(for: partnership, firstPlayer: firstPlayer)
+        let label = pairHandicapLabel(for: partnership)
+
+        VStack(alignment: .leading, spacing: 8) {
+            if let label {
                 Text(label)
                     .fontStyle(kFontName, size: 11, weight: .semibold)
                     .foregroundStyle(Color.neutral)
+                    .lineLimit(1)
+                    .frame(maxWidth: .infinity, alignment: .leading)
             }
-            Line()
-                .frame(height: 1)
+
+            VStack(spacing: 12) {
+                rows()
+            }
         }
-        .padding(.horizontal, 12)
+        .padding(.leading, 15)
+        .overlay(alignment: .leading) {
+            Capsule()
+                .fill(tint)
+                .frame(width: 5)
+                .padding(.top, label == nil ? 0 : 18)
+        }
     }
     
     @ViewBuilder
@@ -1782,26 +1859,46 @@ extension GameLobby {
 
             Line()
 
-            ForEach(Array(players.enumerated()), id: \.element.id) { index, player in
-                let showHandicap = lockMembership ? (index == 0 && handicapsEnabled) : handicapsEnabled
-                TeamSlotRow(
-                    team: team,
-                    player: player,
-                    palette: palette,
-                    playerAvatarSize: playerAvatarSize,
-                    handicapsEnabled: showHandicap,
-                    snapshot: snapshot,
-                    teamsEnabled: teamsEnabled,
-                    readOnly: lockMembership,
-                    onAssign: assign(player:to:),
-                    onRemove: remove(player:from:),
-                    onShowAddPlayers: { showAddPlayersView = true },
-                    onEditPlayer: { editingPlayer = $0 }
-                )
-
-                if let nextPlayer = players[safe: index + 1],
-                   let label = partnerChainLabel(after: player, nextParticipant: nextPlayer) {
-                    partnershipLinkIndicator(label: label)
+            ForEach(partnershipDisplayItems(for: players)) { item in
+                if let partnership = item.partnership, item.slots.count > 1 {
+                    partnershipPlayerBlock(
+                        for: partnership,
+                        firstPlayer: item.slots.first?.participant
+                    ) {
+                        ForEach(item.slots) { slot in
+                            let showHandicap = lockMembership ? (slot.index == 0 && handicapsEnabled) : handicapsEnabled
+                            TeamSlotRow(
+                                team: team,
+                                player: slot.participant,
+                                palette: palette,
+                                playerAvatarSize: playerAvatarSize,
+                                handicapsEnabled: showHandicap,
+                                snapshot: snapshot,
+                                teamsEnabled: teamsEnabled,
+                                readOnly: lockMembership,
+                                onAssign: assign(player:to:),
+                                onRemove: remove(player:from:),
+                                onShowAddPlayers: { showAddPlayersView = true },
+                                onEditPlayer: { editingPlayer = $0 }
+                            )
+                        }
+                    }
+                } else if let slot = item.slots.first {
+                    let showHandicap = lockMembership ? (slot.index == 0 && handicapsEnabled) : handicapsEnabled
+                    TeamSlotRow(
+                        team: team,
+                        player: slot.participant,
+                        palette: palette,
+                        playerAvatarSize: playerAvatarSize,
+                        handicapsEnabled: showHandicap,
+                        snapshot: snapshot,
+                        teamsEnabled: teamsEnabled,
+                        readOnly: lockMembership,
+                        onAssign: assign(player:to:),
+                        onRemove: remove(player:from:),
+                        onShowAddPlayers: { showAddPlayersView = true },
+                        onEditPlayer: { editingPlayer = $0 }
+                    )
                 }
             }
 

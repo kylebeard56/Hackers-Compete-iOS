@@ -167,8 +167,8 @@ final class LiveRoundViewModel: ObservableObject, Loggable {
     
     /// O(1) lookup by (participantID, holeNumber). Rebuilt when snapshot changes.
     private var scoreIndex: [String: ScoreEntry] = [:]
-    /// Cached engine result, invalidated when snapshot changes.
-    private var cachedEngineResult: ScoringResult?
+    /// Cached engine result, keyed by the score basis it was computed with.
+    private var cachedEngineResult: (basis: ScoreBasis, result: ScoringResult)?
     private var hasPerformedInitialHoleNudge = false
     private var loadedSeriesAccessRoundID: String?
     private var isLoadingSeriesAccess = false
@@ -268,14 +268,6 @@ final class LiveRoundViewModel: ObservableObject, Loggable {
             }
             .store(in: &cancellables)
 
-        $scoreBasis
-            .dropFirst()
-            .receive(on: RunLoop.main)
-            .sink { [weak self] _ in
-                self?.cachedEngineResult = nil
-            }
-            .store(in: &cancellables)
-        
         Task {
             await clearStaleSpectatorSessionFlagIfPlayingThisRound()
             await resolveCurrentParticipantIDIfNeeded()
@@ -3018,7 +3010,10 @@ final class LiveRoundViewModel: ObservableObject, Loggable {
     /// Uses computeWithPipeline when template has a non-empty pipeline (field or matchup scope).
     /// Uses computeStrokePlay only when pipeline is empty (plain stroke play).
     var engineResult: ScoringResult {
-        if let cached = cachedEngineResult { return cached }
+        let basis = scoreBasis
+        if let cached = cachedEngineResult, cached.basis == basis {
+            return cached.result
+        }
         let segment = snapshot.roundSegment ?? RoundSegment()
         let holes = defaultTee?.holes ?? []
         let scoreLookupIDs = snapshot.segmentScoreLookupSegmentIDs
@@ -3026,10 +3021,10 @@ final class LiveRoundViewModel: ObservableObject, Loggable {
             snapshot: snapshot,
             segment: segment,
             holes: holes,
-            basis: scoreBasis,
+            basis: basis,
             scoreLookupSegmentIDs: scoreLookupIDs.isEmpty ? nil : scoreLookupIDs
         )
-        cachedEngineResult = result
+        cachedEngineResult = (basis, result)
         return result
     }
 

@@ -38,7 +38,8 @@ struct SeriesRoundSyncService: Loggable {
             snapshot: snapshot,
             membersByID: membersByID
         )
-        if (options.syncPlayerData || options.syncOrganization), participatingMembers.isEmpty {
+        if (options.syncPlayerData || options.syncOrganization || options.syncPairs || options.syncMatchups),
+           participatingMembers.isEmpty {
             return .failure(.noParticipants)
         }
 
@@ -99,6 +100,7 @@ struct SeriesRoundSyncService: Loggable {
 
         var workingParticipants = snapshot.participants
         var workingScoringGroups = snapshot.scoringGroups
+        var workingTeeGroups = snapshot.teeGroups
         var workingRound = snapshot.round
 
         if options.syncFormat {
@@ -163,6 +165,7 @@ struct SeriesRoundSyncService: Loggable {
 
                 let populatedTeeGroupIDs = Set(workingParticipants.compactMap(\.groupID).filter(\.isPopulated))
                 let retainedTeeGroups = updatedTeeGroups.filter { populatedTeeGroupIDs.contains($0.id) }
+                workingTeeGroups = retainedTeeGroups
                 for group in updatedTeeGroups where !populatedTeeGroupIDs.contains(group.id) {
                     if case .failure(let error) = await group.delete() {
                         addBreadcrumb(level: .error, message: "series.round_sync tee group prune failed", error: error)
@@ -177,52 +180,6 @@ struct SeriesRoundSyncService: Loggable {
                         return .failure(.writeFailed(error.localizedDescription))
                     }
                 }
-
-                let sortedTeeGroups = retainedTeeGroups.sorted { $0.index < $1.index }
-                let builtGroups = SeriesRoundCreationMapping.buildRoundScoringGroups(
-                    roundID: snapshot.round.id,
-                    seriesRound: seriesRound,
-                    participants: workingParticipants,
-                    partnershipPlans: partnershipPlans,
-                    teeGroups: sortedTeeGroups
-                )
-
-                let existingByID = Dictionary(uniqueKeysWithValues: snapshot.scoringGroups.map { ($0.id, $0) })
-                let nextByID = Dictionary(uniqueKeysWithValues: builtGroups.map { ($0.id, $0) })
-                let removed = snapshot.scoringGroups.filter { nextByID[$0.id] == nil }
-                for group in removed {
-                    if case .failure(let error) = await group.delete() {
-                        addBreadcrumb(level: .error, message: "series.round_sync scoring group delete failed", error: error)
-                        return .failure(.writeFailed(error.localizedDescription))
-                    }
-                }
-
-                let mergedGroups = builtGroups.map { group -> RoundScoringGroup in
-                    var g = group
-                    if let old = existingByID[group.id] {
-                        g.createdAt = old.createdAt
-                    }
-                    g.parentID = snapshot.round.id
-                    g.lastUpdatedAt = .init()
-                    return g
-                }
-
-                if mergedGroups.isPopulated {
-                    if case .failure(let error) = await Self.batchPutSubcollection(mergedGroups) {
-                        addBreadcrumb(level: .error, message: "series.round_sync scoring groups batch failed", error: error)
-                        return .failure(.writeFailed(error.localizedDescription))
-                    }
-                }
-                workingScoringGroups = mergedGroups
-
-                await replaceMappings(
-                    seriesID: series.id,
-                    seriesRoundID: seriesRound.id,
-                    teamLinks: relevantTeamLinks,
-                    participatingMembers: participatingMembers,
-                    participants: workingParticipants,
-                    scoringGroups: workingScoringGroups
-                )
             } catch let err as SeriesRoundSyncError {
                 return .failure(err)
             } catch {
@@ -231,13 +188,58 @@ struct SeriesRoundSyncService: Loggable {
             }
         }
 
-        if options.syncFormat || options.syncOrganization {
+        if options.syncPairs {
+            let patch = SeriesRoundSyncPlanning.partnershipScoringGroupPatch(
+                roundID: snapshot.round.id,
+                seriesRound: seriesRound,
+                participants: workingParticipants,
+                partnershipPlans: partnershipPlans,
+                teeGroups: workingTeeGroups.sorted { $0.index < $1.index },
+                existingScoringGroups: workingScoringGroups
+            )
+
+            for group in patch.scoringGroupsToDelete {
+                if case .failure(let error) = await group.delete() {
+                    addBreadcrumb(level: .error, message: "series.round_sync scoring group delete failed", error: error)
+                    return .failure(.writeFailed(error.localizedDescription))
+                }
+            }
+
+            if patch.scoringGroupsToPut.isPopulated {
+                if case .failure(let error) = await Self.batchPutSubcollection(patch.scoringGroupsToPut) {
+                    addBreadcrumb(level: .error, message: "series.round_sync scoring groups batch failed", error: error)
+                    return .failure(.writeFailed(error.localizedDescription))
+                }
+            }
+            workingScoringGroups = patch.mergedScoringGroups
+        }
+
+        if options.syncOrganization || options.syncPairs {
+            await replaceMappings(
+                seriesID: series.id,
+                seriesRoundID: seriesRound.id,
+                teamLinks: relevantTeamLinks,
+                participatingMembers: participatingMembers,
+                participants: workingParticipants,
+                scoringGroups: workingScoringGroups
+            )
+        }
+
+        if options.syncFormat || options.syncOrganization || options.syncPairs || options.syncMatchups {
             guard var mainSegment = snapshot.roundSegment else {
                 return .failure(.missingCourseSegment)
             }
+            let scoringSeriesRound = options.syncFormat
+                ? seriesRound
+                : SeriesRoundSyncPlanning.scoringSeriesRoundForExistingRound(
+                    seriesRound,
+                    roundConfiguration: workingRound.configuration,
+                    existingSegment: mainSegment
+                )
             mainSegment = SeriesRoundSyncPlanning.buildUpdatedSegment(
                 series: series,
                 seriesRound: seriesRound,
+                scoringSeriesRound: scoringSeriesRound,
                 courseSegment: courseSegment,
                 participants: workingParticipants,
                 scoringGroups: workingScoringGroups,
@@ -245,7 +247,10 @@ struct SeriesRoundSyncService: Loggable {
                 teams: teams,
                 pods: pods,
                 participatingMembers: participatingMembers,
-                teamLinks: relevantTeamLinks
+                teamLinks: relevantTeamLinks,
+                updateFormat: options.syncFormat,
+                updateScoringUnits: options.syncFormat || options.syncOrganization || options.syncPairs,
+                updateMatchups: options.syncMatchups
             )
             if case .failure(let error) = await mainSegment.put() {
                 addBreadcrumb(level: .error, message: "series.round_sync segment put failed", error: error)
@@ -284,6 +289,8 @@ struct SeriesRoundSyncService: Loggable {
                 "sync_player": options.syncPlayerData,
                 "sync_format": options.syncFormat,
                 "sync_organization": options.syncOrganization,
+                "sync_pairs": options.syncPairs,
+                "sync_matchups": options.syncMatchups,
                 "round_status": roundStatus.rawValue
             ]
         )

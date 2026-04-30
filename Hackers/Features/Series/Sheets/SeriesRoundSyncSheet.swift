@@ -14,10 +14,11 @@ struct SeriesRoundSyncSheet: View {
     let seriesRound: SeriesRound
     let onDismiss: () -> Void
 
-    @State private var step: Int = 0
     @State private var syncPlayer = true
     @State private var syncFormat = true
     @State private var syncOrganization = true
+    @State private var syncPairs = true
+    @State private var syncMatchups = true
     @State private var preserveManualHandicap = false
     @State private var isApplying = false
     @State private var errorMessage: String?
@@ -40,245 +41,251 @@ struct SeriesRoundSyncSheet: View {
     private var canToggleFormat: Bool { !isLive && !isCompleteRound }
     private var canToggleOrganization: Bool { !isLive && !isCompleteRound }
     private var canTogglePlayer: Bool { !isCompleteRound }
+    private var canTogglePairs: Bool { !isCompleteRound }
+    private var canToggleMatchups: Bool { !isCompleteRound }
+    private var canTogglePreserveHandicap: Bool { effectiveSyncPlayer && !isCompleteRound }
+
+    private var effectiveSyncPlayer: Bool { syncPlayer && canTogglePlayer }
+    private var effectiveSyncFormat: Bool { syncFormat && canToggleFormat }
+    private var effectiveSyncOrganization: Bool { syncOrganization && canToggleOrganization }
+    private var effectiveSyncPairs: Bool { syncPairs && canTogglePairs }
+    private var effectiveSyncMatchups: Bool { syncMatchups && canToggleMatchups }
 
     var body: some View {
-        NavigationStack {
-            VStack(spacing: 0) {
-                syncStepIndicator
-
-                TabView(selection: $step) {
-                    playerStep.tag(0)
-                    formatStep.tag(1)
-                    organizationStep.tag(2)
-                    reviewStep.tag(3)
-                }
-                .tabViewStyle(.page(indexDisplayMode: .never))
-                .frame(minHeight: 420)
-            }
-            .navigationTitle("Sync from league")
-            .navigationBarTitleDisplayMode(.inline)
-            .toolbar {
-                ToolbarItem(placement: .cancellationAction) {
-                    Button("Close") { onDismiss() }
-                        .disabled(isApplying)
-                }
-            }
-            .alert("Could not sync", isPresented: Binding(
-                get: { errorMessage != nil },
-                set: { if !$0 { errorMessage = nil } }
-            )) {
-                Button("OK", role: .cancel) { errorMessage = nil }
-            } message: {
-                Text(errorMessage ?? "")
-            }
-        }
-    }
-
-    private var syncStepIndicator: some View {
-        HStack(spacing: 6) {
-            ForEach(0..<4, id: \.self) { i in
-                Circle()
-                    .fill(i == step ? Color.accentGreen : Color.neutral.opacity(0.35))
-                    .frame(width: 7, height: 7)
-            }
-        }
-        .padding(.vertical, 10)
-    }
-
-    private var playerStep: some View {
-        ScrollView {
-            VStack(alignment: .leading, spacing: 16) {
-                Text("Player data")
-                    .fontStyle(kFontName, size: 20, weight: .bold)
-                    .foregroundStyle(palette.foregroundColor)
-
-                Text("Update display names, default tee boxes, and strokes from the league handicap index (same as when the round was started).")
-                    .fontStyle(kFontName, size: 15, weight: .regular)
-                    .foregroundStyle(Color.neutral)
-
-                Toggle(isOn: $syncPlayer) {
-                    VStack(alignment: .leading, spacing: 4) {
-                        Text("Sync player names, tees & handicaps")
-                            .fontStyle(kFontName, size: 16, weight: .semibold)
-                            .foregroundStyle(palette.foregroundColor)
-                        Text("Does not change tee groups, teams, or matchups.")
-                            .fontStyle(kFontName, size: 13, weight: .regular)
-                            .foregroundStyle(Color.neutral)
+        StickyScrollView(
+            header: {
+                SeriesSheetHeader(
+                    palette: palette,
+                    title: "Sync Round",
+                    subtitle: "Choose which league round settings should update the linked round.",
+                    onClose: {
+                        guard !isApplying else { return }
+                        onDismiss()
                     }
-                }
-                .disabled(!canTogglePlayer)
-                .accessibilityHint("Updates participant rows from league roster and handicaps.")
+                )
+            },
+            content: {
+                VStack(spacing: 16) {
+                    if isLive {
+                        betaWarningTile
+                    }
 
-                Toggle(isOn: $preserveManualHandicap) {
-                    Text("Preserve manual handicap edits made in the lobby")
-                        .fontStyle(kFontName, size: 15, weight: .regular)
-                        .foregroundStyle(palette.foregroundColor)
-                }
-                .disabled(!syncPlayer || !canTogglePlayer)
+                    if isCompleteRound {
+                        lockedRoundTile
+                    }
 
-                navigationRow(back: nil, next: 1)
-            }
-            .padding(20)
+                    syncSettingsCard
+                }
+                .padding(.horizontal, 16)
+                .padding(.top, 8)
+                .padding(.bottom, 24)
+            },
+            footer: {
+                VStack(spacing: 0) {
+                    Line()
+                    Button {
+                        Task { await applySync() }
+                    } label: {
+                        Text(isApplying ? "Applying..." : "Apply sync")
+                            .fontStyle(kFontName, size: 16, weight: .semibold)
+                            .foregroundStyle(applyButtonDisabled ? palette.foregroundColor : palette.backgroundColor)
+                            .frame(maxWidth: .infinity)
+                            .padding(.vertical, 14)
+                            .background(applyButtonDisabled ? Color.neutral3 : palette.foregroundColor)
+                            .clipShape(Capsule())
+                    }
+                    .buttonStyle(.plain)
+                    .disabled(applyButtonDisabled)
+                    .padding(.horizontal, 16)
+                    .padding(.vertical, 12)
+                }
+                .background(palette.backgroundColor)
+            },
+            onScroll: { _ in }
+        )
+        .background(palette.backgroundColor.ignoresSafeArea())
+        .alert("Could not sync", isPresented: Binding(
+            get: { errorMessage != nil },
+            set: { if !$0 { errorMessage = nil } }
+        )) {
+            Button("OK", role: .cancel) { errorMessage = nil }
+        } message: {
+            Text(verbatim: errorMessage ?? "")
         }
     }
 
-    private var formatStep: some View {
-        ScrollView {
-            VStack(alignment: .leading, spacing: 16) {
-                Text("Format & competition")
-                    .fontStyle(kFontName, size: 20, weight: .bold)
-                    .foregroundStyle(palette.foregroundColor)
+    private var betaWarningTile: some View {
+        SeriesSheetRow(palette: palette, rowBackground: Color.neutral6.opacity(colorScheme == .dark ? 0.35 : 0.65)) {
+            HStack(alignment: .top, spacing: 10) {
+                Image(systemName: "info.circle.fill")
+                    .font(.system(size: 14, weight: .semibold))
+                    .foregroundStyle(Color.neutral2)
+                    .padding(.top, 1)
 
-                Text("Align game format, competition scope, team scoring modes, and related league options with this scheduled round. The course layout already on the live round is kept.")
-                    .fontStyle(kFontName, size: 15, weight: .regular)
-                    .foregroundStyle(Color.neutral)
-
-                Toggle(isOn: $syncFormat) {
-                    Text("Sync format & competition settings")
-                        .fontStyle(kFontName, size: 16, weight: .semibold)
-                        .foregroundStyle(palette.foregroundColor)
-                }
-                .disabled(!canToggleFormat)
-                .accessibilityHint("Updates round configuration from league round template.")
-
-                if isLive {
-                    Text("Format sync is disabled while the round is live.")
-                        .fontStyle(kFontName, size: 14, weight: .medium)
-                        .foregroundStyle(Color.systemError)
-                }
-
-                navigationRow(back: 0, next: 2)
-            }
-            .padding(20)
-        }
-    }
-
-    private var organizationStep: some View {
-        ScrollView {
-            VStack(alignment: .leading, spacing: 16) {
-                Text("Organization")
-                    .fontStyle(kFontName, size: 20, weight: .bold)
-                    .foregroundStyle(palette.foregroundColor)
-
-                Text("Sync teams, tee sheet groups, partnerships, scoring groups, and matchups. Requires the same number of tee groups as the league expects.")
-                    .fontStyle(kFontName, size: 15, weight: .regular)
-                    .foregroundStyle(Color.neutral)
-
-                Toggle(isOn: $syncOrganization) {
-                    Text("Sync teams, tee groups & matchups")
-                        .fontStyle(kFontName, size: 16, weight: .semibold)
-                        .foregroundStyle(palette.foregroundColor)
-                }
-                .disabled(!canToggleOrganization)
-                .accessibilityHint("Restructures lobby setup from league pods and schedule.")
-
-                if isLive {
-                    Text("Organization sync is disabled while the round is live to protect score entries.")
-                        .fontStyle(kFontName, size: 14, weight: .medium)
-                        .foregroundStyle(Color.systemError)
-                }
-
-                Text("Players added only to the league after this round started are not added to the live round here—use the game lobby if you need new participants.")
+                Text("This feature is in beta, syncing during a live round may cause unknown issues")
                     .fontStyle(kFontName, size: 13, weight: .regular)
                     .foregroundStyle(Color.neutral)
-
-                navigationRow(back: 1, next: 3)
+                    .fixedSize(horizontal: false, vertical: true)
             }
-            .padding(20)
         }
     }
 
-    private var reviewStep: some View {
-        ScrollView {
-            VStack(alignment: .leading, spacing: 16) {
-                Text("Review")
-                    .fontStyle(kFontName, size: 20, weight: .bold)
-                    .foregroundStyle(palette.foregroundColor)
+    private var lockedRoundTile: some View {
+        SeriesSheetRow(palette: palette, rowBackground: Color.neutral6.opacity(colorScheme == .dark ? 0.35 : 0.65)) {
+            HStack(alignment: .top, spacing: 10) {
+                Image(systemName: "lock.fill")
+                    .font(.system(size: 13, weight: .semibold))
+                    .foregroundStyle(Color.neutral2)
+                    .padding(.top, 2)
 
-                summaryRow("Player data", enabled: syncPlayer && canTogglePlayer)
-                summaryRow("Format & competition", enabled: syncFormat && canToggleFormat)
-                summaryRow("Organization", enabled: syncOrganization && canToggleOrganization)
+                Text("Completed and archived rounds cannot be synced from the league.")
+                    .fontStyle(kFontName, size: 13, weight: .regular)
+                    .foregroundStyle(Color.neutral)
+                    .fixedSize(horizontal: false, vertical: true)
+            }
+        }
+    }
 
-                if preserveManualHandicap && syncPlayer {
-                    Text("Manual handicap edits will be kept where the commissioner previously changed strokes in the lobby.")
-                        .fontStyle(kFontName, size: 13, weight: .regular)
+    private var syncSettingsCard: some View {
+        SeriesSheetCard(palette: palette) {
+            sectionHeaderRow("Sync settings")
+
+            syncToggleRow(
+                title: "Player data",
+                description: "Update display names, default tee boxes, and handicap strokes from the league roster.",
+                isOn: effectiveBinding(storage: $syncPlayer, isEnabled: canTogglePlayer),
+                isEnabled: canTogglePlayer
+            )
+
+            syncToggleRow(
+                title: "Format & scoring",
+                description: "Update template, competition scope, team scoring, and matchup scoring settings.",
+                disabledDescription: liveDisabledText("Format sync"),
+                isOn: effectiveBinding(storage: $syncFormat, isEnabled: canToggleFormat),
+                isEnabled: canToggleFormat
+            )
+
+            syncToggleRow(
+                title: "Teams & tee sheet",
+                description: "Update round teams, tee groups, tee times, and player team or tee order assignments.",
+                disabledDescription: liveDisabledText("Teams and tee sheet sync"),
+                isOn: effectiveBinding(storage: $syncOrganization, isEnabled: canToggleOrganization),
+                isEnabled: canToggleOrganization
+            )
+
+            syncToggleRow(
+                title: "Pairs",
+                description: "Update partnership scoring groups from the pairs configured on this series round.",
+                isOn: effectiveBinding(storage: $syncPairs, isEnabled: canTogglePairs),
+                isEnabled: canTogglePairs
+            )
+
+            syncToggleRow(
+                title: "Matchups",
+                description: "Update head-to-head team, player, or pair matchups from this series round.",
+                isOn: effectiveBinding(storage: $syncMatchups, isEnabled: canToggleMatchups),
+                isEnabled: canToggleMatchups
+            )
+
+            syncToggleRow(
+                title: "Preserve manual handicaps",
+                description: "Keep manual handicap edits where the commissioner changed strokes in the lobby.",
+                isOn: effectiveBinding(storage: $preserveManualHandicap, isEnabled: canTogglePreserveHandicap),
+                isEnabled: canTogglePreserveHandicap
+            )
+        }
+    }
+
+    private func syncToggleRow(
+        title: String,
+        description: String,
+        disabledDescription: String? = nil,
+        isOn: Binding<Bool>,
+        isEnabled: Bool
+    ) -> some View {
+        SeriesSheetRow(palette: palette) {
+            Toggle(isOn: isOn) {
+                VStack(alignment: .leading, spacing: 4) {
+                    Text(title)
+                        .fontStyle(kFontName, size: 15, weight: .semibold)
+                        .foregroundStyle(isEnabled ? palette.foregroundColor : Color.neutral)
+
+                    Text(verbatim: disabledDescription ?? description)
+                        .fontStyle(kFontName, size: 12, weight: .regular)
                         .foregroundStyle(Color.neutral)
+                        .fixedSize(horizontal: false, vertical: true)
                 }
-
-                PrimaryButton(
-                    appearance: .fill,
-                    title: "Apply sync",
-                    labelColor: .white,
-                    buttonColor: Color.accentGreen,
-                    theme: palette.theme,
-                    height: 48,
-                    fillWidth: true,
-                    fontSize: 16,
-                    isDisabled: Binding(
-                        get: { !hasSelectedSync || isApplying || isCompleteRound },
-                        set: { _ in }
-                    ),
-                    isLoading: $isApplying,
-                    onTap: { Task { await applySync() } }
-                )
-                .padding(.top, 8)
-
-                navigationRow(back: 2, next: nil)
-
-                Spacer(minLength: 24)
             }
-            .padding(20)
+            .disabled(!isEnabled)
+            .tint(Color.accentGreen)
         }
     }
 
-    private func summaryRow(_ title: String, enabled: Bool) -> some View {
-        HStack {
-            Text(title)
-                .fontStyle(kFontName, size: 16, weight: .medium)
-                .foregroundStyle(palette.foregroundColor)
-            Spacer()
-            Text(enabled ? "On" : "Off")
-                .fontStyle(kFontName, size: 14, weight: .semibold)
-                .foregroundStyle(enabled ? Color.accentGreen : Color.neutral)
+    private func effectiveBinding(storage: Binding<Bool>, isEnabled: Bool) -> Binding<Bool> {
+        Binding(
+            get: { isEnabled && storage.wrappedValue },
+            set: { storage.wrappedValue = $0 }
+        )
+    }
+
+    private func liveDisabledText(_ label: String) -> String? {
+        guard isLive else {
+            return isCompleteRound ? "Completed and archived rounds cannot be synced." : nil
         }
-        .padding(.vertical, 6)
+        return "\(label) is disabled while the round is live to protect existing setup."
+    }
+
+    private func sectionHeaderRow(_ title: String) -> some View {
+        HStack(alignment: .center, spacing: 8) {
+            Text(title.uppercased())
+                .fontStyle(kFontName, size: 14, weight: .semibold)
+                .foregroundStyle(palette.foregroundColor)
+            Spacer(minLength: 0)
+            Text(selectedSyncCountText)
+                .fontStyle(kFontName, size: 11, weight: .semibold)
+                .foregroundStyle(Color.neutral)
+                .padding(.horizontal, 8)
+                .padding(.vertical, 4)
+                .background(palette.cardEmbeddedRowBackground)
+                .clipShape(Capsule())
+        }
+    }
+
+    private var selectedSyncCountText: String {
+        let count = [
+            effectiveSyncPlayer,
+            effectiveSyncFormat,
+            effectiveSyncOrganization,
+            effectiveSyncPairs,
+            effectiveSyncMatchups,
+        ].filter { $0 }.count
+        return count == 1 ? "1 on" : "\(count) on"
     }
 
     private var hasSelectedSync: Bool {
-        let p = syncPlayer && canTogglePlayer
-        let f = syncFormat && canToggleFormat
-        let o = syncOrganization && canToggleOrganization
-        return p || f || o
+        effectiveSyncPlayer
+            || effectiveSyncFormat
+            || effectiveSyncOrganization
+            || effectiveSyncPairs
+            || effectiveSyncMatchups
     }
 
-    @ViewBuilder
-    private func navigationRow(back: Int?, next: Int?) -> some View {
-        HStack {
-            if let back {
-                Button("Back") { step = back }
-                    .fontStyle(kFontName, size: 16, weight: .semibold)
-                    .foregroundStyle(Color.accentGreen)
-            }
-            Spacer()
-            if let next {
-                Button("Next") { step = next }
-                    .fontStyle(kFontName, size: 16, weight: .semibold)
-                    .foregroundStyle(Color.accentGreen)
-            }
-        }
-        .padding(.top, 12)
+    private var applyButtonDisabled: Bool {
+        !hasSelectedSync || isApplying || isCompleteRound
     }
 
     private func applySync() async {
-        guard hasSelectedSync, !isCompleteRound else { return }
+        guard hasSelectedSync, !isCompleteRound, !isApplying else { return }
         isApplying = true
         defer { isApplying = false }
 
         let options = SeriesRoundSyncOptions(
-            syncPlayerData: syncPlayer && canTogglePlayer,
-            syncFormat: syncFormat && canToggleFormat,
-            syncOrganization: syncOrganization && canToggleOrganization,
-            preserveManualHandicapEdits: preserveManualHandicap
+            syncPlayerData: effectiveSyncPlayer,
+            syncFormat: effectiveSyncFormat,
+            syncOrganization: effectiveSyncOrganization,
+            syncPairs: effectiveSyncPairs,
+            syncMatchups: effectiveSyncMatchups,
+            preserveManualHandicapEdits: preserveManualHandicap && effectiveSyncPlayer
         )
 
         let result = await viewModel.syncLinkedRoundFromSeries(seriesRound: seriesRound, options: options)

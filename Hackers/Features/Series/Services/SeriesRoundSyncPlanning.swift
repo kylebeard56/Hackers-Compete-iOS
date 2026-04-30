@@ -11,9 +11,13 @@ struct SeriesRoundSyncOptions: Equatable, Sendable {
     var syncPlayerData: Bool = false
     var syncFormat: Bool = false
     var syncOrganization: Bool = false
+    var syncPairs: Bool = false
+    var syncMatchups: Bool = false
     var preserveManualHandicapEdits: Bool = false
 
-    var hasAny: Bool { syncPlayerData || syncFormat || syncOrganization }
+    var hasAny: Bool {
+        syncPlayerData || syncFormat || syncOrganization || syncPairs || syncMatchups
+    }
 }
 
 enum SeriesRoundSyncError: Error, Equatable, LocalizedError {
@@ -168,6 +172,48 @@ enum SeriesRoundSyncPlanning {
         case .lobby:
             return nil
         }
+    }
+
+    static func partnershipScoringGroupPatch(
+        roundID: String,
+        seriesRound: SeriesRound,
+        participants: [RoundParticipant],
+        partnershipPlans: [SeriesRoundPartnershipPlan],
+        teeGroups: [TeeTimeGroup],
+        existingScoringGroups: [RoundScoringGroup]
+    ) -> (
+        mergedScoringGroups: [RoundScoringGroup],
+        scoringGroupsToPut: [RoundScoringGroup],
+        scoringGroupsToDelete: [RoundScoringGroup]
+    ) {
+        let builtPartnershipGroups = SeriesRoundCreationMapping.buildRoundScoringGroups(
+            roundID: roundID,
+            seriesRound: seriesRound,
+            participants: participants,
+            partnershipPlans: partnershipPlans,
+            teeGroups: teeGroups
+        )
+        .filter { $0.kind == .partnership }
+
+        let existingPartnershipGroups = existingScoringGroups.filter { $0.kind == .partnership }
+        let existingPartnershipByID = Dictionary(uniqueKeysWithValues: existingPartnershipGroups.map { ($0.id, $0) })
+        let nextByID = Dictionary(uniqueKeysWithValues: builtPartnershipGroups.map { ($0.id, $0) })
+        let scoringGroupsToDelete = existingPartnershipGroups.filter { nextByID[$0.id] == nil }
+        let scoringGroupsToPut = builtPartnershipGroups.map { group -> RoundScoringGroup in
+            var next = group
+            if let old = existingPartnershipByID[group.id] {
+                next.createdAt = old.createdAt
+            }
+            next.parentID = roundID
+            next.lastUpdatedAt = .init()
+            return next
+        }
+
+        return (
+            mergedScoringGroups: existingScoringGroups.filter { $0.kind != .partnership } + scoringGroupsToPut,
+            scoringGroupsToPut: scoringGroupsToPut,
+            scoringGroupsToDelete: scoringGroupsToDelete
+        )
     }
 
     static func buildMemberAssignmentsForSync(
@@ -636,6 +682,7 @@ enum SeriesRoundSyncPlanning {
     static func buildUpdatedSegment(
         series: Series,
         seriesRound: SeriesRound,
+        scoringSeriesRound: SeriesRound? = nil,
         courseSegment: CourseSegment,
         participants: [RoundParticipant],
         scoringGroups: [RoundScoringGroup],
@@ -643,7 +690,10 @@ enum SeriesRoundSyncPlanning {
         teams: [SeriesTeam],
         pods: [SeriesTeamPod],
         participatingMembers: [SeriesMember],
-        teamLinks: [String: SeriesRoundCreationMapping.SeriesToRoundTeamLink]
+        teamLinks: [String: SeriesRoundCreationMapping.SeriesToRoundTeamLink],
+        updateFormat: Bool = true,
+        updateScoringUnits: Bool = true,
+        updateMatchups: Bool = true
     ) -> RoundSegment {
         let resolvedPlan = SeriesRoundResolvedPlan(
             series: series,
@@ -653,38 +703,64 @@ enum SeriesRoundSyncPlanning {
             pods: pods,
             courseSegment: courseSegment
         )
-        let matchupPlans = resolvedPlan.matchupPlans
-        let participantIDs = Dictionary(
-            uniqueKeysWithValues: participants.compactMap { p -> (String, String)? in
-                guard let m = p.seriesMemberID else { return nil }
-                return (m, p.id)
-            }
-        )
-
-        let resolvedMatchups = SeriesRoundCreationMapping.buildRoundMatchups(
-            seriesRound: seriesRound,
-            matchupPlans: matchupPlans,
-            teamMappings: teamLinks,
-            participantIDsBySeriesMemberID: participantIDs,
-            scoringGroups: scoringGroups,
-            participants: participants
-        )
-
-        let scoringUnits = SeriesRoundCreationMapping.buildScoringUnits(
-            seriesRound: seriesRound,
-            participants: participants,
-            scoringGroups: scoringGroups,
-            teamMappings: teamLinks
-        )
 
         var segment = existingSegment
-        segment.holeRange = courseSegment.holeRange
-        segment.gameFormat = SeriesRoundCreationMapping.primaryGameFormatForRound(series: series, seriesRound: seriesRound)
-        segment.templateID = seriesRound.roundConfig.formatTemplateID
-        segment.scoringUnits = scoringUnits
-        segment.matchups = resolvedMatchups.isEmpty ? nil : resolvedMatchups
-        segment.competitionScope = resolvedPlan.competitionScope
+        if updateFormat {
+            segment.holeRange = courseSegment.holeRange
+            segment.gameFormat = SeriesRoundCreationMapping.primaryGameFormatForRound(series: series, seriesRound: seriesRound)
+            segment.templateID = seriesRound.roundConfig.formatTemplateID
+            segment.competitionScope = resolvedPlan.competitionScope
+        }
+        if updateScoringUnits {
+            segment.scoringUnits = SeriesRoundCreationMapping.buildScoringUnits(
+                seriesRound: scoringSeriesRound ?? seriesRound,
+                participants: participants,
+                scoringGroups: scoringGroups,
+                teamMappings: teamLinks
+            )
+        }
+        if updateMatchups {
+            let participantIDs = Dictionary(
+                uniqueKeysWithValues: participants.compactMap { p -> (String, String)? in
+                    guard let m = p.seriesMemberID else { return nil }
+                    return (m, p.id)
+                }
+            )
+            let resolvedMatchups = SeriesRoundCreationMapping.buildRoundMatchups(
+                seriesRound: seriesRound,
+                matchupPlans: resolvedPlan.matchupPlans,
+                teamMappings: teamLinks,
+                participantIDsBySeriesMemberID: participantIDs,
+                scoringGroups: scoringGroups,
+                participants: participants
+            )
+            segment.matchups = resolvedMatchups.isEmpty ? nil : resolvedMatchups
+        }
         segment.lastUpdatedAt = .init()
         return segment
+    }
+
+    static func scoringSeriesRoundForExistingRound(
+        _ seriesRound: SeriesRound,
+        roundConfiguration: RoundConfiguration,
+        existingSegment: RoundSegment
+    ) -> SeriesRound {
+        var copy = seriesRound
+        var config = copy.roundConfig
+        config.formatTemplateID = roundConfiguration.formatSummary?.templateID
+            ?? existingSegment.templateID
+            ?? config.formatTemplateID
+        config.competitionScope = roundConfiguration.competitionScope
+        config.teamScoring = roundConfiguration.teamScoring
+        config.matchupResolutionStyle = roundConfiguration.matchupResolutionStyle
+        config.scoreOwnerScope = roundConfiguration.scoreOwnerScope
+        config.matchupScoringStyle = roundConfiguration.matchupScoringStyle
+        config.holeWinPoints = roundConfiguration.holeWinPoints
+        config.matchWinnerBonusPoints = roundConfiguration.matchWinnerBonusPoints
+        config.matchTiePolicy = roundConfiguration.matchTiePolicy
+        config.sequentialTeeStartsEnabled = roundConfiguration.sequentialTeeStartsEnabled
+        config.sharedScoreHandicapConfig = roundConfiguration.sharedScoreHandicapConfig
+        copy.roundConfig = config
+        return copy
     }
 }

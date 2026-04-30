@@ -181,6 +181,7 @@ struct MatchupCardView: View {
             slotLabelContent(
                 title: participant?.name.fullName ?? "Tap to assign",
                 subtitle: isEmpty ? "(Empty)" : nil,
+                participantNames: participant.map { [$0.name] },
                 swatchColor: nil,
                 isEmpty: isEmpty
             )
@@ -229,9 +230,15 @@ struct MatchupCardView: View {
                 }
             }
         } label: {
+            let participantNames = scoreOwner.flatMap(scoreOwnerParticipantNames(for:))
+            let subtitle = participantNames?.isPopulated == true
+                ? nil
+                : scoreOwner.flatMap(scoreOwnerSubtitle(for:)) ?? (isEmpty ? "(Empty)" : nil)
+
             slotLabelContent(
                 title: scoreOwner.map(scoreOwnerTitle(for:)) ?? "Tap to assign",
-                subtitle: scoreOwner.flatMap(scoreOwnerSubtitle(for:)) ?? (isEmpty ? "(Empty)" : nil),
+                subtitle: subtitle,
+                participantNames: participantNames,
                 swatchColor: scoreOwner.flatMap(scoreOwnerColor(for:)),
                 isEmpty: isEmpty
             )
@@ -243,21 +250,38 @@ struct MatchupCardView: View {
     private func slotLabelContent(
         title: String,
         subtitle: String?,
+        participantNames: [Name]? = nil,
         swatchColor: Color?,
         isEmpty: Bool
     ) -> some View {
         VStack(spacing: 4) {
-            HStack(spacing: 6) {
+            HStack(alignment: .top, spacing: 6) {
                 if let swatchColor {
                     Circle()
                         .fill(swatchColor)
                         .frame(width: 8, height: 8)
+                        .padding(.top, 6)
                 }
 
-                Text(title)
-                    .fontStyle(kFontName, size: 15, weight: .semibold)
-                    .foregroundStyle(isEmpty ? Color.neutral : palette.foregroundColor)
-                    .lineLimit(1)
+                if let participantNames, participantNames.isPopulated {
+                    VStack(alignment: .leading, spacing: 2) {
+                        ForEach(Array(participantNames.enumerated()), id: \.offset) { _, name in
+                            LiveRoundAdaptiveNameText(
+                                name: name,
+                                format: .firstNameLastInitial,
+                                fontSize: 15,
+                                weight: .semibold,
+                                color: palette.foregroundColor
+                            )
+                        }
+                    }
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                } else {
+                    Text(title)
+                        .fontStyle(kFontName, size: 15, weight: .semibold)
+                        .foregroundStyle(isEmpty ? Color.neutral : palette.foregroundColor)
+                        .lineLimit(1)
+                }
             }
             .frame(maxWidth: .infinity, alignment: .leading)
 
@@ -320,6 +344,12 @@ struct MatchupCardView: View {
             .compactMap { id in snapshot.participants.first(where: { $0.id == id })?.name.fullName }
         guard memberNames.isPopulated else { return nil }
         return memberNames.joined(separator: ", ")
+    }
+
+    private func scoreOwnerParticipantNames(for owner: RoundScoringGroup) -> [Name]? {
+        let names = owner.memberIDs
+            .compactMap { id in snapshot.participants.first(where: { $0.id == id })?.name }
+        return names.isPopulated ? names : nil
     }
 
     private func scoreOwnerColor(for owner: RoundScoringGroup) -> Color? {

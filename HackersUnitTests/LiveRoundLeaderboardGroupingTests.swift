@@ -42,15 +42,16 @@ final class LiveRoundLeaderboardGroupingTests: XCTestCase {
         last: String,
         teamID: String,
         groupID: String,
-        teeOrder: Int
+        teeOrder: Int,
+        handicap: Int = 0
     ) -> RoundParticipant {
         RoundParticipant(
             id: id,
             playerID: "player_\(id)",
             name: Name(first, last),
             teeBoxID: teeBoxID,
-            originalHandicap: 0,
-            adjustedHandicap: 0,
+            originalHandicap: handicap,
+            adjustedHandicap: handicap,
             teamID: teamID,
             groupID: groupID,
             teeOrder: teeOrder,
@@ -227,6 +228,46 @@ final class LiveRoundLeaderboardGroupingTests: XCTestCase {
         XCTAssertEqual(viewModel.displayLeaderboardRows.map(\.id), ["p1"])
         XCTAssertEqual(viewModel.rowsEligibleForAverageDisplay.map(\.id), ["p1"])
         XCTAssertEqual(viewModel.averageForDisplay(rows: viewModel.rowsEligibleForAverageDisplay) ?? .nan, 1, accuracy: 0.01)
+    }
+
+    func testEngineLeaderboardRowsRecomputeImmediatelyWhenScoreBasisChanges() {
+        let teeGroups = [
+            makeTeeGroup(id: "g1", index: 0)
+        ]
+        let participants = [
+            makeParticipant(id: "p1", first: "Alice", last: "Adams", teamID: "", groupID: "g1", teeOrder: 1, handicap: 18),
+            makeParticipant(id: "p2", first: "Bea", last: "Baker", teamID: "", groupID: "g1", teeOrder: 2)
+        ]
+        let par = courseSegment.tee(from: teeBoxID)?.holes.first(where: { $0.number == 1 })?.par ?? 4
+        let viewModel = LiveRoundViewModel()
+        viewModel.set(snapshot: makeSnapshot(
+            scoreOwnerScope: .individual,
+            teams: [],
+            teeGroups: teeGroups,
+            participants: participants,
+            scoring: [
+                makeScore(participantID: "p1", holeNumber: 1, strokes: par),
+                makeScore(participantID: "p2", holeNumber: 1, strokes: par)
+            ],
+            template: FormatTemplateRegistry.stableford,
+            gameConfiguration: GameConfiguration(
+                method: .individual,
+                basis: .net,
+                handicap: .individualStrokePlay,
+                requiresTeams: false
+            )
+        ))
+        viewModel.selectedLeaderboardChip = .stableford
+        viewModel.scoreBasis = .gross
+
+        let grossRows = Dictionary(uniqueKeysWithValues: viewModel.effectiveLeaderboardRows.map { ($0.id, $0) })
+
+        viewModel.scoreBasis = .net
+        let netRows = Dictionary(uniqueKeysWithValues: viewModel.effectiveLeaderboardRows.map { ($0.id, $0) })
+
+        XCTAssertEqual(grossRows["p1"]?.totalPoints, 2)
+        XCTAssertEqual(netRows["p1"]?.totalPoints, 3)
+        XCTAssertEqual(netRows["p2"]?.totalPoints, 2)
     }
 
     func testScoringParticipantsFollowTeeGroupScoringRowOrderAcrossTeams() {

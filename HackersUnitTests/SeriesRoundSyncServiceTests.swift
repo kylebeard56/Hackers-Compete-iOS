@@ -15,6 +15,8 @@ final class SeriesRoundSyncServiceTests: XCTestCase {
             syncPlayerData: false,
             syncFormat: true,
             syncOrganization: false,
+            syncPairs: false,
+            syncMatchups: false,
             preserveManualHandicapEdits: false
         )
         XCTAssertNotNil(SeriesRoundSyncPlanning.validateOptions(options, roundStatus: .live))
@@ -26,6 +28,16 @@ final class SeriesRoundSyncServiceTests: XCTestCase {
         options.syncOrganization = false
         options.syncPlayerData = true
         XCTAssertNil(SeriesRoundSyncPlanning.validateOptions(options, roundStatus: .live))
+
+        options.syncPlayerData = false
+        options.syncPairs = true
+        XCTAssertNil(SeriesRoundSyncPlanning.validateOptions(options, roundStatus: .live))
+        XCTAssertNil(SeriesRoundSyncPlanning.validateOptions(options, roundStatus: .paused))
+
+        options.syncPairs = false
+        options.syncMatchups = true
+        XCTAssertNil(SeriesRoundSyncPlanning.validateOptions(options, roundStatus: .live))
+        XCTAssertNil(SeriesRoundSyncPlanning.validateOptions(options, roundStatus: .paused))
     }
 
     func testValidateOptions_blocksAllWhenComplete() {
@@ -33,9 +45,125 @@ final class SeriesRoundSyncServiceTests: XCTestCase {
             syncPlayerData: true,
             syncFormat: true,
             syncOrganization: true,
+            syncPairs: true,
+            syncMatchups: true,
             preserveManualHandicapEdits: false
         )
         XCTAssertNotNil(SeriesRoundSyncPlanning.validateOptions(options, roundStatus: .complete))
+    }
+
+    func testPartnershipScoringGroupPatchRebuildsPairsOnly() {
+        var cfg = SeriesRoundConfiguration()
+        cfg.scoreOwnerScope = .partnership
+        let seriesRound = SeriesRound(
+            id: "sr1",
+            roundConfig: cfg,
+            partnershipPlans: [
+                SeriesRoundPartnershipPlan(id: "pair_red", teamID: "series_red", memberIDs: ["m1", "m2"], label: "Red Pair"),
+                SeriesRoundPartnershipPlan(id: "pair_blue", teamID: "series_blue", memberIDs: ["m3", "m4"], label: "Blue Pair"),
+            ],
+            parentID: "series1"
+        )
+        let participants = [
+            RoundParticipant(id: "p1", seriesMemberID: "m1", teamID: "round_red", groupID: "g1", createdAt: t0, parentID: "round1"),
+            RoundParticipant(id: "p2", seriesMemberID: "m2", teamID: "round_red", groupID: "g1", createdAt: t0, parentID: "round1"),
+            RoundParticipant(id: "p3", seriesMemberID: "m3", teamID: "round_blue", groupID: "g1", createdAt: t0, parentID: "round1"),
+            RoundParticipant(id: "p4", seriesMemberID: "m4", teamID: "round_blue", groupID: "g1", createdAt: t0, parentID: "round1"),
+        ]
+        let teeGroups = [
+            TeeTimeGroup(id: "g1", index: 0, teeTime: "2026-05-01T14:00:00Z", startingHole: 7, createdAt: t0, parentID: "round1"),
+        ]
+        let teeGroupOwner = RoundScoringGroup(
+            id: "tee_group_g1",
+            kind: .teeGroup,
+            memberIDs: ["p1", "p2", "p3", "p4"],
+            createdAt: t0,
+            parentID: "round1"
+        )
+        let oldPair = RoundScoringGroup(
+            id: "old_pair",
+            kind: .partnership,
+            memberIDs: ["p1", "p3"],
+            createdAt: t0,
+            parentID: "round1"
+        )
+
+        let patch = SeriesRoundSyncPlanning.partnershipScoringGroupPatch(
+            roundID: "round1",
+            seriesRound: seriesRound,
+            participants: participants,
+            partnershipPlans: seriesRound.partnershipPlans,
+            teeGroups: teeGroups,
+            existingScoringGroups: [teeGroupOwner, oldPair]
+        )
+
+        XCTAssertEqual(Set(patch.scoringGroupsToPut.map(\.id)), ["pair_red", "pair_blue"])
+        XCTAssertEqual(patch.scoringGroupsToDelete.map(\.id), ["old_pair"])
+        XCTAssertTrue(patch.mergedScoringGroups.contains(where: { $0.id == "tee_group_g1" && $0.kind == .teeGroup }))
+        XCTAssertEqual(teeGroups.first?.startingHole, 7)
+    }
+
+    func testBuildUpdatedSegment_matchupsOnlyPreservesFormatAndScoringUnits() {
+        let context = pairMatchupContext()
+        let existingUnit = ScoringUnit(id: "existing_unit", owner: .participant, ownerIDs: ["p1"])
+        let existingSegment = RoundSegment(
+            id: "seg1",
+            holeRange: HoleRange(startHole: 10, endHole: 18),
+            templateID: "old_template",
+            scoringUnits: [existingUnit],
+            matchups: [TeamMatchup(id: "old_matchup", teamIDs: ["old_a", "old_b"], mode: .team)],
+            competitionScope: .field,
+            parentID: "round1"
+        )
+
+        let updated = SeriesRoundSyncPlanning.buildUpdatedSegment(
+            series: context.series,
+            seriesRound: context.seriesRound,
+            courseSegment: testCourseSegment(),
+            participants: context.participants,
+            scoringGroups: context.scoringGroups,
+            existingSegment: existingSegment,
+            teams: context.teams,
+            pods: [],
+            participatingMembers: context.members,
+            teamLinks: context.teamLinks,
+            updateFormat: false,
+            updateScoringUnits: false,
+            updateMatchups: true
+        )
+
+        XCTAssertEqual(updated.templateID, "old_template")
+        XCTAssertEqual(updated.holeRange, HoleRange(startHole: 10, endHole: 18))
+        XCTAssertEqual(updated.competitionScope, .field)
+        XCTAssertEqual(updated.scoringUnits, [existingUnit])
+        XCTAssertEqual(updated.matchups?.map(\.id), ["pair_match"])
+        XCTAssertEqual(updated.matchups?.first?.scoreOwnerIDs, ["pair_red", "pair_blue"])
+    }
+
+    func testBuildUpdatedSegment_pairsAndMatchupsSupportPairVsPairScoreOwnerMatchups() {
+        let context = pairMatchupContext()
+        let existingSegment = RoundSegment(id: "seg1", parentID: "round1")
+
+        let updated = SeriesRoundSyncPlanning.buildUpdatedSegment(
+            series: context.series,
+            seriesRound: context.seriesRound,
+            courseSegment: testCourseSegment(),
+            participants: context.participants,
+            scoringGroups: context.scoringGroups,
+            existingSegment: existingSegment,
+            teams: context.teams,
+            pods: [],
+            participatingMembers: context.members,
+            teamLinks: context.teamLinks,
+            updateFormat: false,
+            updateScoringUnits: true,
+            updateMatchups: true
+        )
+
+        XCTAssertEqual(updated.matchups?.count, 1)
+        XCTAssertEqual(updated.matchups?.first?.mode, .scoreOwner)
+        XCTAssertEqual(updated.matchups?.first?.scoreOwnerScope, .partnership)
+        XCTAssertEqual(updated.matchups?.first?.scoreOwnerIDs, ["pair_red", "pair_blue"])
     }
 
     @MainActor
@@ -581,6 +709,87 @@ final class SeriesRoundSyncServiceTests: XCTestCase {
         XCTAssertTrue(doc.rows[0].contains("\"Team B\""))
         XCTAssertTrue(doc.rows[0].contains("\"match1\""))
         XCTAssertTrue(doc.rows[1].contains("\"Alice A\""))
+    }
+
+    private func pairMatchupContext() -> (
+        series: Series,
+        seriesRound: SeriesRound,
+        members: [SeriesMember],
+        teams: [SeriesTeam],
+        participants: [RoundParticipant],
+        scoringGroups: [RoundScoringGroup],
+        teamLinks: [String: SeriesRoundCreationMapping.SeriesToRoundTeamLink]
+    ) {
+        var settings = SeriesSettings()
+        settings.useTeams = true
+        let series = Series(id: "series1", settings: settings)
+        let members = [
+            testMember(id: "m1", playerID: "player1", teamID: "series_red"),
+            testMember(id: "m2", playerID: "player2", teamID: "series_red"),
+            testMember(id: "m3", playerID: "player3", teamID: "series_blue"),
+            testMember(id: "m4", playerID: "player4", teamID: "series_blue"),
+        ]
+        let teams = [
+            SeriesTeam(id: "series_red", name: "Red", color: "red", index: 0, createdAt: t0, parentID: "series1"),
+            SeriesTeam(id: "series_blue", name: "Blue", color: "blue", index: 1, createdAt: t0, parentID: "series1"),
+        ]
+        let participants = [
+            RoundParticipant(id: "p1", playerID: "player1", seriesMemberID: "m1", teamID: "round_red", groupID: "g1", createdAt: t0, parentID: "round1"),
+            RoundParticipant(id: "p2", playerID: "player2", seriesMemberID: "m2", teamID: "round_red", groupID: "g1", createdAt: t0, parentID: "round1"),
+            RoundParticipant(id: "p3", playerID: "player3", seriesMemberID: "m3", teamID: "round_blue", groupID: "g1", createdAt: t0, parentID: "round1"),
+            RoundParticipant(id: "p4", playerID: "player4", seriesMemberID: "m4", teamID: "round_blue", groupID: "g1", createdAt: t0, parentID: "round1"),
+        ]
+        let scoringGroups = [
+            RoundScoringGroup(
+                id: "pair_red",
+                teamID: "round_red",
+                teeGroupID: "g1",
+                kind: .partnership,
+                memberIDs: ["p1", "p2"],
+                label: "Red Pair",
+                createdAt: t0,
+                parentID: "round1"
+            ),
+            RoundScoringGroup(
+                id: "pair_blue",
+                teamID: "round_blue",
+                teeGroupID: "g1",
+                kind: .partnership,
+                memberIDs: ["p3", "p4"],
+                label: "Blue Pair",
+                createdAt: t0,
+                parentID: "round1"
+            ),
+        ]
+        var cfg = SeriesRoundConfiguration()
+        cfg.competitionScope = .matchup
+        cfg.scoreOwnerScope = .partnership
+        cfg.matchupMode = .teeGroupPartnerships
+        cfg.teamAssignmentMode = .seriesTeams
+        let seriesRound = SeriesRound(
+            id: "sr_pair_match",
+            roundConfig: cfg,
+            matchupPlans: [
+                SeriesRoundMatchupPlan(
+                    id: "pair_match",
+                    teamAID: "series_red",
+                    teamBID: "series_blue",
+                    pairAID: "pair_red",
+                    pairBID: "pair_blue"
+                ),
+            ],
+            partnershipPlans: [
+                SeriesRoundPartnershipPlan(id: "pair_red", teamID: "series_red", memberIDs: ["m1", "m2"]),
+                SeriesRoundPartnershipPlan(id: "pair_blue", teamID: "series_blue", memberIDs: ["m3", "m4"]),
+            ],
+            parentID: "series1"
+        )
+        let teamLinks: [String: SeriesRoundCreationMapping.SeriesToRoundTeamLink] = [
+            "series_red": .init(seriesTeamID: "series_red", roundTeamID: "round_red"),
+            "series_blue": .init(seriesTeamID: "series_blue", roundTeamID: "round_blue"),
+        ]
+
+        return (series, seriesRound, members, teams, participants, scoringGroups, teamLinks)
     }
 
     private func testMember(id: String, playerID: String, teamID: String? = nil) -> SeriesMember {

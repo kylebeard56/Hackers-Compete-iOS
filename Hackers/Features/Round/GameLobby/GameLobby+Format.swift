@@ -383,18 +383,26 @@ extension GameLobby {
                 title: "Count scores",
                 subtitle: "Choose which scores count and how they're computed for leaderboard."
             ) {
-                HStack(spacing: 8) {
+                if snapshot.configuration.teamScoring.mode == .all {
                     Menu {
                         countScoresButtons
                     } label: {
-                        formatChipLabel(teamScoringModeTitle)
+                        formatChipLabel(teamScoringModeTitle, minWidth: 68)
                     }
                     .buttonStyle(.plain)
+                } else {
+                    VStack(spacing: 4) {
+                        Menu {
+                            countScoresButtons
+                        } label: {
+                            formatChipLabel(teamScoringModeTitle, minWidth: 76)
+                        }
+                        .buttonStyle(.plain)
 
-                    if snapshot.configuration.teamScoring.mode != .all {
                         Text("per")
-                            .fontStyle(kFontName, size: 15, weight: .regular)
+                            .fontStyle(kFontName, size: 12, weight: .regular)
                             .foregroundStyle(Color.neutral)
+                            .frame(maxWidth: .infinity, alignment: .center)
 
                         Menu {
                             ForEach(AggregationScope.allCases, id: \.self) { scope in
@@ -411,10 +419,11 @@ extension GameLobby {
                                 }
                             }
                         } label: {
-                            formatChipLabel(teamScoringScopeTitle)
+                            formatChipLabel(teamScoringScopeTitle, minWidth: 76)
                         }
                         .buttonStyle(.plain)
                     }
+                    .frame(minWidth: 84)
                 }
             }
 
@@ -513,10 +522,13 @@ extension GameLobby {
         )
     }
 
-    private func formatChipLabel(_ title: String) -> some View {
+    private func formatChipLabel(_ title: String, minWidth: CGFloat? = nil) -> some View {
         Text(title)
             .fontStyle(kFontName, size: 14, weight: .semibold)
             .foregroundStyle(Color.charcoal)
+            .lineLimit(1)
+            .minimumScaleFactor(0.7)
+            .frame(minWidth: minWidth)
             .padding(.horizontal, 16)
             .padding(.vertical, 8)
             .glassCardEffect(cornerRadius: 12, tint: palette.whiteGlassButtonColor, shadowOpacity: 0)
