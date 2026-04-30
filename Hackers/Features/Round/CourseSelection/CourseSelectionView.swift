@@ -175,13 +175,8 @@ struct CourseSelectionView: View, Loggable {
                         )
                     },
                     onUseCandidate: { candidate in
-                        if candidate.requiresReview {
-                            viewModel.prepareAskAIDraftReview(candidate.course)
-                            showAskAIDraftEditor = true
-                        } else {
-                            showAskAI = false
-                            viewModel.selectAskAICandidate(candidate)
-                        }
+                        showAskAI = false
+                        viewModel.selectAskAICandidate(candidate)
                     }
                 )
                 .sheet(isPresented: $showAskAIDraftEditor) {
@@ -1300,7 +1295,7 @@ private struct AskAICourseSheet: View {
                         .foregroundStyle(message.isUser ? Color.white : Color.foregroundPrimary)
                         .fixedSize(horizontal: false, vertical: true)
 
-                    if let candidate = message.candidate {
+                    ForEach(Array(message.candidates.enumerated()), id: \.offset) { _, candidate in
                         AskAICourseCandidateCard(
                             candidate: candidate,
                             onUse: { onUseCandidate?(candidate) }
@@ -1603,6 +1598,12 @@ private struct AskAICourseCandidateCard: View {
     var body: some View {
         VStack(alignment: .leading, spacing: 10) {
             VStack(alignment: .leading, spacing: 4) {
+                HStack(spacing: 6) {
+                    ForEach(candidate.sources, id: \.self) { source in
+                        sourceBadge(source)
+                    }
+                }
+
                 Text(course.prettyCourseName.isPopulated ? course.prettyCourseName : course.prettyClubName)
                     .fontStyle(kFontName, size: 15, weight: .semibold)
                     .foregroundStyle(Color.foregroundPrimary)
@@ -1633,19 +1634,6 @@ private struct AskAICourseCandidateCard: View {
                 }
             }
 
-            if candidate.requiresReview {
-                VStack(alignment: .leading, spacing: 6) {
-                    Text("Unconfirmed draft")
-                        .fontStyle(kFontName, size: 12, weight: .semibold)
-                        .foregroundStyle(Color.systemOrange)
-
-                    Text("We didn’t confidently confirm this course yet. Review these details before continuing.")
-                        .fontStyle(kFontName, size: 12, weight: .medium)
-                        .foregroundStyle(Color.neutral)
-                        .fixedSize(horizontal: false, vertical: true)
-                }
-            }
-
             if let website = course.venueDetails?.websiteURL, website.isPopulated {
                 Text(website)
                     .fontStyle(kFontName, size: 12, weight: .medium)
@@ -1655,7 +1643,7 @@ private struct AskAICourseCandidateCard: View {
 
             PrimaryButton(
                 appearance: .fill,
-                title: candidate.requiresReview ? "Review draft" : "Use this course",
+                title: "Use this course",
                 labelColor: .backgroundPrimary,
                 buttonColor: .foregroundPrimary,
                 fillWidth: true,
@@ -1687,6 +1675,16 @@ private struct AskAICourseCandidateCard: View {
             .padding(.vertical, 8)
             .background(Color.neutral6)
             .cornerRadius(radius: 10)
+    }
+
+    private func sourceBadge(_ source: AskAICourseCandidateSource) -> some View {
+        Text(source.label)
+            .fontStyle(kFontName, size: 11, weight: .semibold)
+            .foregroundStyle(source == .internet ? Color.accentGreen : Color.foregroundPrimary)
+            .padding(.horizontal, 8)
+            .padding(.vertical, 5)
+            .background(source == .internet ? Color.accentGreen.opacity(0.12) : Color.neutral6)
+            .cornerRadius(radius: 8)
     }
 }
 
@@ -2062,7 +2060,12 @@ private enum AskAICourseSheetPreviewData {
         .init(
             role: .assistant,
             text: "I found a strong match for Twin Lakes Golf Club. Review it below or keep chatting if you want me to refine the details.",
-            candidate: .init(course: sampleCourse, requiresReview: false, isCanonicalMatch: true)
+            candidate: .init(
+                course: sampleCourse,
+                requiresReview: false,
+                isCanonicalMatch: true,
+                sources: [.internet, .golfCourseAPI]
+            )
         )
     ]
 }

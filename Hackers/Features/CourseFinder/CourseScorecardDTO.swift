@@ -189,21 +189,20 @@ enum AskAICourseLookupLLMDecoding {
 
     private static func decodeDTO(from data: Data) throws -> AskAICourseLookupDTO {
         let decoder = JSONDecoder()
-        if let dto = try? decoder.decode(AskAICourseLookupDTO.self, from: data) {
-            return dto
-        }
-
         let snakeDecoder = JSONDecoder()
         snakeDecoder.keyDecodingStrategy = .convertFromSnakeCase
-        if let dto = try? snakeDecoder.decode(AskAICourseLookupDTO.self, from: data) {
-            return dto
-        }
 
         if let envelope = try? decoder.decode(CourseLookupKeyEnvelope.self, from: data) {
             return envelope.courseLookup
         }
         if let envelope = try? snakeDecoder.decode(CourseLookupKeyEnvelope.self, from: data) {
             return envelope.courseLookup
+        }
+        if let dto = try? decoder.decode(AskAICourseLookupDTO.self, from: data) {
+            return dto
+        }
+        if let dto = try? snakeDecoder.decode(AskAICourseLookupDTO.self, from: data) {
+            return dto
         }
 
         return try decoder.decode(AskAICourseLookupDTO.self, from: data)

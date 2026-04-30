@@ -38,6 +38,33 @@ struct AskAICourseCandidate {
     let course: Course
     let requiresReview: Bool
     let isCanonicalMatch: Bool
+    let sources: [AskAICourseCandidateSource]
+
+    init(
+        course: Course,
+        requiresReview: Bool,
+        isCanonicalMatch: Bool,
+        sources: [AskAICourseCandidateSource]
+    ) {
+        self.course = course
+        self.requiresReview = requiresReview
+        self.isCanonicalMatch = isCanonicalMatch
+        self.sources = sources
+    }
+}
+
+enum AskAICourseCandidateSource: String, CaseIterable, Hashable {
+    case internet
+    case golfCourseAPI = "golf_course_api"
+
+    var label: String {
+        switch self {
+        case .internet:
+            return "Internet"
+        case .golfCourseAPI:
+            return "Golf Course API"
+        }
+    }
 }
 
 struct AskAICourseChatMessage: Identifiable {
@@ -49,18 +76,23 @@ struct AskAICourseChatMessage: Identifiable {
     let id: String
     let role: Role
     let text: String
-    let candidate: AskAICourseCandidate?
+    let candidates: [AskAICourseCandidate]
 
     init(
         id: String = HackersID.string(),
         role: Role,
         text: String,
-        candidate: AskAICourseCandidate? = nil
+        candidate: AskAICourseCandidate? = nil,
+        candidates: [AskAICourseCandidate] = []
     ) {
         self.id = id
         self.role = role
         self.text = text
-        self.candidate = candidate
+        if let candidate {
+            self.candidates = [candidate]
+        } else {
+            self.candidates = candidates
+        }
     }
 
     var isUser: Bool {
@@ -71,12 +103,14 @@ struct AskAICourseChatMessage: Identifiable {
 enum AskAICourseLookupSource: String {
     case webScorecard = "web_scorecard"
     case apiFallback = "api_fallback"
-    case draftOnly = "draft_only"
+    case webAndAPI = "web_and_api"
+    case multiple = "multiple"
+    case noMatch = "no_match"
 }
 
 struct AskAICourseLookupResult {
     let assistantMessage: String
-    let candidate: AskAICourseCandidate?
+    let candidates: [AskAICourseCandidate]
     let source: AskAICourseLookupSource
 }
 
@@ -112,9 +146,9 @@ private enum CourseTextLookupPrompt {
         - If the scorecard is missing, partial, ambiguous, paywalled, or inconsistent, set confidence to medium or low and omit the scorecard or return it with empty tees.
 
         Backup search strings:
-        - Always return ordered `apiSearchStrings` when confidence is not high or when the scorecard is absent.
-        - Put the most official resolved course or club name first, followed by other high-quality search variants that may help a strict API search.
-        - If you do return a high-confidence public scorecard, you may leave `apiSearchStrings` empty.
+        - Always return ordered `apiSearchStrings`, even when you return a high-confidence public scorecard.
+        - Put the most official resolved course + routing name first, followed by official club/operator/trail variants that may help a strict API search.
+        - For multi-course facilities, include course-specific routing strings like "Oxmoor Valley Ridge" before facility-only strings like "Oxmoor Valley".
 
         No invention:
         - Never invent tees, holes, par, yardage, handicap, rating, slope, website, phone, or coordinates.
@@ -135,7 +169,7 @@ private enum CourseTextLookupPrompt {
     }
 
     static func finalInstruction(context: AskAICourseLookupContext) -> String {
-        var instruction = "Use the conversation above to resolve the course. Search the web for the official/public scorecard first, then call extract_course_lookup exactly once with the resolved identity, confidence, optional scorecard, and ordered API backup search strings."
+        var instruction = "Use the conversation above to resolve the course. Search the web for the official/public scorecard first, then call extract_course_lookup exactly once with the resolved identity, confidence, optional scorecard, and ordered Golf Course API search strings. Always include API search strings when you can resolve any identity clue."
 
         if context.isLocationAssistEnabled,
            let approximateLocation = context.approximateLocation {
@@ -193,54 +227,158 @@ final class CourseTextLookupService: Loggable {
             throw error
         }
 
-        let draft = draftCourse(from: lookup)
-
-        if lookup.confidence == .high,
-           lookup.hasRealScorecard {
-            return AskAICourseLookupResult(
-                assistantMessage: webScorecardMessage(for: draft),
-                candidate: AskAICourseCandidate(
-                    course: draft,
-                    requiresReview: false,
-                    isCanonicalMatch: false
-                ),
-                source: .webScorecard
-            )
-        }
+        let webCourse = draftCourse(from: lookup)
+        let webCandidate = confirmedWebCandidate(from: lookup, course: webCourse)
+        let apiCandidate: AskAICourseCandidate?
 
         if hasResolvedIdentity(lookup) {
             if let canonicalCourse = await enrichmentService.resolveCanonicalCourse(
-                for: draft,
+                for: webCourse,
                 preferredQueries: orderedFallbackQueries(from: lookup),
                 scanContext: scanContext
             ) {
-                return AskAICourseLookupResult(
-                    assistantMessage: apiFallbackMessage(for: canonicalCourse),
-                    candidate: AskAICourseCandidate(
-                        course: canonicalCourse,
-                        requiresReview: false,
-                        isCanonicalMatch: true
-                    ),
-                    source: .apiFallback
+                apiCandidate = AskAICourseCandidate(
+                    course: canonicalCourse,
+                    requiresReview: false,
+                    isCanonicalMatch: true,
+                    sources: [.golfCourseAPI]
                 )
+            } else {
+                apiCandidate = nil
             }
+        } else {
+            apiCandidate = nil
+        }
 
+        let candidates = mergedCandidates(webCandidate: webCandidate, apiCandidate: apiCandidate)
+        if candidates.isPopulated {
             return AskAICourseLookupResult(
-                assistantMessage: draftCourseMessage(for: draft),
-                candidate: AskAICourseCandidate(
-                    course: draft,
-                    requiresReview: true,
-                    isCanonicalMatch: false
-                ),
-                source: .draftOnly
+                assistantMessage: candidateMessage(for: candidates),
+                candidates: candidates,
+                source: lookupSource(for: candidates)
             )
         }
 
         return AskAICourseLookupResult(
-            assistantMessage: "I need a bit more detail to pin it down. Try the course name, club name, city/state, resort or trail, or another identifying clue.",
-            candidate: nil,
-            source: .draftOnly
+            assistantMessage: followUpMessage(for: lookup),
+            candidates: [],
+            source: .noMatch
         )
+    }
+
+    private func confirmedWebCandidate(
+        from lookup: AskAICourseLookupDTO,
+        course: Course
+    ) -> AskAICourseCandidate? {
+        guard lookup.confidence == .high, lookup.hasRealScorecard else { return nil }
+        return AskAICourseCandidate(
+            course: course,
+            requiresReview: false,
+            isCanonicalMatch: false,
+            sources: [.internet]
+        )
+    }
+
+    private func mergedCandidates(
+        webCandidate: AskAICourseCandidate?,
+        apiCandidate: AskAICourseCandidate?
+    ) -> [AskAICourseCandidate] {
+        guard let webCandidate else {
+            return apiCandidate.map { [$0] } ?? []
+        }
+        guard let apiCandidate else {
+            return [webCandidate]
+        }
+
+        if coursesReferToSameCourse(webCandidate.course, apiCandidate.course) {
+            return [
+                AskAICourseCandidate(
+                    course: apiCandidate.course,
+                    requiresReview: false,
+                    isCanonicalMatch: true,
+                    sources: orderedSources(apiCandidate.sources + webCandidate.sources)
+                )
+            ]
+        }
+
+        return [webCandidate, apiCandidate]
+    }
+
+    private func orderedSources(_ sources: [AskAICourseCandidateSource]) -> [AskAICourseCandidateSource] {
+        AskAICourseCandidateSource.allCases.filter { sources.contains($0) }
+    }
+
+    private func coursesReferToSameCourse(_ lhs: Course, _ rhs: Course) -> Bool {
+        if let lhsID = lhs.golfCourseApiID,
+           let rhsID = rhs.golfCourseApiID,
+           lhsID == rhsID {
+            return true
+        }
+
+        let lhsClues = identityClues(for: lhs)
+        let rhsClues = identityClues(for: rhs)
+        guard lhsClues.isPopulated, rhsClues.isPopulated else { return false }
+
+        let lhsCourseName = CourseNameNormalizer.normalize(lhs.courseName)
+        let rhsCourseName = CourseNameNormalizer.normalize(rhs.courseName)
+        if lhsCourseName.isPopulated,
+           rhsCourseName.isPopulated,
+           lhsCourseName != rhsCourseName,
+           !lhsCourseName.contains(rhsCourseName),
+           !rhsCourseName.contains(lhsCourseName) {
+            return false
+        }
+
+        let hasStrongNameMatch = lhsClues.contains { lhsClue in
+            rhsClues.contains { rhsClue in
+                lhsClue == rhsClue
+                    || (min(lhsClue.count, rhsClue.count) >= 6 && (lhsClue.contains(rhsClue) || rhsClue.contains(lhsClue)))
+            }
+        }
+        guard hasStrongNameMatch else { return false }
+
+        let lhsCity = lhs.location?.city?.trimmingCharacters(in: .whitespacesAndNewlines).lowercased()
+        let rhsCity = rhs.location?.city?.trimmingCharacters(in: .whitespacesAndNewlines).lowercased()
+        let lhsState = lhs.location?.state?.trimmingCharacters(in: .whitespacesAndNewlines).lowercased()
+        let rhsState = rhs.location?.state?.trimmingCharacters(in: .whitespacesAndNewlines).lowercased()
+
+        if lhsCity?.isPopulated == true,
+           rhsCity?.isPopulated == true,
+           lhsCity != rhsCity {
+            return false
+        }
+        if lhsState?.isPopulated == true,
+           rhsState?.isPopulated == true,
+           lhsState != rhsState {
+            return false
+        }
+
+        return true
+    }
+
+    private func identityClues(for course: Course) -> [String] {
+        var clues: [String] = []
+        for value in [course.courseName, course.clubName] {
+            let normalized = CourseNameNormalizer.normalize(value)
+            if normalized.isPopulated, !clues.contains(normalized) {
+                clues.append(normalized)
+            }
+        }
+        return clues
+    }
+
+    private func lookupSource(for candidates: [AskAICourseCandidate]) -> AskAICourseLookupSource {
+        let sourceSet = Set(candidates.flatMap(\.sources))
+        if candidates.count > 1 {
+            return .multiple
+        }
+        if sourceSet == Set([.internet, .golfCourseAPI]) {
+            return .webAndAPI
+        }
+        if sourceSet == Set([.internet]) {
+            return .webScorecard
+        }
+        return .apiFallback
     }
 
     private func draftCourse(from lookup: AskAICourseLookupDTO) -> Course {
@@ -388,31 +526,42 @@ final class CourseTextLookupService: Loggable {
         return messages
     }
 
-    private func webScorecardMessage(for course: Course) -> String {
-        let name = course.prettyCourseName.isPopulated ? course.prettyCourseName : course.prettyClubName
-        let tee = preferredSummaryTee(for: course)
-        var parts = ["I found an official or credible public scorecard for \(name)."]
+    private func candidateMessage(for candidates: [AskAICourseCandidate]) -> String {
+        if candidates.count == 1, let candidate = candidates.first {
+            let name = displayName(for: candidate.course)
+            let sourceText = candidate.sources.map(\.label).joined(separator: " + ")
+            var parts = ["I found a confirmed \(sourceText) match for \(name)."]
 
-        if let location = course.location,
-           let city = location.city,
-           let state = location.state,
-           city.isPopulated,
-           state.isPopulated {
-            parts.append("\(city), \(state).")
+            if let summary = courseSummary(for: candidate.course) {
+                parts.append(summary)
+            }
+
+            return parts.joined(separator: " ")
         }
 
-        if let tee {
-            let segment = course.defaultSegment
-            parts.append("\(tee.totalHoles) holes, par \(tee.par(for: segment)), \(tee.yardage(for: segment)) yards from the \(tee.name) tees.")
-        }
-
-        return parts.joined(separator: " ")
+        return "I found \(candidates.count) possible confirmed course matches. Pick the one that looks right, or send another detail and I’ll narrow it down."
     }
 
-    private func apiFallbackMessage(for course: Course) -> String {
-        let name = course.prettyCourseName.isPopulated ? course.prettyCourseName : course.prettyClubName
+    private func followUpMessage(for lookup: AskAICourseLookupDTO) -> String {
+        let name = [lookup.clubName, lookup.courseName]
+            .compactMap { $0?.trimmingCharacters(in: .whitespacesAndNewlines) }
+            .filter(\.isPopulated)
+            .joined(separator: " ")
+
+        if name.isPopulated {
+            return "I found hints for \(name), but neither the public web result nor Golf Course API confirmed a usable scorecard. Can you send the city/state, the exact course routing, or a more specific scorecard URL?"
+        }
+
+        return "I need a bit more detail to pin it down. Try the course name, club name, city/state, resort or trail, or a more specific scorecard URL."
+    }
+
+    private func displayName(for course: Course) -> String {
+        course.prettyCourseName.isPopulated ? course.prettyCourseName : course.prettyClubName
+    }
+
+    private func courseSummary(for course: Course) -> String? {
         let tee = preferredSummaryTee(for: course)
-        var parts = ["I resolved the course identity and found a fallback Golf Course API match for \(name)."]
+        var parts: [String] = []
 
         if let location = course.location,
            let city = location.city,
@@ -429,16 +578,7 @@ final class CourseTextLookupService: Loggable {
             parts.append("\(course.defaultSegment.holeCount) holes.")
         }
 
-        return parts.joined(separator: " ")
-    }
-
-    private func draftCourseMessage(for course: Course) -> String {
-        let name = course.prettyCourseName.isPopulated ? course.prettyCourseName : course.prettyClubName
-        if name.isPopulated {
-            return "I resolved the course identity for \(name), but I couldn't verify a high-confidence public scorecard and the fallback API search did not confirm a match. Review this draft before continuing, or share another detail and I'll try again."
-        }
-
-        return "I found a few hints, but not enough to build a reliable course yet. Try adding the course name, city/state, resort or trail, or another identifying detail."
+        return parts.isEmpty ? nil : parts.joined(separator: " ")
     }
 
     private func preferredSummaryTee(for course: Course) -> Tee? {

@@ -557,19 +557,25 @@ extension CourseSelectionViewModel {
                 AskAICourseChatMessage(
                     role: .assistant,
                     text: result.assistantMessage,
-                    candidate: result.candidate
+                    candidates: result.candidates
                 )
             )
 
             if shouldTrackRoundSetup {
+                var sourceValues: [String] = []
+                for source in result.candidates.flatMap(\.sources) {
+                    guard !sourceValues.contains(source.rawValue) else { continue }
+                    sourceValues.append(source.rawValue)
+                }
                 addEvent(
                     "round_setup.course_ask_ai_result_received",
                     eventProps: askAITelemetryProps(
                         context: context,
                         extra: [
-                            "has_candidate": result.candidate != nil,
-                            "requires_review": result.candidate?.requiresReview ?? false,
-                            "is_canonical_match": result.candidate?.isCanonicalMatch ?? false,
+                            "has_candidate": result.candidates.isPopulated,
+                            "candidate_count": result.candidates.count,
+                            "source_list": sourceValues.joined(separator: ","),
+                            "is_canonical_match": result.candidates.contains { $0.isCanonicalMatch },
                             "lookup_source": result.source.rawValue,
                             "message_count": askAIMessages.count,
                             "is_existing_round_change": isModifying

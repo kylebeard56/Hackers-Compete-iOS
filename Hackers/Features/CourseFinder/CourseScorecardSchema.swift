@@ -215,7 +215,7 @@ enum CourseScorecardSchema {
                 ],
                 "apiSearchStrings": [
                     "type": "array",
-                    "description": "Ordered Golf Course API backup search strings beginning with the most official resolved name",
+                    "description": "Ordered Golf Course API search strings beginning with the most official course-specific name. Always include when any identity clue is resolved, even with a high-confidence web scorecard.",
                     "items": ["type": "string"]
                 ],
                 "scorecard": [

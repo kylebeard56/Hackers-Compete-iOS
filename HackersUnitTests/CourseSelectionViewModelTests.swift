@@ -110,44 +110,6 @@ struct CourseSelectionViewModelTests {
         #expect(viewModel.selectedCourse.tees.first?.holes.count == 12)
     }
 
-    @Test("Selecting Ask AI draft forces review flow")
-    func selectAskAIDraftForcesReviewFlow() {
-        let viewModel = CourseSelectionViewModel()
-        let course = Course(
-            origin: .manual,
-            clubName: "Oxmoor Valley",
-            courseName: "Ridge Course",
-            tees: []
-        )
-
-        viewModel.selectAskAICandidate(
-            .init(course: course, requiresReview: true, isCanonicalMatch: false)
-        )
-
-        #expect(viewModel.showCourseEdit == true)
-        #expect(viewModel.showConfirmation == false)
-        #expect(viewModel.lastSelectionSource == .askAI)
-    }
-
-    @Test("Preparing Ask AI draft review preserves selection without opening editor state")
-    func prepareAskAIDraftReviewKeepsDraftContext() {
-        let viewModel = CourseSelectionViewModel()
-        let course = Course(
-            origin: .manual,
-            clubName: "Oxmoor Valley",
-            courseName: "Ridge Course",
-            tees: []
-        )
-
-        viewModel.prepareAskAIDraftReview(course, trackEvent: false)
-
-        #expect(viewModel.selectedCourse.clubName == "Oxmoor Valley")
-        #expect(viewModel.selectedCourse.courseName == "Ridge Course")
-        #expect(viewModel.showCourseEdit == false)
-        #expect(viewModel.showConfirmation == false)
-        #expect(viewModel.lastSelectionSource == .askAI)
-    }
-
     @Test("Selecting Ask AI canonical match goes to confirmation")
     func selectAskAICanonicalMatchGoesToConfirmation() {
         let viewModel = CourseSelectionViewModel()
@@ -172,11 +134,85 @@ struct CourseSelectionViewModelTests {
         )
 
         viewModel.selectAskAICandidate(
-            .init(course: course, requiresReview: false, isCanonicalMatch: true)
+            .init(
+                course: course,
+                requiresReview: false,
+                isCanonicalMatch: true,
+                sources: [.golfCourseAPI]
+            )
         )
 
         #expect(viewModel.showCourseEdit == false)
         #expect(viewModel.showConfirmation == true)
         #expect(viewModel.lastSelectionSource == .askAI)
+    }
+
+    @Test("Ask AI no-candidate result stays in conversation without opening selection flow")
+    func askAINoCandidateResultDoesNotOpenEditorOrConfirmation() async {
+        let provider = MockCourseSelectionTextLookupProvider(
+            response: """
+            {
+              "courseLookup": {
+                "clubName": "Oxmoor Valley",
+                "courseName": "Ridge Course",
+                "confidence": "low",
+                "apiSearchStrings": ["Oxmoor Valley Ridge", "Oxmoor Valley"]
+              }
+            }
+            """
+        )
+        let askAIService = CourseTextLookupService(
+            provider: provider,
+            enrichmentService: CourseScorecardEnrichmentService(
+                searchProvider: MockCourseSelectionSearchProvider(results: []),
+                venueLookupProvider: MockCourseSelectionVenueLookupProvider()
+            )
+        )
+        let viewModel = CourseSelectionViewModel(askAIService: askAIService)
+
+        await viewModel.sendAskAIMessage("Oxmoor Valley Ridge from rtjgolf.com/scorecards")
+
+        #expect(viewModel.askAIMessages.count == 2)
+        #expect(viewModel.askAIMessages.last?.candidates.isEmpty == true)
+        #expect(viewModel.askAIMessages.last?.text.contains("Can you send the city/state") == true)
+        #expect(viewModel.showCourseEdit == false)
+        #expect(viewModel.showConfirmation == false)
+        #expect(viewModel.lastSelectionSource == nil)
+    }
+}
+
+@MainActor
+private final class MockCourseSelectionTextLookupProvider: LLMProviderProtocol {
+    let response: String
+
+    init(response: String) {
+        self.response = response
+    }
+
+    func complete(messages: [LLMMessage], model: String?, maxTokens: Int) async throws -> String {
+        response
+    }
+}
+
+@MainActor
+private final class MockCourseSelectionSearchProvider: CourseScorecardSearchProviding {
+    let results: [GolfCourseAPIModel]
+
+    init(results: [GolfCourseAPIModel]) {
+        self.results = results
+    }
+
+    func searchCourses(query: String) async throws -> [GolfCourseAPIModel] {
+        results
+    }
+}
+
+@MainActor
+private final class MockCourseSelectionVenueLookupProvider: CourseScorecardVenueLookupProviding {
+    func venueDetails(
+        for course: GolfCourseAPIModel,
+        approximateLocation: ScorecardScanApproximateLocation?
+    ) async -> CourseVenueDetails? {
+        nil
     }
 }

@@ -389,11 +389,25 @@ extension GameLobby {
     }
 
     private func pairHandicapLabel(for group: RoundScoringGroup) -> String? {
-        guard snapshot.configuration.useHandicaps,
-              let unitStrokes = snapshot.roundSegment?.scoringUnits.first(where: { $0.id == group.id })?.handicapAllowance?.unitStrokes else {
+        guard snapshot.configuration.useHandicaps else {
             return nil
         }
-        return "Pair HCP \(String(format: "%.1f", unitStrokes))"
+
+        if let unitStrokes = snapshot.roundSegment?.scoringUnits.first(where: { $0.id == group.id })?.handicapAllowance?.unitStrokes {
+            return "Pair HCP \(formatPairHandicap(unitStrokes))"
+        }
+
+        let members = partnershipMembers(for: group)
+        let config = snapshot.configuration.sharedScoreHandicapConfig
+            ?? snapshot.resolvedActiveTemplate.requirements.defaultHandicapConfig
+        guard let allowance = ScoringEngine.handicapAllowance(participants: members, config: config) else {
+            return nil
+        }
+        return "Pair HCP \(formatPairHandicap(allowance.unitStrokes))"
+    }
+
+    private func formatPairHandicap(_ value: Double) -> String {
+        String(format: "%.1f", value)
     }
 
     private func partnershipTint(for group: RoundScoringGroup, firstPlayer: RoundParticipant?) -> Color {
