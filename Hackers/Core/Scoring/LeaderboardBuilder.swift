@@ -293,6 +293,7 @@ struct MatchupResultPresentationBuilder {
         if hasDirectScoreEntry(snapshot: snapshot, scoringUnitIDs: directLookupIDs),
            let directRow = directScoringUnitAggregateRow(
             snapshot: snapshot,
+            template: result.template,
             sideID: sideID,
             scoringUnitIDs: directLookupIDs,
             mode: mode,
@@ -378,6 +379,7 @@ struct MatchupResultPresentationBuilder {
 
     private static func directScoringUnitAggregateRow(
         snapshot: RoundSnapshot,
+        template: GameTemplate,
         sideID: String,
         scoringUnitIDs: Set<String>,
         mode: MatchupMode,
@@ -387,6 +389,20 @@ struct MatchupResultPresentationBuilder {
         guard let segment = snapshot.roundSegment else { return nil }
         let lookupSegmentIDs = Set(snapshot.segmentScoreLookupSegmentIDs)
         let holeMap = Dictionary(uniqueKeysWithValues: (snapshot.defaultTee?.holes ?? []).map { ($0.number, $0) })
+        let scoringUnit = directScoringUnit(
+            snapshot: snapshot,
+            sideID: sideID,
+            scoringUnitIDs: scoringUnitIDs,
+            mode: mode,
+            participants: participants
+        )
+        let handicap = ScoringEngine.scoringUnitHandicap(
+            for: scoringUnit,
+            participants: participants,
+            sharedScoreHandicapConfig: scoringUnit.owner == .participant
+                ? nil
+                : (snapshot.configuration.sharedScoreHandicapConfig ?? template.requirements.defaultHandicapConfig)
+        )
         var holeValues: [Int: ScoringRow.HoleValue] = [:]
         var total = 0.0
 
@@ -398,18 +414,29 @@ struct MatchupResultPresentationBuilder {
             }) else { continue }
 
             let par = holeMap[holeNumber]?.par ?? 4
+            guard let grossRelative = ScoringEngine.resolvedGrossRelativeToPar(entry: entry, par: par) else {
+                continue
+            }
+            let strokesReceived = ScoringEngine.strokesReceived(
+                handicap: handicap,
+                holeNumber: holeNumber,
+                holeMap: holeMap,
+                playedHoleNumbers: segment.holeRange.holeNumbers,
+                useHandicaps: basis == .net,
+                handicapStrokeBasis: snapshot.handicapStrokeBasis
+            )
+            let rawStrokes = ScoringEngine.resolvedGrossStrokes(entry: entry, par: par)
+            let netStrokes = rawStrokes.map { max(0, $0 - strokesReceived) }
             let points: Double
             if let entryPoints = entry.points {
                 points = entryPoints
             } else {
-                guard let grossRelative = ScoringEngine.resolvedGrossRelativeToPar(entry: entry, par: par) else { continue }
-                points = Double(grossRelative)
+                points = Double(basis == .net ? grossRelative - strokesReceived : grossRelative)
             }
-            let rawStrokes = ScoringEngine.resolvedGrossStrokes(entry: entry, par: par)
 
             holeValues[holeNumber] = .init(
                 rawStrokes: rawStrokes,
-                netStrokes: basis == .net ? rawStrokes : nil,
+                netStrokes: basis == .net ? netStrokes : nil,
                 points: points,
                 pickedUp: entry.pickedUp
             )
@@ -428,6 +455,32 @@ struct MatchupResultPresentationBuilder {
             total: total,
             holesPlayed: holeValues.count
         )
+    }
+
+    private static func directScoringUnit(
+        snapshot: RoundSnapshot,
+        sideID: String,
+        scoringUnitIDs: Set<String>,
+        mode: MatchupMode,
+        participants: [RoundParticipant]
+    ) -> ScoringUnit {
+        if let scoringUnit = snapshot.segments
+            .flatMap(\.scoringUnits)
+            .first(where: { scoringUnitIDs.contains($0.id) }) {
+            return scoringUnit
+        }
+
+        switch mode {
+        case .individual:
+            return ScoringUnit(id: sideID, owner: .participant, ownerIDs: [sideID], scoringMethod: .individual)
+        case .team:
+            return ScoringUnit(id: sideID, owner: .team, ownerIDs: [sideID], scoringMethod: .aggregate)
+        case .scoreOwner:
+            if let group = snapshot.scoringGroup(id: sideID) {
+                return ScoringUnit(id: group.id, owner: .scoreOwner, ownerIDs: group.memberIDs, scoringMethod: .aggregate)
+            }
+            return ScoringUnit(id: sideID, owner: .scoreOwner, ownerIDs: participants.map(\.id), scoringMethod: .aggregate)
+        }
     }
 
     private static func aggregateScoringRow(

@@ -252,6 +252,56 @@ final class LiveRoundOutcomeHolePerformanceTests: XCTestCase {
         XCTAssertEqual(viewModel.matchupSections.first?.name, "John S. + Tyler D. vs Alice L. + Morgan R.")
     }
 
+    func testSharedScoreOwnerMatchupsDisplayWhenScoreOwnerScopeIsIndividual() async throws {
+        var snapshot = Self.makeSharedPartnershipSnapshot()
+        snapshot.round.configuration.scoreOwnerScope = .individual
+        snapshot.segments[0].matchups = [
+            TeamMatchup(
+                id: "pair_matchup",
+                teamIDs: [],
+                scoreOwnerIDs: ["pair_1", "pair_2"],
+                scoreOwnerScope: .partnership,
+                mode: .scoreOwner
+            )
+        ]
+        snapshot.segments[0].competitionScope = .matchup
+        snapshot.round.configuration.competitionScope = .matchup
+
+        let viewModel = await boundViewModel(snapshot: snapshot, participantID: "p1")
+        let section = try XCTUnwrap(viewModel.matchupSections.first)
+
+        XCTAssertEqual(section.matchup.mode, .scoreOwner)
+        XCTAssertEqual(section.matchup.scoreOwnerIDs, ["pair_1", "pair_2"])
+        XCTAssertEqual(Set(section.rows.map(\.scoringUnitID)), Set(["pair_1", "pair_2"]))
+    }
+
+    func testSharedScoreOutcomeSummaryUsesScoringUnitTotalOverParticipantAlias() async throws {
+        var snapshot = Self.makeSharedPartnershipSnapshot()
+        let roundID = snapshot.round.id
+        let segmentID = try XCTUnwrap(snapshot.segments.first?.id)
+        snapshot.scoring = [
+            ScoreEntry(
+                id: ScoreEntry.makeID(hole: 1, segment: segmentID, scoringUnit: "p1"),
+                holeNumber: 1,
+                segmentID: segmentID,
+                groupID: "group_1",
+                scoringUnitID: "p1",
+                participantIDs: ["p1"],
+                relativeToPar: -3,
+                pickedUp: false,
+                entryID: "p1",
+                parentID: roundID
+            ),
+            Self.makeSharedScoreEntry(roundID: roundID, segmentID: segmentID, scoringUnitID: "pair_1", participantIDs: ["p1", "p2"], holeNumber: 1, strokes: 5),
+            Self.makeSharedScoreEntry(roundID: roundID, segmentID: segmentID, scoringUnitID: "pair_2", participantIDs: ["p3", "p4"], holeNumber: 1, strokes: 4),
+        ]
+
+        let viewModel = await boundViewModel(snapshot: snapshot, participantID: "p1")
+        let summary = try XCTUnwrap(viewModel.outcomePersonalSummary)
+
+        XCTAssertEqual(summary.grossScoreToPar, 1)
+    }
+
     func testSharedScorePartnershipWithoutPairsFallsBackToTeamRows() async throws {
         var snapshot = Self.makeSharedTeamSnapshot(opaqueScoringUnitIDs: false)
         snapshot.round.configuration.scoreOwnerScope = .partnership

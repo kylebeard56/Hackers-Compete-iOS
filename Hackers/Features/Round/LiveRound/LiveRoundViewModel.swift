@@ -2745,13 +2745,27 @@ final class LiveRoundViewModel: ObservableObject, Loggable {
     var outcomePersonalSummary: OutcomePersonalSummary? {
         guard let participant = outcomeParticipant,
               let tee = resolvedPlayedTee(for: participant) else { return nil }
+        let sharedSubject = sharedOutcomeSubject(for: participant)
+        let grossScoreToPar = sharedSubject
+            .map { scoringUnitScoreToPar(scoringUnitID: $0.scoringUnitID, basis: .gross) }
+            ?? scoreToPar(for: participant, basis: .gross)
+        let netScoreToPar = sharedSubject
+            .map { scoringUnitScoreToPar(scoringUnitID: $0.scoringUnitID, basis: .net) }
+            ?? scoreToPar(for: participant, basis: .net)
         return OutcomePersonalSummary(
             participant: participant,
             tee: tee,
-            grossScoreToPar: scoreToPar(for: participant, basis: .gross),
-            netScoreToPar: scoreToPar(for: participant, basis: .net),
+            grossScoreToPar: grossScoreToPar,
+            netScoreToPar: netScoreToPar,
             adjustedIndex: derivedRoundHandicapIndex(for: participant)
         )
+    }
+
+    private func sharedOutcomeSubject(for participant: RoundParticipant) -> SharedScoringSubject? {
+        guard snapshot.isSharedScoreSource else { return nil }
+        return sharedScoringSubjects.first { subject in
+            subject.participants.contains { $0.id == participant.id }
+        }
     }
 
     func derivedRoundHandicapIndex(for participant: RoundParticipant) -> Double? {
@@ -3022,19 +3036,18 @@ final class LiveRoundViewModel: ObservableObject, Loggable {
     /// Matchup sections for the Matchups tab. Empty when not matchup scope or no valid matchups. Only includes sections matching the current mode (requiresTeams).
     var matchupSections: [MatchupLeaderboardSection] {
         let result = engineResult
-        let expectedMode = expectedMatchupMode
         let builtSections = LeaderboardBuilder.buildMatchupSections(
             result: result,
             teams: snapshot.teams,
             participants: snapshot.participants,
             scoringGroups: snapshot.scoringGroups
         )
-        .filter { ($0.matchup.mode ?? .team) == expectedMode }
+        .filter { shouldDisplayMatchup($0.matchup) }
         .map(reorderedMatchupSection)
 
         let builtIDs = Set(builtSections.map(\.id))
         let expectedMatchups = (snapshot.roundSegment?.matchups ?? [])
-            .filter { ($0.mode ?? .team) == expectedMode && $0.isValid && !builtIDs.contains($0.id) }
+            .filter { shouldDisplayMatchup($0) && $0.isValid && !builtIDs.contains($0.id) }
             .map { matchup in
                 MatchupLeaderboardSection(
                     id: matchup.id,
@@ -3045,6 +3058,28 @@ final class LiveRoundViewModel: ObservableObject, Loggable {
             }
 
         return (builtSections + expectedMatchups)
+    }
+
+    private func shouldDisplayMatchup(_ matchup: TeamMatchup) -> Bool {
+        let mode = matchup.mode ?? expectedMatchupMode
+        if mode == expectedMatchupMode {
+            return true
+        }
+        guard snapshot.isSharedScoreSource,
+              mode == .scoreOwner,
+              matchup.isValid else {
+            return false
+        }
+        return matchup.pairingIDs().allSatisfy(canResolveScoreOwnerMatchupSide)
+    }
+
+    private func canResolveScoreOwnerMatchupSide(_ sideID: String) -> Bool {
+        if snapshot.scoringGroup(id: sideID) != nil { return true }
+        if sharedScoringSubject(matching: sideID) != nil { return true }
+        if let scoringUnit = scoringUnit(id: sideID), scoringUnit.owner == .scoreOwner {
+            return true
+        }
+        return false
     }
 
     private func matchupSectionName(for matchup: TeamMatchup) -> String {

@@ -323,13 +323,19 @@ struct ScoringEngine {
         let usesSharedScoreSource = template.scoreSource == .shared
         let scoreIndex = buildScoreIndex(scores: scores, includeParticipantAliases: !usesSharedScoreSource)
         let lookupSegmentIDs = scoreLookupSegmentIDs ?? resolvedScoreLookupSegmentIDs(primarySegment: segment, scores: scores)
-        let scoringUnits = resolvedScoringUnits(
+        let baseScoringUnits = resolvedScoringUnits(
             participants: participants,
             teams: teams,
             scoringGroups: scoringGroups,
             segment: segment,
             template: template,
             scoreOwnerScope: scoreOwnerScope
+        )
+        let scoringUnits = augmentedScoringUnitsForMatchups(
+            baseScoringUnits,
+            matchups: segment.matchups ?? [],
+            scoringGroups: scoringGroups,
+            template: template
         )
         let selectionGroups = resolvedSelectionGroups(
             participants: participants,
@@ -375,8 +381,17 @@ struct ScoringEngine {
         if isMatchupScope {
             for matchup in matchups {
                 guard matchup.isValid else { continue }
-                let pairingIDs = matchup.pairingIDs()
-                let pairingValues = preCompareValues.filter { pairingIDs.contains($0.key) }
+                let matchupSides = resolvedMatchupSides(
+                    matchup: matchup,
+                    participants: participants,
+                    teams: teams,
+                    scoringGroups: scoringGroups,
+                    scoringUnits: scoringUnits
+                )
+                let pairingValues = matchupValues(
+                    values: preCompareValues,
+                    sides: matchupSides
+                )
 
                 let compared = runCompareStages(
                     values: pairingValues,
@@ -452,7 +467,10 @@ struct ScoringEngine {
     ) -> ScoringResult {
         let holeNumbers = segment.holeRange.holeNumbers
         let holeMap = Dictionary(uniqueKeysWithValues: holes.map { ($0.number, $0) })
-        let scoreIndex = buildScoreIndex(scores: scores)
+        let scoreIndex = buildScoreIndex(
+            scores: scores,
+            includeParticipantAliases: template.scoreSource != .shared
+        )
         let lookupSegmentIDs = scoreLookupSegmentIDs ?? resolvedScoreLookupSegmentIDs(primarySegment: segment, scores: scores)
         let rawValues = buildRawValues(
             participants: participants,
@@ -1539,6 +1557,186 @@ struct ScoringEngine {
         guard holesInPlay != basis.holeCount else { return hcp }
         let scaled = Double(hcp) * Double(holesInPlay) / Double(basis.holeCount)
         return Int(scaled.rounded(.toNearestOrAwayFromZero))
+    }
+
+    private struct ResolvedMatchupSide {
+        let sideID: String
+        let participantIDs: [String]
+        let lookupIDs: [String]
+    }
+
+    private static func augmentedScoringUnitsForMatchups(
+        _ scoringUnits: [ScoringUnit],
+        matchups: [TeamMatchup],
+        scoringGroups: [RoundScoringGroup],
+        template: GameTemplate
+    ) -> [ScoringUnit] {
+        guard template.scoreSource == .shared else { return scoringUnits }
+
+        var units = scoringUnits
+        var seenIDs = Set(scoringUnits.map(\.id))
+        var existingMemberSets = Set(scoringUnits
+            .filter { $0.owner == .scoreOwner }
+            .map { Set($0.ownerIDs) })
+        let scoringGroupsByID = Dictionary(uniqueKeysWithValues: scoringGroups.map { ($0.id, $0) })
+
+        for matchup in matchups where (matchup.mode ?? .team) == .scoreOwner {
+            for sideID in matchup.pairingIDs() {
+                guard let group = scoringGroupsByID[sideID],
+                      group.memberIDs.isPopulated,
+                      !seenIDs.contains(group.id),
+                      !existingMemberSets.contains(Set(group.memberIDs)) else {
+                    continue
+                }
+                units.append(ScoringUnit(
+                    id: group.id,
+                    owner: .scoreOwner,
+                    ownerIDs: group.memberIDs,
+                    scoringMethod: .aggregate,
+                    aggregation: .init(mode: .sumAll, scope: .perHole)
+                ))
+                seenIDs.insert(group.id)
+                existingMemberSets.insert(Set(group.memberIDs))
+            }
+        }
+
+        return units
+    }
+
+    private static func resolvedMatchupSides(
+        matchup: TeamMatchup,
+        participants: [RoundParticipant],
+        teams: [RoundTeam],
+        scoringGroups: [RoundScoringGroup],
+        scoringUnits: [ScoringUnit]
+    ) -> [ResolvedMatchupSide] {
+        let mode = matchup.mode ?? .team
+        let participantByID = Dictionary(uniqueKeysWithValues: participants.map { ($0.id, $0) })
+        let teamParticipantIDs = Dictionary(grouping: participants.compactMap { participant -> (String, String)? in
+            guard let teamID = participant.teamID, teamID.isPopulated else { return nil }
+            return (teamID, participant.id)
+        }, by: \.0).mapValues { $0.map(\.1) }
+        let scoringGroupsByID = Dictionary(uniqueKeysWithValues: scoringGroups.map { ($0.id, $0) })
+        let teamIDs = Set(teams.map(\.id))
+
+        return matchup.pairingIDs().map { sideID in
+            let participantIDs: [String]
+            switch mode {
+            case .individual:
+                participantIDs = participantByID[sideID] != nil ? [sideID] : []
+            case .team:
+                participantIDs = teamParticipantIDs[sideID] ?? []
+            case .scoreOwner:
+                if let group = scoringGroupsByID[sideID] {
+                    participantIDs = group.memberIDs
+                } else if let scoringUnit = scoringUnits.first(where: { $0.id == sideID }) {
+                    participantIDs = resolvedParticipantIDs(
+                        for: scoringUnit,
+                        participantsByID: participantByID,
+                        teamParticipantIDs: teamParticipantIDs,
+                        scoringGroupsByID: scoringGroupsByID
+                    )
+                } else if teamIDs.contains(sideID) {
+                    participantIDs = teamParticipantIDs[sideID] ?? []
+                } else {
+                    participantIDs = []
+                }
+            }
+
+            let lookupIDs = matchupSideLookupIDs(
+                sideID: sideID,
+                mode: mode,
+                participantIDs: participantIDs,
+                scoringGroups: scoringGroups,
+                scoringUnits: scoringUnits
+            )
+
+            return ResolvedMatchupSide(
+                sideID: sideID,
+                participantIDs: participantIDs,
+                lookupIDs: lookupIDs
+            )
+        }
+    }
+
+    private static func matchupSideLookupIDs(
+        sideID: String,
+        mode: MatchupMode,
+        participantIDs: [String],
+        scoringGroups: [RoundScoringGroup],
+        scoringUnits: [ScoringUnit]
+    ) -> [String] {
+        var ids: [String] = []
+        var seen = Set<String>()
+        func append(_ id: String?) {
+            guard let id, id.isPopulated, !seen.contains(id) else { return }
+            ids.append(id)
+            seen.insert(id)
+        }
+
+        append(sideID)
+        let participantSet = Set(participantIDs)
+
+        switch mode {
+        case .individual:
+            break
+        case .team:
+            scoringUnits
+                .filter { unit in
+                    unit.owner == .team
+                        && (unit.id == sideID || unit.ownerIDs.contains(sideID))
+                }
+                .forEach { append($0.id) }
+        case .scoreOwner:
+            if let group = scoringGroups.first(where: { $0.id == sideID }) {
+                append(group.id)
+                append(group.teamID)
+            }
+            scoringGroups
+                .filter { group in
+                    group.id == sideID
+                        || (participantSet.isPopulated && Set(group.memberIDs) == participantSet)
+                }
+                .forEach { group in
+                    append(group.id)
+                    append(group.teamID)
+                }
+            scoringUnits
+                .filter { unit in
+                    unit.owner == .scoreOwner
+                        && (unit.id == sideID
+                            || unit.ownerIDs.contains(sideID)
+                            || (participantSet.isPopulated && Set(unit.ownerIDs) == participantSet))
+                }
+                .forEach { append($0.id) }
+        }
+
+        return ids
+    }
+
+    private static func matchupValues(
+        values: [String: [Int: PipelineHoleValue]],
+        sides: [ResolvedMatchupSide]
+    ) -> [String: [Int: PipelineHoleValue]] {
+        var result: [String: [Int: PipelineHoleValue]] = [:]
+        for side in sides {
+            for lookupID in side.lookupIDs {
+                guard let holeMap = values[lookupID] else { continue }
+                result[side.sideID] = holeMap.mapValues { value in
+                    PipelineHoleValue(
+                        participantID: side.sideID,
+                        grossStrokes: value.grossStrokes,
+                        netStrokes: value.netStrokes,
+                        par: value.par,
+                        scoreToPar: value.scoreToPar,
+                        points: value.points,
+                        pickedUp: value.pickedUp
+                    )
+                }
+                break
+            }
+        }
+        return result
     }
 
     private static func resolvedScoringUnits(

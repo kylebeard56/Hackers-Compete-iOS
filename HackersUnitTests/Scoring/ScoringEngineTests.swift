@@ -780,6 +780,132 @@ final class ScoringEngineTests: XCTestCase {
         XCTAssertEqual(rowMap["pair_blue"]?.holesPlayed, 1)
     }
 
+    func testSharedScoreOwnerMatchupResolvesOpaqueScoringUnitRowsToPairSides() {
+        let holes = [Hole(number: 1, par: 4, yardage: 400, handicap: 1)]
+        let participants = [
+            makeParticipant(id: "p1", name: "Alice", teamID: "red"),
+            makeParticipant(id: "p2", name: "Bob", teamID: "red"),
+            makeParticipant(id: "p3", name: "Cara", teamID: "blue"),
+            makeParticipant(id: "p4", name: "Drew", teamID: "blue"),
+        ]
+        let teams = [
+            RoundTeam(id: "red", name: "Red", color: "red", index: 0, createdAt: .init()),
+            RoundTeam(id: "blue", name: "Blue", color: "blue", index: 1, createdAt: .init()),
+        ]
+        let scoringGroups = [
+            makePartnership(id: "pair_red", teamID: "red", memberIDs: ["p1", "p2"]),
+            makePartnership(id: "pair_blue", teamID: "blue", memberIDs: ["p3", "p4"]),
+        ]
+        let matchup = TeamMatchup(
+            id: "match1",
+            teamIDs: [],
+            scoreOwnerIDs: ["pair_red", "pair_blue"],
+            scoreOwnerScope: .partnership,
+            mode: .scoreOwner
+        )
+        let segment = RoundSegment(
+            id: "seg1",
+            roundID: "round1",
+            holeRange: HoleRange(startHole: 1, endHole: 1),
+            templateID: FormatTemplateRegistry.captainsChoice.id,
+            scoringUnits: [
+                ScoringUnit(id: "unit_red", owner: .scoreOwner, ownerIDs: ["p1", "p2"], scoringMethod: .aggregate),
+                ScoringUnit(id: "unit_blue", owner: .scoreOwner, ownerIDs: ["p3", "p4"], scoringMethod: .aggregate),
+            ],
+            matchups: [matchup],
+            competitionScope: .matchup
+        )
+        let scores = [
+            makeSharedScoreEntry(scoringUnitID: "unit_red", participantIDs: ["p1", "p2"], holeNumber: 1, strokes: 4),
+            makeSharedScoreEntry(scoringUnitID: "unit_blue", participantIDs: ["p3", "p4"], holeNumber: 1, strokes: 5),
+        ]
+
+        let result = ScoringEngine.computeWithPipeline(
+            scores: scores,
+            participants: participants,
+            teams: teams,
+            segment: segment,
+            holes: holes,
+            basis: .gross,
+            template: FormatTemplateRegistry.captainsChoice,
+            resolvedCompetitionScope: .matchup,
+            scoreOwnerScope: .partnership,
+            scoringGroups: scoringGroups
+        )
+
+        XCTAssertEqual(result.matchupResults.count, 1)
+        XCTAssertEqual(Set(result.matchupResults[0].rows.map(\.scoringUnitID)), Set(["pair_red", "pair_blue"]))
+        let rowMap = Dictionary(uniqueKeysWithValues: result.matchupResults[0].rows.map { ($0.scoringUnitID, $0) })
+        XCTAssertEqual(rowMap["pair_red"]?.total, 0)
+        XCTAssertEqual(rowMap["pair_blue"]?.total, 1)
+        XCTAssertEqual(rowMap["pair_red"]?.participantIDs, ["p1", "p2"])
+        XCTAssertEqual(rowMap["pair_blue"]?.participantIDs, ["p3", "p4"])
+    }
+
+    func testSharedScoreOwnerDirectFallbackUsesNetScrambleAllowance() {
+        let holes = [Hole(number: 1, par: 4, yardage: 400, handicap: 1)]
+        let participants = [
+            makeParticipant(id: "p1", name: "Alice", handicap: 36, teamID: "red"),
+            makeParticipant(id: "p2", name: "Bob", handicap: 36, teamID: "red"),
+            makeParticipant(id: "p3", name: "Cara", handicap: 0, teamID: "blue"),
+            makeParticipant(id: "p4", name: "Drew", handicap: 0, teamID: "blue"),
+        ]
+        let teams = [
+            RoundTeam(id: "red", name: "Red", color: "red", index: 0, createdAt: .init()),
+            RoundTeam(id: "blue", name: "Blue", color: "blue", index: 1, createdAt: .init()),
+        ]
+        let scoringGroups = [
+            makePartnership(id: "pair_red", teamID: "red", memberIDs: ["p1", "p2"]),
+            makePartnership(id: "pair_blue", teamID: "blue", memberIDs: ["p3", "p4"]),
+        ]
+        let matchup = TeamMatchup(
+            id: "match1",
+            teamIDs: [],
+            scoreOwnerIDs: ["pair_red", "pair_blue"],
+            scoreOwnerScope: .partnership,
+            mode: .scoreOwner
+        )
+        let segment = RoundSegment(
+            id: "seg1",
+            roundID: "round1",
+            holeRange: HoleRange(startHole: 1, endHole: 1),
+            templateID: FormatTemplateRegistry.captainsChoice.id,
+            matchups: [matchup],
+            competitionScope: .matchup
+        )
+        let configuration = RoundConfiguration(
+            primaryFormat: .strokePlay,
+            formatSummary: RoundFormatSummary(from: FormatTemplateRegistry.captainsChoice),
+            competitionScope: .matchup,
+            scoreOwnerScope: .partnership,
+            sharedScoreHandicapConfig: .scramble2Player
+        )
+        let snapshot = RoundSnapshot(
+            round: Round(id: "round1", shareCode: "MATCH", createdBy: "host", configuration: configuration),
+            participants: participants,
+            teams: teams,
+            scoringGroups: scoringGroups,
+            segments: [segment],
+            scoring: [
+                makeSharedScoreEntry(scoringUnitID: "pair_red", participantIDs: ["p1", "p2"], holeNumber: 1, strokes: 5),
+                makeSharedScoreEntry(scoringUnitID: "pair_blue", participantIDs: ["p3", "p4"], holeNumber: 1, strokes: 4),
+            ]
+        )
+        let result = ScoringResult(rows: [], holeStates: [:], template: FormatTemplateRegistry.captainsChoice, matchupResults: [])
+        let section = MatchupLeaderboardSection(id: matchup.id, matchup: matchup, name: "Match 1", rows: [])
+
+        let presentation = MatchupResultPresentationBuilder.build(
+            snapshot: snapshot,
+            result: result,
+            section: section,
+            basis: .net
+        )
+
+        XCTAssertEqual(presentation.side(id: "pair_red")?.scoreLabel, "E")
+        XCTAssertEqual(presentation.side(id: "pair_blue")?.scoreLabel, "E")
+        XCTAssertEqual(presentation.side(id: "pair_red")?.total, 0)
+    }
+
     func testSharedScoreOwnerNetUsesSharedHandicapAllowanceConfig() {
         let holes = makeHoles()
         let participants = [
