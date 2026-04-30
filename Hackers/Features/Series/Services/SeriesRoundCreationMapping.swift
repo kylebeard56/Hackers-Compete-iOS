@@ -96,6 +96,7 @@ enum SeriesRoundCreationMapping {
             holeWinPoints: seriesRound.roundConfig.holeWinPoints,
             matchWinnerBonusPoints: seriesRound.roundConfig.matchWinnerBonusPoints,
             matchTiePolicy: seriesRound.roundConfig.matchTiePolicy,
+            selectionDomain: seriesRound.roundConfig.selectionDomain,
             sequentialTeeStartsEnabled: seriesRound.roundConfig.sequentialTeeStartsEnabled ?? false,
             handicapStrokeBasis: series.handicapConfig.strokeBasis,
             sharedScoreHandicapConfig: seriesRound.roundConfig.sharedScoreHandicapConfig

@@ -4021,6 +4021,7 @@ final class SeriesViewModel: ObservableObject, Loggable {
         updated.holeWinPoints = linkedRound.configuration.holeWinPoints
         updated.matchWinnerBonusPoints = linkedRound.configuration.matchWinnerBonusPoints
         updated.matchTiePolicy = linkedRound.configuration.matchTiePolicy
+        updated.selectionDomain = linkedRound.configuration.selectionDomain
         updated.sequentialTeeStartsEnabled = linkedRound.configuration.sequentialTeeStartsEnabled ?? fallback.sequentialTeeStartsEnabled ?? false
         if linkedRound.configuration.resolvedCompetitionScope == .matchup {
             updated.matchupMode = seriesMatchupMode(

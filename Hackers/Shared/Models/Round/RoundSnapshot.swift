@@ -96,6 +96,12 @@ extension RoundSnapshot {
         } == true
     }
     var expectedMatchupMode: MatchupMode {
+        let explicitModes = Set((roundSegment?.matchups ?? [])
+            .filter(\.isValid)
+            .compactMap(\.mode))
+        if explicitModes.count == 1, let mode = explicitModes.first {
+            return mode
+        }
         if configuration.scoreOwnerScope != .individual {
             return .scoreOwner
         }

@@ -166,6 +166,56 @@ final class SeriesRoundSyncServiceTests: XCTestCase {
         XCTAssertEqual(updated.matchups?.first?.scoreOwnerIDs, ["pair_red", "pair_blue"])
     }
 
+    func testBuildUpdatedSegment_matchupsOnlyPairSyncPreservesIndividualScoreEntry() {
+        var context = pairMatchupContext()
+        context.seriesRound.roundConfig.scoreOwnerScope = .individual
+        let existingUnit = ScoringUnit(id: "p1", owner: .participant, ownerIDs: ["p1"])
+        let existingSegment = RoundSegment(
+            id: "seg1",
+            scoringUnits: [existingUnit],
+            matchups: [],
+            parentID: "round1"
+        )
+
+        let updated = SeriesRoundSyncPlanning.buildUpdatedSegment(
+            series: context.series,
+            seriesRound: context.seriesRound,
+            courseSegment: testCourseSegment(),
+            participants: context.participants,
+            scoringGroups: context.scoringGroups,
+            existingSegment: existingSegment,
+            teams: context.teams,
+            pods: [],
+            participatingMembers: context.members,
+            teamLinks: context.teamLinks,
+            updateFormat: false,
+            updateScoringUnits: false,
+            updateMatchups: true
+        )
+
+        XCTAssertEqual(context.seriesRound.roundConfig.scoreOwnerScope, .individual)
+        XCTAssertEqual(updated.scoringUnits, [existingUnit])
+        XCTAssertEqual(updated.matchups?.first?.mode, .scoreOwner)
+        XCTAssertEqual(updated.matchups?.first?.scoreOwnerScope, .partnership)
+        XCTAssertEqual(updated.matchups?.first?.scoreOwnerIDs, ["pair_red", "pair_blue"])
+    }
+
+    func testScoringSeriesRoundForExistingRoundCopiesSelectionDomain() {
+        var roundConfiguration = RoundConfiguration(selectionDomain: .matchupSide)
+        roundConfiguration.teamScoring = .init(mode: .bestN, count: 1, scope: .perHole)
+        let seriesRound = SeriesRound(id: "sr1", parentID: "series1")
+        let existingSegment = RoundSegment(id: "seg1", templateID: FormatTemplateRegistry.strokePlay.id)
+
+        let updated = SeriesRoundSyncPlanning.scoringSeriesRoundForExistingRound(
+            seriesRound,
+            roundConfiguration: roundConfiguration,
+            existingSegment: existingSegment
+        )
+
+        XCTAssertEqual(updated.roundConfig.selectionDomain, .matchupSide)
+        XCTAssertEqual(updated.roundConfig.teamScoring, roundConfiguration.teamScoring)
+    }
+
     @MainActor
     func testRoundTileLinkedActionCopyAndRSVPEligibility() {
         let viewModel = SeriesViewModel()

@@ -554,6 +554,7 @@ struct SeriesRoundConfiguration: Hashable, Codable {
     var matchWinnerBonusPoints: Double?
     var matchTiePolicy: TiePolicy?
     var sequentialTeeStartsEnabled: Bool?
+    var selectionDomain: ScoringSelectionDomain?
     var matchupMode: SeriesMatchupMode
     var podGroupingStrategy: SeriesPodGroupingStrategy
     var teamAssignmentMode: SeriesTeamAssignmentMode
@@ -580,6 +581,7 @@ struct SeriesRoundConfiguration: Hashable, Codable {
         matchWinnerBonusPoints: Double? = nil,
         matchTiePolicy: TiePolicy? = nil,
         sequentialTeeStartsEnabled: Bool? = false,
+        selectionDomain: ScoringSelectionDomain? = nil,
         matchupMode: SeriesMatchupMode = .field,
         podGroupingStrategy: SeriesPodGroupingStrategy = .disabled,
         teamAssignmentMode: SeriesTeamAssignmentMode = .manual,
@@ -603,6 +605,7 @@ struct SeriesRoundConfiguration: Hashable, Codable {
         self.matchWinnerBonusPoints = matchWinnerBonusPoints
         self.matchTiePolicy = matchTiePolicy
         self.sequentialTeeStartsEnabled = sequentialTeeStartsEnabled
+        self.selectionDomain = selectionDomain
         self.matchupMode = matchupMode
         self.podGroupingStrategy = podGroupingStrategy
         self.teamAssignmentMode = teamAssignmentMode
@@ -630,6 +633,7 @@ struct SeriesRoundConfiguration: Hashable, Codable {
         case legacyBestNSelected = "best_n_selected"
         case legacyBestWorstEnabled = "best_worst_enabled"
         case sequentialTeeStartsEnabled = "sequential_tee_starts_enabled"
+        case selectionDomain = "selection_domain"
         case matchupMode = "matchup_mode"
         case podGroupingStrategy = "pod_grouping_strategy"
         case teamAssignmentMode = "team_assignment_mode"
@@ -684,6 +688,7 @@ struct SeriesRoundConfiguration: Hashable, Codable {
         matchWinnerBonusPoints = try c.decodeIfPresent(Double.self, forKey: .matchWinnerBonusPoints)
         matchTiePolicy = try c.decodeIfPresent(TiePolicy.self, forKey: .matchTiePolicy)
         sequentialTeeStartsEnabled = try c.decodeIfPresent(Bool.self, forKey: .sequentialTeeStartsEnabled) ?? false
+        selectionDomain = try c.decodeIfPresent(ScoringSelectionDomain.self, forKey: .selectionDomain)
         matchupMode = try c.decodeIfPresent(SeriesMatchupMode.self, forKey: .matchupMode) ?? .field
         podGroupingStrategy = try c.decodeIfPresent(SeriesPodGroupingStrategy.self, forKey: .podGroupingStrategy) ?? .disabled
         teamAssignmentMode = try c.decodeIfPresent(SeriesTeamAssignmentMode.self, forKey: .teamAssignmentMode) ?? .manual
@@ -728,6 +733,7 @@ struct SeriesRoundConfiguration: Hashable, Codable {
         try c.encodeIfPresent(matchWinnerBonusPoints, forKey: .matchWinnerBonusPoints)
         try c.encodeIfPresent(matchTiePolicy, forKey: .matchTiePolicy)
         try c.encodeIfPresent(sequentialTeeStartsEnabled, forKey: .sequentialTeeStartsEnabled)
+        try c.encodeIfPresent(selectionDomain, forKey: .selectionDomain)
         try c.encode(matchupMode, forKey: .matchupMode)
         try c.encode(podGroupingStrategy, forKey: .podGroupingStrategy)
         try c.encode(teamAssignmentMode, forKey: .teamAssignmentMode)

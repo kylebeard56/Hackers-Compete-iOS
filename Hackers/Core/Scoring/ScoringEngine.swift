@@ -166,6 +166,8 @@ struct ScoringEngine {
             scoreLookupSegmentIDs: lookupSegmentIDs.isEmpty ? nil : lookupSegmentIDs,
             resolvedCompetitionScope: snapshot.configuration.resolvedCompetitionScope,
             scoreOwnerScope: snapshot.configuration.scoreOwnerScope,
+            selectionDomain: snapshot.configuration.selectionDomain,
+            teamScoring: snapshot.configuration.teamScoring,
             scoringGroups: snapshot.scoringGroups,
             perHoleWinPoints: snapshot.configuration.resolvedHoleWinPoints,
             sharedScoreHandicapConfig: snapshot.configuration.sharedScoreHandicapConfig,
@@ -313,6 +315,8 @@ struct ScoringEngine {
         scoreLookupSegmentIDs: [String]? = nil,
         resolvedCompetitionScope: CompetitionScope? = nil,
         scoreOwnerScope: RoundScoreOwnerScope = .individual,
+        selectionDomain: ScoringSelectionDomain? = nil,
+        teamScoring: RoundTeamScoringConfiguration = .init(),
         scoringGroups: [RoundScoringGroup] = [],
         perHoleWinPoints: Double = 1.0,
         sharedScoreHandicapConfig: HandicapConfiguration? = nil,
@@ -337,10 +341,20 @@ struct ScoringEngine {
             scoringGroups: scoringGroups,
             template: template
         )
+        let matchups = segment.matchups ?? []
+        let effectiveSelectionDomain = resolvedSelectionDomain(
+            explicit: selectionDomain,
+            matchups: matchups,
+            scoringGroups: scoringGroups,
+            scoreOwnerScope: scoreOwnerScope,
+            teamScoring: teamScoring,
+            template: template,
+            teams: teams
+        )
         let selectionGroups = resolvedSelectionGroups(
             participants: participants,
             scoringGroups: scoringGroups,
-            scoreOwnerScope: scoreOwnerScope,
+            selectionDomain: effectiveSelectionDomain,
             template: template
         )
 
@@ -360,6 +374,11 @@ struct ScoringEngine {
                 : nil,
             handicapStrokeBasis: handicapStrokeBasis
         )
+        let baseValues = applyBaseScoringStages(
+            values: rawValues,
+            pipeline: template.pipeline,
+            holeNumbers: holeNumbers
+        )
 
         let preCompareValues = runPreCompareStages(
             values: rawValues,
@@ -371,7 +390,6 @@ struct ScoringEngine {
             selectionGroups: selectionGroups
         )
 
-        let matchups = segment.matchups ?? []
         let effectiveScope = resolvedCompetitionScope ?? segment.competitionScope ?? template.resolvedScope
         let isMatchupScope = effectiveScope == .matchup && !matchups.isEmpty
 
@@ -381,6 +399,27 @@ struct ScoringEngine {
         if isMatchupScope {
             for matchup in matchups {
                 guard matchup.isValid else { continue }
+                if shouldUseDomainSelectionForMatchup(
+                    matchup,
+                    domain: effectiveSelectionDomain,
+                    template: template
+                ), let rows = buildDomainSelectedMatchupRows(
+                    matchup: matchup,
+                    values: baseValues,
+                    participants: participants,
+                    teams: teams,
+                    scoringGroups: scoringGroups,
+                    scoringUnits: scoringUnits,
+                    holeNumbers: holeNumbers,
+                    template: template,
+                    teamScoring: teamScoring,
+                    perHoleWinPoints: perHoleWinPoints
+                ) {
+                    matchupResults.append(MatchupScoringResult(matchup: matchup, rows: rows))
+                    allRows.append(contentsOf: rows)
+                    continue
+                }
+
                 let matchupSides = resolvedMatchupSides(
                     matchup: matchup,
                     participants: participants,
@@ -1565,6 +1604,144 @@ struct ScoringEngine {
         let lookupIDs: [String]
     }
 
+    static func resolvedSelectionDomain(
+        explicit: ScoringSelectionDomain?,
+        matchups: [TeamMatchup],
+        scoringGroups: [RoundScoringGroup],
+        scoreOwnerScope: RoundScoreOwnerScope,
+        teamScoring: RoundTeamScoringConfiguration,
+        template: GameTemplate,
+        teams: [RoundTeam]
+    ) -> ScoringSelectionDomain {
+        if let explicit { return explicit }
+
+        let partnershipGroupIDs = Set(scoringGroups.filter { $0.kind == .partnership }.map(\.id))
+        let hasPartnershipScoreOwnerMatchup = matchups.contains { matchup in
+            guard (matchup.mode ?? .team) == .scoreOwner, matchup.isValid else { return false }
+            let sideIDs = matchup.pairingIDs()
+            return sideIDs.count == 2 && sideIDs.allSatisfy { partnershipGroupIDs.contains($0) }
+        }
+        if hasPartnershipScoreOwnerMatchup {
+            return .matchupSide
+        }
+
+        switch scoreOwnerScope {
+        case .partnership:
+            return .partnership
+        case .teeGroup:
+            return .teeGroup
+        case .individual:
+            break
+        }
+
+        if teamScoring.mode != .all || template.requirements.requiresTeams || teams.isPopulated {
+            return .team
+        }
+        return .participant
+    }
+
+    private static func shouldUseDomainSelectionForMatchup(
+        _ matchup: TeamMatchup,
+        domain: ScoringSelectionDomain,
+        template: GameTemplate
+    ) -> Bool {
+        guard template.scoreSource == .individual,
+              (matchup.mode ?? .team) == .scoreOwner else {
+            return false
+        }
+        return domain == .matchupSide || domain == .partnership || domain == .teeGroup
+    }
+
+    private static func buildDomainSelectedMatchupRows(
+        matchup: TeamMatchup,
+        values: [String: [Int: PipelineHoleValue]],
+        participants: [RoundParticipant],
+        teams: [RoundTeam],
+        scoringGroups: [RoundScoringGroup],
+        scoringUnits: [ScoringUnit],
+        holeNumbers: [Int],
+        template: GameTemplate,
+        teamScoring: RoundTeamScoringConfiguration,
+        perHoleWinPoints: Double
+    ) -> [ScoringRow]? {
+        let participantByID = Dictionary(uniqueKeysWithValues: participants.map { ($0.id, $0) })
+        let sides = resolvedMatchupSides(
+            matchup: matchup,
+            participants: participants,
+            teams: teams,
+            scoringGroups: scoringGroups,
+            scoringUnits: scoringUnits
+        )
+        guard sides.count == 2 else { return nil }
+
+        let sideRows = sides.compactMap { side -> ScoringRow? in
+            let sideParticipants = side.participantIDs.compactMap { participantByID[$0] }
+            guard sideParticipants.isPopulated else { return nil }
+            return buildParticipantGroupAggregateRow(
+                scoringUnitID: side.sideID,
+                owner: .scoreOwner,
+                values: values,
+                participants: sideParticipants,
+                holeNumbers: holeNumbers,
+                leaderboardSort: selectionSort(for: template),
+                teamScoring: teamScoring
+            )
+        }
+        guard sideRows.count == 2 else { return nil }
+
+        guard hasMatchPlayCompare(in: template) else {
+            return sideRows
+        }
+
+        let comparableValues: [String: [Int: PipelineHoleValue]] = Dictionary(uniqueKeysWithValues: sideRows.map { row in
+            let holeMap: [Int: PipelineHoleValue] = Dictionary(uniqueKeysWithValues: row.holeValues.map { holeNumber, value in
+                let strokes = Int(value.points)
+                return (
+                    holeNumber,
+                    PipelineHoleValue(
+                        participantID: row.scoringUnitID,
+                        grossStrokes: value.rawStrokes ?? strokes,
+                        netStrokes: value.netStrokes ?? strokes,
+                        par: 0,
+                        scoreToPar: strokes,
+                        points: value.points,
+                        pickedUp: value.pickedUp
+                    )
+                )
+            })
+            return (row.scoringUnitID, holeMap)
+        })
+        let compared = runCompareStages(
+            values: comparableValues,
+            pipeline: template.pipeline,
+            holeNumbers: holeNumbers,
+            participants: participants,
+            teams: teams,
+            perHoleWinPoints: perHoleWinPoints
+        )
+        let rows = buildScoringRows(
+            from: compared,
+            holeNumbers: holeNumbers,
+            participants: participants,
+            teams: teams,
+            scoringGroups: scoringGroups,
+            scoringUnits: scoringUnits
+        )
+        let rowByID: [String: ScoringRow] = Dictionary(uniqueKeysWithValues: rows.map { ($0.scoringUnitID, $0) })
+        return sides.compactMap { rowByID[$0.sideID] }
+    }
+
+    private static func selectionSort(for template: GameTemplate) -> LeaderboardSort {
+        hasMatchPlayCompare(in: template) ? .lowestWins : template.leaderboardSort
+    }
+
+    private static func hasMatchPlayCompare(in template: GameTemplate) -> Bool {
+        template.pipeline.contains { stage in
+            guard case .compare(let rule) = stage else { return false }
+            return rule.mode == .matchPlay
+        }
+    }
+
     private static func augmentedScoringUnitsForMatchups(
         _ scoringUnits: [ScoringUnit],
         matchups: [TeamMatchup],
@@ -1826,10 +2003,12 @@ struct ScoringEngine {
     private static func resolvedSelectionGroups(
         participants: [RoundParticipant],
         scoringGroups: [RoundScoringGroup],
-        scoreOwnerScope: RoundScoreOwnerScope,
+        selectionDomain: ScoringSelectionDomain,
         template: GameTemplate
     ) -> [String: [String]] {
-        switch scoreOwnerScope {
+        switch selectionDomain {
+        case .matchupSide:
+            return [:]
         case .partnership:
             guard template.scoreSource == .individual else { return [:] }
             return Dictionary(uniqueKeysWithValues: scoringGroups
@@ -1841,11 +2020,14 @@ struct ScoringEngine {
                 guard let groupID = participant.groupID, groupID.isPopulated else { return nil }
                 return (groupID, participant.id)
             }, by: \.0).mapValues { $0.map(\.1) }
-        case .individual:
+        case .team:
+            guard template.scoreSource == .individual else { return [:] }
             return Dictionary(grouping: participants.compactMap { participant -> (String, String)? in
                 guard let teamID = participant.teamID, teamID.isPopulated else { return nil }
                 return (teamID, participant.id)
             }, by: \.0).mapValues { $0.map(\.1) }
+        case .participant:
+            return [:]
         }
     }
 

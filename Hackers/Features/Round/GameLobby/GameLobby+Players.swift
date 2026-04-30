@@ -885,9 +885,7 @@ extension GameLobby {
     // MARK: - Matchups Content
 
     private var currentMatchupMode: MatchupMode {
-        snapshot.configuration.scoreOwnerScope == .individual
-            ? (teamsEnabled ? .team : .individual)
-            : .scoreOwner
+        snapshot.expectedMatchupMode
     }
 
     /// Matchups for the current mode, used for display and editing.

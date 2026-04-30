@@ -511,6 +511,29 @@ extension RoundSession {
         }
     }
 
+    func setSelectionDomain(_ domain: ScoringSelectionDomain?) async {
+        addBreadcrumb()
+        let previousDomain = snapshot.configuration.selectionDomain
+
+        do {
+            if snapshot.round.configuration.selectionDomain != domain {
+                snapshot.round.configuration.selectionDomain = domain
+                _ = try await snapshot.round.put().get()
+            }
+
+            guard previousDomain != domain else { return }
+            emitRoundSetupEvent(
+                "round_setup.selection_domain_changed",
+                extra: [
+                    "value": domain?.rawValue ?? "auto",
+                    "previous_value": previousDomain?.rawValue ?? "auto"
+                ]
+            )
+        } catch {
+            addBreadcrumb(level: .error, message: "Failed to set selection domain", error: error)
+        }
+    }
+
     /// Transitional wrapper while the UI moves from Best N wording to the builder.
     func setBestN(_ n: Int) async {
         await setTeamScoringMode(.bestN)

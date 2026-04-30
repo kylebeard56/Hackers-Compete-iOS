@@ -87,6 +87,7 @@ struct EditSeriesRoundSheet: View {
     @State private var matchWinnerBonusPoints: Double = 0
     @State private var sharedScoreAllowanceText = ""
     @State private var teamScoring = RoundTeamScoringConfiguration(mode: .bestN, count: 2, scope: .perRound)
+    @State private var selectionDomain: ScoringSelectionDomain?
     @State private var sequentialTeeStartsEnabled = false
     @State private var podGroupingStrategy: SeriesPodGroupingStrategy = .disabled
     @State private var matchupSource: MatchupSource = .byTeam
@@ -231,6 +232,7 @@ struct EditSeriesRoundSheet: View {
                 from: seriesRound.roundConfig.sharedScoreHandicapConfig ?? FormatTemplateRegistry.template(for: selectedTemplateID).requirements.defaultHandicapConfig
             )
             teamScoring = seriesRound.roundConfig.teamScoring
+            selectionDomain = seriesRound.roundConfig.selectionDomain
             sequentialTeeStartsEnabled = seriesRound.roundConfig.sequentialTeeStartsEnabled ?? false
             podGroupingStrategy = seriesRound.roundConfig.podGroupingStrategy
             countsTowardHandicapPool = seriesRound.roundConfig.countsTowardHandicapPool
@@ -529,75 +531,109 @@ struct EditSeriesRoundSheet: View {
                     title: "Count scores",
                     subtitle: "Choose which scores count and how they're computed for leaderboard."
                 ) {
-                    HStack(spacing: 10) {
-                        Menu {
-                            Button {
-                                teamScoring.mode = .all
-                            } label: {
-                                HStack {
-                                    Text("All")
-                                    if teamScoring.mode == .all { Image(systemName: "checkmark") }
+                    VStack(alignment: .leading, spacing: 8) {
+                        HStack(spacing: 10) {
+                            Menu {
+                                Button {
+                                    teamScoring.mode = .all
+                                } label: {
+                                    HStack {
+                                        Text("All")
+                                        if teamScoring.mode == .all { Image(systemName: "checkmark") }
+                                    }
                                 }
-                            }
-                            Button {
-                                teamScoring.mode = .bestN
-                                if teamScoring.count < 1 || teamScoring.count > 4 { teamScoring.count = 2 }
-                            } label: {
-                                HStack {
-                                    Text("Best")
-                                    if teamScoring.mode == .bestN { Image(systemName: "checkmark") }
+                                Button {
+                                    teamScoring.mode = .bestN
+                                    if teamScoring.count < 1 || teamScoring.count > 4 { teamScoring.count = 2 }
+                                } label: {
+                                    HStack {
+                                        Text("Best")
+                                        if teamScoring.mode == .bestN { Image(systemName: "checkmark") }
+                                    }
                                 }
-                            }
-                            Button {
-                                teamScoring.mode = .worstN
-                                if teamScoring.count < 1 || teamScoring.count > 4 { teamScoring.count = 2 }
-                            } label: {
-                                HStack {
-                                    Text("Worst")
-                                    if teamScoring.mode == .worstN { Image(systemName: "checkmark") }
+                                Button {
+                                    teamScoring.mode = .worstN
+                                    if teamScoring.count < 1 || teamScoring.count > 4 { teamScoring.count = 2 }
+                                } label: {
+                                    HStack {
+                                        Text("Worst")
+                                        if teamScoring.mode == .worstN { Image(systemName: "checkmark") }
+                                    }
                                 }
+                            } label: {
+                                menuChipLabel(teamScoringKindLabel)
                             }
-                        } label: {
-                            menuChipLabel(teamScoringKindLabel)
+                            .buttonStyle(.plain)
+
+                            if teamScoring.mode == .bestN || teamScoring.mode == .worstN {
+                                Menu {
+                                    ForEach(1...4, id: \.self) { n in
+                                        Button {
+                                            teamScoring.count = n
+                                        } label: {
+                                            HStack {
+                                                Text("\(n)")
+                                                if teamScoring.count == n { Image(systemName: "checkmark") }
+                                            }
+                                        }
+                                    }
+                                } label: {
+                                    menuChipLabel("\(teamScoring.count)")
+                                }
+                                .buttonStyle(.plain)
+
+                                Text("per")
+                                    .fontStyle(kFontName, size: 15, weight: .regular)
+                                    .foregroundStyle(Color.secondary)
+
+                                Menu {
+                                    ForEach(AggregationScope.allCases, id: \.self) { scope in
+                                        Button {
+                                            teamScoring.scope = scope
+                                        } label: {
+                                            HStack {
+                                                Text(scope == .perRound ? "Round" : "Hole")
+                                                if teamScoring.scope == scope { Image(systemName: "checkmark") }
+                                            }
+                                        }
+                                    }
+                                } label: {
+                                    menuChipLabel(teamScoring.scope == .perRound ? "Round" : "Hole")
+                                }
+                                .buttonStyle(.plain)
+                            }
                         }
-                        .buttonStyle(.plain)
 
                         if teamScoring.mode == .bestN || teamScoring.mode == .worstN {
-                            Menu {
-                                ForEach(1...4, id: \.self) { n in
-                                    Button {
-                                        teamScoring.count = n
-                                    } label: {
-                                        HStack {
-                                            Text("\(n)")
-                                            if teamScoring.count == n { Image(systemName: "checkmark") }
-                                        }
-                                    }
-                                }
-                            } label: {
-                                menuChipLabel("\(teamScoring.count)")
-                            }
-                            .buttonStyle(.plain)
-                            
-                            Text("per")
-                                .fontStyle(kFontName, size: 15, weight: .regular)
-                                .foregroundStyle(Color.secondary)
+                            HStack(spacing: 10) {
+                                Text("from")
+                                    .fontStyle(kFontName, size: 15, weight: .regular)
+                                    .foregroundStyle(Color.secondary)
 
-                            Menu {
-                                ForEach(AggregationScope.allCases, id: \.self) { scope in
+                                Menu {
                                     Button {
-                                        teamScoring.scope = scope
+                                        selectionDomain = nil
                                     } label: {
                                         HStack {
-                                            Text(scope == .perRound ? "Round" : "Hole")
-                                            if teamScoring.scope == scope { Image(systemName: "checkmark") }
+                                            Text("Auto")
+                                            if selectionDomain == nil { Image(systemName: "checkmark") }
                                         }
                                     }
+                                    ForEach(ScoringSelectionDomain.allCases, id: \.self) { domain in
+                                        Button {
+                                            selectionDomain = domain
+                                        } label: {
+                                            HStack {
+                                                Text(selectionDomainTitle(for: domain))
+                                                if selectionDomain == domain { Image(systemName: "checkmark") }
+                                            }
+                                        }
+                                    }
+                                } label: {
+                                    menuChipLabel(selectionDomainLabel)
                                 }
-                            } label: {
-                                menuChipLabel(teamScoring.scope == .perRound ? "Round" : "Hole")
+                                .buttonStyle(.plain)
                             }
-                            .buttonStyle(.plain)
                         }
                     }
                 }
@@ -885,6 +921,7 @@ struct EditSeriesRoundSheet: View {
             matchWinnerBonusPoints: competitionScope == .matchup ? matchWinnerBonusPoints : nil,
             matchTiePolicy: .half,
             sequentialTeeStartsEnabled: sequentialTeeStartsEnabled,
+            selectionDomain: selectionDomain,
             matchupMode: resolvedMatchupMode(for: competitionScope),
             podGroupingStrategy: podGroupingStrategy,
             teamAssignmentMode: viewModel.usesTeams ? .seriesTeams : .manual,
@@ -933,6 +970,7 @@ struct EditSeriesRoundSheet: View {
             matchWinnerBonusPoints: competitionScope == .matchup ? matchWinnerBonusPoints : nil,
             matchTiePolicy: .half,
             sequentialTeeStartsEnabled: sequentialTeeStartsEnabled,
+            selectionDomain: selectionDomain,
             matchupMode: resolvedMatchupMode(for: resolvedCompetitionScope),
             podGroupingStrategy: podGroupingStrategy,
             teamAssignmentMode: viewModel.usesTeams ? .seriesTeams : .manual,
@@ -1238,6 +1276,7 @@ struct EditSeriesRoundSheet: View {
             matchWinnerBonusPoints: competitionScope == .matchup ? matchWinnerBonusPoints : nil,
             matchTiePolicy: .half,
             sequentialTeeStartsEnabled: sequentialTeeStartsEnabled,
+            selectionDomain: selectionDomain,
             matchupMode: resolvedMatchupMode(for: competitionScope),
             podGroupingStrategy: podGroupingStrategy,
             teamAssignmentMode: viewModel.usesTeams ? .seriesTeams : .manual,
@@ -2405,6 +2444,26 @@ struct EditSeriesRoundSheet: View {
         case .all: return "All"
         case .bestN: return "Best"
         case .worstN: return "Worst"
+        }
+    }
+
+    private var selectionDomainLabel: String {
+        guard let selectionDomain else { return "Auto" }
+        return selectionDomainTitle(for: selectionDomain)
+    }
+
+    private func selectionDomainTitle(for domain: ScoringSelectionDomain) -> String {
+        switch domain {
+        case .participant:
+            return "Player"
+        case .team:
+            return "Team"
+        case .partnership:
+            return "Pair"
+        case .teeGroup:
+            return "Tee group"
+        case .matchupSide:
+            return "Matchup side"
         }
     }
 

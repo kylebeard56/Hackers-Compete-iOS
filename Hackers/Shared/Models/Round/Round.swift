@@ -172,6 +172,14 @@ enum RoundScoreOwnerScope: String, Codable, CaseIterable {
     case teeGroup = "tee_group"
 }
 
+enum ScoringSelectionDomain: String, Codable, CaseIterable {
+    case participant
+    case team
+    case partnership
+    case teeGroup = "tee_group"
+    case matchupSide = "matchup_side"
+}
+
 enum RoundMatchupScoringStyle: String, Codable, CaseIterable {
     case aggregateRoundTotal = "aggregate_round_total"
     case holeByHolePoints = "hole_by_hole_points"
@@ -233,6 +241,7 @@ struct RoundConfiguration: Hashable, Codable {
     var vegasMode: RoundVegasMode?
     var vegasSelectionRule: RoundVegasSelectionRule?
     var vegasSelectionScope: AggregationScope?
+    var selectionDomain: ScoringSelectionDomain?
     var scoreInputMode: RoundScoreInputMode
     var sequentialTeeStartsEnabled: Bool?  // When true, new tee groups rotate across the active hole range.
     var secretScoring: Bool?               // When true, other teams' scores are hidden until revealed
@@ -266,6 +275,7 @@ struct RoundConfiguration: Hashable, Codable {
         vegasMode: RoundVegasMode? = nil,
         vegasSelectionRule: RoundVegasSelectionRule? = nil,
         vegasSelectionScope: AggregationScope? = nil,
+        selectionDomain: ScoringSelectionDomain? = nil,
         scoreInputMode: RoundScoreInputMode = .strokes,
         sequentialTeeStartsEnabled: Bool? = false,
         secretScoring: Bool? = nil,
@@ -289,6 +299,7 @@ struct RoundConfiguration: Hashable, Codable {
         self.vegasMode = vegasMode
         self.vegasSelectionRule = vegasSelectionRule
         self.vegasSelectionScope = vegasSelectionScope
+        self.selectionDomain = selectionDomain
         self.scoreInputMode = scoreInputMode
         self.sequentialTeeStartsEnabled = sequentialTeeStartsEnabled
         self.secretScoring = secretScoring
@@ -319,6 +330,7 @@ struct RoundConfiguration: Hashable, Codable {
         case vegasMode = "vegas_mode"
         case vegasSelectionRule = "vegas_selection_rule"
         case vegasSelectionScope = "vegas_selection_scope"
+        case selectionDomain = "selection_domain"
         case scoreInputMode = "score_input_mode"
         case legacyBestNSelected = "best_n_selected"
         case legacyBestWorstEnabled = "best_worst_enabled"
@@ -402,6 +414,7 @@ struct RoundConfiguration: Hashable, Codable {
         vegasMode = try c.decodeIfPresent(RoundVegasMode.self, forKey: .vegasMode)
         vegasSelectionRule = try c.decodeIfPresent(RoundVegasSelectionRule.self, forKey: .vegasSelectionRule)
         vegasSelectionScope = try c.decodeIfPresent(AggregationScope.self, forKey: .vegasSelectionScope)
+        selectionDomain = try c.decodeIfPresent(ScoringSelectionDomain.self, forKey: .selectionDomain)
         scoreInputMode = try c.decodeIfPresent(RoundScoreInputMode.self, forKey: .scoreInputMode) ?? .strokes
         sequentialTeeStartsEnabled = try c.decodeIfPresent(Bool.self, forKey: .sequentialTeeStartsEnabled) ?? false
         secretScoring = try c.decodeIfPresent(Bool.self, forKey: .secretScoring)
@@ -445,6 +458,7 @@ struct RoundConfiguration: Hashable, Codable {
         try c.encodeIfPresent(vegasMode, forKey: .vegasMode)
         try c.encodeIfPresent(vegasSelectionRule, forKey: .vegasSelectionRule)
         try c.encodeIfPresent(vegasSelectionScope, forKey: .vegasSelectionScope)
+        try c.encodeIfPresent(selectionDomain, forKey: .selectionDomain)
         try c.encode(scoreInputMode, forKey: .scoreInputMode)
         try c.encodeIfPresent(sequentialTeeStartsEnabled, forKey: .sequentialTeeStartsEnabled)
         try c.encodeIfPresent(secretScoring, forKey: .secretScoring)

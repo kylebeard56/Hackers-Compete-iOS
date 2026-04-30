@@ -758,6 +758,7 @@ enum SeriesRoundSyncPlanning {
         config.holeWinPoints = roundConfiguration.holeWinPoints
         config.matchWinnerBonusPoints = roundConfiguration.matchWinnerBonusPoints
         config.matchTiePolicy = roundConfiguration.matchTiePolicy
+        config.selectionDomain = roundConfiguration.selectionDomain
         config.sequentialTeeStartsEnabled = roundConfiguration.sequentialTeeStartsEnabled
         config.sharedScoreHandicapConfig = roundConfiguration.sharedScoreHandicapConfig
         copy.roundConfig = config
