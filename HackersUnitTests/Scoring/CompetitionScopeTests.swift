@@ -61,6 +61,214 @@ final class CompetitionScopeTests: XCTestCase {
         )
     }
 
+    private func makeSharedScore(
+        unitID: String,
+        participantIDs: [String],
+        hole: Int,
+        strokes: Int,
+        seg: String = "seg1"
+    ) -> ScoreEntry {
+        ScoreEntry(
+            id: ScoreEntry.makeID(hole: hole, segment: seg, scoringUnit: unitID),
+            holeNumber: hole,
+            segmentID: seg,
+            scoringUnitID: unitID,
+            participantIDs: participantIDs,
+            strokes: strokes,
+            pickedUp: false,
+            entryID: participantIDs.first ?? unitID,
+            parentID: "round1"
+        )
+    }
+
+    private func makeLiveMatchupViewModelSnapshot(
+        participants: [RoundParticipant],
+        teams: [RoundTeam] = [],
+        segment: RoundSegment,
+        scores: [ScoreEntry],
+        template: GameTemplate = FormatTemplateRegistry.strokePlayMatchupIndividual
+    ) -> RoundSnapshot {
+        let configuration = RoundConfiguration(
+            primaryFormat: GameFormat(
+                type: .strokePlay,
+                configuration: GameConfiguration(
+                    method: .individual,
+                    aggregation: nil,
+                    basis: .gross,
+                    handicap: .individualStrokePlay,
+                    requiresTeams: template.requirements.requiresTeams,
+                    teeGroupOnly: false
+                )
+            ),
+            formatSummary: RoundFormatSummary(from: template),
+            competitionScope: .matchup,
+            matchupResolutionStyle: .roundAggregate
+        )
+        return RoundSnapshot(
+            round: Round(id: "round1", shareCode: "MATCH", createdBy: "host", configuration: configuration),
+            participants: participants,
+            teams: teams,
+            segments: [segment],
+            scoring: scores
+        )
+    }
+
+    // MARK: - Live Matchup Result Chips
+
+    @MainActor
+    func testLiveMatchupChipShowsLeaderUntilAllMatchupScoresAreEntered() throws {
+        let participants = [
+            makeParticipant(id: "p1", name: "Alice"),
+            makeParticipant(id: "p2", name: "Bob"),
+        ]
+        let matchup = TeamMatchup(
+            id: "m1",
+            teamIDs: [],
+            participantIDs: ["p1", "p2"],
+            mode: .individual
+        )
+        let segment = makeSegment(
+            holeRange: HoleRange(startHole: 1, endHole: 18),
+            matchups: [matchup],
+            competitionScope: .matchup
+        )
+        let snapshot = makeLiveMatchupViewModelSnapshot(
+            participants: participants,
+            segment: segment,
+            scores: [
+                makeScore(pid: "p1", hole: 1, strokes: 3),
+                makeScore(pid: "p2", hole: 1, strokes: 5),
+            ]
+        )
+        let viewModel = LiveRoundViewModel()
+        viewModel.set(snapshot: snapshot)
+        let section = MatchupLeaderboardSection(id: matchup.id, matchup: matchup, name: "Alice vs Bob", rows: [])
+
+        XCTAssertFalse(viewModel.isLiveMatchupFullyScored(section))
+        XCTAssertEqual(viewModel.liveMatchupResultChipTitle(for: "p1", in: section), "Leader")
+        XCTAssertNil(viewModel.liveMatchupResultChipTitle(for: "p2", in: section))
+    }
+
+    @MainActor
+    func testLiveMatchupChipShowsWinnerAfterAllMatchupScoresAreEntered() throws {
+        let participants = [
+            makeParticipant(id: "p1", name: "Alice"),
+            makeParticipant(id: "p2", name: "Bob"),
+        ]
+        let matchup = TeamMatchup(
+            id: "m1",
+            teamIDs: [],
+            participantIDs: ["p1", "p2"],
+            mode: .individual
+        )
+        let segment = makeSegment(
+            holeRange: HoleRange(startHole: 1, endHole: 2),
+            matchups: [matchup],
+            competitionScope: .matchup
+        )
+        let snapshot = makeLiveMatchupViewModelSnapshot(
+            participants: participants,
+            segment: segment,
+            scores: [
+                makeScore(pid: "p1", hole: 1, strokes: 3),
+                makeScore(pid: "p1", hole: 2, strokes: 4),
+                makeScore(pid: "p2", hole: 1, strokes: 5),
+                makeScore(pid: "p2", hole: 2, strokes: 5),
+            ]
+        )
+        let viewModel = LiveRoundViewModel()
+        viewModel.set(snapshot: snapshot)
+        let section = MatchupLeaderboardSection(id: matchup.id, matchup: matchup, name: "Alice vs Bob", rows: [])
+
+        XCTAssertTrue(viewModel.isLiveMatchupFullyScored(section))
+        XCTAssertEqual(viewModel.liveMatchupResultChipTitle(for: "p1", in: section), "Winner")
+        XCTAssertNil(viewModel.liveMatchupResultChipTitle(for: "p2", in: section))
+    }
+
+    @MainActor
+    func testLiveMatchupChipShowsTieOnlyAfterAllMatchupScoresAreEntered() throws {
+        let participants = [
+            makeParticipant(id: "p1", name: "Alice"),
+            makeParticipant(id: "p2", name: "Bob"),
+        ]
+        let matchup = TeamMatchup(
+            id: "m1",
+            teamIDs: [],
+            participantIDs: ["p1", "p2"],
+            mode: .individual
+        )
+        let segment = makeSegment(
+            holeRange: HoleRange(startHole: 1, endHole: 2),
+            matchups: [matchup],
+            competitionScope: .matchup
+        )
+        let viewModel = LiveRoundViewModel()
+        viewModel.set(snapshot: makeLiveMatchupViewModelSnapshot(
+            participants: participants,
+            segment: segment,
+            scores: [
+                makeScore(pid: "p1", hole: 1, strokes: 4),
+                makeScore(pid: "p1", hole: 2, strokes: 5),
+                makeScore(pid: "p2", hole: 1, strokes: 4),
+                makeScore(pid: "p2", hole: 2, strokes: 5),
+            ]
+        ))
+        let section = MatchupLeaderboardSection(id: matchup.id, matchup: matchup, name: "Alice vs Bob", rows: [])
+
+        XCTAssertTrue(viewModel.isLiveMatchupFullyScored(section))
+        XCTAssertEqual(viewModel.liveMatchupResultChipTitle(for: "p1", in: section), "Tie")
+        XCTAssertEqual(viewModel.liveMatchupResultChipTitle(for: "p2", in: section), "Tie")
+    }
+
+    @MainActor
+    func testLiveMatchupCompletionCountsSharedSideScoresOncePerHole() throws {
+        let participants = [
+            makeParticipant(id: "p1", name: "Alice", teamID: "t1"),
+            makeParticipant(id: "p2", name: "Bob", teamID: "t1"),
+            makeParticipant(id: "p3", name: "Charlie", teamID: "t2"),
+            makeParticipant(id: "p4", name: "Dana", teamID: "t2"),
+        ]
+        let teams = [
+            RoundTeam(id: "t1", name: "Team 1", color: "red", index: 0, createdAt: .init()),
+            RoundTeam(id: "t2", name: "Team 2", color: "blue", index: 1, createdAt: .init()),
+        ]
+        let matchup = TeamMatchup(id: "m1", teamIDs: ["t1", "t2"], mode: .team)
+        let segment = makeSegment(
+            holeRange: HoleRange(startHole: 1, endHole: 2),
+            matchups: [matchup],
+            competitionScope: .matchup
+        )
+        let section = MatchupLeaderboardSection(id: matchup.id, matchup: matchup, name: "Team 1 vs Team 2", rows: [])
+        let viewModel = LiveRoundViewModel()
+
+        viewModel.set(snapshot: makeLiveMatchupViewModelSnapshot(
+            participants: participants,
+            teams: teams,
+            segment: segment,
+            scores: [
+                makeSharedScore(unitID: "t1", participantIDs: ["p1", "p2"], hole: 1, strokes: 4),
+                makeSharedScore(unitID: "t1", participantIDs: ["p1", "p2"], hole: 2, strokes: 4),
+                makeSharedScore(unitID: "t2", participantIDs: ["p3", "p4"], hole: 1, strokes: 5),
+            ],
+            template: FormatTemplateRegistry.captainsChoice
+        ))
+        XCTAssertFalse(viewModel.isLiveMatchupFullyScored(section))
+
+        viewModel.set(snapshot: makeLiveMatchupViewModelSnapshot(
+            participants: participants,
+            teams: teams,
+            segment: segment,
+            scores: [
+                makeSharedScore(unitID: "t1", participantIDs: ["p1", "p2"], hole: 1, strokes: 4),
+                makeSharedScore(unitID: "t1", participantIDs: ["p1", "p2"], hole: 2, strokes: 4),
+                makeSharedScore(unitID: "t2", participantIDs: ["p3", "p4"], hole: 1, strokes: 5),
+                makeSharedScore(unitID: "t2", participantIDs: ["p3", "p4"], hole: 2, strokes: 5),
+            ],
+            template: FormatTemplateRegistry.captainsChoice
+        ))
+        XCTAssertTrue(viewModel.isLiveMatchupFullyScored(section))
+    }
+
     // MARK: - Field Scope: Best Ball (4 teams, all compete on one leaderboard)
 
     func testFieldScope_BestBall_4Teams() {

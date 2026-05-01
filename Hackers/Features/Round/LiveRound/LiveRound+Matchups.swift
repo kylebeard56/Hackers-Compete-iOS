@@ -442,10 +442,13 @@ private struct MatchupTileView: View {
 
     @ViewBuilder
     private func resultChip(for sideID: String, accent: Color?) -> some View {
-        if matchupPresentation.hasCompleteSides, matchupPresentation.winningSideID == sideID {
-            liveResultChip("Winner", tint: accent ?? palette.foregroundColor)
-        } else if matchupPresentation.hasCompleteSides, matchupPresentation.isTie {
-            liveResultChip("Tie", tint: Color.neutral)
+        if let title = viewModel.liveMatchupResultChipTitle(
+            for: sideID,
+            in: section,
+            presentation: matchupPresentation
+        ) {
+            let tint = title == "Tie" ? Color.neutral : (accent ?? palette.foregroundColor)
+            liveResultChip(title, tint: tint)
         }
     }
 

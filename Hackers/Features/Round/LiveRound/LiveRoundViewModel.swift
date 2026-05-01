@@ -1887,6 +1887,147 @@ final class LiveRoundViewModel: ObservableObject, Loggable {
         )
     }
 
+    func liveMatchupResultChipTitle(
+        for sideID: String,
+        in section: MatchupLeaderboardSection,
+        presentation: MatchupResultPresentation? = nil
+    ) -> String? {
+        let presentation = presentation ?? matchupPresentation(in: section)
+        guard presentation.hasCompleteSides else { return nil }
+
+        let isFullyScored = isLiveMatchupFullyScored(section)
+        if presentation.winningSideID == sideID {
+            return isFullyScored ? "Winner" : "Leader"
+        }
+        if isFullyScored, presentation.isTie {
+            return "Tie"
+        }
+        return nil
+    }
+
+    func isLiveMatchupFullyScored(_ section: MatchupLeaderboardSection) -> Bool {
+        let holes = liveMatchupRequiredHoleNumbers(for: section)
+        guard holes.isPopulated else { return false }
+
+        let sideIDs = section.matchup.pairingIDs()
+        guard sideIDs.count >= 2 else { return false }
+
+        return sideIDs.allSatisfy {
+            isLiveMatchupSideFullyScored(
+                sideID: $0,
+                matchup: section.matchup,
+                holes: holes
+            )
+        }
+    }
+
+    private func liveMatchupRequiredHoleNumbers(for section: MatchupLeaderboardSection) -> [Int] {
+        if let segment = snapshot.segments.first(where: { $0.matchups?.contains(where: { $0.id == section.matchup.id }) == true }) {
+            return segment.holeRange.holeNumbers
+        }
+        if let segment = snapshot.roundSegment {
+            return segment.holeRange.holeNumbers
+        }
+        return courseOrderHoleNumbers
+    }
+
+    private func isLiveMatchupSideFullyScored(
+        sideID: String,
+        matchup: TeamMatchup,
+        holes: [Int]
+    ) -> Bool {
+        let directLookupIDs = liveMatchupDirectScoreLookupIDs(sideID: sideID, matchup: matchup)
+        let hasDirectScores = snapshot.scoring.contains {
+            directLookupIDs.contains($0.scoringUnitID) && $0.hasRecordedScore
+        }
+
+        if snapshot.isSharedScoreSource || hasDirectScores {
+            return holes.allSatisfy { holeNumber in
+                liveMatchupDirectScoreEntry(
+                    sideID: sideID,
+                    matchup: matchup,
+                    holeNumber: holeNumber
+                )?.hasRecordedScore == true
+            }
+        }
+
+        let participants = matchupSideParticipants(scoringUnitID: sideID, matchup: matchup)
+            .filter(\.isPresenceActive)
+        guard participants.isPopulated else { return false }
+
+        return holes.allSatisfy { holeNumber in
+            participants.allSatisfy {
+                scoreEntry(for: $0.id, holeNumber: holeNumber)?.hasRecordedScore == true
+            }
+        }
+    }
+
+    private func liveMatchupDirectScoreEntry(
+        sideID: String,
+        matchup: TeamMatchup,
+        holeNumber: Int
+    ) -> ScoreEntry? {
+        let lookupIDs = liveMatchupDirectScoreLookupIDs(sideID: sideID, matchup: matchup)
+        return snapshot.scoring.first {
+            lookupIDs.contains($0.scoringUnitID)
+                && $0.holeNumber == holeNumber
+                && $0.hasRecordedScore
+        }
+    }
+
+    private func liveMatchupDirectScoreLookupIDs(
+        sideID: String,
+        matchup: TeamMatchup
+    ) -> Set<String> {
+        var ids = Set([sideID].filter(\.isPopulated))
+        let participants = matchupSideParticipants(scoringUnitID: sideID, matchup: matchup)
+        let participantIDs = Set(participants.map(\.id))
+
+        if let subject = sharedScoringSubject(matching: sideID) {
+            ids.insert(subject.scoringUnitID)
+            if let teamID = subject.teamID { ids.insert(teamID) }
+            if let scoringGroupID = subject.scoringGroupID { ids.insert(scoringGroupID) }
+            if let teeGroupID = subject.teeGroupID { ids.insert(teeGroupID) }
+        }
+
+        switch matchup.effectiveMode {
+        case .individual:
+            break
+        case .team:
+            ids.insert(scoringUnitID(forTeamID: sideID))
+            allScoringUnits
+                .filter { $0.owner == .team && ($0.id == sideID || $0.ownerIDs.contains(sideID)) }
+                .forEach { ids.insert($0.id) }
+        case .partnership, .teeGroup, .scoreOwner:
+            if let group = snapshot.scoringGroup(id: sideID) {
+                ids.insert(group.id)
+                ids.insert(scoringUnitID(for: group))
+                if let teamID = group.teamID { ids.insert(teamID) }
+            }
+            snapshot.scoringGroups
+                .filter { group in
+                    group.id == sideID || (participantIDs.isPopulated && Set(group.memberIDs) == participantIDs)
+                }
+                .forEach { group in
+                    ids.insert(group.id)
+                    ids.insert(scoringUnitID(for: group))
+                    if let teamID = group.teamID { ids.insert(teamID) }
+                }
+            allScoringUnits
+                .filter { unit in
+                    unit.owner == .scoreOwner
+                        && (
+                            unit.id == sideID
+                                || unit.ownerIDs.contains(sideID)
+                                || (participantIDs.isPopulated && Set(unit.ownerIDs) == participantIDs)
+                        )
+                }
+                .forEach { ids.insert($0.id) }
+        }
+
+        return ids.filter(\.isPopulated)
+    }
+
     var matchupCountingScopeLabel: String? {
         let scoring = snapshot.configuration.teamScoring
         guard scoring.mode != .all else { return nil }
