@@ -465,6 +465,44 @@ extension RoundSession {
         }
     }
 
+    func setTeamScoring(mode: RoundTeamScoringMode, count: Int) async {
+        addBreadcrumb()
+        let previousMode = snapshot.configuration.teamScoring.mode
+        let previousCount = snapshot.configuration.teamScoring.count
+        let modeChanged = previousMode != mode
+        let countChanged = previousCount != count
+
+        do {
+            if modeChanged || countChanged {
+                snapshot.round.configuration.teamScoring.mode = mode
+                snapshot.round.configuration.teamScoring.count = count
+                _ = try await snapshot.round.put().get()
+            }
+
+            if modeChanged {
+                emitRoundSetupEvent(
+                    "round_setup.team_scoring_mode_changed",
+                    extra: [
+                        "value": mode.rawValue,
+                        "previous_value": previousMode.rawValue
+                    ]
+                )
+            }
+
+            if countChanged {
+                emitRoundSetupEvent(
+                    "round_setup.team_scoring_count_changed",
+                    extra: [
+                        "value": count,
+                        "previous_value": previousCount
+                    ]
+                )
+            }
+        } catch {
+            addBreadcrumb(level: .error, message: "Failed to set team scoring", error: error)
+        }
+    }
+
     func setTeamScoringCount(_ count: Int) async {
         addBreadcrumb()
         let previousCount = snapshot.configuration.teamScoring.count

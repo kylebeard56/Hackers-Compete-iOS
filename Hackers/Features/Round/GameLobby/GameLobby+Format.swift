@@ -381,90 +381,7 @@ extension GameLobby {
 
     private var teamScoringBuilderBlock: some View {
         VStack(spacing: 10) {
-            configBuilderRow(
-                title: "Count scores",
-                subtitle: "Choose which scores count and how they're computed for leaderboard."
-            ) {
-                if snapshot.configuration.teamScoring.mode == .all {
-                    Menu {
-                        countScoresButtons
-                    } label: {
-                        formatChipLabel(teamScoringModeTitle, minWidth: 68)
-                    }
-                    .buttonStyle(.plain)
-                } else {
-                    VStack(alignment: .trailing, spacing: 8) {
-                        HStack(spacing: 8) {
-                            Menu {
-                                countScoresButtons
-                            } label: {
-                                formatChipLabel(teamScoringModeTitle, minWidth: 110)
-                            }
-                            .buttonStyle(.plain)
-
-                            Text("per")
-                                .fontStyle(kFontName, size: 15, weight: .regular)
-                                .foregroundStyle(Color.neutral)
-
-                            Menu {
-                                ForEach(AggregationScope.allCases, id: \.self) { scope in
-                                    Button {
-                                        Haptics.fire(.light)
-                                        Task { await roundSession.setTeamScoringScope(scope) }
-                                    } label: {
-                                        HStack {
-                                            Text(scope == .perRound ? "Round" : "Hole")
-                                            if snapshot.configuration.teamScoring.scope == scope {
-                                                Icon(name: "f00c", size: 12, weight: .solid)
-                                            }
-                                        }
-                                    }
-                                }
-                            } label: {
-                                formatChipLabel(teamScoringScopeTitle, minWidth: 76)
-                            }
-                            .buttonStyle(.plain)
-                        }
-
-                        HStack(spacing: 8) {
-                            Text("from")
-                                .fontStyle(kFontName, size: 15, weight: .regular)
-                                .foregroundStyle(Color.neutral)
-
-                            Menu {
-                                Button {
-                                    Haptics.fire(.light)
-                                    Task { await roundSession.setSelectionDomain(nil) }
-                                } label: {
-                                    HStack {
-                                        Text("Auto")
-                                        if snapshot.configuration.selectionDomain == nil {
-                                            Icon(name: "f00c", size: 12, weight: .solid)
-                                        }
-                                    }
-                                }
-                                ForEach(ScoringSelectionDomain.allCases, id: \.self) { domain in
-                                    Button {
-                                        Haptics.fire(.light)
-                                        Task { await roundSession.setSelectionDomain(domain) }
-                                    } label: {
-                                        HStack {
-                                            Text(selectionDomainTitle(for: domain))
-                                            if snapshot.configuration.selectionDomain == domain {
-                                                Icon(name: "f00c", size: 12, weight: .solid)
-                                            }
-                                        }
-                                    }
-                                }
-                            } label: {
-                                formatChipLabel(selectionDomainShortTitle, minWidth: 104)
-                            }
-                            .buttonStyle(.plain)
-                        }
-                    }
-                    .frame(minWidth: 136, alignment: .trailing)
-                }
-            }
+            teamScoringConfigRow
 
             if let summary = teamScoringSummaryText {
                 Text(summary)
@@ -474,6 +391,96 @@ extension GameLobby {
                     .padding(.top, 2)
             }
         }
+    }
+
+    private var teamScoringConfigRow: some View {
+        VStack(alignment: .leading, spacing: 10) {
+            VStack(alignment: .leading, spacing: 4) {
+                Text("Count scores")
+                    .fontStyle(kFontName, size: 13, weight: .semibold)
+                    .foregroundStyle(palette.foregroundColor)
+                    .alignLeading()
+
+                Text("Choose which scores count and how they're computed for leaderboard.")
+                    .fontStyle(kFontName, size: 12, weight: .regular)
+                    .foregroundStyle(Color.neutral)
+                    .alignLeading()
+            }
+
+            VStack(alignment: .trailing, spacing: 8) {
+                HStack(spacing: 8) {
+                    Menu {
+                        countScoresButtons
+                    } label: {
+                        formatChipLabel(
+                            teamScoringModeTitle,
+                            minWidth: snapshot.configuration.teamScoring.mode == .all ? 68 : 110
+                        )
+                    }
+                    .stableMenuPresentation()
+
+                    if snapshot.configuration.teamScoring.mode != .all {
+                        Text("per")
+                            .fontStyle(kFontName, size: 15, weight: .regular)
+                            .foregroundStyle(Color.neutral)
+
+                        Menu {
+                            ForEach(AggregationScope.allCases, id: \.self) { scope in
+                                Button {
+                                    Haptics.fire(.light)
+                                    Task { await roundSession.setTeamScoringScope(scope) }
+                                } label: {
+                                    HStack {
+                                        Text(scope == .perRound ? "Round" : "Hole")
+                                        if snapshot.configuration.teamScoring.scope == scope {
+                                            Icon(name: "f00c", size: 12, weight: .solid)
+                                        }
+                                    }
+                                }
+                            }
+                        } label: {
+                            formatChipLabel(teamScoringScopeTitle, minWidth: 76)
+                        }
+                        .stableMenuPresentation()
+                    }
+                }
+
+                if snapshot.configuration.teamScoring.mode != .all {
+                    Menu {
+                        Button {
+                            Haptics.fire(.light)
+                            Task { await roundSession.setSelectionDomain(nil) }
+                        } label: {
+                            HStack {
+                                Text("Auto")
+                                if snapshot.configuration.selectionDomain == nil {
+                                    Icon(name: "f00c", size: 12, weight: .solid)
+                                }
+                            }
+                        }
+                        ForEach(ScoringSelectionDomain.allCases, id: \.self) { domain in
+                            Button {
+                                Haptics.fire(.light)
+                                Task { await roundSession.setSelectionDomain(domain) }
+                            } label: {
+                                HStack {
+                                    Text(selectionDomainTitle(for: domain))
+                                    if snapshot.configuration.selectionDomain == domain {
+                                        Icon(name: "f00c", size: 12, weight: .solid)
+                                    }
+                                }
+                            }
+                        }
+                    } label: {
+                        formatChipLabel(selectionDomainChipTitle, maxWidth: .infinity)
+                    }
+                    .stableMenuPresentation()
+                }
+            }
+            .frame(maxWidth: .infinity, alignment: .trailing)
+        }
+        .padding(12)
+        .background(configBuilderRowBackground)
     }
 
     @ViewBuilder
@@ -496,8 +503,7 @@ extension GameLobby {
             Button {
                 Haptics.fire(.light)
                 Task {
-                    await roundSession.setTeamScoringMode(.bestN)
-                    await roundSession.setTeamScoringCount(count)
+                    await roundSession.setTeamScoring(mode: .bestN, count: count)
                 }
             } label: {
                 HStack {
@@ -516,8 +522,7 @@ extension GameLobby {
             Button {
                 Haptics.fire(.light)
                 Task {
-                    await roundSession.setTeamScoringMode(.worstN)
-                    await roundSession.setTeamScoringCount(count)
+                    await roundSession.setTeamScoring(mode: .worstN, count: count)
                 }
             } label: {
                 HStack {
@@ -554,14 +559,20 @@ extension GameLobby {
             content()
         }
         .padding(12)
-        .background(
-            RoundedRectangle(cornerRadius: 12)
-                .stroke(palette.borderColor, lineWidth: 1)
-                .background(RoundedRectangle(cornerRadius: 12).fill(Color.neutral6.opacity(0.3)))
-        )
+        .background(configBuilderRowBackground)
     }
 
-    private func formatChipLabel(_ title: String, minWidth: CGFloat? = nil) -> some View {
+    private var configBuilderRowBackground: some View {
+        RoundedRectangle(cornerRadius: 12)
+            .stroke(palette.borderColor, lineWidth: 1)
+            .background(RoundedRectangle(cornerRadius: 12).fill(Color.neutral6.opacity(0.3)))
+    }
+
+    private func formatChipLabel(
+        _ title: String,
+        minWidth: CGFloat? = nil,
+        maxWidth: CGFloat? = nil
+    ) -> some View {
         Text(title)
             .fontStyle(kFontName, size: 14, weight: .semibold)
             .foregroundStyle(Color.charcoal)
@@ -570,6 +581,7 @@ extension GameLobby {
             .frame(minWidth: minWidth)
             .padding(.horizontal, 16)
             .padding(.vertical, 8)
+            .frame(maxWidth: maxWidth)
             .glassCardEffect(cornerRadius: 12, tint: palette.whiteGlassButtonColor, shadowOpacity: 0)
             .whiteGlassCardShadow(color: palette.shadowColor)
     }
@@ -741,5 +753,12 @@ extension GameLobby {
             ? HandicapConfiguration(percentage: 1.0, isTeamCombined: true, positionPercentages: percentages)
             : nil
         Task { await roundSession.setSharedScoreHandicapConfig(config) }
+    }
+}
+
+private extension View {
+    func stableMenuPresentation() -> some View {
+        compositingGroup()
+            .buttonStyle(.plain)
     }
 }
