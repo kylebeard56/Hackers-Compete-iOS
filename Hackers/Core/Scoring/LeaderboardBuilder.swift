@@ -99,6 +99,7 @@ struct MatchupResultPresentationBuilder {
             result: result,
             matchup: section.matchup,
             matchupRows: matchupResult?.rows ?? [],
+            isPointsFormatOverride: matchupResult?.isPointsFormat,
             basis: basis
         )
     }
@@ -114,6 +115,7 @@ struct MatchupResultPresentationBuilder {
             result: result,
             matchup: matchupResult.matchup,
             matchupRows: matchupResult.rows,
+            isPointsFormatOverride: matchupResult.isPointsFormat,
             basis: basis
         )
     }
@@ -139,10 +141,13 @@ struct MatchupResultPresentationBuilder {
         result: ScoringResult,
         matchup: TeamMatchup,
         matchupRows: [ScoringRow],
+        isPointsFormatOverride: Bool?,
         basis: ScoreBasis?
     ) -> MatchupResultPresentation {
         let mode = matchup.effectiveMode
-        let isPointsFormat = result.template.leaderboardSort == .highestWins
+        let isPointsFormat = isPointsFormatOverride
+            ?? result.matchupResults.first(where: { $0.matchup.id == matchup.id })?.isPointsFormat
+            ?? (result.template.leaderboardSort == .highestWins)
         let pairingIDs = matchup.pairingIDs()
         let teamScoring = snapshot.configuration.teamScoring
         let countingScope: AggregationScope? = teamScoring.mode == .all ? nil : teamScoring.scope
@@ -157,6 +162,7 @@ struct MatchupResultPresentationBuilder {
                 sideID: sideID,
                 mode: mode,
                 participants: participants,
+                prefersMatchupRows: isPointsFormat,
                 basis: resolvedBasis
             )
             let total = row?.total
@@ -264,14 +270,20 @@ struct MatchupResultPresentationBuilder {
         sideID: String,
         mode: MatchupMode,
         participants: [RoundParticipant],
+        prefersMatchupRows: Bool,
         basis: ScoreBasis
     ) -> ScoringRow? {
-        let exactRow = aggregateScoringRow(
+        let matchupRow = aggregateScoringRow(
             in: matchupRows,
             matchesSideID: sideID,
             mode: mode,
             snapshot: snapshot
-        ) ?? aggregateScoringRow(
+        )
+        if prefersMatchupRows, let matchupRow, matchupRow.holesPlayed > 0 {
+            return matchupRow
+        }
+
+        let exactRow = matchupRow ?? aggregateScoringRow(
             in: result.rows,
             matchesSideID: sideID,
             mode: mode,
@@ -806,7 +818,7 @@ struct LeaderboardBuilder {
         let scoringGroupMap = Dictionary(uniqueKeysWithValues: scoringGroups.map { ($0.id, $0) })
 
         return result.matchupResults.map { matchupResult in
-            let isHighestWins = result.template.leaderboardSort == .highestWins
+            let isHighestWins = matchupResult.isPointsFormat ?? (result.template.leaderboardSort == .highestWins)
             let sortedByStanding = matchupResult.rows.sorted {
                 isHighestWins ? $0.total > $1.total : $0.total < $1.total
             }

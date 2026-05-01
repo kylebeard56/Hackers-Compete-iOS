@@ -36,6 +36,13 @@ struct MatchupScoringResult: Identifiable {
     var id: String { matchup.id }
     let matchup: TeamMatchup
     var rows: [ScoringRow]
+    var isPointsFormat: Bool?
+
+    init(matchup: TeamMatchup, rows: [ScoringRow], isPointsFormat: Bool? = nil) {
+        self.matchup = matchup
+        self.rows = rows
+        self.isPointsFormat = isPointsFormat
+    }
 }
 
 /// A single row in the engine's output, representing one scoring unit's computed result.
@@ -133,6 +140,8 @@ struct ScoringEngine {
                 template: template,
                 teamScoring: snapshot.configuration.teamScoring,
                 matchupResolutionStyle: snapshot.configuration.matchupResolutionStyle,
+                matchupScoringStyle: snapshot.configuration.matchupScoringStyle,
+                perHoleWinPoints: snapshot.configuration.resolvedHoleWinPoints,
                 scoreLookupSegmentIDs: lookupSegmentIDs.isEmpty ? nil : lookupSegmentIDs,
                 resolvedCompetitionScope: snapshot.configuration.resolvedCompetitionScope,
                 handicapStrokeBasis: snapshot.handicapStrokeBasis
@@ -666,6 +675,8 @@ struct ScoringEngine {
         template: GameTemplate,
         teamScoring: RoundTeamScoringConfiguration,
         matchupResolutionStyle: RoundMatchupResolutionStyle,
+        matchupScoringStyle: RoundMatchupScoringStyle = .aggregateRoundTotal,
+        perHoleWinPoints: Double = 1.0,
         scoreLookupSegmentIDs: [String]? = nil,
         resolvedCompetitionScope: CompetitionScope? = nil,
         handicapStrokeBasis: SeriesHandicapStrokeBasis = .eighteenHole
@@ -711,9 +722,20 @@ struct ScoringEngine {
                 guard matchup.isValid else { return nil }
                 let rows = matchup.pairingIDs().compactMap { rowByTeamID[$0] }
                 guard rows.count == 2 else { return nil }
+                if matchupScoringStyle == .holeByHolePoints {
+                    return MatchupScoringResult(
+                        matchup: matchup,
+                        rows: buildMatchPlayPointRows(
+                            from: rows,
+                            holeNumbers: holeNumbers,
+                            perHoleWinPoints: perHoleWinPoints
+                        ),
+                        isPointsFormat: true
+                    )
+                }
                 switch matchupResolutionStyle {
                 case .roundAggregate:
-                    return MatchupScoringResult(matchup: matchup, rows: rows)
+                    return MatchupScoringResult(matchup: matchup, rows: rows, isPointsFormat: false)
                 }
             }
         } else {
@@ -732,6 +754,72 @@ struct ScoringEngine {
             holeStates: holeStates,
             template: template,
             matchupResults: matchupResults
+        )
+    }
+
+    private static func buildMatchPlayPointRows(
+        from aggregateRows: [ScoringRow],
+        holeNumbers: [Int],
+        perHoleWinPoints: Double
+    ) -> [ScoringRow] {
+        guard aggregateRows.count == 2 else { return aggregateRows }
+
+        let first = aggregateRows[0]
+        let second = aggregateRows[1]
+        var firstHoleValues: [Int: ScoringRow.HoleValue] = [:]
+        var secondHoleValues: [Int: ScoringRow.HoleValue] = [:]
+
+        for holeNumber in holeNumbers {
+            guard let firstValue = first.holeValues[holeNumber],
+                  let secondValue = second.holeValues[holeNumber] else {
+                continue
+            }
+
+            let firstPoints: Double
+            let secondPoints: Double
+            if firstValue.points < secondValue.points {
+                firstPoints = perHoleWinPoints
+                secondPoints = 0
+            } else if secondValue.points < firstValue.points {
+                firstPoints = 0
+                secondPoints = perHoleWinPoints
+            } else {
+                firstPoints = perHoleWinPoints / 2
+                secondPoints = perHoleWinPoints / 2
+            }
+
+            firstHoleValues[holeNumber] = .init(
+                rawStrokes: firstValue.rawStrokes,
+                netStrokes: firstValue.netStrokes,
+                points: firstPoints,
+                pickedUp: firstValue.pickedUp
+            )
+            secondHoleValues[holeNumber] = .init(
+                rawStrokes: secondValue.rawStrokes,
+                netStrokes: secondValue.netStrokes,
+                points: secondPoints,
+                pickedUp: secondValue.pickedUp
+            )
+        }
+
+        return [
+            matchPlayPointRow(from: first, holeValues: firstHoleValues),
+            matchPlayPointRow(from: second, holeValues: secondHoleValues),
+        ]
+    }
+
+    private static func matchPlayPointRow(
+        from aggregateRow: ScoringRow,
+        holeValues: [Int: ScoringRow.HoleValue]
+    ) -> ScoringRow {
+        ScoringRow(
+            scoringUnitID: aggregateRow.scoringUnitID,
+            participantIDs: aggregateRow.participantIDs,
+            countingParticipantIDs: aggregateRow.countingParticipantIDs,
+            owner: aggregateRow.owner,
+            holeValues: holeValues,
+            total: holeValues.values.reduce(0) { $0 + $1.points },
+            holesPlayed: holeValues.count
         )
     }
 

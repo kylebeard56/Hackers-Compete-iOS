@@ -4797,8 +4797,8 @@ final class SeriesViewModel: ObservableObject, Loggable {
         mappings: [SeriesRoundMapping]
     ) -> [AwardCompetitor] {
         var competitors: [AwardCompetitor] = []
-        let highestWins = result.template.leaderboardSort == .highestWins
         for matchupResult in result.matchupResults {
+            let highestWins = matchupResult.isPointsFormat ?? (result.template.leaderboardSort == .highestWins)
             let sortedRows = matchupResult.rows.sorted {
                 if $0.total != $1.total {
                     return highestWins ? $0.total > $1.total : $0.total < $1.total

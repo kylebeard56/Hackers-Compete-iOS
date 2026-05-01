@@ -631,6 +631,41 @@ final class LiveRoundViewModelHoleOrderingTests: XCTestCase {
         XCTAssertEqual(presentation.side(id: "team_blue")?.scoreLabel, "+2")
     }
 
+    func testTeamMatchupHoleByHolePointsPresentationUsesPointTotals() async throws {
+        var snapshot = MockLiveRoundBest2of4Matchup.snapshot
+        snapshot.round.configuration.teamScoring = .init(mode: .bestN, count: 1, scope: .perHole)
+        snapshot.round.configuration.matchupScoringStyle = .holeByHolePoints
+        snapshot.scoring = snapshot.scoring.map { entry in
+            guard entry.holeNumber == 3,
+                  ["p03", "p04", "p07", "p08"].contains(entry.scoringUnitID) else {
+                return entry
+            }
+            var updated = entry
+            updated.strokes = 5
+            return updated
+        }
+
+        let vm = await boundViewModel(snapshot: snapshot, participantID: "p01")
+        let result = vm.engineResult
+        let matchupResult = try XCTUnwrap(result.matchupResults.first)
+        let rowMap = Dictionary(uniqueKeysWithValues: matchupResult.rows.map { ($0.scoringUnitID, $0) })
+
+        XCTAssertEqual(matchupResult.isPointsFormat, true)
+        XCTAssertEqual(rowMap["team_red"]?.total, 2.5)
+        XCTAssertEqual(rowMap["team_blue"]?.total, 1.5)
+
+        let section = try XCTUnwrap(vm.matchupSections.first)
+        let presentation = vm.matchupPresentation(in: section)
+        let status = vm.outcomeMatchupStatus(for: section)
+
+        XCTAssertTrue(presentation.isPointsFormat)
+        XCTAssertEqual(presentation.side(id: "team_red")?.scoreLabel, "2.5")
+        XCTAssertEqual(presentation.side(id: "team_blue")?.scoreLabel, "1.5")
+        XCTAssertEqual(status.title, "Red Team wins")
+        XCTAssertEqual(status.detail, "Won by 1 pt")
+        XCTAssertEqual(status.winningScoringUnitID, "team_red")
+    }
+
     func testTeamMatchupBestNUsesTeamAggregatesWhenScoringGroupsExist() async throws {
         var snapshot = MockLiveRoundBest2of4Matchup.snapshot
         snapshot.scoringGroups = Self.best2ScoringGroups()

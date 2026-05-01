@@ -4393,7 +4393,6 @@ final class LiveRoundViewModel: ObservableObject, Loggable {
 
         let result = engineResult
         guard result.matchupResults.isPopulated else { return [] }
-        let highestWins = result.template.leaderboardSort == .highestWins
         let isDirectHolePoints = seriesRound.roundConfig.matchupScoringStyle == .holeByHolePoints
         let now = Time()
         var awards: [SeriesPointAward] = []
@@ -4401,6 +4400,7 @@ final class LiveRoundViewModel: ObservableObject, Loggable {
         for matchupResult in result.matchupResults {
             let rows = matchupResult.rows
             guard rows.contains(where: { $0.holesPlayed > 0 || abs($0.total) > 0.000_001 }) else { continue }
+            let highestWins = matchupResult.isPointsFormat ?? (result.template.leaderboardSort == .highestWins)
             let sortedRows = rows.sorted {
                 if $0.total != $1.total {
                     return highestWins ? $0.total > $1.total : $0.total < $1.total
