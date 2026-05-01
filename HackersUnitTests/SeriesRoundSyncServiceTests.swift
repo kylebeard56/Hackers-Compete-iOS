@@ -161,8 +161,8 @@ final class SeriesRoundSyncServiceTests: XCTestCase {
         )
 
         XCTAssertEqual(updated.matchups?.count, 1)
-        XCTAssertEqual(updated.matchups?.first?.mode, .scoreOwner)
-        XCTAssertEqual(updated.matchups?.first?.scoreOwnerScope, .partnership)
+        XCTAssertEqual(updated.matchups?.first?.mode, .partnership)
+        XCTAssertNil(updated.matchups?.first?.scoreOwnerScope)
         XCTAssertEqual(updated.matchups?.first?.scoreOwnerIDs, ["pair_red", "pair_blue"])
     }
 
@@ -195,8 +195,8 @@ final class SeriesRoundSyncServiceTests: XCTestCase {
 
         XCTAssertEqual(context.seriesRound.roundConfig.scoreOwnerScope, .individual)
         XCTAssertEqual(updated.scoringUnits, [existingUnit])
-        XCTAssertEqual(updated.matchups?.first?.mode, .scoreOwner)
-        XCTAssertEqual(updated.matchups?.first?.scoreOwnerScope, .partnership)
+        XCTAssertEqual(updated.matchups?.first?.mode, .partnership)
+        XCTAssertNil(updated.matchups?.first?.scoreOwnerScope)
         XCTAssertEqual(updated.matchups?.first?.scoreOwnerIDs, ["pair_red", "pair_blue"])
     }
 
@@ -250,7 +250,7 @@ final class SeriesRoundSyncServiceTests: XCTestCase {
     }
 
     func testScoringSeriesRoundForExistingRoundCopiesSelectionDomain() {
-        var roundConfiguration = RoundConfiguration(selectionDomain: .matchupSide)
+        var roundConfiguration = RoundConfiguration(selectionDomain: .partnership)
         roundConfiguration.competitionScope = .matchup
         var teamFormat = GameFormat.strokePlay
         teamFormat.configuration.requiresTeams = true
@@ -265,7 +265,7 @@ final class SeriesRoundSyncServiceTests: XCTestCase {
             existingSegment: existingSegment
         )
 
-        XCTAssertEqual(updated.roundConfig.selectionDomain, .matchupSide)
+        XCTAssertEqual(updated.roundConfig.selectionDomain, .partnership)
         XCTAssertEqual(updated.roundConfig.teamScoring, roundConfiguration.teamScoring)
         XCTAssertEqual(updated.roundConfig.matchupMode, .teamVsTeam)
     }

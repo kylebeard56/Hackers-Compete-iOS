@@ -148,11 +148,36 @@ enum ComparisonMode: String, Codable {
 
 // MARK: - Matchup Mode
 
-/// Indicates whether a matchup pairs teams or individual participants.
+/// Indicates what kind of subjects a matchup pairs.
 enum MatchupMode: String, Codable {
     case team
     case individual
+    case partnership
+    case teeGroup = "tee_group"
+    /// Legacy value for matchups that pair scoring groups. New writes should use
+    /// `.partnership` or `.teeGroup` so shared score entry is not confused with
+    /// competitive grouping.
     case scoreOwner = "score_owner"
+
+    var usesScoringGroupIDs: Bool {
+        switch self {
+        case .partnership, .teeGroup, .scoreOwner:
+            return true
+        case .team, .individual:
+            return false
+        }
+    }
+
+    var scoringOwner: ScoringOwner {
+        switch self {
+        case .team:
+            return .team
+        case .individual:
+            return .participant
+        case .partnership, .teeGroup, .scoreOwner:
+            return .scoreOwner
+        }
+    }
 }
 
 // MARK: - Team Matchup
@@ -164,9 +189,10 @@ struct TeamMatchup: Codable, Hashable, Identifiable {
     var teamIDs: [String]
     /// Exactly two participant IDs (used when mode == .individual).
     var participantIDs: [String]?
-    /// Exactly two score owner IDs (used when mode == .scoreOwner).
+    /// Exactly two scoring-group IDs (used when mode pairs partnerships/tee groups). The
+    /// Firestore key is retained for backward compatibility with legacy score-owner matchups.
     var scoreOwnerIDs: [String]?
-    /// The owner scope the score owner ids represent.
+    /// Legacy hint for score-owner matchups. New writes should prefer `mode`.
     var scoreOwnerScope: RoundScoreOwnerScope?
     /// Whether this matchup pairs teams or individuals. Nil decodes as .team for backward compatibility.
     var mode: MatchupMode?
@@ -187,12 +213,24 @@ struct TeamMatchup: Codable, Hashable, Identifiable {
         self.mode = mode
     }
 
-    /// Returns the pairing IDs for the current mode (teamIDs or participantIDs).
+    var effectiveMode: MatchupMode {
+        guard (mode ?? .team) == .scoreOwner else { return mode ?? .team }
+        switch scoreOwnerScope {
+        case .partnership:
+            return .partnership
+        case .teeGroup:
+            return .teeGroup
+        case .individual, nil:
+            return .scoreOwner
+        }
+    }
+
+    /// Returns the pairing IDs for the current mode.
     func pairingIDs() -> [String] {
-        switch mode ?? .team {
+        switch effectiveMode {
         case .individual:
             return participantIDs ?? []
-        case .scoreOwner:
+        case .partnership, .teeGroup, .scoreOwner:
             return scoreOwnerIDs ?? []
         case .team:
             return teamIDs

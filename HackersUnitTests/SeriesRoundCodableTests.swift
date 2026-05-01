@@ -114,13 +114,13 @@ final class SeriesRoundCodableTests: XCTestCase {
         let legacyConfiguration = try decoder.decode(RoundConfiguration.self, from: Data(#"{}"#.utf8))
         XCTAssertNil(legacyConfiguration.selectionDomain)
 
-        let configuration = RoundConfiguration(selectionDomain: .matchupSide)
+        let configuration = RoundConfiguration(selectionDomain: .partnership)
         let data = try JSONEncoder().encode(configuration)
         let decoded = try decoder.decode(RoundConfiguration.self, from: data)
         let dictionary = try configuration.toDictionary()
 
-        XCTAssertEqual(decoded.selectionDomain, .matchupSide)
-        XCTAssertEqual(dictionary["selection_domain"] as? String, "matchup_side")
+        XCTAssertEqual(decoded.selectionDomain, .partnership)
+        XCTAssertEqual(dictionary["selection_domain"] as? String, "partnership")
     }
 
     func testSeriesRoundSelectionDomainRoundTripsAndDefaultsToNilWhenMissing() throws {

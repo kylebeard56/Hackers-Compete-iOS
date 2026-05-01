@@ -1786,7 +1786,7 @@ final class LiveRoundViewModel: ObservableObject, Loggable {
             return true
         }
 
-        if (matchup.mode ?? expectedMatchupMode) == .scoreOwner {
+        if matchup.effectiveMode.usesScoringGroupIDs {
             if let row = engineResult.matchupResults
                 .first(where: { $0.matchup.id == matchup.id })?
                 .rows
@@ -1796,7 +1796,7 @@ final class LiveRoundViewModel: ObservableObject, Loggable {
                         owner: $0.owner,
                         participantIDs: $0.participantIDs,
                         sideID: teamID,
-                        mode: .scoreOwner
+                        mode: matchup.effectiveMode
                     )
                 }) {
                 if row.countingParticipantIDs.isPopulated {
@@ -2972,7 +2972,7 @@ final class LiveRoundViewModel: ObservableObject, Loggable {
     }
 
     func outcomeMatchupSideName(scoringUnitID: String, matchup: TeamMatchup) -> String {
-        switch matchup.mode ?? expectedMatchupMode {
+        switch matchup.effectiveMode {
         case .team:
             if let team = snapshot.teams.first(where: { $0.id == scoringUnitID }) {
                 return team.name
@@ -2989,7 +2989,7 @@ final class LiveRoundViewModel: ObservableObject, Loggable {
             return "Team"
         case .individual:
             return snapshot.participants.first(where: { $0.id == scoringUnitID })?.name.fullName ?? "Player"
-        case .scoreOwner:
+        case .partnership, .teeGroup, .scoreOwner:
             if let group = snapshot.scoringGroup(id: scoringUnitID) {
                 return scoringGroupLabel(group)
             }
@@ -3056,12 +3056,12 @@ final class LiveRoundViewModel: ObservableObject, Loggable {
     }
 
     private func shouldDisplayMatchup(_ matchup: TeamMatchup) -> Bool {
-        let mode = matchup.mode ?? expectedMatchupMode
+        let mode = matchup.effectiveMode
         if mode == expectedMatchupMode {
             return true
         }
         guard snapshot.isSharedScoreSource,
-              mode == .scoreOwner,
+              mode.usesScoringGroupIDs,
               matchup.isValid else {
             return false
         }
@@ -3137,7 +3137,7 @@ final class LiveRoundViewModel: ObservableObject, Loggable {
             owner: owner,
             participantIDs: participantIDs,
             sideID: sideID,
-            mode: matchup.mode ?? expectedMatchupMode
+            mode: matchup.effectiveMode
         )
     }
 
@@ -3153,7 +3153,7 @@ final class LiveRoundViewModel: ObservableObject, Loggable {
                 owner: $0.owner,
                 participantIDs: $0.participantIDs,
                 sideID: sideID,
-                mode: matchup.mode ?? expectedMatchupMode
+                mode: matchup.effectiveMode
             )
         }
     }
@@ -3179,7 +3179,7 @@ final class LiveRoundViewModel: ObservableObject, Loggable {
             }
             let teamMemberIDs = Set(snapshot.participants.filter { $0.teamID == sideID }.map(\.id))
             return teamMemberIDs.isPopulated && Set(participantIDs).isSubset(of: teamMemberIDs)
-        case .scoreOwner:
+        case .partnership, .teeGroup, .scoreOwner:
             if let scoringUnit,
                scoringUnit.owner == .scoreOwner {
                 if scoringUnit.ownerIDs.contains(sideID) { return true }
@@ -3299,7 +3299,7 @@ final class LiveRoundViewModel: ObservableObject, Loggable {
     }
 
     func matchupSideParticipants(scoringUnitID: String, matchup: TeamMatchup) -> [RoundParticipant] {
-        switch matchup.mode ?? expectedMatchupMode {
+        switch matchup.effectiveMode {
         case .team:
             let teamMembers = snapshot.participants
                 .filter { $0.teamID == scoringUnitID && $0.isPresenceActive }
@@ -3310,7 +3310,7 @@ final class LiveRoundViewModel: ObservableObject, Loggable {
             return snapshot.participants
                 .filter { $0.id == scoringUnitID && $0.isPresenceActive }
                 .sorted(by: participantDisplaySort)
-        case .scoreOwner:
+        case .partnership, .teeGroup, .scoreOwner:
             if let group = snapshot.scoringGroup(id: scoringUnitID) {
                 return participants(for: group).filter(\.isPresenceActive)
             }

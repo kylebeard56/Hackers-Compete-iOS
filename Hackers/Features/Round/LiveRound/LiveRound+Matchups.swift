@@ -58,7 +58,7 @@ private struct MatchupTileView: View {
     }
 
     private var matchupMode: MatchupMode {
-        section.matchup.mode ?? viewModel.expectedMatchupMode
+        section.matchup.effectiveMode
     }
 
     private var isTeamMode: Bool {
@@ -66,7 +66,7 @@ private struct MatchupTileView: View {
     }
 
     private var isScoreOwnerMode: Bool {
-        matchupMode == .scoreOwner
+        matchupMode.usesScoringGroupIDs
     }
 
     private var showsExpandedMembers: Bool {

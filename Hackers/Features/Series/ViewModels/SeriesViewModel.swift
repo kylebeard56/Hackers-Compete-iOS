@@ -155,12 +155,12 @@ enum SeriesRoundCSVExporter {
                 let sideIDs = matchup.pairingIDs()
                 for (sideIndex, sideID) in sideIDs.enumerated() {
                     let contains: Bool
-                    switch matchup.mode ?? .team {
+                    switch matchup.effectiveMode {
                     case .team:
                         contains = participant.teamID == sideID
                     case .individual:
                         contains = participant.id == sideID
-                    case .scoreOwner:
+                    case .partnership, .teeGroup, .scoreOwner:
                         contains = scoringGroupsByID[sideID]?.memberIDs.contains(participant.id) == true
                     }
                     if contains {
@@ -4016,7 +4016,8 @@ final class SeriesViewModel: ObservableObject, Loggable {
         updated.competitionScope = linkedRound.configuration.competitionScope
         updated.teamScoring = linkedRound.configuration.teamScoring
         updated.matchupResolutionStyle = linkedRound.configuration.matchupResolutionStyle
-        updated.scoreOwnerScope = linkedRound.configuration.scoreOwnerScope
+        let template = FormatTemplateRegistry.template(for: updated.formatTemplateID)
+        updated.scoreOwnerScope = template.scoreSource == .shared ? linkedRound.configuration.scoreOwnerScope : .individual
         updated.matchupScoringStyle = linkedRound.configuration.matchupScoringStyle
         updated.holeWinPoints = linkedRound.configuration.holeWinPoints
         updated.matchWinnerBonusPoints = linkedRound.configuration.matchWinnerBonusPoints
@@ -4041,16 +4042,16 @@ final class SeriesViewModel: ObservableObject, Loggable {
         fallback: SeriesMatchupMode
     ) -> SeriesMatchupMode {
         let matchups = segment?.matchups ?? []
-        if matchups.contains(where: { ($0.mode ?? .team) == .scoreOwner && ($0.scoreOwnerScope ?? configuration.scoreOwnerScope) == .partnership }) {
+        if matchups.contains(where: { $0.effectiveMode == .partnership }) {
             return .teeGroupPartnerships
         }
-        if matchups.contains(where: { ($0.mode ?? .team) == .team }) {
+        if matchups.contains(where: { $0.effectiveMode == .team }) {
             return .teamVsTeam
         }
-        if matchups.contains(where: { ($0.mode ?? .team) == .individual }) {
+        if matchups.contains(where: { $0.effectiveMode == .individual }) {
             return .individualVsIndividual
         }
-        if configuration.scoreOwnerScope == .partnership && fallback == .teeGroupPartnerships {
+        if configuration.selectionDomain == .partnership && fallback == .teeGroupPartnerships {
             return .teeGroupPartnerships
         }
         return configuration.primaryFormat.configuration.requiresTeams ? .teamVsTeam : .individualVsIndividual
@@ -4219,7 +4220,7 @@ final class SeriesViewModel: ObservableObject, Loggable {
     ) -> [SeriesMatchupOutcome] {
         let validMatchups = (segment.matchups ?? []).filter(\.isValid)
         return validMatchups.enumerated().compactMap { index, matchup in
-            let mode = matchup.mode ?? expectedMatchupMode(for: snapshot)
+            let mode = matchup.effectiveMode
             let sides = matchup.pairingIDs().map { sideID in
                 SeriesMatchupOutcome.Side(
                     id: sideID,
@@ -4291,7 +4292,7 @@ final class SeriesViewModel: ObservableObject, Loggable {
                 owner: $0.owner,
                 participantIDs: $0.participantIDs,
                 sideID: sideID,
-                mode: matchup.mode ?? expectedMode,
+                mode: matchup.effectiveMode,
                 snapshot: snapshot
             )
         }
@@ -4313,7 +4314,7 @@ final class SeriesViewModel: ObservableObject, Loggable {
         case .team:
             let teamMemberIDs = Set(snapshot.participants.filter { $0.teamID == sideID }.map(\.id))
             return teamMemberIDs.isPopulated && Set(participantIDs).isSubset(of: teamMemberIDs)
-        case .scoreOwner:
+        case .partnership, .teeGroup, .scoreOwner:
             guard let group = snapshot.scoringGroup(id: sideID) else { return false }
             return Set(participantIDs) == Set(group.memberIDs)
         }
@@ -4325,7 +4326,7 @@ final class SeriesViewModel: ObservableObject, Loggable {
             return snapshot.teams.first(where: { $0.id == sideID })?.name ?? "Team"
         case .individual:
             return snapshot.participants.first(where: { $0.id == sideID })?.name.fullName ?? "Player"
-        case .scoreOwner:
+        case .partnership, .teeGroup, .scoreOwner:
             if let scoringGroup = snapshot.scoringGroup(id: sideID) {
                 if let label = scoringGroup.label, label.isPopulated {
                     return label
@@ -4343,7 +4344,7 @@ final class SeriesViewModel: ObservableObject, Loggable {
         switch mode {
         case .individual:
             return nil
-        case .team, .scoreOwner:
+        case .team, .partnership, .teeGroup, .scoreOwner:
             let names = matchupSideParticipants(sideID: sideID, mode: mode, snapshot: snapshot)
                 .map(\.name.fullName)
                 .filter(\.isPopulated)
@@ -4360,7 +4361,7 @@ final class SeriesViewModel: ObservableObject, Loggable {
                 .first(where: { $0.id == sideID })?
                 .teamID
                 .flatMap { teamID in snapshot.teams.first(where: { $0.id == teamID })?.displaySwatchColor }
-        case .scoreOwner:
+        case .partnership, .teeGroup, .scoreOwner:
             guard let group = snapshot.scoringGroup(id: sideID) else { return nil }
             if let teamID = group.teamID {
                 return snapshot.teams.first(where: { $0.id == teamID })?.displaySwatchColor
@@ -4379,7 +4380,7 @@ final class SeriesViewModel: ObservableObject, Loggable {
             return snapshot.participants
                 .filter { $0.id == sideID }
                 .sorted { ($0.teeOrder ?? Int.max) < ($1.teeOrder ?? Int.max) }
-        case .scoreOwner:
+        case .partnership, .teeGroup, .scoreOwner:
             guard let group = snapshot.scoringGroup(id: sideID) else { return [] }
             let memberIDs = Set(group.memberIDs)
             return snapshot.participants
@@ -4511,18 +4512,18 @@ final class SeriesViewModel: ObservableObject, Loggable {
     ) async -> [SeriesRoundMatchupPlan]? {
         let currentMatchups = snapshot.roundSegment?.matchups ?? []
         let validTeamMatchups = currentMatchups
-            .filter { ($0.mode ?? .team) == .team && $0.teamIDs.count == 2 }
+            .filter { $0.effectiveMode == .team && $0.teamIDs.count == 2 }
         let validIndividualMatchups = currentMatchups
-            .filter { ($0.mode ?? .team) == .individual && ($0.participantIDs?.count ?? 0) == 2 }
+            .filter { $0.effectiveMode == .individual && ($0.participantIDs?.count ?? 0) == 2 }
         let validScoreOwnerMatchups = currentMatchups
-            .filter { ($0.mode ?? .team) == .scoreOwner && ($0.scoreOwnerIDs?.count ?? 0) == 2 }
+            .filter { $0.effectiveMode == .partnership && ($0.scoreOwnerIDs?.count ?? 0) == 2 }
 
         let expectsMatchups = seriesRound.roundConfig.matchupMode == .teamVsTeam
             || seriesRound.roundConfig.matchupMode == .individualVsIndividual
             || seriesRound.roundConfig.matchupMode == .teeGroupPartnerships
         let preferredMode: MatchupMode
         if seriesRound.roundConfig.matchupMode == .teeGroupPartnerships || validScoreOwnerMatchups.isPopulated {
-            preferredMode = .scoreOwner
+            preferredMode = .partnership
         } else {
             preferredMode = snapshot.requiresTeams ? .team : .individual
         }
@@ -4532,7 +4533,7 @@ final class SeriesViewModel: ObservableObject, Loggable {
             hasPreferredMatchups = validTeamMatchups.isPopulated
         case .individual:
             hasPreferredMatchups = validIndividualMatchups.isPopulated
-        case .scoreOwner:
+        case .partnership, .teeGroup, .scoreOwner:
             hasPreferredMatchups = validScoreOwnerMatchups.isPopulated
         }
         if !hasPreferredMatchups {
@@ -4562,7 +4563,7 @@ final class SeriesViewModel: ObservableObject, Loggable {
             uniquingKeysWith: { _, new in new }
         )
 
-        if preferredMode == .scoreOwner {
+        if preferredMode == .partnership {
             let updatedPlans = validScoreOwnerMatchups.enumerated().compactMap { index, matchup -> SeriesRoundMatchupPlan? in
                 guard let scoreOwnerIDs = matchup.scoreOwnerIDs,
                       scoreOwnerIDs.count == 2,

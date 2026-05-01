@@ -157,7 +157,8 @@ final class SeriesRoundCreationMappingTests: XCTestCase {
 
         XCTAssertEqual(SeriesRoundCreationMapping.resolvedCompetitionScope(for: sr), .matchup)
         XCTAssertEqual(roundConfig.competitionScope, .matchup)
-        XCTAssertEqual(roundConfig.scoreOwnerScope, .partnership)
+        XCTAssertEqual(roundConfig.scoreOwnerScope, .individual)
+        XCTAssertEqual(roundConfig.selectionDomain, .partnership)
     }
 
     func testRoundDraft_carriesPlayerIDsAndConfiguration() {
@@ -986,8 +987,8 @@ final class SeriesRoundCreationMappingTests: XCTestCase {
         )
 
         XCTAssertEqual(matchups.count, 1)
-        XCTAssertEqual(matchups.first?.mode, .scoreOwner)
-        XCTAssertEqual(matchups.first?.scoreOwnerScope, .partnership)
+        XCTAssertEqual(matchups.first?.mode, .partnership)
+        XCTAssertNil(matchups.first?.scoreOwnerScope)
         XCTAssertEqual(Set(matchups.first?.scoreOwnerIDs ?? []), Set(["red_pair", "blue_pair"]))
     }
 
@@ -1009,7 +1010,7 @@ final class SeriesRoundCreationMappingTests: XCTestCase {
         )
 
         XCTAssertEqual(matchups.count, 1)
-        XCTAssertEqual(matchups.first?.mode, .scoreOwner)
+        XCTAssertEqual(matchups.first?.mode, .partnership)
         XCTAssertEqual(Set(matchups.first?.scoreOwnerIDs ?? []), Set(["red_pair", "blue_pair"]))
     }
 
@@ -1255,7 +1256,7 @@ final class SeriesRoundCreationMappingTests: XCTestCase {
         XCTAssertEqual(Set(participants.compactMap(\.teamID)), Set(["round_red", "round_blue"]))
         XCTAssertEqual(scoringGroups.count, 4)
         XCTAssertEqual(matchups.count, 2)
-        XCTAssertTrue(matchups.allSatisfy { ($0.mode ?? .team) == .scoreOwner })
+        XCTAssertTrue(matchups.allSatisfy { $0.effectiveMode == .partnership })
         XCTAssertEqual(scoringUnits.count, 4)
         XCTAssertTrue(scoringUnits.allSatisfy { $0.handicapAllowance != nil })
         let redPairUnitStrokes = try XCTUnwrap(scoringUnits.first { $0.id == "red_pair_1" }?.handicapAllowance?.unitStrokes)

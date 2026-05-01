@@ -275,7 +275,7 @@ struct LiveRound: View, Loggable {
     private var visibleTabs: [Tab] {
         let matchups = snapshot.roundSegment?.matchups ?? []
         let expectedMode = viewModel.expectedMatchupMode
-        let matchupsForMode = matchups.filter { ($0.mode ?? .team) == expectedMode }
+        let matchupsForMode = matchups.filter { $0.effectiveMode == expectedMode }
         let validMatchupsForMode = matchupsForMode.filter { $0.isValid }
         let showMatchups = snapshot.configuration.resolvedCompetitionScope == .matchup && !validMatchupsForMode.isEmpty
         return showMatchups ? [.scoring, .matchups] : [.scoring]

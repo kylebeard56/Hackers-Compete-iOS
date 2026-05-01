@@ -1031,7 +1031,7 @@ final class ScoringEngineTests: XCTestCase {
             ]
         )
 
-        XCTAssertEqual(snapshot.expectedMatchupMode, .scoreOwner)
+        XCTAssertEqual(snapshot.expectedMatchupMode, .partnership)
         XCTAssertFalse(ScoringEngine.shouldUseTeamAggregateScoring(snapshot: snapshot, segment: segment))
 
         let result = ScoringEngine.computeSnapshotResult(snapshot: snapshot, segment: segment, holes: holes, basis: .gross)

@@ -891,7 +891,7 @@ extension GameLobby {
     /// Matchups for the current mode, used for display and editing.
     private var matchupsForCurrentMode: [TeamMatchup] {
         let all = snapshot.roundSegment?.matchups ?? []
-        return all.filter { ($0.mode ?? .team) == currentMatchupMode }
+        return all.filter { $0.effectiveMode == currentMatchupMode }
     }
 
     private var displayMatchups: [(matchup: TeamMatchup, isPlaceholder: Bool)] {
@@ -912,6 +912,10 @@ extension GameLobby {
             return snapshot.teams.count
         case .individual:
             return snapshot.participants.count
+        case .partnership:
+            return snapshot.scoringGroups.filter { $0.kind == .partnership }.count
+        case .teeGroup:
+            return snapshot.scoringGroups.filter { $0.kind == .teeGroup }.count
         case .scoreOwner:
             return snapshot.scoringGroups.count
         }
@@ -922,8 +926,8 @@ extension GameLobby {
             id: "placeholder-\(index)",
             teamIDs: [],
             participantIDs: currentMatchupMode == .individual ? [] : nil,
-            scoreOwnerIDs: currentMatchupMode == .scoreOwner ? [] : nil,
-            scoreOwnerScope: currentMatchupMode == .scoreOwner ? snapshot.configuration.scoreOwnerScope : nil,
+            scoreOwnerIDs: currentMatchupMode.usesScoringGroupIDs ? [] : nil,
+            scoreOwnerScope: nil,
             mode: currentMatchupMode
         )
     }
@@ -978,6 +982,14 @@ extension GameLobby {
         }
 
         return snapshot.scoringGroups.filter { group in
+            switch currentMatchupMode {
+            case .partnership:
+                guard group.kind == .partnership else { return false }
+            case .teeGroup:
+                guard group.kind == .teeGroup else { return false }
+            case .scoreOwner, .team, .individual:
+                break
+            }
             let usedElsewhere = usedScoreOwnerIDs.contains(group.id) && group.id != currentSlotScoreOwnerID
             let isSelfCompetition = group.id == otherSlotScoreOwnerID
             return !usedElsewhere && !isSelfCompetition
@@ -1011,7 +1023,7 @@ extension GameLobby {
                     },
                     onSwapTeams: (currentMatchupMode == .team && item.matchup.teamIDs.count == 2) ? { swapMatchupTeams(matchupIndex: index) } : nil,
                     onSwapParticipants: (currentMatchupMode == .individual && (item.matchup.participantIDs?.count ?? 0) == 2) ? { swapMatchupParticipants(matchupIndex: index) } : nil,
-                    onSwapScoreOwners: (currentMatchupMode == .scoreOwner && (item.matchup.scoreOwnerIDs?.count ?? 0) == 2) ? { swapMatchupScoreOwners(matchupIndex: index) } : nil
+                    onSwapScoreOwners: (currentMatchupMode.usesScoringGroupIDs && (item.matchup.scoreOwnerIDs?.count ?? 0) == 2) ? { swapMatchupScoreOwners(matchupIndex: index) } : nil
                 )
             }
 
@@ -1039,7 +1051,7 @@ extension GameLobby {
     /// Persists matchups, merging current-mode matchups with the other mode's preserved matchups.
     private func persistMatchups(_ currentModeMatchups: [TeamMatchup]) {
         let all = snapshot.roundSegment?.matchups ?? []
-        let otherMode = all.filter { ($0.mode ?? .team) != currentMatchupMode }
+        let otherMode = all.filter { $0.effectiveMode != currentMatchupMode }
         let merged = otherMode + currentModeMatchups
         Task { await roundSession.setMatchups(merged) }
     }
@@ -1051,8 +1063,8 @@ extension GameLobby {
             id: HackersID.string(),
             teamIDs: currentMatchupMode == .team ? [] : [],
             participantIDs: currentMatchupMode == .individual ? [] : nil,
-            scoreOwnerIDs: currentMatchupMode == .scoreOwner ? [] : nil,
-            scoreOwnerScope: currentMatchupMode == .scoreOwner ? snapshot.configuration.scoreOwnerScope : nil,
+            scoreOwnerIDs: currentMatchupMode.usesScoringGroupIDs ? [] : nil,
+            scoreOwnerScope: nil,
             mode: currentMatchupMode
         ))
         persistMatchups(matchups)
@@ -1082,8 +1094,8 @@ extension GameLobby {
             teamIDs: [],
             participantIDs: nil,
             scoreOwnerIDs: [ids[1], ids[0]],
-            scoreOwnerScope: snapshot.configuration.scoreOwnerScope,
-            mode: .scoreOwner
+            scoreOwnerScope: nil,
+            mode: currentMatchupMode
         )
         persistMatchups(matchups)
     }
@@ -1135,8 +1147,8 @@ extension GameLobby {
                     teamIDs: [],
                     participantIDs: nil,
                     scoreOwnerIDs: [],
-                    scoreOwnerScope: snapshot.configuration.scoreOwnerScope,
-                    mode: .scoreOwner
+                    scoreOwnerScope: nil,
+                    mode: currentMatchupMode
                 )
             )
         }
@@ -1150,8 +1162,8 @@ extension GameLobby {
             teamIDs: [],
             participantIDs: nil,
             scoreOwnerIDs: scoreOwnerIDs.filter(\.isPopulated),
-            scoreOwnerScope: snapshot.configuration.scoreOwnerScope,
-            mode: .scoreOwner
+            scoreOwnerScope: nil,
+            mode: currentMatchupMode
         )
         persistMatchups(matchups)
     }

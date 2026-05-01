@@ -448,7 +448,7 @@ struct OutcomeMatchupTileView: View {
     }
 
     private var matchupMode: MatchupMode {
-        section.matchup.mode ?? viewModel.expectedMatchupMode
+        section.matchup.effectiveMode
     }
 
     private var participantMap: [String: RoundParticipant] {
@@ -633,7 +633,7 @@ struct OutcomeMatchupTileView: View {
             return teamMap[scoringUnitID]?.displaySwatchColor
         case .individual:
             return participantMap[scoringUnitID].flatMap { viewModel.teamColor(for: $0) }
-        case .scoreOwner:
+        case .partnership, .teeGroup, .scoreOwner:
             return scoringGroupMap[scoringUnitID].flatMap { viewModel.scoringGroupAccentColor($0) }
         }
     }
@@ -647,7 +647,7 @@ struct OutcomeMatchupTileView: View {
             return members.isPopulated ? members.joined(separator: ", ") : nil
         case .individual:
             return nil
-        case .scoreOwner:
+        case .partnership, .teeGroup, .scoreOwner:
             return scoringGroupMap[scoringUnitID].flatMap { viewModel.scoringGroupSubtitle($0) }
         }
     }

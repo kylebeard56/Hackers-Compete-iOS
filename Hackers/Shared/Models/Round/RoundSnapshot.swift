@@ -90,7 +90,7 @@ extension RoundSnapshot {
     var hasScheduledTeamMatchups: Bool {
         let teamIDs = Set(teams.map(\.id))
         return roundSegment?.matchups?.contains { matchup in
-            guard (matchup.mode ?? .team) == .team, matchup.isValid else { return false }
+            guard matchup.effectiveMode == .team, matchup.isValid else { return false }
             let pairingIDs = matchup.pairingIDs()
             return pairingIDs.allSatisfy { teamIDs.contains($0) }
         } == true
@@ -98,13 +98,35 @@ extension RoundSnapshot {
     var expectedMatchupMode: MatchupMode {
         let explicitModes = Set((roundSegment?.matchups ?? [])
             .filter(\.isValid)
-            .compactMap(\.mode))
+            .map(\.effectiveMode))
         if explicitModes.count == 1, let mode = explicitModes.first {
             return mode
         }
-        if configuration.scoreOwnerScope != .individual {
-            return .scoreOwner
+
+        switch configuration.selectionDomain {
+        case .partnership:
+            return .partnership
+        case .teeGroup:
+            return .teeGroup
+        case .team:
+            return .team
+        case .participant:
+            return .individual
+        case nil:
+            break
         }
+
+        if isSharedScoreSource {
+            switch configuration.scoreOwnerScope {
+            case .partnership:
+                return .partnership
+            case .teeGroup:
+                return .teeGroup
+            case .individual:
+                break
+            }
+        }
+
         if requiresTeams || hasScheduledTeamMatchups || (teams.isPopulated && configuration.teamScoring.isCountedSelection) {
             return .team
         }

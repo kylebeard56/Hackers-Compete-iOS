@@ -341,7 +341,7 @@ private extension LiveHoleScoringView {
                         fillColor: fillColor,
                         glassTint: isCurrent
                             ? participantTint.opacity(colorScheme.translucent)
-                            : Color.neutral6,
+                            : palette.playerAvatarGlassTint,
                         initialsColor: usesFill ? .white : palette.foregroundColor
                     )
                     .overlay {

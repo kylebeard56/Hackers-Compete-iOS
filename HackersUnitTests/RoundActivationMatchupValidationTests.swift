@@ -128,16 +128,16 @@ final class RoundActivationMatchupValidationTests: XCTestCase {
                 teamIDs: [],
                 participantIDs: nil,
                 scoreOwnerIDs: ["pair1", "pair2"],
-                scoreOwnerScope: .partnership,
-                mode: .scoreOwner
+                scoreOwnerScope: nil,
+                mode: .partnership
             ),
             TeamMatchup(
                 id: "m2",
                 teamIDs: [],
                 participantIDs: nil,
                 scoreOwnerIDs: ["pair3", "pair4"],
-                scoreOwnerScope: .partnership,
-                mode: .scoreOwner
+                scoreOwnerScope: nil,
+                mode: .partnership
             )
         ]
         let session = makeSession(
@@ -156,7 +156,7 @@ final class RoundActivationMatchupValidationTests: XCTestCase {
         let started = await session.activateLiveRound()
 
         XCTAssertFalse(started)
-        XCTAssertEqual(session.snapshot.expectedMatchupMode, .scoreOwner)
+        XCTAssertEqual(session.snapshot.expectedMatchupMode, .partnership)
         XCTAssertTrue(session.roundActivationErrors.contains(.playerMissingFromTeeGroup))
         XCTAssertFalse(session.roundActivationErrors.contains(.matchupsIncomplete))
         XCTAssertFalse(session.roundActivationErrors.contains(.matchupInvalidReferences))

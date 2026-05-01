@@ -479,7 +479,7 @@ struct EditSeriesRoundSheet: View {
                 }
             }
 
-            if viewModel.usesTeams {
+            if viewModel.usesTeams && selectedTemplate.scoreSource == .shared {
                 builderField(
                     title: "Score entry",
                     subtitle: scoreEntryScopeSubtitle
@@ -509,7 +509,7 @@ struct EditSeriesRoundSheet: View {
                 }
             }
 
-            if FormatTemplateRegistry.template(for: selectedTemplateID).scoreSource == .shared {
+            if selectedTemplate.scoreSource == .shared {
                 builderField(
                     title: "Handicap allowance",
                     subtitle: "Comma-separated percentages applied from lowest to highest course handicap."
@@ -532,61 +532,70 @@ struct EditSeriesRoundSheet: View {
                     subtitle: "Choose which scores count and how they're computed for leaderboard."
                 ) {
                     VStack(alignment: .trailing, spacing: 8) {
-                        Menu {
-                            countScoresMenuButtons
-                        } label: {
-                            menuChipLabel(teamScoringModeLabel)
-                        }
-                        .buttonStyle(.plain)
-
                         if teamScoring.mode == .bestN || teamScoring.mode == .worstN {
-                            Text("per")
-                                .fontStyle(kFontName, size: 15, weight: .regular)
-                                .foregroundStyle(Color.secondary)
-                                .frame(maxWidth: .infinity, alignment: .trailing)
-
-                            Menu {
-                                ForEach(AggregationScope.allCases, id: \.self) { scope in
-                                    Button {
-                                        teamScoring.scope = scope
-                                    } label: {
-                                        HStack {
-                                            Text(scope == .perRound ? "Round" : "Hole")
-                                            if teamScoring.scope == scope { Image(systemName: "checkmark") }
-                                        }
-                                    }
-                                }
-                            } label: {
-                                menuChipLabel(teamScoring.scope == .perRound ? "Round" : "Hole")
-                            }
-                            .buttonStyle(.plain)
-
-                            Text("from")
-                                .fontStyle(kFontName, size: 15, weight: .regular)
-                                .foregroundStyle(Color.secondary)
-                                .frame(maxWidth: .infinity, alignment: .trailing)
-
-                            Menu {
-                                Button {
-                                    selectionDomain = nil
+                            HStack(spacing: 8) {
+                                Menu {
+                                    countScoresMenuButtons
                                 } label: {
-                                    HStack {
-                                        Text("Auto")
-                                        if selectionDomain == nil { Image(systemName: "checkmark") }
-                                    }
+                                    menuChipLabel(teamScoringModeLabel)
                                 }
-                                ForEach(ScoringSelectionDomain.allCases, id: \.self) { domain in
-                                    Button {
-                                        selectionDomain = domain
-                                    } label: {
-                                        HStack {
-                                            Text(selectionDomainTitle(for: domain))
-                                            if selectionDomain == domain { Image(systemName: "checkmark") }
+                                .buttonStyle(.plain)
+
+                                Text("per")
+                                    .fontStyle(kFontName, size: 15, weight: .regular)
+                                    .foregroundStyle(Color.secondary)
+
+                                Menu {
+                                    ForEach(AggregationScope.allCases, id: \.self) { scope in
+                                        Button {
+                                            teamScoring.scope = scope
+                                        } label: {
+                                            HStack {
+                                                Text(scope == .perRound ? "Round" : "Hole")
+                                                if teamScoring.scope == scope { Image(systemName: "checkmark") }
+                                            }
                                         }
                                     }
+                                } label: {
+                                    menuChipLabel(teamScoringScopeLabel)
                                 }
+                                .buttonStyle(.plain)
+                            }
+
+                            HStack(spacing: 8) {
+                                Text("from")
+                                    .fontStyle(kFontName, size: 15, weight: .regular)
+                                    .foregroundStyle(Color.secondary)
+
+                                Menu {
+                                    Button {
+                                        selectionDomain = nil
+                                    } label: {
+                                        HStack {
+                                            Text("Auto")
+                                            if selectionDomain == nil { Image(systemName: "checkmark") }
+                                        }
+                                    }
+                                    ForEach(ScoringSelectionDomain.allCases, id: \.self) { domain in
+                                        Button {
+                                            selectionDomain = domain
+                                        } label: {
+                                            HStack {
+                                                Text(selectionDomainTitle(for: domain))
+                                                if selectionDomain == domain { Image(systemName: "checkmark") }
+                                            }
+                                        }
+                                    }
+                                } label: {
+                                    menuChipLabel(selectionDomainLabel)
+                                }
+                                .buttonStyle(.plain)
+                            }
+                        } else {
+                            Menu {
+                                countScoresMenuButtons
                             } label: {
-                                menuChipLabel(selectionDomainLabel)
+                                menuChipLabel(teamScoringModeLabel)
                             }
                             .buttonStyle(.plain)
                         }
@@ -871,7 +880,7 @@ struct EditSeriesRoundSheet: View {
             competitionScope: competitionScope,
             teamScoring: teamScoring,
             matchupResolutionStyle: .roundAggregate,
-            scoreOwnerScope: scoreOwnerScope,
+            scoreOwnerScope: effectiveScoreOwnerScope,
             matchupScoringStyle: matchupScoringStyle,
             holeWinPoints: competitionScope == .matchup ? holeWinPoints : nil,
             matchWinnerBonusPoints: competitionScope == .matchup ? matchWinnerBonusPoints : nil,
@@ -920,7 +929,7 @@ struct EditSeriesRoundSheet: View {
             competitionScope: resolvedCompetitionScope,
             teamScoring: teamScoring,
             matchupResolutionStyle: .roundAggregate,
-            scoreOwnerScope: scoreOwnerScope,
+            scoreOwnerScope: effectiveScoreOwnerScope,
             matchupScoringStyle: matchupScoringStyle,
             holeWinPoints: competitionScope == .matchup ? holeWinPoints : nil,
             matchWinnerBonusPoints: competitionScope == .matchup ? matchWinnerBonusPoints : nil,
@@ -1226,7 +1235,7 @@ struct EditSeriesRoundSheet: View {
             competitionScope: competitionScope,
             teamScoring: teamScoring,
             matchupResolutionStyle: .roundAggregate,
-            scoreOwnerScope: scoreOwnerScope,
+            scoreOwnerScope: effectiveScoreOwnerScope,
             matchupScoringStyle: matchupScoringStyle,
             holeWinPoints: competitionScope == .matchup ? holeWinPoints : nil,
             matchWinnerBonusPoints: competitionScope == .matchup ? matchWinnerBonusPoints : nil,
@@ -1370,6 +1379,14 @@ struct EditSeriesRoundSheet: View {
         guard source != .byPair || canSelectPairMatchupSource else { return }
         if source == .byPair {
             ensurePartnershipPlansFromReadyGroups()
+        }
+        switch source {
+        case .byTeam:
+            selectionDomain = .team
+        case .byPair:
+            selectionDomain = .partnership
+        case .byIndividual:
+            selectionDomain = .participant
         }
         matchupSource = source
         matchupPlans = clearedMatchupPlansForSourceSwitch()
@@ -2318,6 +2335,10 @@ struct EditSeriesRoundSheet: View {
         FormatTemplateRegistry.template(for: selectedTemplateID)
     }
 
+    private var effectiveScoreOwnerScope: RoundScoreOwnerScope {
+        selectedTemplate.scoreSource == .shared ? scoreOwnerScope : .individual
+    }
+
     private var isSharedTeamTemplate: Bool {
         selectedTemplate.scoreSource == .shared && selectedTemplate.requirements.requiresTeams
     }
@@ -2395,6 +2416,10 @@ struct EditSeriesRoundSheet: View {
         }
     }
 
+    private var teamScoringScopeLabel: String {
+        teamScoring.scope == .perRound ? "Round" : "Hole"
+    }
+
     @ViewBuilder
     private var countScoresMenuButtons: some View {
         Button {
@@ -2462,8 +2487,6 @@ struct EditSeriesRoundSheet: View {
             return "Pair"
         case .teeGroup:
             return "Tee group"
-        case .matchupSide:
-            return "Matchup side"
         }
     }
 

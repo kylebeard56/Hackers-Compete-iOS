@@ -653,6 +653,21 @@ extension RoundSession {
         providedScoringGroups: [RoundScoringGroup]?,
         preserveExistingPartnerships: Bool
     ) -> [RoundScoringGroup] {
+        let selectionDomain = snapshot.configuration.selectionDomain
+        if selectionDomain == .partnership || snapshot.expectedMatchupMode == .partnership {
+            if let providedScoringGroups {
+                return normalizedPartnershipGroups(
+                    from: providedScoringGroups,
+                    fillRemainder: false
+                )
+            }
+            return resolvedPartnershipGroups(fillRemainder: preserveExistingPartnerships)
+        }
+
+        if selectionDomain == .teeGroup || snapshot.expectedMatchupMode == .teeGroup {
+            return buildTeeGroupScoringGroups()
+        }
+
         switch snapshot.configuration.scoreOwnerScope {
         case .individual:
             return []
@@ -894,8 +909,8 @@ extension RoundSession {
 
         let expectedMode = snapshot.expectedMatchupMode
 
-        let otherModes = current.filter { ($0.mode ?? .team) != expectedMode }
-        let currentModeMatchups = current.filter { ($0.mode ?? .team) == expectedMode }
+        let otherModes = current.filter { $0.effectiveMode != expectedMode }
+        let currentModeMatchups = current.filter { $0.effectiveMode == expectedMode }
         let availableIDs = availableOwnerIDs(for: expectedMode, scoringGroups: scoringGroups)
         let prunedCurrentMode = currentModeMatchups.filter {
             matchup($0, referencesOnly: availableIDs, in: expectedMode)
@@ -920,6 +935,10 @@ extension RoundSession {
             return Set(snapshot.teams.map(\.id))
         case .individual:
             return Set(snapshot.participants.map(\.id))
+        case .partnership:
+            return Set(scoringGroups.filter { $0.kind == .partnership }.map(\.id))
+        case .teeGroup:
+            return Set(scoringGroups.filter { $0.kind == .teeGroup }.map(\.id))
         case .scoreOwner:
             return Set(scoringGroups.map(\.id))
         }
@@ -937,7 +956,7 @@ extension RoundSession {
             return matchup.teamIDs.allSatisfy(availableIDs.contains)
         case .individual:
             return (matchup.participantIDs ?? []).allSatisfy(availableIDs.contains)
-        case .scoreOwner:
+        case .partnership, .teeGroup, .scoreOwner:
             return (matchup.scoreOwnerIDs ?? []).allSatisfy(availableIDs.contains)
         }
     }
@@ -977,6 +996,48 @@ extension RoundSession {
                     )
                 }
             }
+        case .partnership:
+            let partnershipGroups = scoringGroups.filter { $0.kind == .partnership }
+            let groupsByTeeGroup = Dictionary(grouping: partnershipGroups) { $0.teeGroupID ?? "" }
+            return groupsByTeeGroup.keys.sorted().compactMap { teeGroupID in
+                let groups = (groupsByTeeGroup[teeGroupID] ?? []).sorted {
+                    let lhsTeam = $0.teamID ?? ""
+                    let rhsTeam = $1.teamID ?? ""
+                    if lhsTeam != rhsTeam { return lhsTeam < rhsTeam }
+                    return ($0.label ?? $0.id) < ($1.label ?? $1.id)
+                }
+                guard groups.count == 2 else { return nil }
+                let teamIDs = Set(groups.compactMap(\.teamID).filter(\.isPopulated))
+                guard teamIDs.count == 2 else { return nil }
+                return TeamMatchup(
+                    id: "partnership_matchup_\(groups[0].id)_\(groups[1].id)",
+                    teamIDs: [],
+                    participantIDs: nil,
+                    scoreOwnerIDs: [groups[0].id, groups[1].id],
+                    scoreOwnerScope: nil,
+                    mode: .partnership
+                )
+            }
+        case .teeGroup:
+            let orderedGroups = scoringGroups
+                .filter { $0.kind == .teeGroup }
+                .sorted {
+                    if ($0.teeGroupID ?? "") != ($1.teeGroupID ?? "") {
+                        return ($0.teeGroupID ?? "") < ($1.teeGroupID ?? "")
+                    }
+                    return ($0.label ?? $0.id) < ($1.label ?? $1.id)
+                }
+            return stride(from: 0, to: orderedGroups.count, by: 2).compactMap { index in
+                guard index + 1 < orderedGroups.count else { return nil }
+                return TeamMatchup(
+                    id: "tee_group_matchup_\(orderedGroups[index].id)_\(orderedGroups[index + 1].id)",
+                    teamIDs: [],
+                    participantIDs: nil,
+                    scoreOwnerIDs: [orderedGroups[index].id, orderedGroups[index + 1].id],
+                    scoreOwnerScope: nil,
+                    mode: .teeGroup
+                )
+            }
         case .scoreOwner:
             if snapshot.configuration.scoreOwnerScope == .partnership {
                 let groupsByTeeGroup = Dictionary(grouping: scoringGroups.filter { $0.kind == .partnership }) { $0.teeGroupID ?? "" }
@@ -995,8 +1056,8 @@ extension RoundSession {
                         teamIDs: [],
                         participantIDs: nil,
                         scoreOwnerIDs: [groups[0].id, groups[1].id],
-                        scoreOwnerScope: .partnership,
-                        mode: .scoreOwner
+                        scoreOwnerScope: nil,
+                        mode: .partnership
                     )
                 }
             }
@@ -1015,7 +1076,7 @@ extension RoundSession {
                     participantIDs: nil,
                     scoreOwnerIDs: [orderedGroups[index].id, orderedGroups[index + 1].id],
                     scoreOwnerScope: snapshot.configuration.scoreOwnerScope,
-                    mode: .scoreOwner
+                    mode: snapshot.configuration.scoreOwnerScope == .teeGroup ? .teeGroup : .partnership
                 )
             }
         }

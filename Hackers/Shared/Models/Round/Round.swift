@@ -177,7 +177,6 @@ enum ScoringSelectionDomain: String, Codable, CaseIterable {
     case team
     case partnership
     case teeGroup = "tee_group"
-    case matchupSide = "matchup_side"
 }
 
 enum RoundMatchupScoringStyle: String, Codable, CaseIterable {

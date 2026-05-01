@@ -141,7 +141,7 @@ struct MatchupResultPresentationBuilder {
         matchupRows: [ScoringRow],
         basis: ScoreBasis?
     ) -> MatchupResultPresentation {
-        let mode = matchup.mode ?? expectedMatchupMode(for: snapshot)
+        let mode = matchup.effectiveMode
         let isPointsFormat = result.template.leaderboardSort == .highestWins
         let pairingIDs = matchup.pairingIDs()
         let teamScoring = snapshot.configuration.teamScoring
@@ -308,7 +308,7 @@ struct MatchupResultPresentationBuilder {
             return (exactRow?.holesPlayed ?? 0) > 0 ? exactRow : nil
         }
 
-        let owner: ScoringOwner = mode == .scoreOwner ? .scoreOwner : .team
+        let owner: ScoringOwner = mode.usesScoringGroupIDs ? .scoreOwner : .team
         let lookupSegmentIDs = snapshot.segmentScoreLookupSegmentIDs
         return ScoringEngine.computeParticipantGroupAggregateRow(
             scoringUnitID: sideID,
@@ -346,7 +346,7 @@ struct MatchupResultPresentationBuilder {
                     unit.owner == .team && (unit.id == sideID || unit.ownerIDs.contains(sideID))
                 }
                 .forEach { ids.insert($0.id) }
-        case .scoreOwner:
+        case .partnership, .teeGroup, .scoreOwner:
             if let group = snapshot.scoringGroup(id: sideID) {
                 ids.insert(group.id)
                 if let teamID = group.teamID {
@@ -444,7 +444,7 @@ struct MatchupResultPresentationBuilder {
         }
 
         guard holeValues.isPopulated else { return nil }
-        let owner: ScoringOwner = mode == .scoreOwner ? .scoreOwner : (mode == .team ? .team : .participant)
+        let owner = mode.scoringOwner
         let participantIDs = participants.map(\.id)
         return ScoringRow(
             scoringUnitID: sideID,
@@ -475,7 +475,7 @@ struct MatchupResultPresentationBuilder {
             return ScoringUnit(id: sideID, owner: .participant, ownerIDs: [sideID], scoringMethod: .individual)
         case .team:
             return ScoringUnit(id: sideID, owner: .team, ownerIDs: [sideID], scoringMethod: .aggregate)
-        case .scoreOwner:
+        case .partnership, .teeGroup, .scoreOwner:
             if let group = snapshot.scoringGroup(id: sideID) {
                 return ScoringUnit(id: group.id, owner: .scoreOwner, ownerIDs: group.memberIDs, scoringMethod: .aggregate)
             }
@@ -525,7 +525,7 @@ struct MatchupResultPresentationBuilder {
             guard owner == .team else { return false }
             let teamMemberIDs = Set(snapshot.participants.filter { $0.teamID == sideID }.map(\.id))
             return teamMemberIDs.isPopulated && Set(participantIDs) == teamMemberIDs
-        case .scoreOwner:
+        case .partnership, .teeGroup, .scoreOwner:
             if let scoringUnit,
                scoringUnit.owner == .scoreOwner {
                 if scoringUnit.ownerIDs.contains(sideID) { return true }
@@ -545,7 +545,7 @@ struct MatchupResultPresentationBuilder {
             return snapshot.teams.first(where: { $0.id == sideID })?.name ?? "Team"
         case .individual:
             return snapshot.participants.first(where: { $0.id == sideID })?.name.fullName ?? "Player"
-        case .scoreOwner:
+        case .partnership, .teeGroup, .scoreOwner:
             if let group = snapshot.scoringGroup(id: sideID) {
                 if let teamID = group.teamID,
                    let team = snapshot.teams.first(where: { $0.id == teamID }) {
@@ -567,7 +567,7 @@ struct MatchupResultPresentationBuilder {
         switch mode {
         case .individual:
             return nil
-        case .team, .scoreOwner:
+        case .team, .partnership, .teeGroup, .scoreOwner:
             let names = sideParticipants(sideID: sideID, mode: mode, snapshot: snapshot)
                 .map(\.name.fullName)
                 .filter(\.isPopulated)
@@ -584,7 +584,7 @@ struct MatchupResultPresentationBuilder {
                 .first(where: { $0.id == sideID })?
                 .teamID
                 .flatMap { teamID in snapshot.teams.first(where: { $0.id == teamID })?.displaySwatchColor }
-        case .scoreOwner:
+        case .partnership, .teeGroup, .scoreOwner:
             guard let group = snapshot.scoringGroup(id: sideID),
                   let teamID = group.teamID else { return nil }
             return snapshot.teams.first(where: { $0.id == teamID })?.displaySwatchColor
@@ -598,7 +598,7 @@ struct MatchupResultPresentationBuilder {
             participants = snapshot.participants.filter { $0.teamID == sideID && $0.isPresenceActive }
         case .individual:
             participants = snapshot.participants.filter { $0.id == sideID && $0.isPresenceActive }
-        case .scoreOwner:
+        case .partnership, .teeGroup, .scoreOwner:
             guard let group = snapshot.scoringGroup(id: sideID) else { return [] }
             let memberIDs = Set(group.memberIDs)
             participants = snapshot.participants.filter { memberIDs.contains($0.id) && $0.isPresenceActive }
@@ -837,10 +837,10 @@ struct LeaderboardBuilder {
             let pairingIDs = matchupResult.matchup.pairingIDs()
             let nameA: String
             let nameB: String
-            if matchupResult.matchup.mode == .individual {
+            if matchupResult.matchup.effectiveMode == .individual {
                 nameA = participantMap[pairingIDs.first ?? ""]?.name.fullName ?? "Player A"
                 nameB = participantMap[pairingIDs.last ?? ""]?.name.fullName ?? "Player B"
-            } else if matchupResult.matchup.mode == .scoreOwner {
+            } else if matchupResult.matchup.effectiveMode.usesScoringGroupIDs {
                 nameA = scoreOwnerName(
                     ownerID: pairingIDs.first ?? "",
                     scoringGroupMap: scoringGroupMap,

@@ -193,8 +193,8 @@ struct ScoringEngine {
             || segment.competitionScope == .matchup
         guard isMatchupScope else { return true }
 
-        let matchupModes = matchups.map { $0.mode ?? snapshot.expectedMatchupMode }
-        if matchupModes.contains(.scoreOwner) || matchupModes.contains(.individual) {
+        let matchupModes = matchups.map(\.effectiveMode)
+        if matchupModes.contains(where: { $0.usesScoringGroupIDs }) || matchupModes.contains(.individual) {
             return false
         }
         if matchupModes.contains(.team) {
@@ -1616,22 +1616,34 @@ struct ScoringEngine {
         if let explicit { return explicit }
 
         let partnershipGroupIDs = Set(scoringGroups.filter { $0.kind == .partnership }.map(\.id))
-        let hasPartnershipScoreOwnerMatchup = matchups.contains { matchup in
-            guard (matchup.mode ?? .team) == .scoreOwner, matchup.isValid else { return false }
+        let teeGroupIDs = Set(scoringGroups.filter { $0.kind == .teeGroup }.map(\.id))
+        let hasPartnershipMatchup = matchups.contains { matchup in
+            guard matchup.effectiveMode.usesScoringGroupIDs, matchup.isValid else { return false }
             let sideIDs = matchup.pairingIDs()
             return sideIDs.count == 2 && sideIDs.allSatisfy { partnershipGroupIDs.contains($0) }
         }
-        if hasPartnershipScoreOwnerMatchup {
-            return .matchupSide
+        if hasPartnershipMatchup {
+            return .partnership
         }
 
-        switch scoreOwnerScope {
-        case .partnership:
-            return .partnership
-        case .teeGroup:
+        let hasTeeGroupMatchup = matchups.contains { matchup in
+            guard matchup.effectiveMode.usesScoringGroupIDs, matchup.isValid else { return false }
+            let sideIDs = matchup.pairingIDs()
+            return sideIDs.count == 2 && sideIDs.allSatisfy { teeGroupIDs.contains($0) }
+        }
+        if hasTeeGroupMatchup {
             return .teeGroup
-        case .individual:
-            break
+        }
+
+        if template.scoreSource == .shared {
+            switch scoreOwnerScope {
+            case .partnership:
+                return .partnership
+            case .teeGroup:
+                return .teeGroup
+            case .individual:
+                break
+            }
         }
 
         if teamScoring.mode != .all || template.requirements.requiresTeams || teams.isPopulated {
@@ -1646,10 +1658,10 @@ struct ScoringEngine {
         template: GameTemplate
     ) -> Bool {
         guard template.scoreSource == .individual,
-              (matchup.mode ?? .team) == .scoreOwner else {
+              matchup.effectiveMode.usesScoringGroupIDs else {
             return false
         }
-        return domain == .matchupSide || domain == .partnership || domain == .teeGroup
+        return domain == .partnership || domain == .teeGroup
     }
 
     private static func buildDomainSelectedMatchupRows(
@@ -1757,7 +1769,7 @@ struct ScoringEngine {
             .map { Set($0.ownerIDs) })
         let scoringGroupsByID = Dictionary(uniqueKeysWithValues: scoringGroups.map { ($0.id, $0) })
 
-        for matchup in matchups where (matchup.mode ?? .team) == .scoreOwner {
+        for matchup in matchups where matchup.effectiveMode.usesScoringGroupIDs {
             for sideID in matchup.pairingIDs() {
                 guard let group = scoringGroupsByID[sideID],
                       group.memberIDs.isPopulated,
@@ -1787,7 +1799,7 @@ struct ScoringEngine {
         scoringGroups: [RoundScoringGroup],
         scoringUnits: [ScoringUnit]
     ) -> [ResolvedMatchupSide] {
-        let mode = matchup.mode ?? .team
+        let mode = matchup.effectiveMode
         let participantByID = Dictionary(uniqueKeysWithValues: participants.map { ($0.id, $0) })
         let teamParticipantIDs = Dictionary(grouping: participants.compactMap { participant -> (String, String)? in
             guard let teamID = participant.teamID, teamID.isPopulated else { return nil }
@@ -1803,7 +1815,7 @@ struct ScoringEngine {
                 participantIDs = participantByID[sideID] != nil ? [sideID] : []
             case .team:
                 participantIDs = teamParticipantIDs[sideID] ?? []
-            case .scoreOwner:
+            case .partnership, .teeGroup, .scoreOwner:
                 if let group = scoringGroupsByID[sideID] {
                     participantIDs = group.memberIDs
                 } else if let scoringUnit = scoringUnits.first(where: { $0.id == sideID }) {
@@ -1864,7 +1876,7 @@ struct ScoringEngine {
                         && (unit.id == sideID || unit.ownerIDs.contains(sideID))
                 }
                 .forEach { append($0.id) }
-        case .scoreOwner:
+        case .partnership, .teeGroup, .scoreOwner:
             if let group = scoringGroups.first(where: { $0.id == sideID }) {
                 append(group.id)
                 append(group.teamID)
@@ -2007,8 +2019,6 @@ struct ScoringEngine {
         template: GameTemplate
     ) -> [String: [String]] {
         switch selectionDomain {
-        case .matchupSide:
-            return [:]
         case .partnership:
             guard template.scoreSource == .individual else { return [:] }
             return Dictionary(uniqueKeysWithValues: scoringGroups

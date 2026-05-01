@@ -36,7 +36,7 @@ struct MatchupCardView: View {
         case .individual:
             let ids = matchup.participantIDs ?? []
             return ids.count > index ? ids[index] : nil
-        case .scoreOwner:
+        case .partnership, .teeGroup, .scoreOwner:
             let ids = matchup.scoreOwnerIDs ?? []
             return ids.count > index ? ids[index] : nil
         }
@@ -82,7 +82,7 @@ struct MatchupCardView: View {
                 slotIndex: slotIndex,
                 availableParticipants: slotIndex == 0 ? availableParticipantsForSlot0 : availableParticipantsForSlot1
             )
-        case .scoreOwner:
+        case .partnership, .teeGroup, .scoreOwner:
             scoreOwnerSlot(
                 scoreOwnerID: slotID,
                 slotIndex: slotIndex,

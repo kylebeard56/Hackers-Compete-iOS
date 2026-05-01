@@ -117,10 +117,12 @@ extension RoundSession {
         }
 
         let allMatchups = snapshot.roundSegment?.matchups ?? []
-        let hasExplicitScoreOwnerMatchups = allMatchups.contains { ($0.mode ?? .team) == .scoreOwner }
+        let hasExplicitScoringGroupMatchups = allMatchups.contains { $0.effectiveMode.usesScoringGroupIDs }
+        let selectionUsesScoringGroups = snapshot.configuration.selectionDomain == .partnership
+            || snapshot.configuration.selectionDomain == .teeGroup
 
-        // 3. Validate score-owner group setup whenever the round config or explicit matchups depend on it.
-        if snapshot.configuration.scoreOwnerScope != .individual || hasExplicitScoreOwnerMatchups {
+        // 3. Validate scoring-group setup whenever the round config, selection domain, or explicit matchups depend on it.
+        if snapshot.configuration.scoreOwnerScope != .individual || hasExplicitScoringGroupMatchups || selectionUsesScoringGroups {
             let participantIDs = Set(snapshot.participants.map(\.id))
             let participantByID = Dictionary(uniqueKeysWithValues: snapshot.participants.map { ($0.id, $0) })
 
@@ -167,7 +169,7 @@ extension RoundSession {
 
         if snapshot.configuration.resolvedCompetitionScope == .matchup {
             let currentMode = snapshot.expectedMatchupMode
-            let matchupsForMode = allMatchups.filter { ($0.mode ?? .team) == currentMode }
+            let matchupsForMode = allMatchups.filter { $0.effectiveMode == currentMode }
             let validMatchups = matchupsForMode.filter(\.isValid)
             let hasSingleSidedMatchup = matchupsForMode.contains { $0.pairingIDs().count == 1 }
             if validMatchups.isEmpty || hasSingleSidedMatchup {
@@ -179,12 +181,12 @@ extension RoundSession {
             let scoringGroupIDs = Set(snapshot.scoringGroups.map(\.id))
             let invalidReference = matchupsForMode.contains { m in
                 guard m.isValid else { return false }
-                switch m.mode ?? .team {
+                switch m.effectiveMode {
                 case .team:
                     return m.teamIDs.contains { !teamIds.contains($0) }
                 case .individual:
                     return (m.participantIDs ?? []).contains { !participantIds.contains($0) }
-                case .scoreOwner:
+                case .partnership, .teeGroup, .scoreOwner:
                     return (m.scoreOwnerIDs ?? []).contains { !scoringGroupIDs.contains($0) }
                 }
             }

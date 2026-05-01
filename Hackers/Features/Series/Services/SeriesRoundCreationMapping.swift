@@ -77,6 +77,23 @@ enum SeriesRoundCreationMapping {
         return format
     }
 
+    private static func resolvedSelectionDomain(for seriesRound: SeriesRound) -> ScoringSelectionDomain? {
+        if let selectionDomain = seriesRound.roundConfig.selectionDomain {
+            return selectionDomain
+        }
+
+        switch seriesRound.roundConfig.matchupMode {
+        case .teamVsTeam:
+            return .team
+        case .individualVsIndividual:
+            return .participant
+        case .teeGroupPartnerships:
+            return .partnership
+        case .field, .none:
+            return nil
+        }
+    }
+
     static func roundConfiguration(
         series: Series,
         seriesRound: SeriesRound,
@@ -84,6 +101,9 @@ enum SeriesRoundCreationMapping {
         competitionScope: CompetitionScope
     ) -> RoundConfiguration {
         let template = seriesRound.roundConfig.template
+        let scoreOwnerScope: RoundScoreOwnerScope = template.scoreSource == .shared
+            ? seriesRound.roundConfig.scoreOwnerScope
+            : .individual
         return RoundConfiguration(
             primaryFormat: primaryGameFormat(series: series, seriesRound: seriesRound),
             formatSummary: RoundFormatSummary(from: template),
@@ -91,12 +111,12 @@ enum SeriesRoundCreationMapping {
             competitionScope: competitionScope,
             teamScoring: seriesRound.roundConfig.teamScoring,
             matchupResolutionStyle: seriesRound.roundConfig.matchupResolutionStyle,
-            scoreOwnerScope: seriesRound.roundConfig.scoreOwnerScope,
+            scoreOwnerScope: scoreOwnerScope,
             matchupScoringStyle: seriesRound.roundConfig.matchupScoringStyle,
             holeWinPoints: seriesRound.roundConfig.holeWinPoints,
             matchWinnerBonusPoints: seriesRound.roundConfig.matchWinnerBonusPoints,
             matchTiePolicy: seriesRound.roundConfig.matchTiePolicy,
-            selectionDomain: seriesRound.roundConfig.selectionDomain,
+            selectionDomain: resolvedSelectionDomain(for: seriesRound),
             sequentialTeeStartsEnabled: seriesRound.roundConfig.sequentialTeeStartsEnabled ?? false,
             handicapStrokeBasis: series.handicapConfig.strokeBasis,
             sharedScoreHandicapConfig: seriesRound.roundConfig.sharedScoreHandicapConfig
@@ -490,7 +510,9 @@ enum SeriesRoundCreationMapping {
                 }
         }
 
-        guard seriesRound.roundConfig.scoreOwnerScope == .partnership else { return [] }
+        guard seriesRound.roundConfig.selectionDomain == .partnership
+            || seriesRound.roundConfig.matchupMode == .teeGroupPartnerships
+            || seriesRound.roundConfig.scoreOwnerScope == .partnership else { return [] }
 
         let activeMemberIDs = Set(members.map(\.id))
         let teamOrder = Dictionary(uniqueKeysWithValues: teams.map { ($0.id, $0.index) })
@@ -582,7 +604,8 @@ enum SeriesRoundCreationMapping {
         scoringGroups: [RoundScoringGroup],
         participants: [RoundParticipant]
     ) -> [TeamMatchup] {
-        if (seriesRound.roundConfig.scoreOwnerScope == .partnership
+        if (seriesRound.roundConfig.selectionDomain == .partnership
+            || seriesRound.roundConfig.scoreOwnerScope == .partnership
             || seriesRound.roundConfig.matchupMode == .teeGroupPartnerships),
            scoringGroups.isPopulated {
             if seriesRound.roundConfig.matchupMode == .teeGroupPartnerships {
@@ -627,8 +650,8 @@ enum SeriesRoundCreationMapping {
                         teamIDs: [],
                         participantIDs: nil,
                         scoreOwnerIDs: [scoreOwnerAID, scoreOwnerBID],
-                        scoreOwnerScope: .partnership,
-                        mode: .scoreOwner
+                        scoreOwnerScope: nil,
+                        mode: .partnership
                     )
                 }
 
@@ -661,8 +684,8 @@ enum SeriesRoundCreationMapping {
                         teamIDs: [],
                         participantIDs: nil,
                         scoreOwnerIDs: [sortedGroups[0].id, sortedGroups[1].id],
-                        scoreOwnerScope: .partnership,
-                        mode: .scoreOwner
+                        scoreOwnerScope: nil,
+                        mode: .partnership
                     )
                 )
             }

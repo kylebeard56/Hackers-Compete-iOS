@@ -67,6 +67,10 @@ extension DesignPalette {
         scheme.isLight ? Color.neutral5 : Color.neutral7
     }
 
+    var playerAvatarGlassTint: Color {
+        scheme.isLight ? Color.neutral6 : Color.neutral5
+    }
+
     var buttonColor: Color {
         switch (theme, scheme) {
         case (.glass, .light):          return .neutral6

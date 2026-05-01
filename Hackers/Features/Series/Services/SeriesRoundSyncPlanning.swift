@@ -111,12 +111,12 @@ enum SeriesRoundSyncPlanning {
         let currentMatchups = matchups ?? snapshot.roundSegment?.matchups ?? []
         let retainedMatchups = currentMatchups.filter { matchup in
             guard matchup.isValid else { return false }
-            switch matchup.mode ?? .team {
+            switch matchup.effectiveMode {
             case .team:
                 return matchup.teamIDs.allSatisfy(activeTeamIDs.contains)
             case .individual:
                 return (matchup.participantIDs ?? []).allSatisfy(activeParticipantIDs.contains)
-            case .scoreOwner:
+            case .partnership, .teeGroup, .scoreOwner:
                 return (matchup.scoreOwnerIDs ?? []).allSatisfy(retainedScoringGroupIDsWithActivePlayers.contains)
             }
         }
@@ -754,7 +754,8 @@ enum SeriesRoundSyncPlanning {
         config.competitionScope = roundConfiguration.competitionScope
         config.teamScoring = roundConfiguration.teamScoring
         config.matchupResolutionStyle = roundConfiguration.matchupResolutionStyle
-        config.scoreOwnerScope = roundConfiguration.scoreOwnerScope
+        let template = FormatTemplateRegistry.template(for: config.formatTemplateID)
+        config.scoreOwnerScope = template.scoreSource == .shared ? roundConfiguration.scoreOwnerScope : .individual
         config.matchupScoringStyle = roundConfiguration.matchupScoringStyle
         config.holeWinPoints = roundConfiguration.holeWinPoints
         config.matchWinnerBonusPoints = roundConfiguration.matchWinnerBonusPoints
@@ -779,16 +780,16 @@ enum SeriesRoundSyncPlanning {
         guard configuration.resolvedCompetitionScope == .matchup else { return .field }
 
         let matchups = segment?.matchups ?? []
-        if matchups.contains(where: { ($0.mode ?? .team) == .scoreOwner && ($0.scoreOwnerScope ?? configuration.scoreOwnerScope) == .partnership }) {
+        if matchups.contains(where: { $0.effectiveMode == .partnership }) {
             return .teeGroupPartnerships
         }
-        if matchups.contains(where: { ($0.mode ?? .team) == .team }) {
+        if matchups.contains(where: { $0.effectiveMode == .team }) {
             return .teamVsTeam
         }
-        if matchups.contains(where: { ($0.mode ?? .team) == .individual }) {
+        if matchups.contains(where: { $0.effectiveMode == .individual }) {
             return .individualVsIndividual
         }
-        if configuration.scoreOwnerScope == .partnership && fallback == .teeGroupPartnerships {
+        if configuration.selectionDomain == .partnership && fallback == .teeGroupPartnerships {
             return .teeGroupPartnerships
         }
         return configuration.primaryFormat.configuration.requiresTeams ? .teamVsTeam : .individualVsIndividual
