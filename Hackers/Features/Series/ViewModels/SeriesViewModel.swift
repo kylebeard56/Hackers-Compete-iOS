@@ -2805,28 +2805,13 @@ final class SeriesViewModel: ObservableObject, Loggable {
         creatingRoundID = seriesRound.id
         defer { creatingRoundID = nil }
 
-        let attendance = attendanceByRound[seriesRound.id] ?? []
-        let attendanceByMemberID = Dictionary(uniqueKeysWithValues: attendance.map { ($0.memberID, $0) })
-        let participants = eligibleMembers.filter { member in
-            guard let attendance = attendanceByMemberID[member.id] else {
-                return series.settings.attendanceDefault != .no
-            }
-            return attendance.status == SeriesRoundAttendanceStatus.pending.rawValue
-                || attendance.status == SeriesRoundAttendanceStatus.accepted.rawValue
-        }
-        let presenceStatusByMemberID = Dictionary(uniqueKeysWithValues: participants.map { member in
-            let resolvedStatus: RoundParticipantPresenceStatus
-            if let attendance = attendanceByMemberID[member.id],
-               attendance.status == SeriesRoundAttendanceStatus.pending.rawValue {
-                resolvedStatus = .unconfirmed
-            } else if attendanceByMemberID[member.id] == nil,
-                      series.settings.attendanceDefault == .pending {
-                resolvedStatus = .unconfirmed
-            } else {
-                resolvedStatus = .active
-            }
-            return (member.id, resolvedStatus)
-        })
+        let attendancePlan = SeriesRoundCreationMapping.participatingMembersAndPresenceStatuses(
+            series: series,
+            eligibleMembers: eligibleMembers,
+            attendance: attendanceByRound[seriesRound.id] ?? []
+        )
+        let participants = attendancePlan.members
+        let presenceStatusByMemberID = attendancePlan.presenceStatusByMemberID
 
         if let courseSegment {
             rounds[roundIndex].courseOverride = SeriesCourseSelection(

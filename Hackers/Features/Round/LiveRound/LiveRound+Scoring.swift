@@ -646,7 +646,7 @@ extension LiveRound {
                     }
                 }
             } else if viewModel.effectiveLeaderboardRows.isEmpty {
-                Text(viewModel.snapshot.isSharedScoreSource && viewModel.snapshot.participants.contains(where: \.isPresenceActive)
+                Text(viewModel.snapshot.isSharedScoreSource && viewModel.snapshot.participants.contains(where: viewModel.isPresenceActive)
                      ? "No shared scoring groups are set up yet."
                      : "No players in this round yet.")
                     .fontStyle(kFontName, size: 14, weight: .regular)

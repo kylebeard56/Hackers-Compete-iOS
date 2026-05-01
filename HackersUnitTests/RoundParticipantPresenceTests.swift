@@ -44,4 +44,69 @@ final class RoundParticipantPresenceTests: XCTestCase {
         XCTAssertEqual(participant.resolvedPresenceStatus, .active)
         XCTAssertTrue(participant.isPresenceActive)
     }
+
+    @MainActor
+    func testLiveRoundPresenceStatusIsIgnoredWhenAttendanceConfirmationIsDisabled() async {
+        let participant = RoundParticipant(
+            id: "participant1",
+            playerID: "player1",
+            name: Name("Alice", "Player"),
+            presenceStatus: .noShow,
+            parentID: "round1"
+        )
+        var configuration = RoundConfiguration()
+        configuration.attendanceConfirmationEnabled = false
+        let viewModel = await boundLiveRoundViewModel(
+            snapshot: RoundSnapshot(
+                round: Round(id: "round1", configuration: configuration),
+                participants: [participant]
+            ),
+            participantID: participant.id
+        )
+
+        XCTAssertEqual(viewModel.effectivePresenceStatus(for: participant), .active)
+        XCTAssertTrue(viewModel.isPresenceActive(participant))
+        XCTAssertFalse(viewModel.canEditPresence(participant: participant))
+    }
+
+    @MainActor
+    func testLiveRoundPresenceStatusAppliesWhenAttendanceConfirmationIsEnabled() async {
+        let participant = RoundParticipant(
+            id: "participant1",
+            playerID: "player1",
+            name: Name("Alice", "Player"),
+            presenceStatus: .noShow,
+            parentID: "round1"
+        )
+        var configuration = RoundConfiguration()
+        configuration.attendanceConfirmationEnabled = true
+        let viewModel = await boundLiveRoundViewModel(
+            snapshot: RoundSnapshot(
+                round: Round(id: "round1", configuration: configuration),
+                participants: [participant]
+            ),
+            participantID: participant.id
+        )
+
+        XCTAssertEqual(viewModel.effectivePresenceStatus(for: participant), .noShow)
+        XCTAssertFalse(viewModel.isPresenceActive(participant))
+    }
+
+    @MainActor
+    private func boundLiveRoundViewModel(
+        snapshot: RoundSnapshot,
+        participantID: String
+    ) async -> LiveRoundViewModel {
+        let appSession = AppSession()
+        appSession.ephemeralParticipantID = participantID
+
+        let roundSession = RoundSession()
+        roundSession.snapshot = snapshot
+
+        let viewModel = LiveRoundViewModel()
+        viewModel.bind(appSession: appSession, roundSession: roundSession)
+        await viewModel.ensureParticipantResolved()
+        await Task.yield()
+        return viewModel
+    }
 }

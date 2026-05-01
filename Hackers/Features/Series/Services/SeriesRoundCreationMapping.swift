@@ -119,8 +119,43 @@ enum SeriesRoundCreationMapping {
             selectionDomain: resolvedSelectionDomain(for: seriesRound),
             sequentialTeeStartsEnabled: seriesRound.roundConfig.sequentialTeeStartsEnabled ?? false,
             handicapStrokeBasis: series.handicapConfig.strokeBasis,
-            sharedScoreHandicapConfig: seriesRound.roundConfig.sharedScoreHandicapConfig
+            sharedScoreHandicapConfig: seriesRound.roundConfig.sharedScoreHandicapConfig,
+            attendanceConfirmationEnabled: series.settings.isAttendanceEnabled
         )
+    }
+
+    static func participatingMembersAndPresenceStatuses(
+        series: Series,
+        eligibleMembers: [SeriesMember],
+        attendance: [SeriesRoundAttendance]
+    ) -> (members: [SeriesMember], presenceStatusByMemberID: [String: RoundParticipantPresenceStatus]) {
+        guard series.settings.isAttendanceEnabled else {
+            return (eligibleMembers, [:])
+        }
+
+        let attendanceByMemberID = Dictionary(uniqueKeysWithValues: attendance.map { ($0.memberID, $0) })
+        let members = eligibleMembers.filter { member in
+            guard let attendance = attendanceByMemberID[member.id] else {
+                return series.settings.attendanceDefault != .no
+            }
+            return attendance.status == SeriesRoundAttendanceStatus.pending.rawValue
+                || attendance.status == SeriesRoundAttendanceStatus.accepted.rawValue
+        }
+        let presenceStatusByMemberID = Dictionary(uniqueKeysWithValues: members.map { member in
+            let resolvedStatus: RoundParticipantPresenceStatus
+            if let attendance = attendanceByMemberID[member.id],
+               attendance.status == SeriesRoundAttendanceStatus.pending.rawValue {
+                resolvedStatus = .unconfirmed
+            } else if attendanceByMemberID[member.id] == nil,
+                      series.settings.attendanceDefault == .pending {
+                resolvedStatus = .unconfirmed
+            } else {
+                resolvedStatus = .active
+            }
+            return (member.id, resolvedStatus)
+        })
+
+        return (members, presenceStatusByMemberID)
     }
 
     /// Values used when creating the root `Round` before Firestore post (share code and timestamps filled by caller).

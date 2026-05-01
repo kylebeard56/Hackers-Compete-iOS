@@ -116,6 +116,18 @@ final class LiveRoundViewModel: ObservableObject, Loggable {
         snapshot.configuration.useHandicaps
     }
 
+    var isAttendanceConfirmationEnabled: Bool {
+        snapshot.round.configuration.attendanceConfirmationEnabled == true
+    }
+
+    func effectivePresenceStatus(for participant: RoundParticipant) -> RoundParticipantPresenceStatus {
+        isAttendanceConfirmationEnabled ? participant.resolvedPresenceStatus : .active
+    }
+
+    func isPresenceActive(_ participant: RoundParticipant) -> Bool {
+        effectivePresenceStatus(for: participant) != .noShow
+    }
+
     var isCurrentUserHost: Bool {
         guard let id = currentParticipantID else { return false }
         return snapshot.participants.first(where: { $0.id == id })?.isHost == true
@@ -479,12 +491,14 @@ final class LiveRoundViewModel: ObservableObject, Loggable {
 
     func canEditScorecard(participant: RoundParticipant) -> Bool {
         canEditActualGroupScores
-            && participant.isPresenceActive
+            && isPresenceActive(participant)
             && activeActualTeeGroupParticipants.contains(where: { $0.id == participant.id })
     }
 
     func canEditPresence(participant: RoundParticipant) -> Bool {
-        canScoreVisibleGroup && visibleTeeGroupParticipants.contains(where: { $0.id == participant.id })
+        isAttendanceConfirmationEnabled
+            && canScoreVisibleGroup
+            && visibleTeeGroupParticipants.contains(where: { $0.id == participant.id })
     }
 
     func canMarkParticipantNoShow(participant: RoundParticipant) -> Bool {
@@ -623,7 +637,7 @@ final class LiveRoundViewModel: ObservableObject, Loggable {
     }
 
     private func teamSharedScoringSubjects() -> [SharedScoringSubject] {
-        let activeParticipants = snapshot.participants.filter(\.isPresenceActive)
+        let activeParticipants = snapshot.participants.filter(isPresenceActive)
         let participantSort: (RoundParticipant, RoundParticipant) -> Bool = { lhs, rhs in
             self.participantDisplaySort(lhs: lhs, rhs: rhs)
         }
@@ -710,7 +724,7 @@ final class LiveRoundViewModel: ObservableObject, Loggable {
                 return scoringGroupLabel(lhs) < scoringGroupLabel(rhs)
             }
             .compactMap { group -> SharedScoringSubject? in
-                let members = participants(for: group).filter(\.isPresenceActive)
+                let members = participants(for: group).filter(isPresenceActive)
                 guard members.isPopulated else { return nil }
                 return SharedScoringSubject(
                     scoringUnitID: scoringUnitID(for: group),
@@ -754,7 +768,7 @@ final class LiveRoundViewModel: ObservableObject, Loggable {
                 return scoringGroupLabel(lhs) < scoringGroupLabel(rhs)
             }
             .compactMap { group -> SharedScoringSubject? in
-                let members = participants(for: group).filter(\.isPresenceActive)
+                let members = participants(for: group).filter(isPresenceActive)
                 guard members.isPopulated else { return nil }
                 return SharedScoringSubject(
                     scoringUnitID: scoringUnitID(for: group),
@@ -780,7 +794,7 @@ final class LiveRoundViewModel: ObservableObject, Loggable {
             .sorted { $0.index < $1.index }
             .compactMap { teeGroup -> SharedScoringSubject? in
                 let members = snapshot.participants
-                    .filter { $0.isPresenceActive && $0.groupID == teeGroup.id }
+                    .filter { isPresenceActive($0) && $0.groupID == teeGroup.id }
                     .sorted(by: participantSort)
                 guard members.isPopulated else { return nil }
                 let subtitle = members
@@ -826,7 +840,7 @@ final class LiveRoundViewModel: ObservableObject, Loggable {
         let memberByID = Dictionary(uniqueKeysWithValues: snapshot.participants.map { ($0.id, $0) })
         let members = scoringUnit.ownerIDs
             .compactMap { memberByID[$0] }
-            .filter(\.isPresenceActive)
+            .filter(isPresenceActive)
             .sorted(by: participantDisplaySort)
         guard members.isPopulated else { return nil }
 
@@ -1078,7 +1092,7 @@ final class LiveRoundViewModel: ObservableObject, Loggable {
         for scoringGroup: RoundScoringGroup,
         holeNumber: Int
     ) -> ScoringSession? {
-        let members = participants(for: scoringGroup).filter(\.isPresenceActive)
+        let members = participants(for: scoringGroup).filter(isPresenceActive)
         guard let anchor = members.first else { return nil }
         return sharedScoringSession(
             anchorParticipant: anchor,
@@ -1319,12 +1333,12 @@ final class LiveRoundViewModel: ObservableObject, Loggable {
     }
 
     private func activeParticipantsInTeeGroup(in snapshot: RoundSnapshot, groupID: String?) -> [RoundParticipant] {
-        participantsInTeeGroup(in: snapshot, groupID: groupID).filter(\.isPresenceActive)
+        participantsInTeeGroup(in: snapshot, groupID: groupID).filter(isPresenceActive)
     }
 
     private func holesPlayedCount(for participantID: String, in snapshot: RoundSnapshot) -> Int {
         guard let participant = snapshot.participants.first(where: { $0.id == participantID }),
-              participant.isPresenceActive else {
+              isPresenceActive(participant) else {
             return 0
         }
         return holeNumbers(in: snapshot).filter { holeNumber in
@@ -1721,7 +1735,7 @@ final class LiveRoundViewModel: ObservableObject, Loggable {
     // MARK: - Aggregates (Stroke play MVP)
 
     func scoreToPar(for participant: RoundParticipant, basis: ScoreBasis) -> Int {
-        guard participant.isPresenceActive else { return 0 }
+        guard isPresenceActive(participant) else { return 0 }
         let holes = holeNumbers
         var sum = 0
         
@@ -1857,16 +1871,16 @@ final class LiveRoundViewModel: ObservableObject, Loggable {
            sessionIDs != visibleIDs,
            session.participants.count > 1 {
             return session.participants
-                .filter(\.isPresenceActive)
+                .filter(isPresenceActive)
                 .sorted(by: participantDisplaySort)
         }
 
-        let orderedRows = teeGroupTeamSections.flatMap(\.participants).filter(\.isPresenceActive)
+        let orderedRows = teeGroupTeamSections.flatMap(\.participants).filter(isPresenceActive)
         if orderedRows.isPopulated {
             return orderedRows
         }
 
-        let fallback = session.participants.filter(\.isPresenceActive)
+        let fallback = session.participants.filter(isPresenceActive)
         return (fallback.isPopulated ? fallback : session.participants)
             .sorted(by: participantDisplaySort)
     }
@@ -1952,7 +1966,7 @@ final class LiveRoundViewModel: ObservableObject, Loggable {
         }
 
         let participants = matchupSideParticipants(scoringUnitID: sideID, matchup: matchup)
-            .filter(\.isPresenceActive)
+            .filter(isPresenceActive)
         guard participants.isPopulated else { return false }
 
         return holes.allSatisfy { holeNumber in
@@ -2418,7 +2432,7 @@ final class LiveRoundViewModel: ObservableObject, Loggable {
 
     var leaderboardRows: [LeaderboardRow] {
         let basis = scoreBasis
-        let baseRows = snapshot.participants.filter(\.isPresenceActive).map { p in
+        let baseRows = snapshot.participants.filter(isPresenceActive).map { p in
             LeaderboardRow(
                 participant: p,
                 thru: holesPlayedCount(for: p.id),
@@ -2925,7 +2939,7 @@ final class LiveRoundViewModel: ObservableObject, Loggable {
 
     func outcomeHolePerformanceRows(sortedBy sort: OutcomeHoleSort) -> [OutcomeHolePerformanceRow] {
         let tee = resolvedPlayedTee(for: outcomeParticipant)
-        let activeParticipants = snapshot.participants.filter(\.isPresenceActive)
+        let activeParticipants = snapshot.participants.filter(isPresenceActive)
 
         let rows = courseOrderHoleNumbers.map { holeNumber -> OutcomeHolePerformanceRow in
             let hole = tee?.holes.first(where: { $0.number == holeNumber })
@@ -3443,17 +3457,17 @@ final class LiveRoundViewModel: ObservableObject, Loggable {
         switch matchup.effectiveMode {
         case .team:
             let teamMembers = snapshot.participants
-                .filter { $0.teamID == scoringUnitID && $0.isPresenceActive }
+                .filter { $0.teamID == scoringUnitID && isPresenceActive($0) }
                 .sorted(by: participantDisplaySort)
             if teamMembers.isPopulated { return teamMembers }
             return sharedScoringSubject(matching: scoringUnitID)?.participants ?? []
         case .individual:
             return snapshot.participants
-                .filter { $0.id == scoringUnitID && $0.isPresenceActive }
+                .filter { $0.id == scoringUnitID && isPresenceActive($0) }
                 .sorted(by: participantDisplaySort)
         case .partnership, .teeGroup, .scoreOwner:
             if let group = snapshot.scoringGroup(id: scoringUnitID) {
-                return participants(for: group).filter(\.isPresenceActive)
+                return participants(for: group).filter(isPresenceActive)
             }
             return sharedScoringSubject(matching: scoringUnitID)?.participants ?? []
         }
@@ -3514,12 +3528,12 @@ final class LiveRoundViewModel: ObservableObject, Loggable {
     ) -> LeaderboardRow? {
         let activeMembers = row.participantIDs
             .compactMap { participantMap[$0] }
-            .filter(\.isPresenceActive)
+            .filter(isPresenceActive)
             .sorted(by: participantDisplaySort)
         let isSharedRow = snapshot.isSharedScoreSource && (row.owner != .participant || activeMembers.count > 1)
 
         if let participant = participantMap[row.scoringUnitID] {
-            guard participant.isPresenceActive else { return nil }
+            guard isPresenceActive(participant) else { return nil }
             return LeaderboardRow(
                 participant: participant,
                 participants: [participant],
@@ -3827,7 +3841,7 @@ final class LiveRoundViewModel: ObservableObject, Loggable {
     ) async {
         addBreadcrumb()
 
-        guard participant.isPresenceActive else { return }
+        guard isPresenceActive(participant) else { return }
         
         guard let roundSession else { return }
         let beforeSnapshot = roundSession.snapshot
@@ -3940,7 +3954,7 @@ final class LiveRoundViewModel: ObservableObject, Loggable {
     ) async {
         addBreadcrumb()
 
-        guard participant.isPresenceActive else { return }
+        guard isPresenceActive(participant) else { return }
         guard let roundSession else { return }
 
         let beforeSnapshot = roundSession.snapshot

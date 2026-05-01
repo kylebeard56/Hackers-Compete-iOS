@@ -119,10 +119,15 @@ final class SeriesRoundCreationMappingTests: XCTestCase {
         ]
     }
 
-    private func makeSeries(handicapsEnabled: Bool = false, useTeams: Bool = true) -> Series {
+    private func makeSeries(
+        handicapsEnabled: Bool = false,
+        useTeams: Bool = true,
+        attendanceEnabled: Bool = true
+    ) -> Series {
         var settings = SeriesSettings()
         settings.handicapConfig = SeriesHandicapConfig(isEnabled: handicapsEnabled, config: .league2025)
         settings.useTeams = useTeams
+        settings.isAttendanceEnabled = attendanceEnabled
         return Series(id: "series1", settings: settings)
     }
 
@@ -315,6 +320,30 @@ final class SeriesRoundCreationMappingTests: XCTestCase {
         )
         XCTAssertTrue(draft.configuration.useHandicaps)
         XCTAssertEqual(draft.configuration.primaryFormat.configuration.basis, .net)
+    }
+
+    func testRoundDraft_capturesAttendanceConfirmationSetting() {
+        let enabledDraft = SeriesRoundCreationMapping.roundDraft(
+            id: "r_enabled",
+            shareCode: "ENABLED",
+            createdBy: "u",
+            series: makeSeries(attendanceEnabled: true),
+            members: [],
+            seriesRound: fieldSeriesRound(),
+            courseSegment: makeCourseSegment()
+        )
+        let disabledDraft = SeriesRoundCreationMapping.roundDraft(
+            id: "r_disabled",
+            shareCode: "DISABLED",
+            createdBy: "u",
+            series: makeSeries(attendanceEnabled: false),
+            members: [],
+            seriesRound: fieldSeriesRound(),
+            courseSegment: makeCourseSegment()
+        )
+
+        XCTAssertEqual(enabledDraft.configuration.attendanceConfirmationEnabled, true)
+        XCTAssertEqual(disabledDraft.configuration.attendanceConfirmationEnabled, false)
     }
 
     func testRoundDraft_carriesNineHoleHandicapBasisAndKeepsEnteredHCP() {
@@ -924,6 +953,69 @@ final class SeriesRoundCreationMappingTests: XCTestCase {
 
         XCTAssertEqual(payloads[0].resolvedPresenceStatus, .active)
         XCTAssertEqual(payloads[1].resolvedPresenceStatus, .unconfirmed)
+    }
+
+    func testParticipatingMembersAndPresenceStatuses_attendanceDisabledIncludesEligibleMembersWithoutPresenceOverrides() {
+        var series = makeSeries(attendanceEnabled: false)
+        series.settings.attendanceDefault = .pending
+        let members = [
+            makeMember(id: "m1", name: "One", playerID: "p1"),
+            makeMember(id: "m2", name: "Two", playerID: "p2"),
+        ]
+        let attendance = [
+            SeriesRoundAttendance(
+                id: "a1",
+                seriesRoundID: "sr_field",
+                memberID: "m1",
+                status: SeriesRoundAttendanceStatus.no.rawValue,
+                parentID: series.id
+            ),
+        ]
+
+        let result = SeriesRoundCreationMapping.participatingMembersAndPresenceStatuses(
+            series: series,
+            eligibleMembers: members,
+            attendance: attendance
+        )
+
+        XCTAssertEqual(result.members.map(\.id), ["m1", "m2"])
+        XCTAssertTrue(result.presenceStatusByMemberID.isEmpty)
+    }
+
+    func testParticipatingMembersAndPresenceStatuses_attendanceEnabledSeedsPendingAsUnconfirmed() {
+        var series = makeSeries(attendanceEnabled: true)
+        series.settings.attendanceDefault = .pending
+        let members = [
+            makeMember(id: "m1", name: "One", playerID: "p1"),
+            makeMember(id: "m2", name: "Two", playerID: "p2"),
+            makeMember(id: "m3", name: "Three", playerID: "p3"),
+        ]
+        let attendance = [
+            SeriesRoundAttendance(
+                id: "a1",
+                seriesRoundID: "sr_field",
+                memberID: "m1",
+                status: SeriesRoundAttendanceStatus.no.rawValue,
+                parentID: series.id
+            ),
+            SeriesRoundAttendance(
+                id: "a2",
+                seriesRoundID: "sr_field",
+                memberID: "m2",
+                status: SeriesRoundAttendanceStatus.pending.rawValue,
+                parentID: series.id
+            ),
+        ]
+
+        let result = SeriesRoundCreationMapping.participatingMembersAndPresenceStatuses(
+            series: series,
+            eligibleMembers: members,
+            attendance: attendance
+        )
+
+        XCTAssertEqual(result.members.map(\.id), ["m2", "m3"])
+        XCTAssertEqual(result.presenceStatusByMemberID["m2"], .unconfirmed)
+        XCTAssertEqual(result.presenceStatusByMemberID["m3"], .unconfirmed)
     }
 
     // MARK: - Segment matchups + Firestore mapping ids

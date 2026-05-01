@@ -54,8 +54,10 @@ struct PlayerScoringRow: View {
     private var effectiveAccent: Color {
         viewModel.hasTeamColorMatchingTheme ? palette.foregroundColor : viewModel.theme.color
     }
-    private var presenceStatus: RoundParticipantPresenceStatus { participant.resolvedPresenceStatus }
-    private var canScoreParticipant: Bool { participant.isPresenceActive }
+    private var presenceStatus: RoundParticipantPresenceStatus {
+        viewModel.effectivePresenceStatus(for: participant)
+    }
+    private var canScoreParticipant: Bool { viewModel.isPresenceActive(participant) }
     private var canEditPresence: Bool { viewModel.canEditPresence(participant: participant) }
     private var hasRecordedScores: Bool { viewModel.hasRecordedScores(for: participant) }
     private var canShowActivePresenceMenu: Bool {
