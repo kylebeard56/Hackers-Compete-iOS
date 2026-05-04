@@ -885,6 +885,8 @@ struct NewSeriesRoundSheet: View {
             teeGroupMode: podGroupingStrategy.usesPodAlignment ? .podAligned : .auto,
             notes: notes.isEmpty ? nil : notes,
             sharedScoreHandicapConfig: sharedScoreAllowanceConfig,
+            handicapEntryFormat: viewModel.series.handicapConfig.entryFormat,
+            handicapNormalizationMode: resolvedHandicapNormalizationMode(for: competitionScope),
             countsTowardHandicapPool: countsTowardHandicapPool,
             excludedHandicapMemberIDs: excludedHandicapMemberIDs
         )
@@ -935,6 +937,8 @@ struct NewSeriesRoundSheet: View {
             teeGroupMode: podGroupingStrategy.usesPodAlignment ? .podAligned : .auto,
             notes: notes.isEmpty ? nil : notes,
             sharedScoreHandicapConfig: sharedScoreAllowanceConfig,
+            handicapEntryFormat: viewModel.series.handicapConfig.entryFormat,
+            handicapNormalizationMode: resolvedHandicapNormalizationMode(for: competitionScope),
             countsTowardHandicapPool: countsTowardHandicapPool,
             excludedHandicapMemberIDs: excludedHandicapMemberIDs
         )
@@ -959,6 +963,11 @@ struct NewSeriesRoundSheet: View {
             onCreated()
             dismiss()
         }
+    }
+
+    private func resolvedHandicapNormalizationMode(for competitionScope: CompetitionScope) -> HandicapNormalizationMode {
+        guard viewModel.series.handicapConfig.normalizationMode != .off else { return .off }
+        return competitionScope == .matchup ? .matchup : .field
     }
 
     private func sectionTitle(_ title: String) -> some View {

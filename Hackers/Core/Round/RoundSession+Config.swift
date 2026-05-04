@@ -196,6 +196,62 @@ extension RoundSession {
         }
     }
 
+    func setHandicapEntryFormat(_ format: HandicapEntryFormat, maximumHandicap: Int? = nil) async {
+        addBreadcrumb()
+        let previous = snapshot.configuration.handicapEntryFormat
+
+        do {
+            if snapshot.round.configuration.handicapEntryFormat != format {
+                snapshot.round.configuration.handicapEntryFormat = format
+                _ = try await snapshot.round.put().get()
+            }
+
+            let recomputed = HandicapCalculator.recomputedParticipants(
+                snapshot.participants,
+                format: format,
+                courseSegment: snapshot.courseSegment,
+                maximumHandicap: maximumHandicap
+            )
+            for participant in recomputed where snapshot.participants.first(where: { $0.id == participant.id }) != participant {
+                try await update(participant: participant)
+            }
+
+            guard previous != format else { return }
+            emitRoundSetupEvent(
+                "round_setup.handicap_entry_format_changed",
+                extra: [
+                    "value": format.rawValue,
+                    "previous_value": previous.rawValue
+                ]
+            )
+        } catch {
+            addBreadcrumb(level: .error, message: "Failed to set handicap entry format", error: error)
+        }
+    }
+
+    func setHandicapNormalizationMode(_ mode: HandicapNormalizationMode) async {
+        addBreadcrumb()
+        let previous = snapshot.configuration.handicapNormalizationMode
+
+        do {
+            if snapshot.round.configuration.handicapNormalizationMode != mode {
+                snapshot.round.configuration.handicapNormalizationMode = mode
+                _ = try await snapshot.round.put().get()
+            }
+
+            guard previous != mode else { return }
+            emitRoundSetupEvent(
+                "round_setup.handicap_normalization_changed",
+                extra: [
+                    "value": mode.rawValue,
+                    "previous_value": previous.rawValue
+                ]
+            )
+        } catch {
+            addBreadcrumb(level: .error, message: "Failed to set handicap normalization", error: error)
+        }
+    }
+
     func revealScores() async {
         addBreadcrumb()
         do {

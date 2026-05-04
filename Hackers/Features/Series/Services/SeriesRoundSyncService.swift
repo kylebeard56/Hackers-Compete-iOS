@@ -115,7 +115,22 @@ struct SeriesRoundSyncService: Loggable {
             }
         }
 
+        if options.syncHandicapSettings {
+            workingRound.configuration.handicapEntryFormat = seriesRound.roundConfig.handicapEntryFormat
+            workingRound.configuration.handicapNormalizationMode = seriesRound.roundConfig.handicapNormalizationMode
+            workingRound.configuration.handicapStrokeBasis = series.handicapConfig.strokeBasis
+            workingRound.lastUpdatedAt = .init()
+            switch await workingRound.put() {
+            case .success(let updated):
+                workingRound = updated
+            case .failure(let error):
+                addBreadcrumb(level: .error, message: "series.round_sync handicap settings put failed", error: error)
+                return .failure(.writeFailed(error.localizedDescription))
+            }
+        }
+
         if !options.syncFormat,
+           !options.syncHandicapSettings,
            (options.syncPlayerData || options.syncOrganization),
            workingRound.configuration.handicapStrokeBasis != series.handicapConfig.strokeBasis {
             workingRound.configuration.handicapStrokeBasis = series.handicapConfig.strokeBasis
@@ -268,12 +283,35 @@ struct SeriesRoundSyncService: Loggable {
                 handicaps: handicaps,
                 maximumHandicap: series.handicapConfig.isEnabled ? series.handicapConfig.config.maximumHandicap : nil,
                 courseSegment: courseSegment,
+                handicapEntryFormat: workingRound.configuration.handicapEntryFormat,
                 hostPlayerID: hostPlayerID,
                 preserveManualHandicapEdits: options.preserveManualHandicapEdits
             )
         }
 
-        if options.syncPlayerData || options.syncOrganization {
+        if options.syncHandicapSettings && !options.syncPlayerData {
+            workingParticipants = workingParticipants.map { existing in
+                guard let memberID = existing.seriesMemberID else { return existing }
+                if options.preserveManualHandicapEdits, existing.isLeagueHandicapModifiedFromCreation {
+                    return existing
+                }
+                let input = handicaps[memberID]?.effectiveIndex
+                    ?? existing.handicapIndex
+                    ?? Double(existing.originalHandicap)
+                var next = HandicapCalculator.participant(
+                    existing,
+                    applying: input,
+                    format: workingRound.configuration.handicapEntryFormat,
+                    courseSegment: courseSegment,
+                    maximumHandicap: series.handicapConfig.isEnabled ? series.handicapConfig.config.maximumHandicap : nil
+                )
+                next.leagueHandicapStrokesAtCreation = next.adjustedHandicap
+                next.lastUpdatedAt = .init()
+                return next
+            }
+        }
+
+        if options.syncPlayerData || options.syncOrganization || options.syncHandicapSettings {
             if case .failure(let error) = await Self.batchPutSubcollection(workingParticipants) {
                 addBreadcrumb(level: .error, message: "series.round_sync participants batch failed", error: error)
                 return .failure(.writeFailed(error.localizedDescription))
@@ -291,6 +329,7 @@ struct SeriesRoundSyncService: Loggable {
                 "sync_organization": options.syncOrganization,
                 "sync_pairs": options.syncPairs,
                 "sync_matchups": options.syncMatchups,
+                "sync_handicap_settings": options.syncHandicapSettings,
                 "round_status": roundStatus.rawValue
             ]
         )

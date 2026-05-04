@@ -21,6 +21,19 @@ extension RoundSession {
             snapshot.round.configuration.courses[0].defaultTee = teeID
             _ = try await snapshot.round.put().get()
 
+            if snapshot.configuration.handicapEntryFormat == .courseHandicap {
+                var updatedSegment = snapshot.courseSegment
+                updatedSegment?.defaultTee = teeID
+                let recomputed = HandicapCalculator.recomputedParticipants(
+                    snapshot.participants,
+                    format: .courseHandicap,
+                    courseSegment: updatedSegment
+                )
+                for participant in recomputed where snapshot.participants.first(where: { $0.id == participant.id }) != participant {
+                    try await update(participant: participant)
+                }
+            }
+
             var props: [String: Any] = [:]
             if let previousTee {
                 props.merge(
@@ -80,6 +93,17 @@ extension RoundSession {
 
             if snapshot.configuration.usesSequentialTeeStarts {
                 try await resequenceTeeGroupsForSequentialStarts()
+            }
+
+            if snapshot.configuration.handicapEntryFormat == .courseHandicap {
+                let recomputed = HandicapCalculator.recomputedParticipants(
+                    snapshot.participants,
+                    format: .courseHandicap,
+                    courseSegment: segmentToSave
+                )
+                for participant in recomputed where snapshot.participants.first(where: { $0.id == participant.id }) != participant {
+                    try await update(participant: participant)
+                }
             }
 
             guard previousSegment != segmentToSave || didSyncSegment else { return }

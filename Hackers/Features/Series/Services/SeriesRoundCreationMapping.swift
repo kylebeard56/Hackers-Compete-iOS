@@ -120,6 +120,8 @@ enum SeriesRoundCreationMapping {
             sequentialTeeStartsEnabled: seriesRound.roundConfig.sequentialTeeStartsEnabled ?? false,
             handicapStrokeBasis: series.handicapConfig.strokeBasis,
             sharedScoreHandicapConfig: seriesRound.roundConfig.sharedScoreHandicapConfig,
+            handicapEntryFormat: seriesRound.roundConfig.handicapEntryFormat,
+            handicapNormalizationMode: seriesRound.roundConfig.handicapNormalizationMode,
             attendanceConfirmationEnabled: series.settings.isAttendanceEnabled
         )
     }
@@ -592,23 +594,43 @@ enum SeriesRoundCreationMapping {
         handicaps: [String: SeriesMemberHandicap],
         maximumHandicap: Int? = nil,
         courseSegment: CourseSegment,
+        handicapEntryFormat: HandicapEntryFormat = .strokes,
         hostPlayerID: String?,
         presenceStatusByMemberID: [String: RoundParticipantPresenceStatus] = [:]
     ) -> [RoundParticipant] {
         members.map { member in
             let assignment = memberAssignments[member.id]
+            let effectiveIndex = handicaps[member.id]?.effectiveIndex
             let effectiveHandicap = handicaps[member.id]?.effectiveStrokes(maximumHandicap: maximumHandicap) ?? 0
             let teamMapping = member.teamID.flatMap { teamMappings[$0] }
             let teeBoxID = resolvedTeeBoxID(for: member, courseSegment: courseSegment)
+            let template = RoundParticipant(
+                teeBoxID: teeBoxID,
+                originalHandicap: effectiveHandicap,
+                adjustedHandicap: effectiveHandicap
+            )
+            let computedHandicap = effectiveIndex.map {
+                HandicapCalculator.strokes(
+                    for: $0,
+                    format: handicapEntryFormat,
+                    participant: template,
+                    courseSegment: courseSegment,
+                    maximumHandicap: maximumHandicap
+                )
+            } ?? effectiveHandicap
+            let originalHandicap = handicapEntryFormat == .courseHandicap
+                ? max(0, Int((effectiveIndex ?? 0).rounded()))
+                : effectiveHandicap
             return RoundParticipant(
                 id: HackersID.string(),
                 userID: member.userID,
                 playerID: member.playerID,
                 name: member.name.normalizedForStorage,
                 teeBoxID: teeBoxID,
-                originalHandicap: effectiveHandicap,
-                adjustedHandicap: effectiveHandicap,
-                leagueHandicapStrokesAtCreation: effectiveHandicap,
+                originalHandicap: originalHandicap,
+                adjustedHandicap: computedHandicap,
+                handicapIndex: handicapEntryFormat == .courseHandicap ? effectiveIndex : nil,
+                leagueHandicapStrokesAtCreation: computedHandicap,
                 seriesMemberID: member.id,
                 teamID: teamMapping?.roundTeamID,
                 groupID: assignment?.groupID,

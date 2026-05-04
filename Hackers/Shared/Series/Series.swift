@@ -567,6 +567,8 @@ struct SeriesRoundConfiguration: Hashable, Codable {
     var scoreBasisOverride: ScoreBasis?
     /// Optional format-specific allowance for shared-score scoring units, applied by handicap rank.
     var sharedScoreHandicapConfig: HandicapConfiguration?
+    var handicapEntryFormat: HandicapEntryFormat
+    var handicapNormalizationMode: HandicapNormalizationMode
     var countsTowardHandicapPool: Bool
     var excludedHandicapMemberIDs: [String]
 
@@ -592,6 +594,8 @@ struct SeriesRoundConfiguration: Hashable, Codable {
         allowLobbyBackPropagation: Bool = true,
         scoreBasisOverride: ScoreBasis? = nil,
         sharedScoreHandicapConfig: HandicapConfiguration? = nil,
+        handicapEntryFormat: HandicapEntryFormat = .strokes,
+        handicapNormalizationMode: HandicapNormalizationMode = .off,
         countsTowardHandicapPool: Bool = true,
         excludedHandicapMemberIDs: [String] = []
     ) {
@@ -616,6 +620,8 @@ struct SeriesRoundConfiguration: Hashable, Codable {
         self.allowLobbyBackPropagation = allowLobbyBackPropagation
         self.scoreBasisOverride = scoreBasisOverride
         self.sharedScoreHandicapConfig = sharedScoreHandicapConfig
+        self.handicapEntryFormat = handicapEntryFormat
+        self.handicapNormalizationMode = handicapNormalizationMode
         self.countsTowardHandicapPool = countsTowardHandicapPool
         self.excludedHandicapMemberIDs = Self.normalizedMemberIDs(excludedHandicapMemberIDs)
     }
@@ -644,6 +650,8 @@ struct SeriesRoundConfiguration: Hashable, Codable {
         case allowLobbyBackPropagation = "allow_lobby_back_propagation"
         case scoreBasisOverride = "score_basis_override"
         case sharedScoreHandicapConfig = "shared_score_handicap_config"
+        case handicapEntryFormat = "handicap_entry_format"
+        case handicapNormalizationMode = "handicap_normalization_mode"
         case countsTowardHandicapPool = "counts_toward_handicap_pool"
         case excludedHandicapMemberIDs = "excluded_handicap_member_ids"
     }
@@ -699,6 +707,8 @@ struct SeriesRoundConfiguration: Hashable, Codable {
         allowLobbyBackPropagation = try c.decodeIfPresent(Bool.self, forKey: .allowLobbyBackPropagation) ?? true
         scoreBasisOverride = try c.decodeIfPresent(ScoreBasis.self, forKey: .scoreBasisOverride)
         sharedScoreHandicapConfig = try c.decodeIfPresent(HandicapConfiguration.self, forKey: .sharedScoreHandicapConfig)
+        handicapEntryFormat = try c.decodeIfPresent(HandicapEntryFormat.self, forKey: .handicapEntryFormat) ?? .strokes
+        handicapNormalizationMode = try c.decodeIfPresent(HandicapNormalizationMode.self, forKey: .handicapNormalizationMode) ?? .off
         countsTowardHandicapPool = try c.decodeIfPresent(Bool.self, forKey: .countsTowardHandicapPool) ?? true
         excludedHandicapMemberIDs = Self.normalizedMemberIDs(
             try c.decodeIfPresent([String].self, forKey: .excludedHandicapMemberIDs) ?? []
@@ -744,6 +754,8 @@ struct SeriesRoundConfiguration: Hashable, Codable {
         try c.encode(allowLobbyBackPropagation, forKey: .allowLobbyBackPropagation)
         try c.encodeIfPresent(scoreBasisOverride, forKey: .scoreBasisOverride)
         try c.encodeIfPresent(sharedScoreHandicapConfig, forKey: .sharedScoreHandicapConfig)
+        try c.encode(handicapEntryFormat, forKey: .handicapEntryFormat)
+        try c.encode(handicapNormalizationMode, forKey: .handicapNormalizationMode)
         try c.encode(countsTowardHandicapPool, forKey: .countsTowardHandicapPool)
         try c.encode(Self.normalizedMemberIDs(excludedHandicapMemberIDs), forKey: .excludedHandicapMemberIDs)
     }
@@ -757,6 +769,8 @@ struct SeriesHandicapConfig: Hashable, Codable {
     var mode: SeriesHandicapMode
     var config: HandicapComputationConfigDTO
     var strokeBasis: SeriesHandicapStrokeBasis
+    var entryFormat: HandicapEntryFormat
+    var normalizationMode: HandicapNormalizationMode
 
     var isEnabled: Bool {
         get { mode.isEnabled }
@@ -774,21 +788,29 @@ struct SeriesHandicapConfig: Hashable, Codable {
     init(
         mode: SeriesHandicapMode = .off,
         config: HandicapComputationConfigDTO = .league2025,
-        strokeBasis: SeriesHandicapStrokeBasis? = nil
+        strokeBasis: SeriesHandicapStrokeBasis? = nil,
+        entryFormat: HandicapEntryFormat = .strokes,
+        normalizationMode: HandicapNormalizationMode = .off
     ) {
         self.mode = mode
         self.config = config
         self.strokeBasis = strokeBasis ?? SeriesHandicapStrokeBasis.defaultBasis(defaultParForIndex: config.defaultParForIndex)
+        self.entryFormat = entryFormat
+        self.normalizationMode = normalizationMode
     }
 
     init(
         isEnabled: Bool,
         config: HandicapComputationConfigDTO = .league2025,
-        strokeBasis: SeriesHandicapStrokeBasis? = nil
+        strokeBasis: SeriesHandicapStrokeBasis? = nil,
+        entryFormat: HandicapEntryFormat = .strokes,
+        normalizationMode: HandicapNormalizationMode = .off
     ) {
         self.mode = isEnabled ? .dynamic : .off
         self.config = config
         self.strokeBasis = strokeBasis ?? SeriesHandicapStrokeBasis.defaultBasis(defaultParForIndex: config.defaultParForIndex)
+        self.entryFormat = entryFormat
+        self.normalizationMode = normalizationMode
     }
 
     enum CodingKeys: String, CodingKey {
@@ -796,6 +818,8 @@ struct SeriesHandicapConfig: Hashable, Codable {
         case isEnabled = "is_enabled"
         case config
         case strokeBasis = "stroke_basis"
+        case entryFormat = "entry_format"
+        case normalizationMode = "normalization_mode"
     }
 
     init(from decoder: Decoder) throws {
@@ -806,6 +830,8 @@ struct SeriesHandicapConfig: Hashable, Codable {
         config = try c.decodeIfPresent(HandicapComputationConfigDTO.self, forKey: .config) ?? .league2025
         strokeBasis = try c.decodeIfPresent(SeriesHandicapStrokeBasis.self, forKey: .strokeBasis)
             ?? SeriesHandicapStrokeBasis.defaultBasis(defaultParForIndex: config.defaultParForIndex)
+        entryFormat = try c.decodeIfPresent(HandicapEntryFormat.self, forKey: .entryFormat) ?? .strokes
+        normalizationMode = try c.decodeIfPresent(HandicapNormalizationMode.self, forKey: .normalizationMode) ?? .off
     }
 
     func encode(to encoder: Encoder) throws {
@@ -814,6 +840,8 @@ struct SeriesHandicapConfig: Hashable, Codable {
         try c.encode(isEnabled, forKey: .isEnabled)
         try c.encode(config, forKey: .config)
         try c.encode(strokeBasis, forKey: .strokeBasis)
+        try c.encode(entryFormat, forKey: .entryFormat)
+        try c.encode(normalizationMode, forKey: .normalizationMode)
     }
 }
 

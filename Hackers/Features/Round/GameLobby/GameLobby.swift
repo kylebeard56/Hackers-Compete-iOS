@@ -47,6 +47,8 @@ struct GameLobby: View, Loggable {
     @State var matchupsEnabled: Bool = false
     @State var sequentialTeeStartsEnabled: Bool = false
     @State var secretScoringEnabled: Bool = false
+    @State var handicapEntryFormat: HandicapEntryFormat = .strokes
+    @State var handicapNormalizationMode: HandicapNormalizationMode = .off
     
     /// Handicap mutation
     @State var handicapString = ""
@@ -215,6 +217,8 @@ struct GameLobby: View, Loggable {
             matchupsEnabled = s.configuration.resolvedCompetitionScope == .matchup
             sequentialTeeStartsEnabled = s.configuration.usesSequentialTeeStarts
             secretScoringEnabled = s.isSecretScoring
+            handicapEntryFormat = s.configuration.handicapEntryFormat
+            handicapNormalizationMode = s.configuration.handicapNormalizationMode
             sharedScoreAllowanceText = Self.allowanceText(
                 from: s.configuration.sharedScoreHandicapConfig ?? s.resolvedActiveTemplate.requirements.defaultHandicapConfig
             )

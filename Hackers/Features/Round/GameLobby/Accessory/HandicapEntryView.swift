@@ -14,10 +14,12 @@ struct HandicapEntryView: View {
     @Binding var participant: RoundParticipant
     var holes: Int = 18
     var maximumValue: Int = 36
-    var onComplete: CallbackValue<Int>? = nil
+    var entryFormat: HandicapEntryFormat = .strokes
+    var courseSegment: CourseSegment? = nil
+    var onComplete: CallbackValue<RoundParticipant>? = nil
     
     @FocusState private var focus: Bool
-    @State private var handicapValue: Int = 0
+    @State private var handicapValue: Double = 0
     @State private var handicapString: String = ""
     private var palette: DesignPalette { .init(theme: .primary, scheme: colorScheme) }
     
@@ -38,12 +40,22 @@ struct HandicapEntryView: View {
                         icon: "f00c",
                         color: palette.backgroundColor,
                         background: palette.foregroundColor,
-                        onTap: { onComplete?(handicapValue) }
+                        onTap: {
+                            onComplete?(
+                                HandicapCalculator.participant(
+                                    participant,
+                                    applying: handicapValue,
+                                    format: entryFormat,
+                                    courseSegment: courseSegment,
+                                    maximumHandicap: maximumValue
+                                )
+                            )
+                        }
                     )
                 }
             }
             
-            Text("Enter the number of strokes \(participant.name.fullName) should get over \(holes) holes (max of \(maximumValue)).")
+            Text(entryFormat == .courseHandicap ? "Enter \(participant.name.fullName)'s handicap index. Course HCP \(computedHandicap)." : "Enter the number of strokes \(participant.name.fullName) should get over \(holes) holes (max of \(maximumValue)).")
                 .fontStyle(kFontName, size: 15, weight: .regular)
                 .foregroundStyle(Color.neutral)
                 .multilineTextAlignment(.leading)
@@ -52,7 +64,7 @@ struct HandicapEntryView: View {
             TextField("00", text: $handicapString)
                 .fontStyle(kFontName, size: 64, weight: .regular)
                 .foregroundStyle(palette.foregroundColor)
-                .keyboardType(.numberPad)
+                .keyboardType(entryFormat == .courseHandicap ? .decimalPad : .numberPad)
                 .focused($focus)
                 .alignCenter()
             
@@ -61,19 +73,55 @@ struct HandicapEntryView: View {
         .padding(16)
         .background(palette.backgroundColor)
         .onAppear {
-            let currentValue = participant.adjustedHandicap
-            handicapValue = min(max(currentValue, 0), maximumValue)
-            handicapString = String(handicapValue)
+            let currentValue = participant.handicapIndex ?? Double(participant.adjustedHandicap)
+            handicapValue = min(max(currentValue, 0), Double(maximumValue))
+            handicapString = entryFormat == .courseHandicap ? String(format: "%.1f", handicapValue) : String(Int(handicapValue.rounded()))
         }
         .task(delay: 0.2) {
             focus = true
         }
         .onChange(of: handicapString) {
-            if let value = Int(handicapString.filter(\.isNumber)) {
-                handicapValue = min(max(value, 0), maximumValue)
-                handicapString = String(handicapValue)
+            if entryFormat == .courseHandicap {
+                let filtered = decimalHandicapText(handicapString)
+                if filtered != handicapString {
+                    handicapString = filtered
+                }
+                handicapValue = max(Double(filtered) ?? 0, 0)
+            } else if let value = Int(handicapString.filter(\.isNumber)) {
+                let clamped = min(max(value, 0), maximumValue)
+                handicapValue = Double(clamped)
+                handicapString = String(clamped)
             }
         }
+    }
+
+    private var computedHandicap: Int {
+        HandicapCalculator.strokes(
+            for: handicapValue,
+            format: entryFormat,
+            participant: participant,
+            courseSegment: courseSegment,
+            maximumHandicap: maximumValue
+        )
+    }
+
+    private func decimalHandicapText(_ text: String) -> String {
+        var hasDecimal = false
+        var decimalPlaces = 0
+        var output = ""
+        for character in text {
+            if character.isNumber {
+                if hasDecimal {
+                    guard decimalPlaces < 1 else { continue }
+                    decimalPlaces += 1
+                }
+                output.append(character)
+            } else if character == ".", !hasDecimal {
+                hasDecimal = true
+                output.append(character)
+            }
+        }
+        return output
     }
 }
 

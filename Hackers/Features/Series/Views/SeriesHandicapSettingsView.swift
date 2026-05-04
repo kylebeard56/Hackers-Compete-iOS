@@ -18,6 +18,8 @@ struct SeriesHandicapSettingsView: View {
     @State private var minimumScores: Int = 1
     @State private var bestNScores: Int = 1
     @State private var usesCourseRatingSlopeAdjustment = true
+    @State private var entryFormat: HandicapEntryFormat = .strokes
+    @State private var normalizationMode: HandicapNormalizationMode = .off
     /// `nil` = all scores in the pool (no rolling date window).
     @State private var rollingPoolSize: Int? = nil
     @State private var scorePoolPolicy: HandicapScorePoolPolicy = .bestOfUsedCount
@@ -222,6 +224,40 @@ struct SeriesHandicapSettingsView: View {
                 }
                 .tint(.accentGreen)
                 .onChange(of: usesCourseRatingSlopeAdjustment) { _, _ in updatePreview() }
+            }
+
+            SeriesSheetRow(palette: palette) {
+                Toggle(isOn: Binding(
+                    get: { entryFormat == .courseHandicap },
+                    set: { entryFormat = $0 ? .courseHandicap : .strokes }
+                )) {
+                    VStack(alignment: .leading, spacing: 4) {
+                        Text("Course Handicap")
+                            .fontStyle(kFontName, size: 13, weight: .semibold)
+                            .foregroundStyle(palette.foregroundColor)
+                        Text("Use member index and selected round tee to seed strokes.")
+                            .fontStyle(kFontName, size: 12, weight: .regular)
+                            .foregroundStyle(Color.neutral)
+                    }
+                }
+                .tint(.accentGreen)
+            }
+
+            SeriesSheetRow(palette: palette) {
+                Toggle(isOn: Binding(
+                    get: { normalizationMode != .off },
+                    set: { normalizationMode = $0 ? .field : .off }
+                )) {
+                    VStack(alignment: .leading, spacing: 4) {
+                        Text("Normalize Handicaps")
+                            .fontStyle(kFontName, size: 13, weight: .semibold)
+                            .foregroundStyle(palette.foregroundColor)
+                        Text("Play net strokes from the lowest handicap in each field or matchup.")
+                            .fontStyle(kFontName, size: 12, weight: .regular)
+                            .foregroundStyle(Color.neutral)
+                    }
+                }
+                .tint(.accentGreen)
             }
 
             SeriesSheetRow(palette: palette) {
@@ -578,6 +614,8 @@ struct SeriesHandicapSettingsView: View {
         maximumHandicap = hc.config.maximumHandicap
         minimumScores = hc.config.minimumScoresForIndex
         usesCourseRatingSlopeAdjustment = hc.config.usesCourseRatingSlopeAdjustment
+        entryFormat = hc.entryFormat
+        normalizationMode = hc.normalizationMode
 
         if let first = hc.config.gamesUsedRules.first {
             bestNScores = first.used
@@ -602,7 +640,13 @@ struct SeriesHandicapSettingsView: View {
     private func save() {
         let rules = [GamesUsedRuleDTO(playedLower: 1, playedUpper: 100, used: bestNScores)]
         let dto = mergedHandicapDTO(rules: rules)
-        let config = SeriesHandicapConfig(mode: handicapMode, config: dto, strokeBasis: strokeBasis)
+        let config = SeriesHandicapConfig(
+            mode: handicapMode,
+            config: dto,
+            strokeBasis: strokeBasis,
+            entryFormat: entryFormat,
+            normalizationMode: normalizationMode
+        )
         Task {
             await viewModel.saveHandicapSettings(config)
         }

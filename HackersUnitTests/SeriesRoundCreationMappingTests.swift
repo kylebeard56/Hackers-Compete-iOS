@@ -1786,4 +1786,50 @@ final class SeriesRoundCreationMappingTests: XCTestCase {
         XCTAssertNil(sections[0].options[2].subtitle)
         XCTAssertEqual(sections[1].options[0].subtitle, "9.0 HCP")
     }
+
+    func testBuildParticipantPayloadsComputesCourseHandicapFromMemberIndexAndTee() {
+        let holes = (1...18).map { makeHole($0) }
+        let blue = Tee(
+            id: "blue",
+            name: "Blue",
+            gender: "male",
+            totalHoles: 18,
+            holes: holes,
+            ratingFull: 74.0,
+            slopeFull: 130,
+            ratingFront: nil,
+            slopeFront: nil,
+            ratingBack: nil,
+            slopeBack: nil
+        )
+        let segment = CourseSegment(
+            courseInfo: CourseInfo(id: "course1", name: "Test Course", totalHoles: 18, tees: [blue]),
+            holeRange: HoleRange(startHole: 1, endHole: 18),
+            defaultTee: "blue"
+        )
+        let member = makeMember(id: "m1", name: "Kyle", defaultTeeBoxID: "blue")
+
+        let payloads = SeriesRoundCreationMapping.buildParticipantPayloads(
+            members: [member],
+            roundID: "round1",
+            teamMappings: [:],
+            memberAssignments: [:],
+            handicaps: [
+                "m1": SeriesMemberHandicap(
+                    id: "m1",
+                    memberID: "m1",
+                    computedIndex: 8.1
+                )
+            ],
+            maximumHandicap: nil,
+            courseSegment: segment,
+            handicapEntryFormat: .courseHandicap,
+            hostPlayerID: nil
+        )
+
+        XCTAssertEqual(payloads.first?.handicapIndex, 8.1)
+        XCTAssertEqual(payloads.first?.originalHandicap, 8)
+        XCTAssertEqual(payloads.first?.adjustedHandicap, 11)
+        XCTAssertEqual(payloads.first?.leagueHandicapStrokesAtCreation, 11)
+    }
 }

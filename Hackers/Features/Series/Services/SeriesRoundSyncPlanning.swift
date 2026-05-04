@@ -13,10 +13,11 @@ struct SeriesRoundSyncOptions: Equatable, Sendable {
     var syncOrganization: Bool = false
     var syncPairs: Bool = false
     var syncMatchups: Bool = false
+    var syncHandicapSettings: Bool = false
     var preserveManualHandicapEdits: Bool = false
 
     var hasAny: Bool {
-        syncPlayerData || syncFormat || syncOrganization || syncPairs || syncMatchups
+        syncPlayerData || syncFormat || syncOrganization || syncPairs || syncMatchups || syncHandicapSettings
     }
 }
 
@@ -382,6 +383,7 @@ enum SeriesRoundSyncPlanning {
         handicaps: [String: SeriesMemberHandicap],
         maximumHandicap: Int? = nil,
         courseSegment: CourseSegment,
+        handicapEntryFormat: HandicapEntryFormat = .strokes,
         hostPlayerID: String?,
         preserveManualHandicapEdits: Bool
     ) -> [RoundParticipant] {
@@ -393,6 +395,7 @@ enum SeriesRoundSyncPlanning {
             handicaps: handicaps,
             maximumHandicap: maximumHandicap,
             courseSegment: courseSegment,
+            handicapEntryFormat: handicapEntryFormat,
             hostPlayerID: hostPlayerID
         )
         let templateByMemberID = Dictionary(uniqueKeysWithValues: zip(participatingMembers.map(\.id), templates))
@@ -540,6 +543,7 @@ enum SeriesRoundSyncPlanning {
             handicaps: handicaps,
             maximumHandicap: series.handicapConfig.isEnabled ? series.handicapConfig.config.maximumHandicap : nil,
             courseSegment: courseSegment,
+            handicapEntryFormat: seriesRound.roundConfig.handicapEntryFormat,
             hostPlayerID: hostPlayerID,
             presenceStatusByMemberID: presenceStatusByMemberID
         )

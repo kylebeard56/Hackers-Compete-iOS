@@ -15,3 +15,168 @@ extension ScoringService {
     /// Provide a 0-100 difficulty score for a tee box from slope and course ratings
     static func courseDifficulty() { }
 }
+
+enum HandicapCalculator {
+    static func courseHandicap(index: Double, tee: Tee, segment: HoleSegment) -> Int? {
+        guard let rating = tee.rating(for: segment),
+              let slope = tee.slope(for: segment),
+              slope > 0 else {
+            return nil
+        }
+
+        let par = tee.par(for: segment)
+        guard par > 0 else { return nil }
+
+        let indexBasis: Double
+        switch segment {
+        case .front9, .back9:
+            indexBasis = (index / 2.0 * 10).rounded() / 10
+        case .full18, .custom:
+            indexBasis = index
+        }
+
+        return max(0, Int((indexBasis * (Double(slope) / 113.0) + (rating - Double(par))).rounded()))
+    }
+
+    static func courseHandicap(index: Double, participant: RoundParticipant, courseSegment: CourseSegment?) -> Int? {
+        guard let courseSegment,
+              let tee = tee(for: participant, in: courseSegment) else {
+            return nil
+        }
+        return courseHandicap(index: index, tee: tee, segment: courseSegment.holeSegment)
+    }
+
+    static func hasCourseHandicapData(for participant: RoundParticipant? = nil, courseSegment: CourseSegment?) -> Bool {
+        guard let courseSegment else { return false }
+        let tee: Tee?
+        if let participant {
+            tee = self.tee(for: participant, in: courseSegment)
+        } else if let defaultTeeID = courseSegment.defaultTee {
+            tee = courseSegment.tee(from: defaultTeeID)
+        } else {
+            tee = courseSegment.courseInfo.tees.first
+        }
+        guard let tee else { return false }
+        return courseHandicap(index: 0, tee: tee, segment: courseSegment.holeSegment) != nil
+    }
+
+    static func strokes(
+        for input: Double,
+        format: HandicapEntryFormat,
+        participant: RoundParticipant,
+        courseSegment: CourseSegment?,
+        maximumHandicap: Int? = nil
+    ) -> Int {
+        let raw: Int
+        switch format {
+        case .strokes:
+            raw = Int(input.rounded())
+        case .courseHandicap:
+            raw = courseHandicap(index: input, participant: participant, courseSegment: courseSegment)
+                ?? Int(input.rounded())
+        }
+        return capped(raw, maximumHandicap: maximumHandicap)
+    }
+
+    static func participant(
+        _ participant: RoundParticipant,
+        applying input: Double,
+        format: HandicapEntryFormat,
+        courseSegment: CourseSegment?,
+        maximumHandicap: Int? = nil
+    ) -> RoundParticipant {
+        var updated = participant
+        updated.handicapIndex = format == .courseHandicap ? input : nil
+        updated.originalHandicap = capped(Int(input.rounded()), maximumHandicap: format == .strokes ? maximumHandicap : nil)
+        updated.adjustedHandicap = strokes(
+            for: input,
+            format: format,
+            participant: updated,
+            courseSegment: courseSegment,
+            maximumHandicap: maximumHandicap
+        )
+        return updated
+    }
+
+    static func recomputedParticipants(
+        _ participants: [RoundParticipant],
+        format: HandicapEntryFormat,
+        courseSegment: CourseSegment?,
+        maximumHandicap: Int? = nil
+    ) -> [RoundParticipant] {
+        participants.map { participant in
+            let input = participant.handicapIndex ?? Double(participant.originalHandicap)
+            return self.participant(
+                participant,
+                applying: input,
+                format: format,
+                courseSegment: courseSegment,
+                maximumHandicap: maximumHandicap
+            )
+        }
+    }
+
+    static func normalizedParticipantsForField(_ participants: [RoundParticipant]) -> [RoundParticipant] {
+        let active = participants.filter(\.isPresenceActive)
+        let baseline = active.map(\.adjustedHandicap).min() ?? 0
+        return participants.map { normalized($0, subtracting: baseline) }
+    }
+
+    static func normalizedParticipants(
+        _ participants: [RoundParticipant],
+        for matchup: TeamMatchup,
+        teams: [RoundTeam],
+        scoringGroups: [RoundScoringGroup]
+    ) -> [RoundParticipant] {
+        let participantIDs = participantIDs(in: matchup, participants: participants, teams: teams, scoringGroups: scoringGroups)
+        let baseline = participants
+            .filter { participantIDs.contains($0.id) && $0.isPresenceActive }
+            .map(\.adjustedHandicap)
+            .min() ?? 0
+
+        return participants.map { participant in
+            guard participantIDs.contains(participant.id) else { return participant }
+            return normalized(participant, subtracting: baseline)
+        }
+    }
+
+    static func participantIDs(
+        in matchup: TeamMatchup,
+        participants: [RoundParticipant],
+        teams: [RoundTeam],
+        scoringGroups: [RoundScoringGroup]
+    ) -> Set<String> {
+        switch matchup.effectiveMode {
+        case .individual:
+            return Set(matchup.participantIDs ?? [])
+        case .team:
+            let teamIDs = Set(matchup.teamIDs)
+            return Set(participants.filter { $0.teamID.map(teamIDs.contains) == true }.map(\.id))
+        case .partnership, .teeGroup, .scoreOwner:
+            let groupByID = Dictionary(uniqueKeysWithValues: scoringGroups.map { ($0.id, $0) })
+            return Set(matchup.pairingIDs().flatMap { groupByID[$0]?.memberIDs ?? [] })
+        }
+    }
+
+    private static func normalized(_ participant: RoundParticipant, subtracting baseline: Int) -> RoundParticipant {
+        var updated = participant
+        updated.adjustedHandicap = max(0, participant.adjustedHandicap - max(0, baseline))
+        return updated
+    }
+
+    private static func tee(for participant: RoundParticipant, in courseSegment: CourseSegment) -> Tee? {
+        if participant.teeBoxID.isPopulated, let tee = courseSegment.tee(from: participant.teeBoxID) {
+            return tee
+        }
+        if let defaultTeeID = courseSegment.defaultTee, let tee = courseSegment.tee(from: defaultTeeID) {
+            return tee
+        }
+        return courseSegment.courseInfo.tees.first
+    }
+
+    private static func capped(_ value: Int, maximumHandicap: Int?) -> Int {
+        let nonNegative = max(0, value)
+        guard let maximumHandicap else { return nonNegative }
+        return min(nonNegative, maximumHandicap)
+    }
+}

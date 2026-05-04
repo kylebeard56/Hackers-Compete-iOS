@@ -121,7 +121,7 @@ extension RoundSession {
 
             // 2. Create participants locally (no DB writes yet)
             var participants = players.map {
-                RoundParticipant(
+                let participant = RoundParticipant(
                     player: $0,
                     teeBoxID: snapshot.defaultTee?.id ?? "",
                     teamID: nil,
@@ -129,6 +129,13 @@ extension RoundSession {
                     teeOrder: nil,
                     isHost: $0.isHost(in: snapshot),
                     parentID: roundID ?? snapshot.round.id
+                )
+                let input = Double(participant.originalHandicap)
+                return HandicapCalculator.participant(
+                    participant,
+                    applying: input,
+                    format: snapshot.configuration.handicapEntryFormat,
+                    courseSegment: snapshot.courseSegment
                 )
             }
 

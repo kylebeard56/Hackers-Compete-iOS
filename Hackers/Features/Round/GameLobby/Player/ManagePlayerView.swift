@@ -40,7 +40,7 @@ struct ManagePlayerView: View {
     @State private var tee: Tee? = nil
     @State private var showTeeSelection = false
     @State private var handicapString = "0"
-    @State private var handicapValue: Int = 0
+    @State private var handicapValue: Double = 0
     @State private var groupID: String? = nil
     @State private var teamID: String? = nil
     
@@ -68,7 +68,7 @@ struct ManagePlayerView: View {
               let baseline = participant?.leagueHandicapStrokesAtCreation else {
             return palette.foregroundColor
         }
-        return handicapValue != baseline ? Color.orange : palette.foregroundColor
+        return Int(handicapValue.rounded()) != baseline ? Color.orange : palette.foregroundColor
     }
 
     private var maximumHandicapValue: Int {
@@ -114,8 +114,8 @@ struct ManagePlayerView: View {
         .task {
             name = participant?.name.fullName ?? ""
             tee = snapshot.tees.first(where: { $0.id == participant?.teeBoxID }) ?? snapshot.defaultTee
-            handicapValue = participant?.adjustedHandicap ?? 0
-            handicapString = String(handicapValue)
+            handicapValue = participant?.handicapIndex ?? Double(participant?.originalHandicap ?? participant?.adjustedHandicap ?? 0)
+            handicapString = formattedHandicapInput(handicapValue)
             groupID = participant?.groupID
             teamID = participant?.teamID
             
@@ -246,7 +246,7 @@ extension ManagePlayerView {
 
             if strokesHandicapLockedForEditor {
                 HStack(spacing: 10) {
-                    Text("\(handicapValue)")
+                    Text("\(computedHandicapValue)")
                         .fontStyle(kFontName, size: 17, weight: .regular)
                         .foregroundStyle(Color.neutral3)
                     Image(systemName: "lock.fill")
@@ -273,7 +273,7 @@ extension ManagePlayerView {
                     TextField("0", text: $handicapString)
                         .fontStyle(kFontName, size: 17, weight: .regular)
                         .foregroundStyle(commissionerStrokesValueColor)
-                        .keyboardType(.numberPad)
+                        .keyboardType(snapshot.configuration.handicapEntryFormat == .courseHandicap ? .decimalPad : .numberPad)
                         .focused($focus, equals: .handicap)
 
                     Spacer(minLength: 0)
@@ -288,11 +288,25 @@ extension ManagePlayerView {
                 }
                 .borderedContentStyle(isActive: focus == .handicap, theme: palette.theme)
                 .onChange(of: handicapString) {
-                    if let value = Int(handicapString.filter(\.isNumber)) {
-                        handicapValue = min(max(value, 0), maximumHandicapValue)
-                        handicapString = String(handicapValue)
+                    if snapshot.configuration.handicapEntryFormat == .courseHandicap {
+                        let filtered = decimalHandicapText(handicapString)
+                        if filtered != handicapString {
+                            handicapString = filtered
+                        }
+                        handicapValue = max(Double(filtered) ?? 0, 0)
+                    } else if let value = Int(handicapString.filter(\.isNumber)) {
+                        let clamped = min(max(value, 0), maximumHandicapValue)
+                        handicapValue = Double(clamped)
+                        handicapString = String(clamped)
                     }
                 }
+            }
+
+            if snapshot.configuration.handicapEntryFormat == .courseHandicap {
+                Text("Course HCP \(computedHandicapValue)")
+                    .fontStyle(kFontName, size: 13, weight: .semibold)
+                    .foregroundStyle(Color.neutral)
+                    .alignLeading()
             }
 
             if !snapshot.configuration.useHandicaps {
@@ -501,15 +515,65 @@ extension ManagePlayerView {
         var p = participant ?? .init()
         p.name = Name(name)
         p.teeBoxID = tee?.id ?? ""
+        let courseSegment = participantCourseSegment
+        let computed = HandicapCalculator.participant(
+            p,
+            applying: handicapValue,
+            format: snapshot.configuration.handicapEntryFormat,
+            courseSegment: courseSegment,
+            maximumHandicap: maximumHandicapValue
+        )
         if seriesHandicapLockActive && isSeriesCommissioner {
-            p.adjustedHandicap = handicapValue
+            p.adjustedHandicap = computed.adjustedHandicap
         } else {
-            p.originalHandicap = handicapValue
-            p.adjustedHandicap = handicapValue
+            p.originalHandicap = computed.originalHandicap
+            p.adjustedHandicap = computed.adjustedHandicap
+            p.handicapIndex = computed.handicapIndex
         }
         p.groupID = groupID
         p.teamID = teamID
         onFinish(p)
+    }
+
+    private var participantCourseSegment: CourseSegment? {
+        guard var segment = snapshot.courseSegment else { return nil }
+        if let teeID = tee?.id {
+            segment.defaultTee = teeID
+        }
+        return segment
+    }
+
+    private var computedHandicapValue: Int {
+        HandicapCalculator.strokes(
+            for: handicapValue,
+            format: snapshot.configuration.handicapEntryFormat,
+            participant: participant ?? .init(teeBoxID: tee?.id ?? ""),
+            courseSegment: participantCourseSegment,
+            maximumHandicap: maximumHandicapValue
+        )
+    }
+
+    private func formattedHandicapInput(_ value: Double) -> String {
+        snapshot.configuration.handicapEntryFormat == .courseHandicap ? String(format: "%.1f", value) : "\(Int(value.rounded()))"
+    }
+
+    private func decimalHandicapText(_ text: String) -> String {
+        var hasDecimal = false
+        var decimalPlaces = 0
+        var output = ""
+        for character in text {
+            if character.isNumber {
+                if hasDecimal {
+                    guard decimalPlaces < 1 else { continue }
+                    decimalPlaces += 1
+                }
+                output.append(character)
+            } else if character == ".", !hasDecimal {
+                hasDecimal = true
+                output.append(character)
+            }
+        }
+        return output
     }
 }
 

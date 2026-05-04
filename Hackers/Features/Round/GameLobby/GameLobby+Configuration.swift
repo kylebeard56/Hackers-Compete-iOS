@@ -35,6 +35,11 @@ extension GameLobby {
                     await roundSession.toggleHandicaps(handicapsEnabled)
                 }
             }
+
+            if handicapsEnabled {
+                handicapEntryFormatRow
+                handicapNormalizationRow
+            }
             
             Toggle(isOn: $teamsEnabled, label: {
                 VStack(spacing: 4) {
@@ -107,6 +112,61 @@ extension GameLobby {
         }
         .padding(16)
         .glassCardEffect(forceMaterial: true, tint: palette.cardColor)
+    }
+
+    private var courseHandicapAvailable: Bool {
+        HandicapCalculator.hasCourseHandicapData(courseSegment: snapshot.courseSegment)
+    }
+
+    private var handicapEntryFormatRow: some View {
+        Toggle(isOn: Binding(
+            get: { handicapEntryFormat == .courseHandicap },
+            set: { newValue in
+                let next: HandicapEntryFormat = newValue ? .courseHandicap : .strokes
+                handicapEntryFormat = next
+                Task { await roundSession.setHandicapEntryFormat(next, maximumHandicap: seriesLeagueHandicapMaximum) }
+            }
+        )) {
+            VStack(spacing: 4) {
+                Text("Course Handicap")
+                    .fontStyle(kFontName, size: 13, weight: .semibold)
+                    .foregroundStyle(courseHandicapAvailable ? palette.foregroundColor : Color.neutral)
+                    .alignLeading()
+
+                Text(courseHandicapAvailable ? "Convert index entries using the selected tee rating and slope" : "Select a course and tee with rating/slope to use index entries")
+                    .fontStyle(kFontName, size: 12, weight: .regular)
+                    .foregroundStyle(Color.neutral)
+                    .alignLeading()
+            }
+        }
+        .disabled(!courseHandicapAvailable)
+        .tint(.accentGreen)
+    }
+
+    private var handicapNormalizationRow: some View {
+        Toggle(isOn: Binding(
+            get: { handicapNormalizationMode != .off },
+            set: { newValue in
+                let next: HandicapNormalizationMode = newValue
+                    ? (snapshot.configuration.resolvedCompetitionScope == .matchup ? .matchup : .field)
+                    : .off
+                handicapNormalizationMode = next
+                Task { await roundSession.setHandicapNormalizationMode(next) }
+            }
+        )) {
+            VStack(spacing: 4) {
+                Text("Normalize Handicaps")
+                    .fontStyle(kFontName, size: 13, weight: .semibold)
+                    .foregroundStyle(palette.foregroundColor)
+                    .alignLeading()
+
+                Text(snapshot.configuration.resolvedCompetitionScope == .matchup ? "Play each matchup from the lowest handicap in that pairing" : "Play the field from the lowest handicap")
+                    .fontStyle(kFontName, size: 12, weight: .regular)
+                    .foregroundStyle(Color.neutral)
+                    .alignLeading()
+            }
+        }
+        .tint(.accentGreen)
     }
 
     @ViewBuilder

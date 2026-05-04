@@ -19,6 +19,7 @@ struct SeriesRoundSyncSheet: View {
     @State private var syncOrganization = true
     @State private var syncPairs = true
     @State private var syncMatchups = true
+    @State private var syncHandicapSettings = true
     @State private var preserveManualHandicap = false
     @State private var isApplying = false
     @State private var errorMessage: String?
@@ -43,13 +44,15 @@ struct SeriesRoundSyncSheet: View {
     private var canTogglePlayer: Bool { !isCompleteRound }
     private var canTogglePairs: Bool { !isCompleteRound }
     private var canToggleMatchups: Bool { !isCompleteRound }
-    private var canTogglePreserveHandicap: Bool { effectiveSyncPlayer && !isCompleteRound }
+    private var canToggleHandicapSettings: Bool { !isCompleteRound }
+    private var canTogglePreserveHandicap: Bool { (effectiveSyncPlayer || effectiveSyncHandicapSettings) && !isCompleteRound }
 
     private var effectiveSyncPlayer: Bool { syncPlayer && canTogglePlayer }
     private var effectiveSyncFormat: Bool { syncFormat && canToggleFormat }
     private var effectiveSyncOrganization: Bool { syncOrganization && canToggleOrganization }
     private var effectiveSyncPairs: Bool { syncPairs && canTogglePairs }
     private var effectiveSyncMatchups: Bool { syncMatchups && canToggleMatchups }
+    private var effectiveSyncHandicapSettings: Bool { syncHandicapSettings && canToggleHandicapSettings }
 
     var body: some View {
         StickyScrollView(
@@ -188,6 +191,13 @@ struct SeriesRoundSyncSheet: View {
             )
 
             syncToggleRow(
+                title: "Handicap settings",
+                description: "Update course-handicap and normalization settings, then recompute league handicap strokes.",
+                isOn: effectiveBinding(storage: $syncHandicapSettings, isEnabled: canToggleHandicapSettings),
+                isEnabled: canToggleHandicapSettings
+            )
+
+            syncToggleRow(
                 title: "Preserve manual handicaps",
                 description: "Keep manual handicap edits where the commissioner changed strokes in the lobby.",
                 isOn: effectiveBinding(storage: $preserveManualHandicap, isEnabled: canTogglePreserveHandicap),
@@ -258,6 +268,7 @@ struct SeriesRoundSyncSheet: View {
             effectiveSyncOrganization,
             effectiveSyncPairs,
             effectiveSyncMatchups,
+            effectiveSyncHandicapSettings,
         ].filter { $0 }.count
         return count == 1 ? "1 on" : "\(count) on"
     }
@@ -268,6 +279,7 @@ struct SeriesRoundSyncSheet: View {
             || effectiveSyncOrganization
             || effectiveSyncPairs
             || effectiveSyncMatchups
+            || effectiveSyncHandicapSettings
     }
 
     private var applyButtonDisabled: Bool {
@@ -285,7 +297,8 @@ struct SeriesRoundSyncSheet: View {
             syncOrganization: effectiveSyncOrganization,
             syncPairs: effectiveSyncPairs,
             syncMatchups: effectiveSyncMatchups,
-            preserveManualHandicapEdits: preserveManualHandicap && effectiveSyncPlayer
+            syncHandicapSettings: effectiveSyncHandicapSettings,
+            preserveManualHandicapEdits: preserveManualHandicap && (effectiveSyncPlayer || effectiveSyncHandicapSettings)
         )
 
         let result = await viewModel.syncLinkedRoundFromSeries(seriesRound: seriesRound, options: options)

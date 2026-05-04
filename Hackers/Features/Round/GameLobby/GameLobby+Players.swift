@@ -543,17 +543,28 @@ extension GameLobby {
                         HandicapTextField(
                             id: participant.id,
                             initialValue: participant.adjustedHandicap,
+                            entryValue: participant.handicapIndex,
+                            entryFormat: handicapEntryFormat,
                             focusedField: $focus,
                             palette: palette,
                             maximumValue: seriesLock ? seriesLeagueHandicapMaximum : nil,
                             onDebouncedEdit: { newValue in
-                                if participant.adjustedHandicap == newValue { return }
-                                var updated = participant
+                                var updated = HandicapCalculator.participant(
+                                    participant,
+                                    applying: newValue,
+                                    format: handicapEntryFormat,
+                                    courseSegment: snapshot.courseSegment,
+                                    maximumHandicap: seriesLock ? seriesLeagueHandicapMaximum : nil
+                                )
+                                if participant.adjustedHandicap == updated.adjustedHandicap,
+                                   participant.handicapIndex == updated.handicapIndex {
+                                    return
+                                }
                                 if seriesLock && isSeriesCommissioner {
-                                    updated.adjustedHandicap = newValue
+                                    updated.originalHandicap = participant.originalHandicap
+                                    updated.handicapIndex = participant.handicapIndex
                                 } else {
-                                    updated.originalHandicap = newValue
-                                    updated.adjustedHandicap = newValue
+                                    updated.leagueHandicapStrokesAtCreation = nil
                                 }
                                 Task { try? await roundSession.update(participant: updated) }
                             },
@@ -1188,10 +1199,11 @@ extension GameLobby {
         var items: [SubtitleItem] = []
 
         if handicapsEnabled, components.contains(.handicap) {
+            let label = handicapSubtitle(for: participant)
             items.append(
                 SubtitleItem(
                     view: AnyView(
-                        Text("HCP \(participant.adjustedHandicap)")
+                        Text(label)
                             .fontStyle(kFontName, size: 14, weight: .regular)
                             .foregroundStyle(Color.neutral)
                     )
@@ -1254,6 +1266,18 @@ extension GameLobby {
         }
 
         return items
+    }
+
+    private func handicapSubtitle(for participant: RoundParticipant) -> String {
+        guard handicapNormalizationMode == .field else {
+            if handicapEntryFormat == .courseHandicap, let index = participant.handicapIndex {
+                return "Index \(String(format: "%.1f", index)) -> HCP \(participant.adjustedHandicap)"
+            }
+            return "HCP \(participant.adjustedHandicap)"
+        }
+        let normalized = HandicapCalculator.normalizedParticipantsForField(snapshot.participants)
+            .first { $0.id == participant.id }?.adjustedHandicap ?? participant.adjustedHandicap
+        return "HCP \(participant.adjustedHandicap) -> Playing \(normalized)"
     }
 
     @ViewBuilder

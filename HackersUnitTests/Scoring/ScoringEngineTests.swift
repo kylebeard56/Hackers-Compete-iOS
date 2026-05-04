@@ -1709,4 +1709,161 @@ final class ScoringEngineTests: XCTestCase {
             .twoTimesParPlusOne
         )
     }
+
+    func testCourseHandicapUsesRatingSlopeAndPar() {
+        let tee = Tee(
+            id: "blue",
+            name: "Blue",
+            gender: "male",
+            totalHoles: 18,
+            holes: makeHoles(),
+            ratingFull: 74.0,
+            slopeFull: 130,
+            ratingFront: nil,
+            slopeFront: nil,
+            ratingBack: nil,
+            slopeBack: nil
+        )
+
+        XCTAssertEqual(
+            HandicapCalculator.courseHandicap(index: 8.1, tee: tee, segment: .full18),
+            11
+        )
+    }
+
+    func testCourseHandicapMissingTeeDataFallsBackToEnteredStrokes() {
+        let participant = RoundParticipant(id: "p1", teeBoxID: "blue")
+        let tee = Tee(
+            id: "blue",
+            name: "Blue",
+            gender: "male",
+            totalHoles: 18,
+            holes: makeHoles(),
+            ratingFull: 74.0,
+            slopeFull: 130,
+            ratingFront: nil,
+            slopeFront: nil,
+            ratingBack: nil,
+            slopeBack: nil
+        )
+        let segment = CourseSegment(
+            courseInfo: CourseInfo(id: "c1", name: "Course", totalHoles: 18, tees: [tee]),
+            holeRange: HoleRange(startHole: 1, endHole: 3),
+            defaultTee: "blue"
+        )
+
+        XCTAssertNil(HandicapCalculator.courseHandicap(index: 8.1, participant: participant, courseSegment: segment))
+        XCTAssertEqual(
+            HandicapCalculator.strokes(
+                for: 8.1,
+                format: .courseHandicap,
+                participant: participant,
+                courseSegment: segment
+            ),
+            8
+        )
+    }
+
+    func testFieldNormalizationSubtractsLowestActiveHandicap() {
+        let participants = [
+            makeParticipant(id: "peyton", name: "Peyton", handicap: 4),
+            makeParticipant(id: "andrew", name: "Andrew", handicap: 12),
+            makeParticipant(id: "scott", name: "Scott", handicap: 14),
+            makeParticipant(id: "kyle", name: "Kyle", handicap: 18),
+        ]
+
+        let normalized = Dictionary(uniqueKeysWithValues: HandicapCalculator.normalizedParticipantsForField(participants).map { ($0.id, $0.adjustedHandicap) })
+
+        XCTAssertEqual(normalized["peyton"], 0)
+        XCTAssertEqual(normalized["andrew"], 8)
+        XCTAssertEqual(normalized["scott"], 10)
+        XCTAssertEqual(normalized["kyle"], 14)
+    }
+
+    func testMatchupNormalizationSubtractsLowestParticipantOnlyInsideMatchup() {
+        let participants = [
+            makeParticipant(id: "peyton", name: "Peyton", handicap: 4),
+            makeParticipant(id: "andrew", name: "Andrew", handicap: 12),
+            makeParticipant(id: "scott", name: "Scott", handicap: 14),
+            makeParticipant(id: "kyle", name: "Kyle", handicap: 18),
+        ]
+        let matchup = TeamMatchup(participantIDs: ["andrew", "kyle"], mode: .individual)
+
+        let normalized = Dictionary(uniqueKeysWithValues: HandicapCalculator.normalizedParticipants(participants, for: matchup, teams: [], scoringGroups: []).map { ($0.id, $0.adjustedHandicap) })
+
+        XCTAssertEqual(normalized["peyton"], 4)
+        XCTAssertEqual(normalized["andrew"], 0)
+        XCTAssertEqual(normalized["scott"], 14)
+        XCTAssertEqual(normalized["kyle"], 6)
+    }
+
+    func testTeamMatchupNormalizationSubtractsLowestAcrossBothTeams() {
+        let participants = [
+            makeParticipant(id: "peyton", name: "Peyton", handicap: 4, teamID: "red"),
+            makeParticipant(id: "andrew", name: "Andrew", handicap: 12, teamID: "red"),
+            makeParticipant(id: "scott", name: "Scott", handicap: 14, teamID: "blue"),
+            makeParticipant(id: "kyle", name: "Kyle", handicap: 18, teamID: "blue"),
+            makeParticipant(id: "guest", name: "Guest", handicap: 20, teamID: "green"),
+        ]
+        let teams = [
+            RoundTeam(id: "red", name: "Red", color: "red", index: 0, createdAt: .init()),
+            RoundTeam(id: "blue", name: "Blue", color: "blue", index: 1, createdAt: .init()),
+            RoundTeam(id: "green", name: "Green", color: "green", index: 2, createdAt: .init()),
+        ]
+        let matchup = TeamMatchup(teamIDs: ["red", "blue"], mode: .team)
+
+        let normalized = Dictionary(uniqueKeysWithValues: HandicapCalculator.normalizedParticipants(participants, for: matchup, teams: teams, scoringGroups: []).map { ($0.id, $0.adjustedHandicap) })
+
+        XCTAssertEqual(normalized["peyton"], 0)
+        XCTAssertEqual(normalized["andrew"], 8)
+        XCTAssertEqual(normalized["scott"], 10)
+        XCTAssertEqual(normalized["kyle"], 14)
+        XCTAssertEqual(normalized["guest"], 20)
+    }
+
+    func testScoringGroupMatchupNormalizationSubtractsLowestAcrossBothSides() {
+        let participants = [
+            makeParticipant(id: "peyton", name: "Peyton", handicap: 4),
+            makeParticipant(id: "andrew", name: "Andrew", handicap: 12),
+            makeParticipant(id: "scott", name: "Scott", handicap: 14),
+            makeParticipant(id: "kyle", name: "Kyle", handicap: 18),
+            makeParticipant(id: "guest", name: "Guest", handicap: 20),
+        ]
+        let scoringGroups = [
+            makePartnership(id: "pair_red", teamID: "red", memberIDs: ["peyton", "andrew"]),
+            makePartnership(id: "pair_blue", teamID: "blue", memberIDs: ["scott", "kyle"]),
+        ]
+        let matchup = TeamMatchup(scoreOwnerIDs: ["pair_red", "pair_blue"], mode: .partnership)
+
+        let normalized = Dictionary(uniqueKeysWithValues: HandicapCalculator.normalizedParticipants(participants, for: matchup, teams: [], scoringGroups: scoringGroups).map { ($0.id, $0.adjustedHandicap) })
+
+        XCTAssertEqual(normalized["peyton"], 0)
+        XCTAssertEqual(normalized["andrew"], 8)
+        XCTAssertEqual(normalized["scott"], 10)
+        XCTAssertEqual(normalized["kyle"], 14)
+        XCTAssertEqual(normalized["guest"], 20)
+    }
+
+    func testTeeGroupMatchupNormalizationSubtractsLowestAcrossBothSides() {
+        let participants = [
+            makeParticipant(id: "peyton", name: "Peyton", handicap: 4),
+            makeParticipant(id: "andrew", name: "Andrew", handicap: 12),
+            makeParticipant(id: "scott", name: "Scott", handicap: 14),
+            makeParticipant(id: "kyle", name: "Kyle", handicap: 18),
+            makeParticipant(id: "guest", name: "Guest", handicap: 20),
+        ]
+        let scoringGroups = [
+            RoundScoringGroup(id: "tee_1", teeGroupID: "g1", kind: .teeGroup, memberIDs: ["peyton", "andrew"], parentID: "round1"),
+            RoundScoringGroup(id: "tee_2", teeGroupID: "g2", kind: .teeGroup, memberIDs: ["scott", "kyle"], parentID: "round1"),
+        ]
+        let matchup = TeamMatchup(scoreOwnerIDs: ["tee_1", "tee_2"], mode: .teeGroup)
+
+        let normalized = Dictionary(uniqueKeysWithValues: HandicapCalculator.normalizedParticipants(participants, for: matchup, teams: [], scoringGroups: scoringGroups).map { ($0.id, $0.adjustedHandicap) })
+
+        XCTAssertEqual(normalized["peyton"], 0)
+        XCTAssertEqual(normalized["andrew"], 8)
+        XCTAssertEqual(normalized["scott"], 10)
+        XCTAssertEqual(normalized["kyle"], 14)
+        XCTAssertEqual(normalized["guest"], 20)
+    }
 }
