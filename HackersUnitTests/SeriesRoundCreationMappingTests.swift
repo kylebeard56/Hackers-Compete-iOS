@@ -210,6 +210,23 @@ final class SeriesRoundCreationMappingTests: XCTestCase {
         XCTAssertEqual(roundConfig.sharedScoreHandicapConfig, cfg.sharedScoreHandicapConfig)
     }
 
+    func testRoundConfigurationCopiesSeriesRoundHandicapSettings() {
+        var cfg = SeriesRoundConfiguration()
+        cfg.handicapEntryFormat = .courseHandicap
+        cfg.handicapNormalizationMode = .matchup
+        let seriesRound = SeriesRound(id: "sr_handicap", roundConfig: cfg, parentID: "series1")
+
+        let roundConfig = SeriesRoundCreationMapping.roundConfiguration(
+            series: makeSeries(handicapsEnabled: true),
+            seriesRound: seriesRound,
+            courseSegment: makeCourseSegment(),
+            competitionScope: .matchup
+        )
+
+        XCTAssertEqual(roundConfig.handicapEntryFormat, .courseHandicap)
+        XCTAssertEqual(roundConfig.handicapNormalizationMode, .matchup)
+    }
+
     func testTeeGroupPlansWithAdjacentPartnershipsKeepsPairsTogether() {
         let groupPlans = [
             SeriesRoundCreationMapping.TeeGroupPlan(

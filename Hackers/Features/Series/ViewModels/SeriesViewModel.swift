@@ -217,6 +217,245 @@ enum SeriesRoundCSVExporter {
     }
 }
 
+struct SeriesRoundOutcomeNarrative: Equatable {
+    let paragraph: String
+}
+
+enum SeriesRoundOutcomeNarrativeBuilder {
+    struct PriorRoundSnapshot {
+        let seriesRound: SeriesRound
+        let snapshot: RoundSnapshot
+    }
+
+    private struct PlayerResult {
+        let participant: RoundParticipant
+        let memberID: String?
+        let name: String
+        let grossStrokes: Int
+        let grossToPar: Int
+        let netStrokes: Int
+        let netToPar: Int
+        let handicapUsed: Int
+        let nextHandicap: Double?
+    }
+
+    static func build(
+        seriesRound: SeriesRound,
+        snapshot: RoundSnapshot,
+        priorRoundSnapshots: [PriorRoundSnapshot],
+        members: [SeriesMember],
+        handicapScores _: [SeriesHandicapScore],
+        memberHandicaps: [String: SeriesMemberHandicap]
+    ) -> SeriesRoundOutcomeNarrative? {
+        let results = playerResults(
+            snapshot: snapshot,
+            members: members,
+            memberHandicaps: memberHandicaps
+        )
+        guard results.isPopulated else { return nil }
+
+        let ordered = results.sorted {
+            if $0.netStrokes != $1.netStrokes { return $0.netStrokes < $1.netStrokes }
+            if $0.grossStrokes != $1.grossStrokes { return $0.grossStrokes < $1.grossStrokes }
+            return $0.name.localizedCaseInsensitiveCompare($1.name) == .orderedAscending
+        }
+
+        let title = seriesRound.title.isPopulated ? seriesRound.title : "Round \(seriesRound.index + 1)"
+        let leaderboard = ordered.map { result in
+            "\(result.name) net \(result.netStrokes) (\(scoreToParLabel(result.netToPar)), gross \(result.grossStrokes), HCP \(result.handicapUsed), next week HCP \(handicapLabel(result.nextHandicap)))"
+        }.joined(separator: "; ")
+
+        let birdies = birdieHighlights(snapshot: snapshot, members: members)
+        let birdieSentence = birdies.isEmpty
+            ? "No birdies were recorded."
+            : "Birdies: \(birdies.joined(separator: "; "))."
+
+        let best = ordered[0]
+        var closing = "Best round: \(best.name) with net \(best.netStrokes) (\(scoreToParLabel(best.netToPar)))."
+
+        if let bounceBack = bounceBackResult(
+            currentResults: results,
+            priorRoundSnapshots: priorRoundSnapshots,
+            members: members,
+            memberHandicaps: memberHandicaps
+        ) {
+            closing += " Bounce-back player: \(bounceBack.name), improving \(bounceBack.improvement) \(strokeUnit(bounceBack.improvement)) from the prior Series round."
+        }
+
+        return SeriesRoundOutcomeNarrative(
+            paragraph: "\(title) is scored. Leaderboard low-to-high by net: \(leaderboard). \(birdieSentence) \(closing)"
+        )
+    }
+
+    private static func playerResults(
+        snapshot: RoundSnapshot,
+        members: [SeriesMember],
+        memberHandicaps: [String: SeriesMemberHandicap]
+    ) -> [PlayerResult] {
+        snapshot.participants
+            .filter(\.isPresenceActive)
+            .compactMap { participant in
+                guard let totals = totals(for: participant, snapshot: snapshot) else { return nil }
+                let memberID = memberID(for: participant, members: members)
+                let nextHandicap = memberID.flatMap { memberHandicaps[$0]?.effectiveIndex }
+                return PlayerResult(
+                    participant: participant,
+                    memberID: memberID,
+                    name: displayName(for: participant),
+                    grossStrokes: totals.gross,
+                    grossToPar: totals.grossToPar,
+                    netStrokes: totals.gross - participant.adjustedHandicap,
+                    netToPar: totals.grossToPar - participant.adjustedHandicap,
+                    handicapUsed: participant.adjustedHandicap,
+                    nextHandicap: nextHandicap
+                )
+            }
+    }
+
+    private static func totals(
+        for participant: RoundParticipant,
+        snapshot: RoundSnapshot
+    ) -> (gross: Int, grossToPar: Int)? {
+        let entriesByHole = Dictionary(
+            grouping: snapshot.scoring.filter { $0.scoringUnitID == participant.id },
+            by: \.holeNumber
+        ).compactMapValues(\.first)
+        guard entriesByHole.isPopulated else { return nil }
+
+        let tee = playedTee(for: participant, snapshot: snapshot)
+        var gross = 0
+        var grossToPar = 0
+        var hasScore = false
+
+        for holeNumber in holeNumbers(for: snapshot) {
+            guard let entry = entriesByHole[holeNumber],
+                  let par = par(for: holeNumber, tee: tee),
+                  let strokes = grossStrokes(from: entry, par: par) else {
+                continue
+            }
+            hasScore = true
+            gross += strokes
+            grossToPar += strokes - par
+        }
+
+        return hasScore ? (gross, grossToPar) : nil
+    }
+
+    private static func birdieHighlights(snapshot: RoundSnapshot, members: [SeriesMember]) -> [String] {
+        snapshot.participants
+            .filter(\.isPresenceActive)
+            .flatMap { participant -> [String] in
+                let tee = playedTee(for: participant, snapshot: snapshot)
+                let entries = snapshot.scoring.filter { $0.scoringUnitID == participant.id }
+                let entriesByHole = Dictionary(grouping: entries, by: \.holeNumber).compactMapValues(\.first)
+                let holes = holeNumbers(for: snapshot).filter { holeNumber in
+                    guard let entry = entriesByHole[holeNumber],
+                          let par = par(for: holeNumber, tee: tee),
+                          let strokes = grossStrokes(from: entry, par: par) else {
+                        return false
+                    }
+                    return strokes - par == -1
+                }
+                guard holes.isPopulated else { return [] }
+                let name = displayName(for: participant)
+                let holeText = holes.map { "#\($0)" }.joined(separator: ", ")
+                return ["\(name) on \(holeText)"]
+            }
+            .sorted()
+    }
+
+    private static func bounceBackResult(
+        currentResults: [PlayerResult],
+        priorRoundSnapshots: [PriorRoundSnapshot],
+        members: [SeriesMember],
+        memberHandicaps: [String: SeriesMemberHandicap]
+    ) -> (name: String, improvement: Int)? {
+        let priorByMemberID = priorRoundSnapshots
+            .sorted { $0.seriesRound.index > $1.seriesRound.index }
+            .reduce(into: [String: PlayerResult]()) { result, prior in
+                for playerResult in playerResults(
+                    snapshot: prior.snapshot,
+                    members: members,
+                    memberHandicaps: memberHandicaps
+                ) {
+                    guard let memberID = playerResult.memberID,
+                          result[memberID] == nil else { continue }
+                    result[memberID] = playerResult
+                }
+            }
+
+        return currentResults
+            .compactMap { current -> (name: String, improvement: Int, netToPar: Int)? in
+                guard let memberID = current.memberID,
+                      let prior = priorByMemberID[memberID] else { return nil }
+                let improvement = prior.netToPar - current.netToPar
+                guard improvement > 0 else { return nil }
+                return (current.name, improvement, current.netToPar)
+            }
+            .sorted {
+                if $0.improvement != $1.improvement { return $0.improvement > $1.improvement }
+                if $0.netToPar != $1.netToPar { return $0.netToPar < $1.netToPar }
+                return $0.name.localizedCaseInsensitiveCompare($1.name) == .orderedAscending
+            }
+            .first
+            .map { ($0.name, $0.improvement) }
+    }
+
+    private static func memberID(for participant: RoundParticipant, members: [SeriesMember]) -> String? {
+        if let memberID = participant.seriesMemberID, memberID.isPopulated {
+            return memberID
+        }
+        guard let playerID = participant.playerID else { return nil }
+        return members.first { $0.playerID == playerID }?.id
+    }
+
+    private static func playedTee(for participant: RoundParticipant, snapshot: RoundSnapshot) -> Tee? {
+        if participant.teeBoxID.isPopulated,
+           let tee = snapshot.courseSegment?.tee(from: participant.teeBoxID) ?? snapshot.tees.first(where: { $0.id == participant.teeBoxID }) {
+            return tee
+        }
+        return snapshot.defaultTee ?? snapshot.tees.first
+    }
+
+    private static func holeNumbers(for snapshot: RoundSnapshot) -> [Int] {
+        snapshot.holeRange?.holeNumbers ?? snapshot.holeSegment.holeRange.holeNumbers
+    }
+
+    private static func par(for holeNumber: Int, tee: Tee?) -> Int? {
+        tee?.holes.first { $0.number == holeNumber }?.par
+    }
+
+    private static func grossStrokes(from entry: ScoreEntry, par: Int) -> Int? {
+        if let strokes = entry.strokes { return strokes }
+        if let relative = entry.relativeToPar { return par + relative }
+        return nil
+    }
+
+    private static func displayName(for participant: RoundParticipant) -> String {
+        let fullName = participant.name.fullName.trimmingCharacters(in: .whitespacesAndNewlines)
+        return fullName.isPopulated ? fullName : "Player"
+    }
+
+    private static func scoreToParLabel(_ value: Int) -> String {
+        if value == 0 { return "E" }
+        if value > 0 { return "+\(value)" }
+        return "\(value)"
+    }
+
+    private static func handicapLabel(_ value: Double?) -> String {
+        guard let value else { return "unavailable" }
+        let rounded = (value * 10).rounded() / 10
+        if abs(rounded - rounded.rounded(.towardZero)) < 0.000_001 {
+            return "\(Int(rounded.rounded(.towardZero)))"
+        }
+        return String(format: "%.1f", rounded)
+    }
+
+    private static func strokeUnit(_ count: Int) -> String {
+        count == 1 ? "stroke" : "strokes"
+    }
+}
+
 struct SeriesRoundMatchupMemberOption: Identifiable, Hashable {
     let memberID: String
     let teamID: String?
@@ -4117,6 +4356,53 @@ final class SeriesViewModel: ObservableObject, Loggable {
     func loadLinkedRoundSnapshot(for seriesRound: SeriesRound) async -> RoundSnapshot? {
         guard let roundID = seriesRound.roundID else { return nil }
         return await loadRoundSnapshot(roundID: roundID)
+    }
+
+    func roundOutcomeNarrative(for seriesRound: SeriesRound) async -> SeriesRoundOutcomeNarrative? {
+        guard effectiveStatus(for: seriesRound) == .complete,
+              let roundID = seriesRound.roundID,
+              let snapshot = await loadRoundSnapshot(roundID: roundID) else {
+            return nil
+        }
+
+        let priorRounds = rounds
+            .filter { prior in
+                prior.id != seriesRound.id
+                    && prior.index < seriesRound.index
+                    && effectiveStatus(for: prior) == .complete
+                    && prior.roundID?.isPopulated == true
+            }
+            .sorted { $0.index > $1.index }
+
+        var priorSnapshots: [SeriesRoundOutcomeNarrativeBuilder.PriorRoundSnapshot] = []
+        for priorRound in priorRounds {
+            guard let priorRoundID = priorRound.roundID,
+                  let priorSnapshot = await loadRoundSnapshot(roundID: priorRoundID) else {
+                continue
+            }
+            priorSnapshots.append(.init(seriesRound: priorRound, snapshot: priorSnapshot))
+        }
+
+        return roundOutcomeNarrative(
+            for: seriesRound,
+            snapshot: snapshot,
+            priorRoundSnapshots: priorSnapshots
+        )
+    }
+
+    func roundOutcomeNarrative(
+        for seriesRound: SeriesRound,
+        snapshot: RoundSnapshot,
+        priorRoundSnapshots: [SeriesRoundOutcomeNarrativeBuilder.PriorRoundSnapshot] = []
+    ) -> SeriesRoundOutcomeNarrative? {
+        SeriesRoundOutcomeNarrativeBuilder.build(
+            seriesRound: seriesRound,
+            snapshot: snapshot,
+            priorRoundSnapshots: priorRoundSnapshots,
+            members: members,
+            handicapScores: handicapScores,
+            memberHandicaps: memberHandicaps
+        )
     }
 
     func matchupOutcomes(for seriesRound: SeriesRound) async -> [SeriesMatchupOutcome] {

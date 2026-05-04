@@ -214,10 +214,10 @@ struct SeriesHandicapSettingsView: View {
             SeriesSheetRow(palette: palette) {
                 Toggle(isOn: $usesCourseRatingSlopeAdjustment) {
                     VStack(alignment: .leading, spacing: 4) {
-                        Text("Course adjustment")
+                        Text("Index course adjustment")
                             .fontStyle(kFontName, size: 13, weight: .semibold)
                             .foregroundStyle(palette.foregroundColor)
-                        Text("Normalize round scores using that tee's rating and slope before they enter the index.")
+                        Text("Adjust posted scores by tee rating and slope before they update series handicap indexes.")
                             .fontStyle(kFontName, size: 12, weight: .regular)
                             .foregroundStyle(Color.neutral)
                     }

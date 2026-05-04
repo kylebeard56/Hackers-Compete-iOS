@@ -277,4 +277,183 @@ struct SeriesHandicapHistoryTests {
         )
         #expect(viewModel.canReviewScores(for: complete) == false)
     }
+
+    @Test("Round outcome narrative sorts net leaderboard and includes handicaps, gross scores, birdies, and bounce back")
+    func roundOutcomeNarrativeIncludesRequiredRoundFacts() throws {
+        let members = Self.outcomeMembers()
+        let currentRound = SeriesRound(id: "series_round_2", title: "Week 2", index: 1, roundID: "round_2")
+        let priorRound = SeriesRound(id: "series_round_1", title: "Week 1", index: 0, roundID: "round_1")
+        let snapshot = Self.outcomeSnapshot(
+            roundID: "round_2",
+            scores: [
+                "p_alice": [1: 4, 2: 3, 3: 4],
+                "p_bob": [1: 5, 2: 4, 3: 3],
+                "p_charlie": [1: 4, 2: 4, 3: 3],
+            ],
+            handicaps: ["p_alice": 2, "p_bob": 4, "p_charlie": 1]
+        )
+        let priorSnapshot = Self.outcomeSnapshot(
+            roundID: "round_1",
+            scores: [
+                "p_alice": [1: 6, 2: 6, 3: 4],
+                "p_bob": [1: 4, 2: 4, 3: 4],
+            ],
+            handicaps: ["p_alice": 2, "p_bob": 2]
+        )
+
+        let narrative = try #require(SeriesRoundOutcomeNarrativeBuilder.build(
+            seriesRound: currentRound,
+            snapshot: snapshot,
+            priorRoundSnapshots: [.init(seriesRound: priorRound, snapshot: priorSnapshot)],
+            members: members,
+            handicapScores: [],
+            memberHandicaps: [
+                "m_alice": SeriesMemberHandicap(id: "m_alice", memberID: "m_alice", computedIndex: 5),
+                "m_bob": SeriesMemberHandicap(id: "m_bob", memberID: "m_bob", computedIndex: 3.4),
+            ]
+        ))
+
+        let paragraph = narrative.paragraph
+        let bobRange = try #require(paragraph.range(of: "Bob Player net 8 (-3, gross 12, HCP 4, next week HCP 3.4)"))
+        let aliceRange = try #require(paragraph.range(of: "Alice Player net 9 (-2, gross 11, HCP 2, next week HCP 5)"))
+        let charlieRange = try #require(paragraph.range(of: "Charlie Player net 10 (-1, gross 11, HCP 1, next week HCP unavailable)"))
+        #expect(bobRange.lowerBound < aliceRange.lowerBound)
+        #expect(aliceRange.lowerBound < charlieRange.lowerBound)
+        #expect(paragraph.contains("Birdies: Alice Player on #2."))
+        #expect(paragraph.contains("Best round: Bob Player with net 8 (-3)."))
+        #expect(paragraph.contains("Bounce-back player: Alice Player, improving 5 strokes from the prior Series round."))
+    }
+
+    @Test("Round outcome narrative handles no birdies and no prior comparable round")
+    func roundOutcomeNarrativeHandlesNoBirdiesAndNoPriorRound() throws {
+        let narrative = try #require(SeriesRoundOutcomeNarrativeBuilder.build(
+            seriesRound: SeriesRound(id: "series_round_1", title: "Week 1", index: 0, roundID: "round_1"),
+            snapshot: Self.outcomeSnapshot(
+                roundID: "round_1",
+                scores: [
+                    "p_alice": [1: 4, 2: 4, 3: 3],
+                    "p_bob": [1: 5, 2: 4, 3: 4],
+                ],
+                handicaps: ["p_alice": 1, "p_bob": 2]
+            ),
+            priorRoundSnapshots: [],
+            members: Self.outcomeMembers(),
+            handicapScores: [],
+            memberHandicaps: [:]
+        ))
+
+        #expect(narrative.paragraph.contains("No birdies were recorded."))
+        #expect(!narrative.paragraph.contains("Bounce-back player"))
+    }
+
+    @Test("SeriesViewModel sync outcome narrative helper uses current view model state")
+    func viewModelRoundOutcomeNarrativeUsesSeriesState() throws {
+        let viewModel = SeriesViewModel()
+        viewModel.members = Self.outcomeMembers()
+        viewModel.memberHandicaps = [
+            "m_alice": SeriesMemberHandicap(id: "m_alice", memberID: "m_alice", computedIndex: 4.6)
+        ]
+        let round = SeriesRound(id: "series_round_1", title: "Week 1", index: 0, roundID: "round_1")
+
+        let narrative = try #require(viewModel.roundOutcomeNarrative(
+            for: round,
+            snapshot: Self.outcomeSnapshot(
+                roundID: "round_1",
+                scores: ["p_alice": [1: 4, 2: 3, 3: 3]],
+                handicaps: ["p_alice": 2]
+            )
+        ))
+
+        #expect(narrative.paragraph.contains("Alice Player net 8 (-3, gross 10, HCP 2, next week HCP 4.6)"))
+    }
+
+    private static func outcomeMembers() -> [SeriesMember] {
+        [
+            outcomeMember(id: "m_alice", playerID: "p_alice", first: "Alice"),
+            outcomeMember(id: "m_bob", playerID: "p_bob", first: "Bob"),
+            outcomeMember(id: "m_charlie", playerID: "p_charlie", first: "Charlie"),
+        ]
+    }
+
+    private static func outcomeMember(id: String, playerID: String, first: String) -> SeriesMember {
+        SeriesMember(
+            id: id,
+            userID: "u_\(id)",
+            playerID: playerID,
+            name: Name(first, "Player"),
+            role: .member,
+            isActive: true,
+            createdAt: .init(),
+            lastUpdatedAt: .init(),
+            parentID: "series1"
+        )
+    }
+
+    private static func outcomeSnapshot(
+        roundID: String,
+        scores: [String: [Int: Int]],
+        handicaps: [String: Int]
+    ) -> RoundSnapshot {
+        let tee = Tee(
+            id: "tee",
+            name: "Member",
+            gender: Gender.male.rawValue,
+            totalHoles: 3,
+            holes: [
+                Hole(number: 1, par: 4, yardage: 380, handicap: 1),
+                Hole(number: 2, par: 4, yardage: 360, handicap: 2),
+                Hole(number: 3, par: 3, yardage: 150, handicap: 3),
+            ],
+            ratingFull: 72,
+            slopeFull: 113,
+            ratingFront: nil,
+            slopeFront: nil,
+            ratingBack: nil,
+            slopeBack: nil
+        )
+        let participants = outcomeMembers().map { member in
+            RoundParticipant(
+                id: member.playerID ?? member.id,
+                playerID: member.playerID,
+                name: member.name,
+                teeBoxID: tee.id,
+                adjustedHandicap: handicaps[member.playerID ?? ""] ?? 0,
+                seriesMemberID: member.id,
+                parentID: roundID
+            )
+        }
+        let entries = scores.flatMap { participantID, holeScores in
+            holeScores.map { holeNumber, strokes in
+                ScoreEntry(
+                    id: ScoreEntry.makeID(hole: holeNumber, segment: "segment", scoringUnit: participantID),
+                    holeNumber: holeNumber,
+                    segmentID: "segment",
+                    scoringUnitID: participantID,
+                    participantIDs: [participantID],
+                    strokes: strokes,
+                    parentID: roundID
+                )
+            }
+        }
+
+        return RoundSnapshot(
+            round: Round(
+                id: roundID,
+                status: .complete,
+                configuration: RoundConfiguration(
+                    courses: [
+                        CourseSegment(
+                            courseInfo: CourseInfo(id: "course", name: "Test Course", totalHoles: 3, tees: [tee]),
+                            holeRange: HoleRange(startHole: 1, endHole: 3),
+                            defaultTee: tee.id
+                        )
+                    ],
+                    handicapStrokeBasis: .nineHole
+                )
+            ),
+            participants: participants,
+            segments: [RoundSegment(id: "segment", holeRange: HoleRange(startHole: 1, endHole: 3), parentID: roundID)],
+            scoring: entries
+        )
+    }
 }

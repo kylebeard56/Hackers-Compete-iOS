@@ -3,6 +3,7 @@
 //  Hackers
 //
 
+import AlertToast
 import SkeletonUI
 import SwiftUI
 import UIKit
@@ -14,6 +15,9 @@ struct SeriesRoundAwardsDetailSheet: View {
     @ObservedObject var viewModel: SeriesViewModel
     let seriesRound: SeriesRound
     @State private var matchupOutcomes: [SeriesMatchupOutcome] = []
+    @State private var outcomeNarrative: SeriesRoundOutcomeNarrative?
+    @State private var isOutcomeNarrativeLoading = false
+    @State private var showOutcomeCopiedToast = false
 
     private var palette: DesignPalette { .init(theme: .primary, scheme: colorScheme) }
 
@@ -29,6 +33,8 @@ struct SeriesRoundAwardsDetailSheet: View {
             ScrollView(showsIndicators: false) {
                 VStack(spacing: 16) {
                     summarySection
+
+                    outcomeParagraphSection
 
                     awardsSection(
                         title: "Team Awards",
@@ -50,8 +56,14 @@ struct SeriesRoundAwardsDetailSheet: View {
             .background(palette.backgroundColor)
         }
         .background(palette.backgroundColor.ignoresSafeArea())
+        .toast(isPresenting: $showOutcomeCopiedToast) { .completeTile("Outcome paragraph copied") }
         .task(id: seriesRound.id) {
-            matchupOutcomes = await viewModel.matchupOutcomes(for: seriesRound)
+            isOutcomeNarrativeLoading = true
+            async let outcomes = viewModel.matchupOutcomes(for: seriesRound)
+            async let narrative = viewModel.roundOutcomeNarrative(for: seriesRound)
+            matchupOutcomes = await outcomes
+            outcomeNarrative = await narrative
+            isOutcomeNarrativeLoading = false
         }
     }
 
@@ -117,6 +129,66 @@ struct SeriesRoundAwardsDetailSheet: View {
                 .frame(maxWidth: .infinity, alignment: .leading)
                 .background(palette.cardEmbeddedRowBackground)
                 .cornerRadius(14)
+            }
+        }
+        .padding(16)
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .background(palette.cardColor)
+        .cornerRadius(20)
+    }
+
+    private var outcomeParagraphSection: some View {
+        VStack(alignment: .leading, spacing: 12) {
+            HStack(spacing: 12) {
+                VStack(alignment: .leading, spacing: 4) {
+                    Text("Outcome Paragraph".uppercased())
+                        .fontStyle(kFontName, size: 13, weight: .semibold)
+                        .foregroundStyle(palette.foregroundColor)
+
+                    Text("Generated from this round's scores and Series handicap history.")
+                        .fontStyle(kFontName, size: 13, weight: .regular)
+                        .foregroundStyle(Color.neutral)
+                }
+
+                Spacer(minLength: 0)
+
+                if let paragraph = outcomeNarrative?.paragraph {
+                    Button {
+                        Haptics.fire(.light)
+                        UIPasteboard.general.string = paragraph
+                        showOutcomeCopiedToast = true
+                    } label: {
+                        Label("Copy", systemImage: "doc.on.doc")
+                            .fontStyle(kFontName, size: 13, weight: .semibold)
+                            .foregroundStyle(Color.accentGreen)
+                    }
+                    .buttonStyle(.plain)
+                    .padding(.horizontal, 10)
+                    .padding(.vertical, 7)
+                    .background(Color.accentGreen.opacity(colorScheme.translucent))
+                    .cornerRadius(10)
+                }
+            }
+
+            if isOutcomeNarrativeLoading {
+                HStack(spacing: 10) {
+                    ProgressView()
+                        .tint(Color.accentGreen)
+                    Text("Generating outcome paragraph...")
+                        .fontStyle(kFontName, size: 13, weight: .regular)
+                        .foregroundStyle(Color.neutral)
+                }
+                .padding(.vertical, 4)
+            } else if let paragraph = outcomeNarrative?.paragraph {
+                Text(paragraph)
+                    .fontStyle(kFontName, size: 14, weight: .regular)
+                    .foregroundStyle(palette.foregroundColor)
+                    .fixedSize(horizontal: false, vertical: true)
+                    .textSelection(.enabled)
+            } else {
+                Text("Outcome paragraph will appear once the completed round scores and snapshot are available.")
+                    .fontStyle(kFontName, size: 13, weight: .regular)
+                    .foregroundStyle(Color.neutral)
             }
         }
         .padding(16)

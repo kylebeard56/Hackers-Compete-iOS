@@ -92,6 +92,9 @@ struct NewSeriesRoundSheet: View {
     @State private var matchupSource: MatchupSource = .byTeam
     @State private var selectedTeamProfileID: String?
     @State private var selectedIndividualProfileID: String?
+    @State private var handicapEntryFormat: HandicapEntryFormat = .strokes
+    @State private var handicapNormalizationMode: HandicapNormalizationMode = .off
+    @State private var courseHandicapAvailable = false
     @State private var countsTowardHandicapPool = true
     @State private var excludedHandicapMemberIDs: [String] = []
     @State private var notes = ""
@@ -169,6 +172,7 @@ struct NewSeriesRoundSheet: View {
                     basicsSection
                     courseSection
                     formatSection
+                    handicapSettingsSection
                     handicapParticipationSection
                     if competitionScope == .matchup {
                         matchupSection
@@ -231,9 +235,15 @@ struct NewSeriesRoundSheet: View {
             teamScoring = defaults.teamScoring
             sequentialTeeStartsEnabled = defaults.sequentialTeeStartsEnabled ?? false
             podGroupingStrategy = defaults.podGroupingStrategy
+            handicapEntryFormat = viewModel.series.handicapConfig.entryFormat
+            handicapNormalizationMode = normalizedHandicapNormalizationMode(
+                viewModel.series.handicapConfig.normalizationMode,
+                for: competitionScope
+            )
             countsTowardHandicapPool = defaults.countsTowardHandicapPool
             excludedHandicapMemberIDs = defaults.normalizedExcludedHandicapMemberIDs
             selectedCourse = viewModel.suggestedCourseSelectionForNextRound()
+            await refreshCourseHandicapAvailability()
             matchupPlans = []
             refreshPlanningStructure(forceRegenerate: true)
             normalizeSelectedProfilesForCompetition()
@@ -242,6 +252,7 @@ struct NewSeriesRoundSheet: View {
             if newValue != .matchup {
                 matchupPlans = []
             }
+            handicapNormalizationMode = normalizedHandicapNormalizationMode(handicapNormalizationMode, for: newValue)
             refreshPlanningStructure()
             normalizeSelectedProfilesForCompetition()
         }
@@ -256,7 +267,10 @@ struct NewSeriesRoundSheet: View {
             refreshPlanningStructure()
         }
         .onChange(of: matchupPlans) { _, _ in refreshPlanningStructure() }
-        .onChange(of: selectedCourse) { _, _ in refreshPlanningStructure() }
+        .onChange(of: selectedCourse) { _, _ in
+            refreshPlanningStructure()
+            Task { await refreshCourseHandicapAvailability() }
+        }
         .onChange(of: scheduledDate) { _, _ in if hasDate { refreshPlanningStructure() } }
         .onChange(of: hasDate) { _, _ in refreshPlanningStructure(forceRegenerate: false) }
         .onChange(of: sequentialTeeStartsEnabled) { _, _ in refreshPlanningStructure() }
@@ -649,6 +663,61 @@ struct NewSeriesRoundSheet: View {
         }
     }
 
+    private var handicapSettingsSection: some View {
+        SeriesSheetCard(palette: palette) {
+            sectionHeaderRow("Handicap", status: handicapSettingsSectionStatus)
+
+            SeriesSheetRow(palette: palette) {
+                Toggle(isOn: Binding(
+                    get: { handicapEntryFormat == .courseHandicap },
+                    set: { isEnabled in
+                        handicapEntryFormat = isEnabled ? .courseHandicap : .strokes
+                    }
+                )) {
+                    VStack(alignment: .leading, spacing: 4) {
+                        Text("Course Handicap")
+                            .fontStyle(kFontName, size: 13, weight: .semibold)
+                            .foregroundStyle(courseHandicapAvailable ? palette.foregroundColor : Color.neutral)
+                        Text(courseHandicapAvailable ? "Use member index and this round's selected tee to seed playing strokes." : "Select a course and tee with rating/slope to use course handicap.")
+                            .fontStyle(kFontName, size: 12, weight: .regular)
+                            .foregroundStyle(Color.neutral)
+                    }
+                    .fixedSize(horizontal: false, vertical: true)
+                }
+                .tint(.accentGreen)
+                .disabled(!courseHandicapAvailable)
+            }
+
+            SeriesSheetRow(palette: palette) {
+                Toggle(isOn: Binding(
+                    get: { handicapNormalizationMode != .off },
+                    set: { isEnabled in
+                        handicapNormalizationMode = isEnabled
+                            ? normalizedHandicapNormalizationMode(.field, for: competitionScope)
+                            : .off
+                    }
+                )) {
+                    VStack(alignment: .leading, spacing: 4) {
+                        Text("Normalize Handicaps")
+                            .fontStyle(kFontName, size: 13, weight: .semibold)
+                            .foregroundStyle(palette.foregroundColor)
+                        Text(competitionScope == .matchup ? "Play each matchup from the lowest handicap in that pairing." : "Play the field from the lowest handicap.")
+                            .fontStyle(kFontName, size: 12, weight: .regular)
+                            .foregroundStyle(Color.neutral)
+                    }
+                    .fixedSize(horizontal: false, vertical: true)
+                }
+                .tint(.accentGreen)
+            }
+        }
+    }
+
+    private var handicapSettingsSectionStatus: SeriesRoundSheetSectionStatus {
+        if handicapEntryFormat == .courseHandicap, !courseHandicapAvailable { return .review }
+        if handicapEntryFormat == .strokes, handicapNormalizationMode == .off { return .optional }
+        return .confirmed
+    }
+
     private var matchupSection: some View {
         SeriesSheetCard(palette: palette) {
             VStack(alignment: .leading, spacing: 12) {
@@ -885,7 +954,7 @@ struct NewSeriesRoundSheet: View {
             teeGroupMode: podGroupingStrategy.usesPodAlignment ? .podAligned : .auto,
             notes: notes.isEmpty ? nil : notes,
             sharedScoreHandicapConfig: sharedScoreAllowanceConfig,
-            handicapEntryFormat: viewModel.series.handicapConfig.entryFormat,
+            handicapEntryFormat: resolvedHandicapEntryFormat,
             handicapNormalizationMode: resolvedHandicapNormalizationMode(for: competitionScope),
             countsTowardHandicapPool: countsTowardHandicapPool,
             excludedHandicapMemberIDs: excludedHandicapMemberIDs
@@ -937,7 +1006,7 @@ struct NewSeriesRoundSheet: View {
             teeGroupMode: podGroupingStrategy.usesPodAlignment ? .podAligned : .auto,
             notes: notes.isEmpty ? nil : notes,
             sharedScoreHandicapConfig: sharedScoreAllowanceConfig,
-            handicapEntryFormat: viewModel.series.handicapConfig.entryFormat,
+            handicapEntryFormat: resolvedHandicapEntryFormat,
             handicapNormalizationMode: resolvedHandicapNormalizationMode(for: competitionScope),
             countsTowardHandicapPool: countsTowardHandicapPool,
             excludedHandicapMemberIDs: excludedHandicapMemberIDs
@@ -966,8 +1035,25 @@ struct NewSeriesRoundSheet: View {
     }
 
     private func resolvedHandicapNormalizationMode(for competitionScope: CompetitionScope) -> HandicapNormalizationMode {
-        guard viewModel.series.handicapConfig.normalizationMode != .off else { return .off }
+        normalizedHandicapNormalizationMode(handicapNormalizationMode, for: competitionScope)
+    }
+
+    private var resolvedHandicapEntryFormat: HandicapEntryFormat {
+        courseHandicapAvailable ? handicapEntryFormat : .strokes
+    }
+
+    private func normalizedHandicapNormalizationMode(_ mode: HandicapNormalizationMode, for competitionScope: CompetitionScope) -> HandicapNormalizationMode {
+        guard mode != .off else { return .off }
         return competitionScope == .matchup ? .matchup : .field
+    }
+
+    @MainActor
+    private func refreshCourseHandicapAvailability() async {
+        let available = await SeriesRoundCourseHandicapAvailability.isAvailable(for: planningCourseSelection)
+        courseHandicapAvailable = available
+        if !available, handicapEntryFormat == .courseHandicap {
+            handicapEntryFormat = .strokes
+        }
     }
 
     private func sectionTitle(_ title: String) -> some View {
@@ -3426,6 +3512,50 @@ struct SeriesRoundTeeSheetPlanningCard: View {
             updated.lastUpdatedAt = .init()
             return updated
         }
+    }
+}
+
+enum SeriesRoundCourseHandicapAvailability {
+    static func isAvailable(for selection: SeriesCourseSelection?) async -> Bool {
+        guard let selection, selection.courseID.isPopulated else { return false }
+        guard let course = await loadCourse(for: selection) else { return false }
+        let totalHoles = course.tees.map(\.totalHoles).max() ?? selection.holeSegment.holeCount
+        let holeRange = selection.holeSegment.toHoleRange(totalHoles: totalHoles) ?? selection.holeSegment.holeRange
+        let defaultTee = resolvedDefaultTeeID(persistedID: selection.defaultTeeBoxID, course: course)
+        let segment = CourseSegment(
+            courseInfo: CourseInfo(course: course, for: selection.holeSegment),
+            holeRange: holeRange,
+            defaultTee: defaultTee
+        )
+        return HandicapCalculator.hasCourseHandicapData(courseSegment: segment)
+    }
+
+    private static func loadCourse(for selection: SeriesCourseSelection) async -> Course? {
+        if let apiID = Int(selection.courseID) {
+            do {
+                let apiCourse = try await GolfCourseAPI.shared.getCourse(by: apiID)
+                return Course(from: apiCourse, with: selection.courseID, useStableTeeIDs: true)
+            } catch {
+                switch await FirebaseService.shared.getCourseByID(selection.courseID) {
+                case .success(let fetched):
+                    return fetched
+                case .failure:
+                    return nil
+                }
+            }
+        }
+
+        switch await FirebaseService.shared.getCourseByID(selection.courseID) {
+        case .success(let fetched):
+            return fetched
+        case .failure:
+            return nil
+        }
+    }
+
+    private static func resolvedDefaultTeeID(persistedID: String, course: Course) -> String? {
+        guard persistedID.isPopulated else { return course.tees.first?.id }
+        return course.tees.contains(where: { $0.id == persistedID }) ? persistedID : course.tees.first?.id
     }
 }
 
