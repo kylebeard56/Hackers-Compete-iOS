@@ -214,6 +214,7 @@ final class SeriesRoundCreationMappingTests: XCTestCase {
         var cfg = SeriesRoundConfiguration()
         cfg.handicapEntryFormat = .courseHandicap
         cfg.handicapNormalizationMode = .matchup
+        cfg.handicapStrokeBasis = .nineHole
         let seriesRound = SeriesRound(id: "sr_handicap", roundConfig: cfg, parentID: "series1")
 
         let roundConfig = SeriesRoundCreationMapping.roundConfiguration(
@@ -225,6 +226,7 @@ final class SeriesRoundCreationMappingTests: XCTestCase {
 
         XCTAssertEqual(roundConfig.handicapEntryFormat, .courseHandicap)
         XCTAssertEqual(roundConfig.handicapNormalizationMode, .matchup)
+        XCTAssertEqual(roundConfig.handicapStrokeBasis, .nineHole)
     }
 
     func testTeeGroupPlansWithAdjacentPartnershipsKeepsPairsTogether() {
@@ -363,11 +365,12 @@ final class SeriesRoundCreationMappingTests: XCTestCase {
         XCTAssertEqual(disabledDraft.configuration.attendanceConfirmationEnabled, false)
     }
 
-    func testRoundDraft_carriesNineHoleHandicapBasisAndKeepsEnteredHCP() {
+    func testRoundDraft_carriesExplicitNineHoleHandicapBasisAndKeepsEnteredHCP() {
         var settings = SeriesSettings()
         settings.handicapConfig = SeriesHandicapConfig(isEnabled: true, config: .league2025, strokeBasis: .nineHole)
         let series = Series(id: "series1", settings: settings)
-        let sr = fieldSeriesRound()
+        var sr = fieldSeriesRound()
+        sr.roundConfig.handicapStrokeBasis = .nineHole
         let segment = makeCourseSegment()
         let member = makeMember(id: "m1", name: "Player", playerID: "p1")
 
@@ -389,6 +392,7 @@ final class SeriesRoundCreationMappingTests: XCTestCase {
                 "m1": SeriesMemberHandicap(id: "m1", memberID: "m1", computedIndex: 7),
             ],
             courseSegment: segment,
+            handicapStrokeBasis: sr.roundConfig.handicapStrokeBasis,
             hostPlayerID: nil
         )
 
@@ -1835,7 +1839,7 @@ final class SeriesRoundCreationMappingTests: XCTestCase {
                 "m1": SeriesMemberHandicap(
                     id: "m1",
                     memberID: "m1",
-                    computedIndex: 8.1
+                    computedIndex: 12.9
                 )
             ],
             maximumHandicap: nil,
@@ -1844,9 +1848,9 @@ final class SeriesRoundCreationMappingTests: XCTestCase {
             hostPlayerID: nil
         )
 
-        XCTAssertEqual(payloads.first?.handicapIndex, 8.1)
-        XCTAssertEqual(payloads.first?.originalHandicap, 8)
-        XCTAssertEqual(payloads.first?.adjustedHandicap, 11)
-        XCTAssertEqual(payloads.first?.leagueHandicapStrokesAtCreation, 11)
+        XCTAssertEqual(payloads.first?.handicapIndex, 12.9)
+        XCTAssertEqual(payloads.first?.originalHandicap, 13)
+        XCTAssertEqual(payloads.first?.adjustedHandicap, 17)
+        XCTAssertEqual(payloads.first?.leagueHandicapStrokesAtCreation, 17)
     }
 }

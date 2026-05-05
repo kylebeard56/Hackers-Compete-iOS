@@ -16,6 +16,7 @@ struct HandicapEntryView: View {
     var maximumValue: Int = 36
     var entryFormat: HandicapEntryFormat = .strokes
     var courseSegment: CourseSegment? = nil
+    var handicapStrokeBasis: SeriesHandicapStrokeBasis = .eighteenHole
     var onComplete: CallbackValue<RoundParticipant>? = nil
     
     @FocusState private var focus: Bool
@@ -47,7 +48,8 @@ struct HandicapEntryView: View {
                                     applying: handicapValue,
                                     format: entryFormat,
                                     courseSegment: courseSegment,
-                                    maximumHandicap: maximumValue
+                                    maximumHandicap: maximumValue,
+                                    handicapStrokeBasis: handicapStrokeBasis
                                 )
                             )
                         }
@@ -55,7 +57,7 @@ struct HandicapEntryView: View {
                 }
             }
             
-            Text(entryFormat == .courseHandicap ? "Enter \(participant.name.fullName)'s handicap index. Course HCP \(computedHandicap)." : "Enter the number of strokes \(participant.name.fullName) should get over \(holes) holes (max of \(maximumValue)).")
+            Text(entryFormat == .courseHandicap ? "Enter \(participant.name.fullName)'s handicap index." : "Enter the number of strokes \(participant.name.fullName) should get over \(holes) holes (max of \(maximumValue)).")
                 .fontStyle(kFontName, size: 15, weight: .regular)
                 .foregroundStyle(Color.neutral)
                 .multilineTextAlignment(.leading)
@@ -67,6 +69,13 @@ struct HandicapEntryView: View {
                 .keyboardType(entryFormat == .courseHandicap ? .decimalPad : .numberPad)
                 .focused($focus)
                 .alignCenter()
+
+            if entryFormat == .courseHandicap, let computedCourseHandicap {
+                Text("Course HCP: \(String(format: "%.1f", computedCourseHandicap))")
+                    .fontStyle(kFontName, size: 15, weight: .semibold)
+                    .foregroundStyle(Color.neutral)
+                    .alignLeading()
+            }
             
             Spacer(minLength: 0)
         }
@@ -95,13 +104,12 @@ struct HandicapEntryView: View {
         }
     }
 
-    private var computedHandicap: Int {
-        HandicapCalculator.strokes(
-            for: handicapValue,
-            format: entryFormat,
+    private var computedCourseHandicap: Double? {
+        HandicapCalculator.rawCourseHandicap(
+            index: handicapValue,
             participant: participant,
             courseSegment: courseSegment,
-            maximumHandicap: maximumValue
+            handicapStrokeBasis: handicapStrokeBasis
         )
     }
 

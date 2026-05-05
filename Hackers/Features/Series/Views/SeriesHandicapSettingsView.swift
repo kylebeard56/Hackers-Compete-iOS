@@ -16,7 +16,7 @@ struct SeriesHandicapSettingsView: View {
     @State private var defaultPar: Double = 36
     @State private var maximumHandicap: Int = 21
     @State private var minimumScores: Int = 1
-    @State private var bestNScores: Int = 1
+    @State private var gamesUsedMatrixRows: [GamesUsedMatrixRow] = HandicapComputationConfigDTO.league2025.gamesUsedMatrixRows()
     @State private var usesCourseRatingSlopeAdjustment = true
     @State private var entryFormat: HandicapEntryFormat = .strokes
     @State private var normalizationMode: HandicapNormalizationMode = .off
@@ -231,14 +231,16 @@ struct SeriesHandicapSettingsView: View {
                     get: { entryFormat == .courseHandicap },
                     set: { entryFormat = $0 ? .courseHandicap : .strokes }
                 )) {
-                    VStack(alignment: .leading, spacing: 4) {
-                        Text("Course Handicap")
-                            .fontStyle(kFontName, size: 13, weight: .semibold)
-                            .foregroundStyle(palette.foregroundColor)
-                        Text("Use member index and selected round tee to seed strokes.")
-                            .fontStyle(kFontName, size: 12, weight: .regular)
-                            .foregroundStyle(Color.neutral)
-                    }
+                    Text("Course Handicap")
+                    Text("Use member index and selected round tee to seed strokes.")
+//                    VStack(alignment: .leading, spacing: 4) {
+//                        Text("Course Handicap")
+//                            .fontStyle(kFontName, size: 13, weight: .semibold)
+//                            .foregroundStyle(palette.foregroundColor)
+//                        Text("Use member index and selected round tee to seed strokes.")
+//                            .fontStyle(kFontName, size: 12, weight: .regular)
+//                            .foregroundStyle(Color.neutral)
+//                    }
                 }
                 .tint(.accentGreen)
             }
@@ -248,22 +250,24 @@ struct SeriesHandicapSettingsView: View {
                     get: { normalizationMode != .off },
                     set: { normalizationMode = $0 ? .field : .off }
                 )) {
-                    VStack(alignment: .leading, spacing: 4) {
-                        Text("Normalize Handicaps")
-                            .fontStyle(kFontName, size: 13, weight: .semibold)
-                            .foregroundStyle(palette.foregroundColor)
-                        Text("Play net strokes from the lowest handicap in each field or matchup.")
-                            .fontStyle(kFontName, size: 12, weight: .regular)
-                            .foregroundStyle(Color.neutral)
-                    }
+                    Text("Normalize Handicaps")
+                    Text("Play net strokes from the lowest handicap in each field or matchup.")
+//                    VStack(alignment: .leading, spacing: 4) {
+//                        Text("Normalize Handicaps")
+//                            .fontStyle(kFontName, size: 13, weight: .semibold)
+//                            .foregroundStyle(palette.foregroundColor)
+//                        Text("Play net strokes from the lowest handicap in each field or matchup.")
+//                            .fontStyle(kFontName, size: 12, weight: .regular)
+//                            .foregroundStyle(Color.neutral)
+//                    }
                 }
                 .tint(.accentGreen)
             }
 
             SeriesSheetRow(palette: palette) {
                 configRow(
-                    title: "Pool size",
-                    subtitle: "How many recent scores by date are considered."
+                    title: "Recent score window",
+                    subtitle: "Optional cap on the newest eligible scores before the matrix is applied."
                 ) {
                     Menu {
                         Button {
@@ -296,27 +300,7 @@ struct SeriesHandicapSettingsView: View {
                 }
             }
 
-            SeriesSheetRow(palette: palette) {
-                configRow(title: "Scores in average", subtitle: "How many low scores from the pool count toward the index") {
-                    Menu {
-                        ForEach(1...8, id: \.self) { n in
-                            Button {
-                                bestNScores = n
-                                updatePreview()
-                            } label: {
-                                HStack {
-                                    Text("\(n)")
-                                    if bestNScores == n {
-                                        Image(systemName: "checkmark")
-                                    }
-                                }
-                            }
-                        }
-                    } label: {
-                        configMenuLabel("\(bestNScores)")
-                    }
-                }
-            }
+            scoresUsedMatrixSection
 
             SeriesSheetRow(palette: palette) {
                 configRow(title: "Score pool", subtitle: scorePoolSubtitle) {
@@ -393,6 +377,88 @@ struct SeriesHandicapSettingsView: View {
                 }
             }
         }
+    }
+
+    private var scoresUsedMatrixSection: some View {
+        SeriesSheetRow(palette: palette) {
+            VStack(alignment: .leading, spacing: 12) {
+                VStack(alignment: .leading, spacing: 4) {
+                    Text("Scores Used Matrix")
+                        .fontStyle(kFontName, size: 13, weight: .semibold)
+                        .foregroundStyle(palette.foregroundColor)
+                    Text("Choose how many lowest scores count once a member has that many eligible scores.")
+                        .fontStyle(kFontName, size: 12, weight: .regular)
+                        .foregroundStyle(Color.neutral)
+                        .fixedSize(horizontal: false, vertical: true)
+                }
+
+                HStack {
+                    Text("Played")
+                        .fontStyle(kFontName, size: 11, weight: .semibold)
+                        .foregroundStyle(Color.neutral)
+                        .frame(maxWidth: .infinity, alignment: .leading)
+                    Text("Used")
+                        .fontStyle(kFontName, size: 11, weight: .semibold)
+                        .foregroundStyle(Color.neutral)
+                        .frame(width: 88, alignment: .center)
+                }
+
+                LazyVGrid(
+                    columns: [
+                        GridItem(.flexible(), spacing: 8),
+                        GridItem(.flexible(), spacing: 8),
+                    ],
+                    spacing: 8
+                ) {
+                    ForEach(gamesUsedMatrixRows.indices, id: \.self) { index in
+                        gamesUsedMatrixCell(index: index)
+                    }
+                }
+            }
+        }
+    }
+
+    private func gamesUsedMatrixCell(index: Int) -> some View {
+        let row = gamesUsedMatrixRows[index]
+        return HStack(spacing: 8) {
+            Text("\(row.played)")
+                .fontStyle(kFontName, size: 13, weight: .semibold)
+                .foregroundStyle(palette.foregroundColor)
+                .frame(width: 28, alignment: .leading)
+
+            Spacer(minLength: 0)
+
+            Menu {
+                ForEach(1...row.played, id: \.self) { used in
+                    Button {
+                        gamesUsedMatrixRows[index].used = used
+                        updatePreview()
+                    } label: {
+                        HStack {
+                            Text("\(used)")
+                            if row.used == used {
+                                Image(systemName: "checkmark")
+                            }
+                        }
+                    }
+                }
+            } label: {
+                Text("\(HandicapComputationConfigDTO.clampedGamesUsed(row.used, played: row.played))")
+                    .fontStyle(kFontName, size: 13, weight: .semibold)
+                    .foregroundStyle(Color.charcoal)
+                    .frame(width: 42, height: 30)
+                    .background(
+                        RoundedRectangle(cornerRadius: 8)
+                            .fill(Color.neutral6.opacity(0.4))
+                    )
+            }
+        }
+        .padding(.horizontal, 10)
+        .padding(.vertical, 8)
+        .background(
+            RoundedRectangle(cornerRadius: 8)
+                .fill(palette.cardEmbeddedRowBackground)
+        )
     }
 
     private func configRow<Content: View>(title: String, subtitle: String, @ViewBuilder trailing: () -> Content) -> some View {
@@ -616,10 +682,7 @@ struct SeriesHandicapSettingsView: View {
         usesCourseRatingSlopeAdjustment = hc.config.usesCourseRatingSlopeAdjustment
         entryFormat = hc.entryFormat
         normalizationMode = hc.normalizationMode
-
-        if let first = hc.config.gamesUsedRules.first {
-            bestNScores = first.used
-        }
+        gamesUsedMatrixRows = hc.config.gamesUsedMatrixRows()
         scorePoolPolicy = hc.config.toConfig().scorePoolPolicy
         rollingPoolSize = hc.config.rollingPoolSize
     }
@@ -638,7 +701,7 @@ struct SeriesHandicapSettingsView: View {
     }
 
     private func save() {
-        let rules = [GamesUsedRuleDTO(playedLower: 1, playedUpper: 100, used: bestNScores)]
+        let rules = HandicapComputationConfigDTO.compressedGamesUsedRules(fromMatrix: gamesUsedMatrixRows)
         let dto = mergedHandicapDTO(rules: rules)
         let config = SeriesHandicapConfig(
             mode: handicapMode,
@@ -680,7 +743,7 @@ struct SeriesHandicapSettingsView: View {
                 sortOrder: index
             )
         }
-        let rules = [GamesUsedRuleDTO(playedLower: 1, playedUpper: 100, used: bestNScores)]
+        let rules = HandicapComputationConfigDTO.compressedGamesUsedRules(fromMatrix: gamesUsedMatrixRows)
         let dto = mergedHandicapDTO(rules: rules)
         previewResult = computeHandicapIndex(samples: samples, config: dto.toConfig())
     }
@@ -702,7 +765,7 @@ struct SeriesHandicapSettingsView: View {
     }
 
     private func previewPoolFootnote(for result: HandicapIndexResult) -> String {
-        let poolPrefix = rollingPoolSize.map { "Last \($0) scores by date in pool. " } ?? ""
+        let poolPrefix = rollingPoolSize.map { "Recent window: last \($0) scores by date. " } ?? ""
         let values = result.selectedBestScores.map { String(format: "%.0f", $0) }.joined(separator: ", ")
         switch scorePoolPolicy {
         case .bestOfUsedCount:

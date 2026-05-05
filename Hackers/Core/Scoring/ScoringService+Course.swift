@@ -17,7 +17,12 @@ extension ScoringService {
 }
 
 enum HandicapCalculator {
-    static func courseHandicap(index: Double, tee: Tee, segment: HoleSegment) -> Int? {
+    static func rawCourseHandicap(
+        index: Double,
+        tee: Tee,
+        segment: HoleSegment,
+        handicapStrokeBasis: SeriesHandicapStrokeBasis = .eighteenHole
+    ) -> Double? {
         guard let rating = tee.rating(for: segment),
               let slope = tee.slope(for: segment),
               slope > 0 else {
@@ -27,23 +32,59 @@ enum HandicapCalculator {
         let par = tee.par(for: segment)
         guard par > 0 else { return nil }
 
-        let indexBasis: Double
-        switch segment {
-        case .front9, .back9:
-            indexBasis = (index / 2.0 * 10).rounded() / 10
-        case .full18, .custom:
-            indexBasis = index
-        }
+        let indexBasis = courseHandicapIndexBasis(
+            index,
+            inputBasis: handicapStrokeBasis,
+            segment: segment
+        )
 
-        return max(0, Int((indexBasis * (Double(slope) / 113.0) + (rating - Double(par))).rounded()))
+        return max(0, indexBasis * (Double(slope) / 113.0) + (rating - Double(par)))
     }
 
-    static func courseHandicap(index: Double, participant: RoundParticipant, courseSegment: CourseSegment?) -> Int? {
+    static func courseHandicap(
+        index: Double,
+        tee: Tee,
+        segment: HoleSegment,
+        handicapStrokeBasis: SeriesHandicapStrokeBasis = .eighteenHole
+    ) -> Int? {
+        rawCourseHandicap(
+            index: index,
+            tee: tee,
+            segment: segment,
+            handicapStrokeBasis: handicapStrokeBasis
+        ).map { Int($0.rounded()) }
+    }
+
+    static func rawCourseHandicap(
+        index: Double,
+        participant: RoundParticipant,
+        courseSegment: CourseSegment?,
+        handicapStrokeBasis: SeriesHandicapStrokeBasis = .eighteenHole
+    ) -> Double? {
         guard let courseSegment,
               let tee = tee(for: participant, in: courseSegment) else {
             return nil
         }
-        return courseHandicap(index: index, tee: tee, segment: courseSegment.holeSegment)
+        return rawCourseHandicap(
+            index: index,
+            tee: tee,
+            segment: courseSegment.holeSegment,
+            handicapStrokeBasis: handicapStrokeBasis
+        )
+    }
+
+    static func courseHandicap(
+        index: Double,
+        participant: RoundParticipant,
+        courseSegment: CourseSegment?,
+        handicapStrokeBasis: SeriesHandicapStrokeBasis = .eighteenHole
+    ) -> Int? {
+        rawCourseHandicap(
+            index: index,
+            participant: participant,
+            courseSegment: courseSegment,
+            handicapStrokeBasis: handicapStrokeBasis
+        ).map { Int($0.rounded()) }
     }
 
     static func hasCourseHandicapData(for participant: RoundParticipant? = nil, courseSegment: CourseSegment?) -> Bool {
@@ -65,14 +106,20 @@ enum HandicapCalculator {
         format: HandicapEntryFormat,
         participant: RoundParticipant,
         courseSegment: CourseSegment?,
-        maximumHandicap: Int? = nil
+        maximumHandicap: Int? = nil,
+        handicapStrokeBasis: SeriesHandicapStrokeBasis = .eighteenHole
     ) -> Int {
         let raw: Int
         switch format {
         case .strokes:
             raw = Int(input.rounded())
         case .courseHandicap:
-            raw = courseHandicap(index: input, participant: participant, courseSegment: courseSegment)
+            raw = courseHandicap(
+                index: input,
+                participant: participant,
+                courseSegment: courseSegment,
+                handicapStrokeBasis: handicapStrokeBasis
+            )
                 ?? Int(input.rounded())
         }
         return capped(raw, maximumHandicap: maximumHandicap)
@@ -83,7 +130,8 @@ enum HandicapCalculator {
         applying input: Double,
         format: HandicapEntryFormat,
         courseSegment: CourseSegment?,
-        maximumHandicap: Int? = nil
+        maximumHandicap: Int? = nil,
+        handicapStrokeBasis: SeriesHandicapStrokeBasis = .eighteenHole
     ) -> RoundParticipant {
         var updated = participant
         updated.handicapIndex = format == .courseHandicap ? input : nil
@@ -93,7 +141,8 @@ enum HandicapCalculator {
             format: format,
             participant: updated,
             courseSegment: courseSegment,
-            maximumHandicap: maximumHandicap
+            maximumHandicap: maximumHandicap,
+            handicapStrokeBasis: handicapStrokeBasis
         )
         return updated
     }
@@ -102,7 +151,8 @@ enum HandicapCalculator {
         _ participants: [RoundParticipant],
         format: HandicapEntryFormat,
         courseSegment: CourseSegment?,
-        maximumHandicap: Int? = nil
+        maximumHandicap: Int? = nil,
+        handicapStrokeBasis: SeriesHandicapStrokeBasis = .eighteenHole
     ) -> [RoundParticipant] {
         participants.map { participant in
             let input = participant.handicapIndex ?? Double(participant.originalHandicap)
@@ -111,8 +161,25 @@ enum HandicapCalculator {
                 applying: input,
                 format: format,
                 courseSegment: courseSegment,
-                maximumHandicap: maximumHandicap
+                maximumHandicap: maximumHandicap,
+                handicapStrokeBasis: handicapStrokeBasis
             )
+        }
+    }
+
+    private static func courseHandicapIndexBasis(
+        _ index: Double,
+        inputBasis: SeriesHandicapStrokeBasis,
+        segment: HoleSegment
+    ) -> Double {
+        let targetBasis: SeriesHandicapStrokeBasis = segment.holeCount <= 9 ? .nineHole : .eighteenHole
+        switch (inputBasis, targetBasis) {
+        case (.eighteenHole, .nineHole):
+            return (index / 2.0 * 10).rounded() / 10
+        case (.nineHole, .eighteenHole):
+            return index * 2.0
+        case (.nineHole, .nineHole), (.eighteenHole, .eighteenHole):
+            return index
         }
     }
 

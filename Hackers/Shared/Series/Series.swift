@@ -567,6 +567,8 @@ struct SeriesRoundConfiguration: Hashable, Codable {
     var scoreBasisOverride: ScoreBasis?
     /// Optional format-specific allowance for shared-score scoring units, applied by handicap rank.
     var sharedScoreHandicapConfig: HandicapConfiguration?
+    /// Optional basis for round playing handicaps. Nil means infer from the round hole count.
+    var handicapStrokeBasis: SeriesHandicapStrokeBasis?
     var handicapEntryFormat: HandicapEntryFormat
     var handicapNormalizationMode: HandicapNormalizationMode
     var countsTowardHandicapPool: Bool
@@ -594,6 +596,7 @@ struct SeriesRoundConfiguration: Hashable, Codable {
         allowLobbyBackPropagation: Bool = true,
         scoreBasisOverride: ScoreBasis? = nil,
         sharedScoreHandicapConfig: HandicapConfiguration? = nil,
+        handicapStrokeBasis: SeriesHandicapStrokeBasis? = nil,
         handicapEntryFormat: HandicapEntryFormat = .strokes,
         handicapNormalizationMode: HandicapNormalizationMode = .off,
         countsTowardHandicapPool: Bool = true,
@@ -620,6 +623,7 @@ struct SeriesRoundConfiguration: Hashable, Codable {
         self.allowLobbyBackPropagation = allowLobbyBackPropagation
         self.scoreBasisOverride = scoreBasisOverride
         self.sharedScoreHandicapConfig = sharedScoreHandicapConfig
+        self.handicapStrokeBasis = handicapStrokeBasis
         self.handicapEntryFormat = handicapEntryFormat
         self.handicapNormalizationMode = handicapNormalizationMode
         self.countsTowardHandicapPool = countsTowardHandicapPool
@@ -650,6 +654,7 @@ struct SeriesRoundConfiguration: Hashable, Codable {
         case allowLobbyBackPropagation = "allow_lobby_back_propagation"
         case scoreBasisOverride = "score_basis_override"
         case sharedScoreHandicapConfig = "shared_score_handicap_config"
+        case handicapStrokeBasis = "handicap_stroke_basis"
         case handicapEntryFormat = "handicap_entry_format"
         case handicapNormalizationMode = "handicap_normalization_mode"
         case countsTowardHandicapPool = "counts_toward_handicap_pool"
@@ -707,6 +712,7 @@ struct SeriesRoundConfiguration: Hashable, Codable {
         allowLobbyBackPropagation = try c.decodeIfPresent(Bool.self, forKey: .allowLobbyBackPropagation) ?? true
         scoreBasisOverride = try c.decodeIfPresent(ScoreBasis.self, forKey: .scoreBasisOverride)
         sharedScoreHandicapConfig = try c.decodeIfPresent(HandicapConfiguration.self, forKey: .sharedScoreHandicapConfig)
+        handicapStrokeBasis = try c.decodeIfPresent(SeriesHandicapStrokeBasis.self, forKey: .handicapStrokeBasis)
         handicapEntryFormat = try c.decodeIfPresent(HandicapEntryFormat.self, forKey: .handicapEntryFormat) ?? .strokes
         handicapNormalizationMode = try c.decodeIfPresent(HandicapNormalizationMode.self, forKey: .handicapNormalizationMode) ?? .off
         countsTowardHandicapPool = try c.decodeIfPresent(Bool.self, forKey: .countsTowardHandicapPool) ?? true
@@ -754,6 +760,7 @@ struct SeriesRoundConfiguration: Hashable, Codable {
         try c.encode(allowLobbyBackPropagation, forKey: .allowLobbyBackPropagation)
         try c.encodeIfPresent(scoreBasisOverride, forKey: .scoreBasisOverride)
         try c.encodeIfPresent(sharedScoreHandicapConfig, forKey: .sharedScoreHandicapConfig)
+        try c.encodeIfPresent(handicapStrokeBasis, forKey: .handicapStrokeBasis)
         try c.encode(handicapEntryFormat, forKey: .handicapEntryFormat)
         try c.encode(handicapNormalizationMode, forKey: .handicapNormalizationMode)
         try c.encode(countsTowardHandicapPool, forKey: .countsTowardHandicapPool)

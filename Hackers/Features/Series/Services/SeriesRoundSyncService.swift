@@ -118,7 +118,7 @@ struct SeriesRoundSyncService: Loggable {
         if options.syncHandicapSettings {
             workingRound.configuration.handicapEntryFormat = seriesRound.roundConfig.handicapEntryFormat
             workingRound.configuration.handicapNormalizationMode = seriesRound.roundConfig.handicapNormalizationMode
-            workingRound.configuration.handicapStrokeBasis = series.handicapConfig.strokeBasis
+            workingRound.configuration.handicapStrokeBasis = seriesRound.roundConfig.handicapStrokeBasis
             workingRound.lastUpdatedAt = .init()
             switch await workingRound.put() {
             case .success(let updated):
@@ -132,8 +132,8 @@ struct SeriesRoundSyncService: Loggable {
         if !options.syncFormat,
            !options.syncHandicapSettings,
            (options.syncPlayerData || options.syncOrganization),
-           workingRound.configuration.handicapStrokeBasis != series.handicapConfig.strokeBasis {
-            workingRound.configuration.handicapStrokeBasis = series.handicapConfig.strokeBasis
+           workingRound.configuration.handicapStrokeBasis != seriesRound.roundConfig.handicapStrokeBasis {
+            workingRound.configuration.handicapStrokeBasis = seriesRound.roundConfig.handicapStrokeBasis
             workingRound.lastUpdatedAt = .init()
             switch await workingRound.put() {
             case .success(let updated):
@@ -284,6 +284,7 @@ struct SeriesRoundSyncService: Loggable {
                 maximumHandicap: series.handicapConfig.isEnabled ? series.handicapConfig.config.maximumHandicap : nil,
                 courseSegment: courseSegment,
                 handicapEntryFormat: workingRound.configuration.handicapEntryFormat,
+                handicapStrokeBasis: workingRound.configuration.handicapStrokeBasis,
                 hostPlayerID: hostPlayerID,
                 preserveManualHandicapEdits: options.preserveManualHandicapEdits
             )
@@ -303,7 +304,10 @@ struct SeriesRoundSyncService: Loggable {
                     applying: input,
                     format: workingRound.configuration.handicapEntryFormat,
                     courseSegment: courseSegment,
-                    maximumHandicap: series.handicapConfig.isEnabled ? series.handicapConfig.config.maximumHandicap : nil
+                    maximumHandicap: series.handicapConfig.isEnabled ? series.handicapConfig.config.maximumHandicap : nil,
+                    handicapStrokeBasis: workingRound.configuration.resolvedHandicapStrokeBasis(
+                        holeCount: courseSegment.holeSegment.holeCount
+                    )
                 )
                 next.leagueHandicapStrokesAtCreation = next.adjustedHandicap
                 next.lastUpdatedAt = .init()

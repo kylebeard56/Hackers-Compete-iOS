@@ -16,7 +16,7 @@ extension GameLobby {
                 .foregroundStyle(palette.foregroundColor)
                 .alignCenter()
             
-            Toggle(isOn: $handicapsEnabled, label: {
+            HStack(spacing: 12) {
                 VStack(spacing: 4) {
                     Text("Handicaps")
                         .fontStyle(kFontName, size: 13, weight: .semibold)
@@ -28,17 +28,21 @@ extension GameLobby {
                         .foregroundStyle(Color.neutral)
                         .alignLeading()
                 }
-            })
-            .tint(.accentGreen)
-            .onChange(of: handicapsEnabled) {
-                Task {
-                    await roundSession.toggleHandicaps(handicapsEnabled)
-                }
-            }
 
-            if handicapsEnabled {
-                handicapEntryFormatRow
-                handicapNormalizationRow
+                Spacer(minLength: 0)
+
+                Toggle("", isOn: $handicapsEnabled)
+                    .labelsHidden()
+                    .tint(.accentGreen)
+                    .onChange(of: handicapsEnabled) {
+                        Task {
+                            await roundSession.toggleHandicaps(handicapsEnabled)
+                        }
+                    }
+
+                if handicapsEnabled {
+                    handicapOptionsMenu
+                }
             }
             
             Toggle(isOn: $teamsEnabled, label: {
@@ -118,55 +122,106 @@ extension GameLobby {
         HandicapCalculator.hasCourseHandicapData(courseSegment: snapshot.courseSegment)
     }
 
-    private var handicapEntryFormatRow: some View {
-        Toggle(isOn: Binding(
-            get: { handicapEntryFormat == .courseHandicap },
-            set: { newValue in
-                let next: HandicapEntryFormat = newValue ? .courseHandicap : .strokes
+    private var handicapOptionsMenu: some View {
+        Menu {
+            Button {
+                guard courseHandicapAvailable else { return }
+                Haptics.fire(.light)
+                let next: HandicapEntryFormat = handicapEntryFormat == .courseHandicap ? .strokes : .courseHandicap
                 handicapEntryFormat = next
                 Task { await roundSession.setHandicapEntryFormat(next, maximumHandicap: seriesLeagueHandicapMaximum) }
+            } label: {
+                Label(
+                    "Course Handicap",
+                    systemImage: handicapEntryFormat == .courseHandicap ? "checkmark.circle.fill" : "circle"
+                )
+                Text(courseHandicapMenuSubtitle)
             }
-        )) {
-            VStack(spacing: 4) {
-                Text("Course Handicap")
-                    .fontStyle(kFontName, size: 13, weight: .semibold)
-                    .foregroundStyle(courseHandicapAvailable ? palette.foregroundColor : Color.neutral)
-                    .alignLeading()
+            .menuActionDismissBehavior(.disabled)
+            .disabled(!courseHandicapAvailable)
 
-                Text(courseHandicapAvailable ? "Convert index entries using the selected tee rating and slope" : "Select a course and tee with rating/slope to use index entries")
-                    .fontStyle(kFontName, size: 12, weight: .regular)
-                    .foregroundStyle(Color.neutral)
-                    .alignLeading()
-            }
-        }
-        .disabled(!courseHandicapAvailable)
-        .tint(.accentGreen)
-    }
-
-    private var handicapNormalizationRow: some View {
-        Toggle(isOn: Binding(
-            get: { handicapNormalizationMode != .off },
-            set: { newValue in
-                let next: HandicapNormalizationMode = newValue
+            Button {
+                Haptics.fire(.light)
+                let next: HandicapNormalizationMode = handicapNormalizationMode == .off
                     ? (snapshot.configuration.resolvedCompetitionScope == .matchup ? .matchup : .field)
                     : .off
                 handicapNormalizationMode = next
                 Task { await roundSession.setHandicapNormalizationMode(next) }
+            } label: {
+                Label(
+                    "Normalize Handicaps",
+                    systemImage: handicapNormalizationMode == .off ? "circle" : "checkmark.circle.fill"
+                )
+                Text(normalizeHandicapsMenuSubtitle)
             }
-        )) {
-            VStack(spacing: 4) {
-                Text("Normalize Handicaps")
-                    .fontStyle(kFontName, size: 13, weight: .semibold)
-                    .foregroundStyle(palette.foregroundColor)
-                    .alignLeading()
+            .menuActionDismissBehavior(.disabled)
 
-                Text(snapshot.configuration.resolvedCompetitionScope == .matchup ? "Play each matchup from the lowest handicap in that pairing" : "Play the field from the lowest handicap")
-                    .fontStyle(kFontName, size: 12, weight: .regular)
-                    .foregroundStyle(Color.neutral)
-                    .alignLeading()
+            Menu {
+                Button {
+                    Haptics.fire(.light)
+                    handicapStrokeBasis = nil
+                    Task { await roundSession.setHandicapStrokeBasis(nil, maximumHandicap: seriesLeagueHandicapMaximum) }
+                } label: {
+                    HStack {
+                        Text("Auto")
+                        if handicapStrokeBasis == nil {
+                            Image(systemName: "checkmark")
+                        }
+                    }
+                }
+
+                ForEach(SeriesHandicapStrokeBasis.allCases, id: \.self) { basis in
+                    Button {
+                        Haptics.fire(.light)
+                        handicapStrokeBasis = basis
+                        Task { await roundSession.setHandicapStrokeBasis(basis, maximumHandicap: seriesLeagueHandicapMaximum) }
+                    } label: {
+                        HStack {
+                            Text(basis.displayName)
+                            if handicapStrokeBasis == basis {
+                                Image(systemName: "checkmark")
+                            }
+                        }
+                    }
+                }
+            } label: {
+                Label("Hole Basis", systemImage: "circle.grid.2x1")
+                Text(handicapStrokeBasisDescription)
             }
+            .menuActionDismissBehavior(.disabled)
+        } label: {
+            Image(systemName: "pencil")
+                .font(.system(size: 16, weight: .semibold))
+                .foregroundStyle(Color.charcoal)
+                .frame(width: 44, height: 44)
+                .glassCardEffect(cornerRadius: 22, tint: palette.whiteGlassButtonColor, shadowOpacity: 0)
+                .whiteGlassCardShadow(color: palette.shadowColor)
+                .accessibilityLabel("Handicap options")
         }
-        .tint(.accentGreen)
+        .menuActionDismissBehavior(.disabled)
+    }
+
+    private var courseHandicapMenuSubtitle: String {
+        courseHandicapAvailable
+            ? "Convert index entries using the selected tee rating and slope"
+            : "Select a course and tee with rating/slope to use index entries"
+    }
+
+    private var normalizeHandicapsMenuSubtitle: String {
+        snapshot.configuration.resolvedCompetitionScope == .matchup
+            ? "Play each matchup from the lowest handicap in that pairing"
+            : "Play the field from the lowest handicap"
+    }
+
+    private var handicapStrokeBasisDisplay: String {
+        handicapStrokeBasis?.displayName ?? "Auto"
+    }
+
+    private var handicapStrokeBasisDescription: String {
+        if handicapStrokeBasis == nil {
+            return "Auto currently uses \(snapshot.handicapStrokeBasis.displayName)"
+        }
+        return "\(handicapStrokeBasisDisplay) values"
     }
 
     @ViewBuilder

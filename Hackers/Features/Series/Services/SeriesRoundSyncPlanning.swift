@@ -384,6 +384,7 @@ enum SeriesRoundSyncPlanning {
         maximumHandicap: Int? = nil,
         courseSegment: CourseSegment,
         handicapEntryFormat: HandicapEntryFormat = .strokes,
+        handicapStrokeBasis: SeriesHandicapStrokeBasis? = nil,
         hostPlayerID: String?,
         preserveManualHandicapEdits: Bool
     ) -> [RoundParticipant] {
@@ -396,6 +397,7 @@ enum SeriesRoundSyncPlanning {
             maximumHandicap: maximumHandicap,
             courseSegment: courseSegment,
             handicapEntryFormat: handicapEntryFormat,
+            handicapStrokeBasis: handicapStrokeBasis,
             hostPlayerID: hostPlayerID
         )
         let templateByMemberID = Dictionary(uniqueKeysWithValues: zip(participatingMembers.map(\.id), templates))
@@ -421,6 +423,7 @@ enum SeriesRoundSyncPlanning {
             if preserveManualHandicapEdits, existing.isLeagueHandicapModifiedFromCreation {
                 next.originalHandicap = existing.originalHandicap
                 next.adjustedHandicap = existing.adjustedHandicap
+                next.handicapIndex = existing.handicapIndex
                 next.leagueHandicapStrokesAtCreation = existing.leagueHandicapStrokesAtCreation
             }
 
@@ -544,6 +547,7 @@ enum SeriesRoundSyncPlanning {
             maximumHandicap: series.handicapConfig.isEnabled ? series.handicapConfig.config.maximumHandicap : nil,
             courseSegment: courseSegment,
             handicapEntryFormat: seriesRound.roundConfig.handicapEntryFormat,
+            handicapStrokeBasis: seriesRound.roundConfig.handicapStrokeBasis,
             hostPlayerID: hostPlayerID,
             presenceStatusByMemberID: presenceStatusByMemberID
         )
@@ -604,7 +608,7 @@ enum SeriesRoundSyncPlanning {
 
         var round = snapshot.round
         round.players = workingParticipants.compactMap(\.playerID)
-        round.configuration.handicapStrokeBasis = series.handicapConfig.strokeBasis
+        round.configuration.handicapStrokeBasis = seriesRound.roundConfig.handicapStrokeBasis
         round.lastUpdatedAt = .init()
 
         let mappingsToPut = buildSeriesRoundMappings(

@@ -302,8 +302,8 @@ extension ManagePlayerView {
                 }
             }
 
-            if snapshot.configuration.handicapEntryFormat == .courseHandicap {
-                Text("Course HCP \(computedHandicapValue)")
+            if snapshot.configuration.handicapEntryFormat == .courseHandicap, let computedCourseHandicapValue {
+                Text("Course HCP: \(String(format: "%.1f", computedCourseHandicapValue))")
                     .fontStyle(kFontName, size: 13, weight: .semibold)
                     .foregroundStyle(Color.neutral)
                     .alignLeading()
@@ -521,7 +521,8 @@ extension ManagePlayerView {
             applying: handicapValue,
             format: snapshot.configuration.handicapEntryFormat,
             courseSegment: courseSegment,
-            maximumHandicap: maximumHandicapValue
+            maximumHandicap: maximumHandicapValue,
+            handicapStrokeBasis: snapshot.handicapStrokeBasis
         )
         if seriesHandicapLockActive && isSeriesCommissioner {
             p.adjustedHandicap = computed.adjustedHandicap
@@ -547,10 +548,26 @@ extension ManagePlayerView {
         HandicapCalculator.strokes(
             for: handicapValue,
             format: snapshot.configuration.handicapEntryFormat,
-            participant: participant ?? .init(teeBoxID: tee?.id ?? ""),
+            participant: handicapComputationParticipant,
             courseSegment: participantCourseSegment,
-            maximumHandicap: maximumHandicapValue
+            maximumHandicap: maximumHandicapValue,
+            handicapStrokeBasis: snapshot.handicapStrokeBasis
         )
+    }
+
+    private var computedCourseHandicapValue: Double? {
+        HandicapCalculator.rawCourseHandicap(
+            index: handicapValue,
+            participant: handicapComputationParticipant,
+            courseSegment: participantCourseSegment,
+            handicapStrokeBasis: snapshot.handicapStrokeBasis
+        )
+    }
+
+    private var handicapComputationParticipant: RoundParticipant {
+        var p = participant ?? .init()
+        p.teeBoxID = tee?.id ?? p.teeBoxID
+        return p
     }
 
     private func formattedHandicapInput(_ value: Double) -> String {

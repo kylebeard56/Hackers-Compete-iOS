@@ -95,6 +95,7 @@ struct EditSeriesRoundSheet: View {
     @State private var selectedIndividualProfileID: String?
     @State private var handicapEntryFormat: HandicapEntryFormat = .strokes
     @State private var handicapNormalizationMode: HandicapNormalizationMode = .off
+    @State private var handicapStrokeBasis: SeriesHandicapStrokeBasis?
     @State private var courseHandicapAvailable = false
     @State private var countsTowardHandicapPool = true
     @State private var excludedHandicapMemberIDs: [String] = []
@@ -240,6 +241,7 @@ struct EditSeriesRoundSheet: View {
             sequentialTeeStartsEnabled = seriesRound.roundConfig.sequentialTeeStartsEnabled ?? false
             podGroupingStrategy = seriesRound.roundConfig.podGroupingStrategy
             handicapEntryFormat = seriesRound.roundConfig.handicapEntryFormat
+            handicapStrokeBasis = seriesRound.roundConfig.handicapStrokeBasis
             handicapNormalizationMode = normalizedHandicapNormalizationMode(
                 seriesRound.roundConfig.handicapNormalizationMode,
                 for: competitionScope
@@ -676,48 +678,92 @@ struct EditSeriesRoundSheet: View {
             sectionHeaderRow("Handicap", status: handicapSettingsSectionStatus)
 
             SeriesSheetRow(palette: palette) {
-                Toggle(isOn: Binding(
-                    get: { handicapEntryFormat == .courseHandicap },
-                    set: { isEnabled in
-                        handicapEntryFormat = isEnabled ? .courseHandicap : .strokes
-                    }
-                )) {
-                    VStack(alignment: .leading, spacing: 4) {
-                        Text("Course Handicap")
-                            .fontStyle(kFontName, size: 13, weight: .semibold)
-                            .foregroundStyle(courseHandicapAvailable ? palette.foregroundColor : Color.neutral)
-                        Text(courseHandicapAvailable ? "Use member index and this round's selected tee to seed playing strokes." : "Select a course and tee with rating/slope to use course handicap.")
-                            .fontStyle(kFontName, size: 12, weight: .regular)
-                            .foregroundStyle(Color.neutral)
-                    }
-                    .fixedSize(horizontal: false, vertical: true)
-                }
-                .tint(.accentGreen)
-                .disabled(!courseHandicapAvailable)
-            }
-
-            SeriesSheetRow(palette: palette) {
-                Toggle(isOn: Binding(
-                    get: { handicapNormalizationMode != .off },
-                    set: { isEnabled in
-                        handicapNormalizationMode = isEnabled
-                            ? normalizedHandicapNormalizationMode(.field, for: competitionScope)
-                            : .off
-                    }
-                )) {
-                    VStack(alignment: .leading, spacing: 4) {
-                        Text("Normalize Handicaps")
-                            .fontStyle(kFontName, size: 13, weight: .semibold)
-                            .foregroundStyle(palette.foregroundColor)
-                        Text(competitionScope == .matchup ? "Play each matchup from the lowest handicap in that pairing." : "Play the field from the lowest handicap.")
-                            .fontStyle(kFontName, size: 12, weight: .regular)
-                            .foregroundStyle(Color.neutral)
-                    }
-                    .fixedSize(horizontal: false, vertical: true)
-                }
-                .tint(.accentGreen)
+                handicapOptionsRow
             }
         }
+    }
+
+    private var handicapOptionsRow: some View {
+        HStack(spacing: 12) {
+            VStack(alignment: .leading, spacing: 4) {
+                Text("Playing handicap options")
+                    .fontStyle(kFontName, size: 13, weight: .semibold)
+                    .foregroundStyle(palette.foregroundColor)
+                Text(handicapOptionsSummary)
+                    .fontStyle(kFontName, size: 12, weight: .regular)
+                    .foregroundStyle(Color.neutral)
+            }
+            .fixedSize(horizontal: false, vertical: true)
+
+            Spacer(minLength: 0)
+
+            handicapOptionsMenu
+        }
+    }
+
+    private var handicapOptionsMenu: some View {
+        Menu {
+            Button(courseHandicapMenuTitle) {
+                guard courseHandicapAvailable else { return }
+                handicapEntryFormat = handicapEntryFormat == .courseHandicap ? .strokes : .courseHandicap
+            }
+            .disabled(!courseHandicapAvailable)
+
+            Button(normalizeHandicapsMenuTitle) {
+                handicapNormalizationMode = handicapNormalizationMode == .off
+                    ? normalizedHandicapNormalizationMode(.field, for: competitionScope)
+                    : .off
+            }
+
+            Menu {
+                Button(handicapStrokeBasis == nil ? "✓ Auto" : "Auto") {
+                    handicapStrokeBasis = nil
+                }
+
+                ForEach(SeriesHandicapStrokeBasis.allCases, id: \.self) { basis in
+                    Button(handicapStrokeBasis == basis ? "✓ \(basis.displayName)" : basis.displayName) {
+                        handicapStrokeBasis = basis
+                    }
+                }
+            } label: {
+                Text("Hole Basis\n\(handicapStrokeBasisDescription)")
+            }
+        } label: {
+            Image(systemName: "pencil.circle.fill")
+                .font(.system(size: 28, weight: .semibold))
+                .foregroundStyle(palette.foregroundColor)
+                .accessibilityLabel("Handicap options")
+        }
+    }
+
+    private var handicapOptionsSummary: String {
+        let course = handicapEntryFormat == .courseHandicap ? "Course HCP on" : "Course HCP off"
+        let normalized = handicapNormalizationMode == .off ? "Normalize off" : "Normalize on"
+        return "\(course) - \(normalized) - \(handicapStrokeBasisDisplay)"
+    }
+
+    private var courseHandicapMenuTitle: String {
+        let state = handicapEntryFormat == .courseHandicap ? "✓" : "○"
+        let subtitle = courseHandicapAvailable
+            ? "Use member index and this round's selected tee to seed playing strokes"
+            : "Select a course and tee with rating/slope to use course handicap"
+        return "\(state) Course Handicap\n\(subtitle)"
+    }
+
+    private var normalizeHandicapsMenuTitle: String {
+        let state = handicapNormalizationMode == .off ? "○" : "✓"
+        let subtitle = competitionScope == .matchup
+            ? "Play each matchup from the lowest handicap in that pairing"
+            : "Play the field from the lowest handicap"
+        return "\(state) Normalize Handicaps\n\(subtitle)"
+    }
+
+    private var handicapStrokeBasisDisplay: String {
+        handicapStrokeBasis?.displayName ?? "Auto"
+    }
+
+    private var handicapStrokeBasisDescription: String {
+        handicapStrokeBasis == nil ? "Auto - infer 9-hole or 18-hole from the round" : "\(handicapStrokeBasisDisplay) values"
     }
 
     private var handicapSettingsSectionStatus: SeriesRoundSheetSectionStatus {
@@ -962,6 +1008,7 @@ struct EditSeriesRoundSheet: View {
             teeGroupMode: podGroupingStrategy.usesPodAlignment ? .podAligned : .auto,
             notes: notes.isEmpty ? nil : notes,
             sharedScoreHandicapConfig: sharedScoreAllowanceConfig,
+            handicapStrokeBasis: handicapStrokeBasis,
             handicapEntryFormat: resolvedHandicapEntryFormat,
             handicapNormalizationMode: resolvedHandicapNormalizationMode(for: competitionScope),
             countsTowardHandicapPool: countsTowardHandicapPool,
@@ -1013,6 +1060,7 @@ struct EditSeriesRoundSheet: View {
             teeGroupMode: podGroupingStrategy.usesPodAlignment ? .podAligned : .auto,
             notes: notes.isEmpty ? nil : notes,
             sharedScoreHandicapConfig: sharedScoreAllowanceConfig,
+            handicapStrokeBasis: handicapStrokeBasis,
             handicapEntryFormat: resolvedHandicapEntryFormat,
             handicapNormalizationMode: resolvedHandicapNormalizationMode(for: competitionScope),
             countsTowardHandicapPool: countsTowardHandicapPool,
@@ -1343,6 +1391,9 @@ struct EditSeriesRoundSheet: View {
             teeGroupMode: podGroupingStrategy.usesPodAlignment ? .podAligned : .auto,
             notes: notes.isEmpty ? nil : notes,
             sharedScoreHandicapConfig: sharedScoreAllowanceConfig,
+            handicapStrokeBasis: handicapStrokeBasis,
+            handicapEntryFormat: resolvedHandicapEntryFormat,
+            handicapNormalizationMode: resolvedHandicapNormalizationMode(for: competitionScope),
             countsTowardHandicapPool: countsTowardHandicapPool,
             excludedHandicapMemberIDs: excludedHandicapMemberIDs
         )

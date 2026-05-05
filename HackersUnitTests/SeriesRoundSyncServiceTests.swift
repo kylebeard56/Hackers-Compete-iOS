@@ -471,6 +471,7 @@ final class SeriesRoundSyncServiceTests: XCTestCase {
             teeBoxID: "tee_old",
             originalHandicap: 12,
             adjustedHandicap: 14,
+            handicapIndex: 12.9,
             leagueHandicapStrokesAtCreation: 12,
             seriesMemberID: "mem1",
             teamID: "team_round",
@@ -528,6 +529,7 @@ final class SeriesRoundSyncServiceTests: XCTestCase {
 
         XCTAssertEqual(out.first?.name.fullName, "New Name")
         XCTAssertEqual(out.first?.adjustedHandicap, 14)
+        XCTAssertEqual(out.first?.handicapIndex, 12.9)
         XCTAssertEqual(out.first?.teeBoxID, "tee_white")
     }
 
@@ -615,9 +617,11 @@ final class SeriesRoundSyncServiceTests: XCTestCase {
             defaultTee: "tee_white"
         )
 
+        var cfg = SeriesRoundConfiguration()
+        cfg.handicapStrokeBasis = .nineHole
         let plan = SeriesRoundResolvedPlan(
             series: series,
-            seriesRound: SeriesRound(id: "sr1", parentID: "series1"),
+            seriesRound: SeriesRound(id: "sr1", roundConfig: cfg, parentID: "series1"),
             members: [member],
             teams: [],
             pods: [],

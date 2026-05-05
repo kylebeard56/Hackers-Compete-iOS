@@ -93,6 +93,18 @@ final class SeriesRoundCodableTests: XCTestCase {
         XCTAssertEqual(configuration.resolvedHandicapStrokeBasis(holeCount: 9), .eighteenHole)
     }
 
+    func testSeriesRoundHandicapBasisDefaultsToAutoAndDecodesExplicitValue() throws {
+        let decoder = JSONDecoder()
+        let auto = try decoder.decode(SeriesRoundConfiguration.self, from: Data(#"{}"#.utf8))
+        let explicit = try decoder.decode(
+            SeriesRoundConfiguration.self,
+            from: Data(#"{"handicap_stroke_basis":"nine_hole"}"#.utf8)
+        )
+
+        XCTAssertNil(auto.handicapStrokeBasis)
+        XCTAssertEqual(explicit.handicapStrokeBasis, .nineHole)
+    }
+
     func testRoundSharedScoreHandicapConfigRoundTrips() throws {
         let config = HandicapConfiguration(
             percentage: 1.0,

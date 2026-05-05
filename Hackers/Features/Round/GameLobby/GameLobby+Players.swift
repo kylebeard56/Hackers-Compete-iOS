@@ -554,7 +554,8 @@ extension GameLobby {
                                     applying: newValue,
                                     format: handicapEntryFormat,
                                     courseSegment: snapshot.courseSegment,
-                                    maximumHandicap: seriesLock ? seriesLeagueHandicapMaximum : nil
+                                    maximumHandicap: seriesLock ? seriesLeagueHandicapMaximum : nil,
+                                    handicapStrokeBasis: snapshot.handicapStrokeBasis
                                 )
                                 if participant.adjustedHandicap == updated.adjustedHandicap,
                                    participant.handicapIndex == updated.handicapIndex {

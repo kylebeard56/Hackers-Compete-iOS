@@ -36,6 +36,11 @@ struct GamesUsedRuleDTO: Hashable, Codable {
     }
 }
 
+struct GamesUsedMatrixRow: Hashable {
+    var played: Int
+    var used: Int
+}
+
 struct EarlyAdjustmentRuleDTO: Hashable, Codable {
     var playedLower: Int
     var playedUpper: Int
@@ -180,6 +185,52 @@ struct HandicapComputationConfigDTO: Hashable, Codable {
     }
 
     static let league2025 = HandicapComputationConfigDTO(from: .league2025)
+
+    static let gamesUsedMatrixRange = 1...20
+
+    func gamesUsedMatrixRows() -> [GamesUsedMatrixRow] {
+        let config = toConfig()
+        return Self.gamesUsedMatrixRange.map { played in
+            GamesUsedMatrixRow(
+                played: played,
+                used: Self.clampedGamesUsed(config.gamesUsed(forPoolCount: played), played: played)
+            )
+        }
+    }
+
+    static func compressedGamesUsedRules(fromMatrix rows: [GamesUsedMatrixRow]) -> [GamesUsedRuleDTO] {
+        let sortedRows = rows
+            .filter { gamesUsedMatrixRange.contains($0.played) }
+            .sorted { $0.played < $1.played }
+
+        guard !sortedRows.isEmpty else {
+            return league2025.gamesUsedRules
+        }
+
+        var rules: [GamesUsedRuleDTO] = []
+        var currentLower = sortedRows[0].played
+        var currentUpper = sortedRows[0].played
+        var currentUsed = clampedGamesUsed(sortedRows[0].used, played: sortedRows[0].played)
+
+        for row in sortedRows.dropFirst() {
+            let used = clampedGamesUsed(row.used, played: row.played)
+            if row.played == currentUpper + 1, used == currentUsed {
+                currentUpper = row.played
+            } else {
+                rules.append(.init(playedLower: currentLower, playedUpper: currentUpper, used: currentUsed))
+                currentLower = row.played
+                currentUpper = row.played
+                currentUsed = used
+            }
+        }
+
+        rules.append(.init(playedLower: currentLower, playedUpper: 100, used: currentUsed))
+        return rules
+    }
+
+    static func clampedGamesUsed(_ used: Int, played: Int) -> Int {
+        min(max(used, 1), max(played, 1))
+    }
 
     // MARK: - Score pool policy
 

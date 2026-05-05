@@ -14,12 +14,16 @@ struct HandicapComputationTests {
     func gamesUsedMappingBoundaries() throws {
         let mapping: [(Int, Int)] = [
             (1, 1),
-            (4, 1),
             (5, 1),
             (6, 2),
             (8, 2),
             (9, 3),
+            (12, 4),
+            (16, 5),
+            (17, 6),
+            (19, 7),
             (20, 8),
+            (21, 8),
         ]
 
         for (played, expectedUsed) in mapping {
@@ -27,6 +31,64 @@ struct HandicapComputationTests {
             let result = try #require(computeHandicapIndex(scores: scores))
             #expect(result.gamesUsed == expectedUsed)
         }
+    }
+
+    @Test("Default DTO expands to played-used matrix")
+    func defaultDTOExpandsToPlayedUsedMatrix() {
+        let rows = HandicapComputationConfigDTO.league2025.gamesUsedMatrixRows()
+        let expected: [(Int, Int)] = [
+            (1, 1), (2, 1), (3, 1), (4, 1), (5, 1),
+            (6, 2), (7, 2), (8, 2),
+            (9, 3), (10, 3), (11, 3),
+            (12, 4), (13, 4), (14, 4),
+            (15, 5), (16, 5),
+            (17, 6), (18, 6),
+            (19, 7),
+            (20, 8),
+        ]
+
+        #expect(rows.map { "\($0.played):\($0.used)" } == expected.map { "\($0.0):\($0.1)" })
+    }
+
+    @Test("Played-used matrix compresses saved rules and extends row twenty")
+    func playedUsedMatrixCompressesSavedRules() {
+        let rows = HandicapComputationConfigDTO.league2025.gamesUsedMatrixRows()
+        let rules = HandicapComputationConfigDTO.compressedGamesUsedRules(fromMatrix: rows)
+        let expected: [(Int, Int, Int)] = [
+            (1, 5, 1),
+            (6, 8, 2),
+            (9, 11, 3),
+            (12, 14, 4),
+            (15, 16, 5),
+            (17, 18, 6),
+            (19, 19, 7),
+            (20, 100, 8),
+        ]
+
+        #expect(
+            rules.map { "\($0.playedLower):\($0.playedUpper):\($0.used)" }
+                == expected.map { "\($0.0):\($0.1):\($0.2)" }
+        )
+    }
+
+    @Test("Legacy broad rule hydrates as clamped effective matrix")
+    func legacyBroadRuleHydratesAsClampedEffectiveMatrix() {
+        let dto = HandicapComputationConfigDTO(
+            gamesUsedRules: [.init(playedLower: 1, playedUpper: 100, used: 4)]
+        )
+        let rows = dto.gamesUsedMatrixRows()
+
+        let firstSix = rows.prefix(6).map { "\($0.played):\($0.used)" }
+        let expectedFirstSix = [
+            (1, 1),
+            (2, 2),
+            (3, 3),
+            (4, 4),
+            (5, 4),
+            (6, 4),
+        ].map { "\($0.0):\($0.1)" }
+        #expect(firstSix == expectedFirstSix)
+        #expect(rows.last == GamesUsedMatrixRow(played: 20, used: 4))
     }
 
     @Test("Index rounds down to one decimal")

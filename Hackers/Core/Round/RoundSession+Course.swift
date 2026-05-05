@@ -27,7 +27,8 @@ extension RoundSession {
                 let recomputed = HandicapCalculator.recomputedParticipants(
                     snapshot.participants,
                     format: .courseHandicap,
-                    courseSegment: updatedSegment
+                    courseSegment: updatedSegment,
+                    handicapStrokeBasis: snapshot.handicapStrokeBasis
                 )
                 for participant in recomputed where snapshot.participants.first(where: { $0.id == participant.id }) != participant {
                     try await update(participant: participant)
@@ -99,7 +100,10 @@ extension RoundSession {
                 let recomputed = HandicapCalculator.recomputedParticipants(
                     snapshot.participants,
                     format: .courseHandicap,
-                    courseSegment: segmentToSave
+                    courseSegment: segmentToSave,
+                    handicapStrokeBasis: snapshot.configuration.resolvedHandicapStrokeBasis(
+                        holeCount: segmentToSave.holeSegment.holeCount
+                    )
                 )
                 for participant in recomputed where snapshot.participants.first(where: { $0.id == participant.id }) != participant {
                     try await update(participant: participant)

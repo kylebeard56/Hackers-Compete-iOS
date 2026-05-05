@@ -121,6 +121,7 @@ struct SeriesRoundCreationService: Loggable {
                 maximumHandicap: series.handicapConfig.isEnabled ? series.handicapConfig.config.maximumHandicap : nil,
                 courseSegment: courseSegment,
                 handicapEntryFormat: seriesRound.roundConfig.handicapEntryFormat,
+                handicapStrokeBasis: seriesRound.roundConfig.handicapStrokeBasis,
                 hostPlayerID: player.id,
                 presenceStatusByMemberID: presenceStatusByMemberID
             )

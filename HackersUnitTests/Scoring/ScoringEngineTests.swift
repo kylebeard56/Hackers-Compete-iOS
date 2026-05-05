@@ -1731,6 +1731,81 @@ final class ScoringEngineTests: XCTestCase {
         )
     }
 
+    func testCourseHandicapRespectsNineHoleInputBasis() {
+        let tee = Tee(
+            id: "white",
+            name: "White",
+            gender: "male",
+            totalHoles: 18,
+            holes: makeHoles(),
+            ratingFull: 69.4,
+            slopeFull: 124,
+            ratingFront: 34.7,
+            slopeFront: 124,
+            ratingBack: nil,
+            slopeBack: nil
+        )
+
+        XCTAssertEqual(
+            HandicapCalculator.courseHandicap(
+                index: 13.0,
+                tee: tee,
+                segment: .front9,
+                handicapStrokeBasis: .eighteenHole
+            ),
+            6
+        )
+        XCTAssertEqual(
+            HandicapCalculator.courseHandicap(
+                index: 13.0,
+                tee: tee,
+                segment: .front9,
+                handicapStrokeBasis: .nineHole
+            ),
+            13
+        )
+        XCTAssertEqual(
+            HandicapCalculator.rawCourseHandicap(
+                index: 13.0,
+                tee: tee,
+                segment: .front9,
+                handicapStrokeBasis: .nineHole
+            ).map { ($0 * 10).rounded() / 10 },
+            13.0
+        )
+    }
+
+    func testCourseHandicapDoublesNineHoleInputForFullRound() {
+        let tee = Tee(
+            id: "white",
+            name: "White",
+            gender: "male",
+            totalHoles: 18,
+            holes: makeHoles(),
+            ratingFull: 69.4,
+            slopeFull: 124,
+            ratingFront: 34.7,
+            slopeFront: 124,
+            ratingBack: nil,
+            slopeBack: nil
+        )
+
+        XCTAssertEqual(
+            HandicapCalculator.courseHandicap(
+                index: 6.5,
+                tee: tee,
+                segment: .full18,
+                handicapStrokeBasis: .nineHole
+            ),
+            HandicapCalculator.courseHandicap(
+                index: 13.0,
+                tee: tee,
+                segment: .full18,
+                handicapStrokeBasis: .eighteenHole
+            )
+        )
+    }
+
     func testCourseHandicapMissingTeeDataFallsBackToEnteredStrokes() {
         let participant = RoundParticipant(id: "p1", teeBoxID: "blue")
         let tee = Tee(

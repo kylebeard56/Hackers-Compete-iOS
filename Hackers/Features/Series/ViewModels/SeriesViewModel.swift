@@ -4250,6 +4250,7 @@ final class SeriesViewModel: ObservableObject, Loggable {
         updated.sequentialTeeStartsEnabled = linkedRound.configuration.sequentialTeeStartsEnabled ?? fallback.sequentialTeeStartsEnabled ?? false
         updated.handicapEntryFormat = linkedRound.configuration.handicapEntryFormat
         updated.handicapNormalizationMode = linkedRound.configuration.handicapNormalizationMode
+        updated.handicapStrokeBasis = linkedRound.configuration.handicapStrokeBasis
         if linkedRound.configuration.resolvedCompetitionScope == .matchup {
             updated.matchupMode = seriesMatchupMode(
                 from: linkedRound.configuration,

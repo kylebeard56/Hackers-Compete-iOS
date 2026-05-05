@@ -210,7 +210,8 @@ extension RoundSession {
                 snapshot.participants,
                 format: format,
                 courseSegment: snapshot.courseSegment,
-                maximumHandicap: maximumHandicap
+                maximumHandicap: maximumHandicap,
+                handicapStrokeBasis: snapshot.handicapStrokeBasis
             )
             for participant in recomputed where snapshot.participants.first(where: { $0.id == participant.id }) != participant {
                 try await update(participant: participant)
@@ -226,6 +227,45 @@ extension RoundSession {
             )
         } catch {
             addBreadcrumb(level: .error, message: "Failed to set handicap entry format", error: error)
+        }
+    }
+
+    func setHandicapStrokeBasis(_ basis: SeriesHandicapStrokeBasis?, maximumHandicap: Int? = nil) async {
+        addBreadcrumb()
+        let previous = snapshot.configuration.handicapStrokeBasis
+
+        do {
+            if snapshot.round.configuration.handicapStrokeBasis != basis {
+                snapshot.round.configuration.handicapStrokeBasis = basis
+                _ = try await snapshot.round.put().get()
+            }
+
+            if snapshot.configuration.handicapEntryFormat == .courseHandicap {
+                let resolvedBasis = basis ?? SeriesHandicapStrokeBasis.defaultBasis(
+                    holeCount: snapshot.holeRange?.count ?? snapshot.holeSegment.holeCount
+                )
+                let recomputed = HandicapCalculator.recomputedParticipants(
+                    snapshot.participants,
+                    format: .courseHandicap,
+                    courseSegment: snapshot.courseSegment,
+                    maximumHandicap: maximumHandicap,
+                    handicapStrokeBasis: resolvedBasis
+                )
+                for participant in recomputed where snapshot.participants.first(where: { $0.id == participant.id }) != participant {
+                    try await update(participant: participant)
+                }
+            }
+
+            guard previous != basis else { return }
+            emitRoundSetupEvent(
+                "round_setup.handicap_stroke_basis_changed",
+                extra: [
+                    "value": basis?.rawValue ?? "auto",
+                    "previous_value": previous?.rawValue ?? "auto"
+                ]
+            )
+        } catch {
+            addBreadcrumb(level: .error, message: "Failed to set handicap stroke basis", error: error)
         }
     }
 

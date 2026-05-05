@@ -49,6 +49,7 @@ struct GameLobby: View, Loggable {
     @State var secretScoringEnabled: Bool = false
     @State var handicapEntryFormat: HandicapEntryFormat = .strokes
     @State var handicapNormalizationMode: HandicapNormalizationMode = .off
+    @State var handicapStrokeBasis: SeriesHandicapStrokeBasis?
     
     /// Handicap mutation
     @State var handicapString = ""
@@ -219,6 +220,7 @@ struct GameLobby: View, Loggable {
             secretScoringEnabled = s.isSecretScoring
             handicapEntryFormat = s.configuration.handicapEntryFormat
             handicapNormalizationMode = s.configuration.handicapNormalizationMode
+            handicapStrokeBasis = s.configuration.handicapStrokeBasis
             sharedScoreAllowanceText = Self.allowanceText(
                 from: s.configuration.sharedScoreHandicapConfig ?? s.resolvedActiveTemplate.requirements.defaultHandicapConfig
             )

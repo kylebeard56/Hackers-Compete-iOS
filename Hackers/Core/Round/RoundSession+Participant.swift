@@ -135,7 +135,8 @@ extension RoundSession {
                     participant,
                     applying: input,
                     format: snapshot.configuration.handicapEntryFormat,
-                    courseSegment: snapshot.courseSegment
+                    courseSegment: snapshot.courseSegment,
+                    handicapStrokeBasis: snapshot.handicapStrokeBasis
                 )
             }
 

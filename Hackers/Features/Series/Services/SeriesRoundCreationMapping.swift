@@ -118,7 +118,7 @@ enum SeriesRoundCreationMapping {
             matchTiePolicy: seriesRound.roundConfig.matchTiePolicy,
             selectionDomain: resolvedSelectionDomain(for: seriesRound),
             sequentialTeeStartsEnabled: seriesRound.roundConfig.sequentialTeeStartsEnabled ?? false,
-            handicapStrokeBasis: series.handicapConfig.strokeBasis,
+            handicapStrokeBasis: seriesRound.roundConfig.handicapStrokeBasis,
             sharedScoreHandicapConfig: seriesRound.roundConfig.sharedScoreHandicapConfig,
             handicapEntryFormat: seriesRound.roundConfig.handicapEntryFormat,
             handicapNormalizationMode: seriesRound.roundConfig.handicapNormalizationMode,
@@ -595,6 +595,7 @@ enum SeriesRoundCreationMapping {
         maximumHandicap: Int? = nil,
         courseSegment: CourseSegment,
         handicapEntryFormat: HandicapEntryFormat = .strokes,
+        handicapStrokeBasis: SeriesHandicapStrokeBasis? = nil,
         hostPlayerID: String?,
         presenceStatusByMemberID: [String: RoundParticipantPresenceStatus] = [:]
     ) -> [RoundParticipant] {
@@ -615,7 +616,8 @@ enum SeriesRoundCreationMapping {
                     format: handicapEntryFormat,
                     participant: template,
                     courseSegment: courseSegment,
-                    maximumHandicap: maximumHandicap
+                    maximumHandicap: maximumHandicap,
+                    handicapStrokeBasis: handicapStrokeBasis ?? SeriesHandicapStrokeBasis.defaultBasis(holeCount: courseSegment.holeSegment.holeCount)
                 )
             } ?? effectiveHandicap
             let originalHandicap = handicapEntryFormat == .courseHandicap
