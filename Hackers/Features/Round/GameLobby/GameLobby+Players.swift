@@ -436,7 +436,7 @@ extension GameLobby {
                 let teamA = a.teamID ?? ""
                 let teamB = b.teamID ?? ""
                 if teamA != teamB { return teamA < teamB }
-                if handicapsEnabled {
+                if snapshot.configuration.useHandicaps {
                     return a.adjustedHandicap < b.adjustedHandicap
                 }
                 return a.name.fullName < b.name.fullName
@@ -504,7 +504,7 @@ extension GameLobby {
                 
                 Spacer(minLength: 0)
                 
-                if handicapsEnabled {
+                if snapshot.configuration.useHandicaps {
                     Text("Strokes")
                         .fontStyle(kFontName, size: 13, weight: .medium)
                         .foregroundStyle(Color.neutral)
@@ -531,30 +531,31 @@ extension GameLobby {
                         editingPlayer = participant
                         showEditPlayerView = true
                     }) {
-                        playerRow(for: participant, components: [.teeGroup, .teeTime, .defaultTee]) {
+                        playerRow(for: participant, components: [.teeGroup, .teeTime, .defaultTee, .courseHandicap]) {
                             EmptyView()
                         }
                     }
                     .buttonStyle(.plain)
 
-                    if handicapsEnabled {
+                    if snapshot.configuration.useHandicaps {
                         let seriesLock = seriesHandicapLobbyLockActive
                         let lockedForUser = seriesLock && !isSeriesCommissioner
+                        let rosterEntryFormat = snapshot.configuration.handicapEntryFormat
                         HandicapTextField(
                             id: participant.id,
                             initialValue: participant.adjustedHandicap,
                             entryValue: participant.handicapIndex,
-                            entryFormat: handicapEntryFormat,
+                            entryFormat: rosterEntryFormat,
                             focusedField: $focus,
                             palette: palette,
-                            maximumValue: seriesLock ? seriesLeagueHandicapMaximum : nil,
+                            maximumValue: seriesLock ? effectiveSeriesLeagueHandicapMaximum : nil,
                             onDebouncedEdit: { newValue in
                                 var updated = HandicapCalculator.participant(
                                     participant,
                                     applying: newValue,
-                                    format: handicapEntryFormat,
+                                    format: rosterEntryFormat,
                                     courseSegment: snapshot.courseSegment,
-                                    maximumHandicap: seriesLock ? seriesLeagueHandicapMaximum : nil,
+                                    maximumHandicap: seriesLock ? effectiveSeriesLeagueHandicapMaximum : nil,
                                     handicapStrokeBasis: snapshot.handicapStrokeBasis
                                 )
                                 if participant.adjustedHandicap == updated.adjustedHandicap,
@@ -1185,7 +1186,7 @@ extension GameLobby {
     
 extension GameLobby {
     enum PlayerSubtitleComponent {
-        case defaultTee, teeGroup, teeTime, handicap, team
+        case defaultTee, teeGroup, teeTime, handicap, team, courseHandicap
     }
     
     struct SubtitleItem: Identifiable {
@@ -1199,7 +1200,7 @@ extension GameLobby {
     ) -> [SubtitleItem] {
         var items: [SubtitleItem] = []
 
-        if handicapsEnabled, components.contains(.handicap) {
+        if snapshot.configuration.useHandicaps, components.contains(.handicap) {
             let label = handicapSubtitle(for: participant)
             items.append(
                 SubtitleItem(
@@ -1238,7 +1239,10 @@ extension GameLobby {
             }
         }
         
-        if let defaultTee = snapshot.defaultTee,
+        let courseHandicapLabel = components.contains(.courseHandicap) ? courseHandicapSubtitle(for: participant) : nil
+
+        if courseHandicapLabel == nil,
+           let defaultTee = snapshot.defaultTee,
            participant.teeBoxID != defaultTee.id,
            components.contains(.defaultTee),
            let participantTee = snapshot.tees.first(where: { $0.id == participant.teeBoxID }) {
@@ -1269,9 +1273,27 @@ extension GameLobby {
         return items
     }
 
+    private func courseHandicapSubtitle(for participant: RoundParticipant) -> String? {
+        guard snapshot.configuration.useHandicaps,
+              snapshot.configuration.handicapEntryFormat == .courseHandicap,
+              let index = participant.handicapIndex else {
+            return nil
+        }
+
+        return CourseHandicapRosterDisplay.label(
+            index: index,
+            participant: participant,
+            courseSegment: snapshot.courseSegment,
+            handicapStrokeBasis: snapshot.handicapStrokeBasis,
+            defaultTee: snapshot.defaultTee,
+            tees: snapshot.tees,
+            maximumHandicap: effectiveSeriesLeagueHandicapMaximum
+        )
+    }
+
     private func handicapSubtitle(for participant: RoundParticipant) -> String {
-        guard handicapNormalizationMode == .field else {
-            if handicapEntryFormat == .courseHandicap, let index = participant.handicapIndex {
+        guard snapshot.configuration.handicapNormalizationMode == .field else {
+            if snapshot.configuration.handicapEntryFormat == .courseHandicap, let index = participant.handicapIndex {
                 return "Index \(String(format: "%.1f", index)) -> HCP \(participant.adjustedHandicap)"
             }
             return "HCP \(participant.adjustedHandicap)"
@@ -1328,6 +1350,14 @@ extension GameLobby {
 
                         Spacer(minLength: 0)
                     }
+                }
+
+                if components.contains(.courseHandicap),
+                   let courseHandicapLabel = courseHandicapSubtitle(for: participant) {
+                    Text(courseHandicapLabel)
+                        .fontStyle(kFontName, size: 12, weight: .semibold)
+                        .foregroundStyle(Color.accentGreen)
+                        .alignLeading()
                 }
             }
             

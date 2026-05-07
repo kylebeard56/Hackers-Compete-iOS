@@ -1806,6 +1806,130 @@ final class ScoringEngineTests: XCTestCase {
         )
     }
 
+    func testCourseHandicapDisplaysRawDecimalButRoundsStoredStrokes() {
+        let tee = Tee(
+            id: "white",
+            name: "White",
+            gender: "male",
+            totalHoles: 18,
+            holes: makeHoles(),
+            ratingFull: 72.0,
+            slopeFull: 113,
+            ratingFront: nil,
+            slopeFront: nil,
+            ratingBack: nil,
+            slopeBack: nil
+        )
+
+        XCTAssertEqual(
+            HandicapCalculator.rawCourseHandicap(index: 7.4, tee: tee, segment: .full18) ?? .nan,
+            7.4,
+            accuracy: 0.000_001
+        )
+        XCTAssertEqual(
+            HandicapCalculator.courseHandicap(index: 7.4, tee: tee, segment: .full18),
+            7
+        )
+        XCTAssertEqual(
+            HandicapCalculator.rawCourseHandicap(index: 7.6, tee: tee, segment: .full18) ?? .nan,
+            7.6,
+            accuracy: 0.000_001
+        )
+        XCTAssertEqual(
+            HandicapCalculator.courseHandicap(index: 7.6, tee: tee, segment: .full18),
+            8
+        )
+    }
+
+    func testCourseHandicapRosterDisplayLabelsRawCappedAndTeeValues() {
+        let white = Tee(
+            id: "white",
+            name: "White",
+            gender: "male",
+            totalHoles: 18,
+            holes: makeHoles(),
+            ratingFull: 72.0,
+            slopeFull: 113,
+            ratingFront: nil,
+            slopeFront: nil,
+            ratingBack: nil,
+            slopeBack: nil
+        )
+        let purple = Tee(
+            id: "purple",
+            name: "Purple",
+            gender: "male",
+            totalHoles: 18,
+            holes: makeHoles(),
+            ratingFull: 72.0,
+            slopeFull: 113,
+            ratingFront: nil,
+            slopeFront: nil,
+            ratingBack: nil,
+            slopeBack: nil
+        )
+        let segment = CourseSegment(
+            courseInfo: CourseInfo(
+                id: "course1",
+                name: "Test Course",
+                totalHoles: 18,
+                tees: [white, purple]
+            ),
+            holeRange: HoleRange(startHole: 1, endHole: 18),
+            defaultTee: "white"
+        )
+        let whiteParticipant = RoundParticipant(id: "p1", teeBoxID: "white")
+        let purpleParticipant = RoundParticipant(id: "p2", teeBoxID: "purple")
+
+        XCTAssertEqual(
+            CourseHandicapRosterDisplay.label(
+                index: 7.2,
+                participant: whiteParticipant,
+                courseSegment: segment,
+                handicapStrokeBasis: .eighteenHole,
+                defaultTee: white,
+                tees: [white, purple],
+                maximumHandicap: nil
+            ),
+            "Course HCP: 7.2"
+        )
+        XCTAssertEqual(
+            CourseHandicapRosterDisplay.label(
+                index: 7.2,
+                participant: purpleParticipant,
+                courseSegment: segment,
+                handicapStrokeBasis: .eighteenHole,
+                defaultTee: white,
+                tees: [white, purple],
+                maximumHandicap: nil
+            ),
+            "Course HCP: 7.2 (Purple tees)"
+        )
+        XCTAssertEqual(
+            CourseHandicapRosterDisplay.label(
+                index: 27.7,
+                participant: whiteParticipant,
+                courseSegment: segment,
+                handicapStrokeBasis: .eighteenHole,
+                defaultTee: white,
+                tees: [white, purple],
+                maximumHandicap: 18
+            ),
+            "Course HCP: 18.0*"
+        )
+        XCTAssertNil(
+            CourseHandicapRosterDisplay.label(
+                index: 7.2,
+                participant: whiteParticipant,
+                courseSegment: nil,
+                handicapStrokeBasis: .eighteenHole,
+                defaultTee: white,
+                tees: [white, purple],
+                maximumHandicap: nil
+            )
+        )
+    }
+
     func testCourseHandicapMissingTeeDataFallsBackToEnteredStrokes() {
         let participant = RoundParticipant(id: "p1", teeBoxID: "blue")
         let tee = Tee(

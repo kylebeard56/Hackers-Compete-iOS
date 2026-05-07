@@ -213,14 +213,10 @@ struct SeriesHandicapSettingsView: View {
 
             SeriesSheetRow(palette: palette) {
                 Toggle(isOn: $usesCourseRatingSlopeAdjustment) {
-                    VStack(alignment: .leading, spacing: 4) {
-                        Text("Index course adjustment")
-                            .fontStyle(kFontName, size: 13, weight: .semibold)
-                            .foregroundStyle(palette.foregroundColor)
-                        Text("Adjust posted scores by tee rating and slope before they update series handicap indexes.")
-                            .fontStyle(kFontName, size: 12, weight: .regular)
-                            .foregroundStyle(Color.neutral)
-                    }
+                    toggleLabel(
+                        title: "Course adjustment",
+                        subtitle: "Adjust posted scores by tee rating and slope before updating series handicap indexes."
+                    )
                 }
                 .tint(.accentGreen)
                 .onChange(of: usesCourseRatingSlopeAdjustment) { _, _ in updatePreview() }
@@ -231,16 +227,10 @@ struct SeriesHandicapSettingsView: View {
                     get: { entryFormat == .courseHandicap },
                     set: { entryFormat = $0 ? .courseHandicap : .strokes }
                 )) {
-                    Text("Course Handicap")
-                    Text("Use member index and selected round tee to seed strokes.")
-//                    VStack(alignment: .leading, spacing: 4) {
-//                        Text("Course Handicap")
-//                            .fontStyle(kFontName, size: 13, weight: .semibold)
-//                            .foregroundStyle(palette.foregroundColor)
-//                        Text("Use member index and selected round tee to seed strokes.")
-//                            .fontStyle(kFontName, size: 12, weight: .regular)
-//                            .foregroundStyle(Color.neutral)
-//                    }
+                    toggleLabel(
+                        title: "Course handicap",
+                        subtitle: "Convert index entries using the selected tee rating and slope."
+                    )
                 }
                 .tint(.accentGreen)
             }
@@ -250,16 +240,10 @@ struct SeriesHandicapSettingsView: View {
                     get: { normalizationMode != .off },
                     set: { normalizationMode = $0 ? .field : .off }
                 )) {
-                    Text("Normalize Handicaps")
-                    Text("Play net strokes from the lowest handicap in each field or matchup.")
-//                    VStack(alignment: .leading, spacing: 4) {
-//                        Text("Normalize Handicaps")
-//                            .fontStyle(kFontName, size: 13, weight: .semibold)
-//                            .foregroundStyle(palette.foregroundColor)
-//                        Text("Play net strokes from the lowest handicap in each field or matchup.")
-//                            .fontStyle(kFontName, size: 12, weight: .regular)
-//                            .foregroundStyle(Color.neutral)
-//                    }
+                    toggleLabel(
+                        title: "Normalize handicaps",
+                        subtitle: "Play the field from the lowest handicap."
+                    )
                 }
                 .tint(.accentGreen)
             }
@@ -473,6 +457,18 @@ struct SeriesHandicapSettingsView: View {
             }
             Spacer(minLength: 0)
             trailing()
+        }
+    }
+
+    private func toggleLabel(title: String, subtitle: String) -> some View {
+        VStack(alignment: .leading, spacing: 4) {
+            Text(title)
+                .fontStyle(kFontName, size: 13, weight: .semibold)
+                .foregroundStyle(palette.foregroundColor)
+            Text(subtitle)
+                .fontStyle(kFontName, size: 12, weight: .regular)
+                .foregroundStyle(Color.neutral)
+                .fixedSize(horizontal: false, vertical: true)
         }
     }
 

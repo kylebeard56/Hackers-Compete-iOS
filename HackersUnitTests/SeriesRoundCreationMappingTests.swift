@@ -121,11 +121,19 @@ final class SeriesRoundCreationMappingTests: XCTestCase {
 
     private func makeSeries(
         handicapsEnabled: Bool = false,
+        maximumHandicap: Int? = nil,
         useTeams: Bool = true,
         attendanceEnabled: Bool = true
     ) -> Series {
         var settings = SeriesSettings()
-        settings.handicapConfig = SeriesHandicapConfig(isEnabled: handicapsEnabled, config: .league2025)
+        var handicapConfig = HandicapComputationConfig.league2025
+        if let maximumHandicap {
+            handicapConfig.maximumHandicap = maximumHandicap
+        }
+        settings.handicapConfig = SeriesHandicapConfig(
+            isEnabled: handicapsEnabled,
+            config: HandicapComputationConfigDTO(from: handicapConfig)
+        )
         settings.useTeams = useTeams
         settings.isAttendanceEnabled = attendanceEnabled
         return Series(id: "series1", settings: settings)
@@ -227,6 +235,18 @@ final class SeriesRoundCreationMappingTests: XCTestCase {
         XCTAssertEqual(roundConfig.handicapEntryFormat, .courseHandicap)
         XCTAssertEqual(roundConfig.handicapNormalizationMode, .matchup)
         XCTAssertEqual(roundConfig.handicapStrokeBasis, .nineHole)
+        XCTAssertEqual(roundConfig.leagueHandicapMaximum, 21)
+    }
+
+    func testRoundConfigurationCarriesSeriesHandicapMaximumWhenEnabled() {
+        let roundConfig = SeriesRoundCreationMapping.roundConfiguration(
+            series: makeSeries(handicapsEnabled: true, maximumHandicap: 18),
+            seriesRound: SeriesRound(id: "sr_handicap_max", roundConfig: .init(), parentID: "series1"),
+            courseSegment: makeCourseSegment(),
+            competitionScope: .field
+        )
+
+        XCTAssertEqual(roundConfig.leagueHandicapMaximum, 18)
     }
 
     func testTeeGroupPlansWithAdjacentPartnershipsKeepsPairsTogether() {
@@ -921,13 +941,17 @@ final class SeriesRoundCreationMappingTests: XCTestCase {
         XCTAssertEqual(payloads.first?.leagueHandicapStrokesAtCreation, 18)
     }
 
-    func testSeriesMemberHandicapCappedDisplayTextUsesAsteriskOnlyWhenCapped() {
+    func testSeriesMemberHandicapCappedDisplayTextFormatsDecimalIndexesAndCaps() {
         let capped = SeriesMemberHandicap(memberID: "m1", computedIndex: 27.7)
-        let uncapped = SeriesMemberHandicap(memberID: "m2", computedIndex: 17.4)
-        let missing = SeriesMemberHandicap(memberID: "m3")
+        let whole = SeriesMemberHandicap(memberID: "m2", computedIndex: 6.0)
+        let decimal = SeriesMemberHandicap(memberID: "m3", computedIndex: 6.2)
+        let roundedDecimal = SeriesMemberHandicap(memberID: "m4", computedIndex: 6.25)
+        let missing = SeriesMemberHandicap(memberID: "m5")
 
         XCTAssertEqual(capped.cappedDisplayText(maximumHandicap: 18), "18*")
-        XCTAssertEqual(uncapped.cappedDisplayText(maximumHandicap: 18), "17")
+        XCTAssertEqual(whole.cappedDisplayText(maximumHandicap: 18), "6")
+        XCTAssertEqual(decimal.cappedDisplayText(maximumHandicap: 18), "6.2")
+        XCTAssertEqual(roundedDecimal.cappedDisplayText(maximumHandicap: 18), "6.3")
         XCTAssertNil(missing.cappedDisplayText(maximumHandicap: 18))
     }
 
@@ -1852,5 +1876,51 @@ final class SeriesRoundCreationMappingTests: XCTestCase {
         XCTAssertEqual(payloads.first?.originalHandicap, 13)
         XCTAssertEqual(payloads.first?.adjustedHandicap, 17)
         XCTAssertEqual(payloads.first?.leagueHandicapStrokesAtCreation, 17)
+    }
+
+    func testBuildParticipantPayloadsCapsCourseHandicapFromMemberIndex() {
+        let holes = (1...18).map { makeHole($0) }
+        let blue = Tee(
+            id: "blue",
+            name: "Blue",
+            gender: "male",
+            totalHoles: 18,
+            holes: holes,
+            ratingFull: 72.0,
+            slopeFull: 113,
+            ratingFront: nil,
+            slopeFront: nil,
+            ratingBack: nil,
+            slopeBack: nil
+        )
+        let segment = CourseSegment(
+            courseInfo: CourseInfo(id: "course1", name: "Test Course", totalHoles: 18, tees: [blue]),
+            holeRange: HoleRange(startHole: 1, endHole: 18),
+            defaultTee: "blue"
+        )
+        let member = makeMember(id: "m1", name: "Kyle", defaultTeeBoxID: "blue")
+
+        let payloads = SeriesRoundCreationMapping.buildParticipantPayloads(
+            members: [member],
+            roundID: "round1",
+            teamMappings: [:],
+            memberAssignments: [:],
+            handicaps: [
+                "m1": SeriesMemberHandicap(
+                    id: "m1",
+                    memberID: "m1",
+                    computedIndex: 27.7
+                )
+            ],
+            maximumHandicap: 18,
+            courseSegment: segment,
+            handicapEntryFormat: .courseHandicap,
+            hostPlayerID: nil
+        )
+
+        XCTAssertEqual(payloads.first?.handicapIndex, 27.7)
+        XCTAssertEqual(payloads.first?.originalHandicap, 28)
+        XCTAssertEqual(payloads.first?.adjustedHandicap, 18)
+        XCTAssertEqual(payloads.first?.leagueHandicapStrokesAtCreation, 18)
     }
 }

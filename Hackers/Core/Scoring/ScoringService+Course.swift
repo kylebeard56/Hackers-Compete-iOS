@@ -247,3 +247,38 @@ enum HandicapCalculator {
         return min(nonNegative, maximumHandicap)
     }
 }
+
+enum CourseHandicapRosterDisplay {
+    static func label(
+        index: Double,
+        participant: RoundParticipant,
+        courseSegment: CourseSegment?,
+        handicapStrokeBasis: SeriesHandicapStrokeBasis,
+        defaultTee: Tee?,
+        tees: [Tee],
+        maximumHandicap: Int?
+    ) -> String? {
+        guard let rawCourseHandicap = HandicapCalculator.rawCourseHandicap(
+            index: index,
+            participant: participant,
+            courseSegment: courseSegment,
+            handicapStrokeBasis: handicapStrokeBasis
+        ) else {
+            return nil
+        }
+
+        let displayedCourseHandicap = maximumHandicap
+            .map { min(rawCourseHandicap, Double($0)) }
+            ?? rawCourseHandicap
+        let capSuffix = displayedCourseHandicap < rawCourseHandicap ? "*" : ""
+        var label = "Course HCP: \(String(format: "%.1f", displayedCourseHandicap))\(capSuffix)"
+
+        if let defaultTee,
+           participant.teeBoxID != defaultTee.id,
+           let participantTee = tees.first(where: { $0.id == participant.teeBoxID }) {
+            label += " (\(participantTee.name) tees)"
+        }
+
+        return label
+    }
+}

@@ -279,6 +279,8 @@ struct RoundConfiguration: Hashable, Codable {
     var handicapEntryFormat: HandicapEntryFormat
     /// Whether net scoring should play from the lowest handicap in the field or matchup.
     var handicapNormalizationMode: HandicapNormalizationMode
+    /// Optional league cap for participant playing handicaps injected from a linked series.
+    var leagueHandicapMaximum: Int?
     /// When false, team avatars and dots use neutral styling; team names follow indexed "Team N" when reset from lobby.
     var teamColorsEnabled: Bool
     /// When true, round teams are kept in sync with tee groups for shared team formats.
@@ -315,6 +317,7 @@ struct RoundConfiguration: Hashable, Codable {
         sharedScoreHandicapConfig: HandicapConfiguration? = nil,
         handicapEntryFormat: HandicapEntryFormat = .strokes,
         handicapNormalizationMode: HandicapNormalizationMode = .off,
+        leagueHandicapMaximum: Int? = nil,
         teamColorsEnabled: Bool = true,
         mirrorTeeGroupsAsTeams: Bool? = nil,
         attendanceConfirmationEnabled: Bool? = nil
@@ -342,6 +345,7 @@ struct RoundConfiguration: Hashable, Codable {
         self.sharedScoreHandicapConfig = sharedScoreHandicapConfig
         self.handicapEntryFormat = handicapEntryFormat
         self.handicapNormalizationMode = handicapNormalizationMode
+        self.leagueHandicapMaximum = leagueHandicapMaximum
         self.teamColorsEnabled = teamColorsEnabled
         self.mirrorTeeGroupsAsTeams = mirrorTeeGroupsAsTeams
         self.attendanceConfirmationEnabled = attendanceConfirmationEnabled
@@ -378,6 +382,7 @@ struct RoundConfiguration: Hashable, Codable {
         case sharedScoreHandicapConfig = "shared_score_handicap_config"
         case handicapEntryFormat = "handicap_entry_format"
         case handicapNormalizationMode = "handicap_normalization_mode"
+        case leagueHandicapMaximum = "league_handicap_maximum"
         case teamColorsEnabled = "team_colors_enabled"
         case mirrorTeeGroupsAsTeams = "mirror_tee_groups_as_teams"
         case attendanceConfirmationEnabled = "attendance_confirmation_enabled"
@@ -463,6 +468,7 @@ struct RoundConfiguration: Hashable, Codable {
         sharedScoreHandicapConfig = try c.decodeIfPresent(HandicapConfiguration.self, forKey: .sharedScoreHandicapConfig)
         handicapEntryFormat = try c.decodeIfPresent(HandicapEntryFormat.self, forKey: .handicapEntryFormat) ?? .strokes
         handicapNormalizationMode = try c.decodeIfPresent(HandicapNormalizationMode.self, forKey: .handicapNormalizationMode) ?? .off
+        leagueHandicapMaximum = try c.decodeIfPresent(Int.self, forKey: .leagueHandicapMaximum)
         teamColorsEnabled = try c.decodeIfPresent(Bool.self, forKey: .teamColorsEnabled) ?? true
         mirrorTeeGroupsAsTeams = try c.decodeIfPresent(Bool.self, forKey: .mirrorTeeGroupsAsTeams)
         attendanceConfirmationEnabled = try c.decodeIfPresent(Bool.self, forKey: .attendanceConfirmationEnabled)
@@ -510,6 +516,7 @@ struct RoundConfiguration: Hashable, Codable {
         try c.encodeIfPresent(sharedScoreHandicapConfig, forKey: .sharedScoreHandicapConfig)
         try c.encode(handicapEntryFormat, forKey: .handicapEntryFormat)
         try c.encode(handicapNormalizationMode, forKey: .handicapNormalizationMode)
+        try c.encodeIfPresent(leagueHandicapMaximum, forKey: .leagueHandicapMaximum)
         try c.encode(teamColorsEnabled, forKey: .teamColorsEnabled)
         try c.encodeIfPresent(mirrorTeeGroupsAsTeams, forKey: .mirrorTeeGroupsAsTeams)
         try c.encodeIfPresent(attendanceConfirmationEnabled, forKey: .attendanceConfirmationEnabled)

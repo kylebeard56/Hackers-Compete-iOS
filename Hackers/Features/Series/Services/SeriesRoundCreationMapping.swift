@@ -122,6 +122,7 @@ enum SeriesRoundCreationMapping {
             sharedScoreHandicapConfig: seriesRound.roundConfig.sharedScoreHandicapConfig,
             handicapEntryFormat: seriesRound.roundConfig.handicapEntryFormat,
             handicapNormalizationMode: seriesRound.roundConfig.handicapNormalizationMode,
+            leagueHandicapMaximum: series.handicapConfig.isEnabled ? series.handicapConfig.config.maximumHandicap : nil,
             attendanceConfirmationEnabled: series.settings.isAttendanceEnabled
         )
     }

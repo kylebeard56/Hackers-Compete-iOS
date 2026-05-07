@@ -119,6 +119,9 @@ struct SeriesRoundSyncService: Loggable {
             workingRound.configuration.handicapEntryFormat = seriesRound.roundConfig.handicapEntryFormat
             workingRound.configuration.handicapNormalizationMode = seriesRound.roundConfig.handicapNormalizationMode
             workingRound.configuration.handicapStrokeBasis = seriesRound.roundConfig.handicapStrokeBasis
+            workingRound.configuration.leagueHandicapMaximum = series.handicapConfig.isEnabled
+                ? series.handicapConfig.config.maximumHandicap
+                : nil
             workingRound.lastUpdatedAt = .init()
             switch await workingRound.put() {
             case .success(let updated):

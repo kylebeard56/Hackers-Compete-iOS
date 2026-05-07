@@ -344,7 +344,7 @@ struct GameLobby: View, Loggable {
                 participant: player,
                 seriesHandicapLockActive: seriesHandicapLobbyLockActive,
                 isSeriesCommissioner: isSeriesCommissioner,
-                seriesHandicapMaximum: seriesLeagueHandicapMaximum
+                seriesHandicapMaximum: effectiveSeriesLeagueHandicapMaximum
             )
             .presentationDragIndicator(.visible)
         }
@@ -433,8 +433,14 @@ extension GameLobby {
 extension GameLobby {
     /// Series round in app session + league handicaps on (drives client-side stroke lock for non-commissioners).
     var seriesHandicapLobbyLockActive: Bool {
-        guard let sid = appSession.activeSeriesID, sid.isPopulated else { return false }
-        return seriesLeagueHandicapsEnabled
+        if let sid = appSession.activeSeriesID, sid.isPopulated {
+            return seriesLeagueHandicapsEnabled || snapshot.configuration.leagueHandicapMaximum != nil
+        }
+        return snapshot.configuration.leagueHandicapMaximum != nil
+    }
+
+    var effectiveSeriesLeagueHandicapMaximum: Int? {
+        seriesLeagueHandicapMaximum ?? snapshot.configuration.leagueHandicapMaximum
     }
 
     fileprivate var navBarSpacer: some View {

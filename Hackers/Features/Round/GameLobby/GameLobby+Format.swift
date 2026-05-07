@@ -412,17 +412,16 @@ extension GameLobby {
                     Menu {
                         countScoresButtons
                     } label: {
-                        formatChipLabel(
-                            teamScoringModeTitle,
-                            minWidth: snapshot.configuration.teamScoring.mode == .all ? 68 : 110
-                        )
+                        formatChipLabel(teamScoringModeTitle, maxWidth: .infinity)
                     }
+                    .frame(maxWidth: .infinity)
                     .stableMenuPresentation()
 
                     if snapshot.configuration.teamScoring.mode != .all {
                         Text("per")
                             .fontStyle(kFontName, size: 15, weight: .regular)
                             .foregroundStyle(Color.neutral)
+                            .frame(width: 32)
 
                         Menu {
                             ForEach(AggregationScope.allCases, id: \.self) { scope in
@@ -439,8 +438,9 @@ extension GameLobby {
                                 }
                             }
                         } label: {
-                            formatChipLabel(teamScoringScopeTitle, minWidth: 76)
+                            formatChipLabel(teamScoringScopeTitle, maxWidth: .infinity)
                         }
+                        .frame(maxWidth: .infinity)
                         .stableMenuPresentation()
                     }
                 }

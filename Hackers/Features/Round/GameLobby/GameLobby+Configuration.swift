@@ -129,7 +129,7 @@ extension GameLobby {
                 Haptics.fire(.light)
                 let next: HandicapEntryFormat = handicapEntryFormat == .courseHandicap ? .strokes : .courseHandicap
                 handicapEntryFormat = next
-                Task { await roundSession.setHandicapEntryFormat(next, maximumHandicap: seriesLeagueHandicapMaximum) }
+                Task { await roundSession.setHandicapEntryFormat(next, maximumHandicap: effectiveSeriesLeagueHandicapMaximum) }
             } label: {
                 Label(
                     "Course Handicap",
@@ -160,7 +160,7 @@ extension GameLobby {
                 Button {
                     Haptics.fire(.light)
                     handicapStrokeBasis = nil
-                    Task { await roundSession.setHandicapStrokeBasis(nil, maximumHandicap: seriesLeagueHandicapMaximum) }
+                    Task { await roundSession.setHandicapStrokeBasis(nil, maximumHandicap: effectiveSeriesLeagueHandicapMaximum) }
                 } label: {
                     HStack {
                         Text("Auto")
@@ -174,7 +174,7 @@ extension GameLobby {
                     Button {
                         Haptics.fire(.light)
                         handicapStrokeBasis = basis
-                        Task { await roundSession.setHandicapStrokeBasis(basis, maximumHandicap: seriesLeagueHandicapMaximum) }
+                        Task { await roundSession.setHandicapStrokeBasis(basis, maximumHandicap: effectiveSeriesLeagueHandicapMaximum) }
                     } label: {
                         HStack {
                             Text(basis.displayName)
@@ -185,16 +185,15 @@ extension GameLobby {
                     }
                 }
             } label: {
-                Label("Hole Basis", systemImage: "circle.grid.2x1")
+                Text("Hole Basis")
                 Text(handicapStrokeBasisDescription)
             }
             .menuActionDismissBehavior(.disabled)
         } label: {
-            Image(systemName: "pencil")
-                .font(.system(size: 16, weight: .semibold))
+            Icon(name: "f141", size: 20, weight: .solid)
                 .foregroundStyle(Color.charcoal)
-                .frame(width: 44, height: 44)
-                .glassCardEffect(cornerRadius: 22, tint: palette.whiteGlassButtonColor, shadowOpacity: 0)
+                .frame(width: 40, height: 40)
+                .glassCardEffect(cornerRadius: 20, tint: palette.whiteGlassButtonColor, shadowOpacity: 0)
                 .whiteGlassCardShadow(color: palette.shadowColor)
                 .accessibilityLabel("Handicap options")
         }

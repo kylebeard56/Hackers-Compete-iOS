@@ -261,17 +261,17 @@ enum SeriesRoundOutcomeNarrativeBuilder {
         }
 
         let title = seriesRound.title.isPopulated ? seriesRound.title : "Round \(seriesRound.index + 1)"
-        let leaderboard = ordered.map { result in
-            "\(result.name) net \(result.netStrokes) (\(scoreToParLabel(result.netToPar)), gross \(result.grossStrokes), HCP \(result.handicapUsed), next week HCP \(handicapLabel(result.nextHandicap)))"
-        }.joined(separator: "; ")
+        let leaderboard = ordered.enumerated().map { offset, result in
+            "\(offset + 1). \(result.name): net \(result.netStrokes) (\(scoreToParLabel(result.netToPar))), gross \(result.grossStrokes), HCP used \(result.handicapUsed), next week HCP \(handicapLabel(result.nextHandicap))"
+        }.joined(separator: "\n")
 
         let birdies = birdieHighlights(snapshot: snapshot, members: members)
-        let birdieSentence = birdies.isEmpty
+        let birdieText = birdies.isEmpty
             ? "No birdies were recorded."
-            : "Birdies: \(birdies.joined(separator: "; "))."
+            : birdies.joined(separator: "\n")
 
         let best = ordered[0]
-        var closing = "Best round: \(best.name) with net \(best.netStrokes) (\(scoreToParLabel(best.netToPar)))."
+        var highlights = ["Best round: \(best.name) with net \(best.netStrokes) (\(scoreToParLabel(best.netToPar)))."]
 
         if let bounceBack = bounceBackResult(
             currentResults: results,
@@ -279,11 +279,22 @@ enum SeriesRoundOutcomeNarrativeBuilder {
             members: members,
             memberHandicaps: memberHandicaps
         ) {
-            closing += " Bounce-back player: \(bounceBack.name), improving \(bounceBack.improvement) \(strokeUnit(bounceBack.improvement)) from the prior Series round."
+            highlights.append("Bounce-back player: \(bounceBack.name), improving \(bounceBack.improvement) \(strokeUnit(bounceBack.improvement)) from the prior Series round.")
         }
 
         return SeriesRoundOutcomeNarrative(
-            paragraph: "\(title) is scored. Leaderboard low-to-high by net: \(leaderboard). \(birdieSentence) \(closing)"
+            paragraph: """
+            \(title) is scored.
+
+            Leaderboard (low-to-high net):
+            \(leaderboard)
+
+            Birdies:
+            \(birdieText)
+
+            Highlights:
+            \(highlights.joined(separator: "\n"))
+            """
         )
     }
 
@@ -1317,7 +1328,7 @@ final class SeriesViewModel: ObservableObject, Loggable {
 
         await loadLinkedRounds()
         await syncLinkedRoundState()
-        await loadAttendanceForPlannedRounds()
+        await loadAttendanceForRSVPEligibleRounds()
         recomputeAllHandicaps()
         await hydrateRoundHandicapScoreMetadataIfNeeded()
         await backfillOfflineMemberUserIDs()
@@ -1359,14 +1370,18 @@ final class SeriesViewModel: ObservableObject, Loggable {
         linkedRounds = Dictionary(uniqueKeysWithValues: fetched.map { ($0.id, $0) })
     }
 
-    func loadAttendanceForPlannedRounds() async {
+    func shouldPreloadAttendance(for seriesRound: SeriesRound) -> Bool {
+        isRSVPEligible(for: seriesRound)
+    }
+
+    func loadAttendanceForRSVPEligibleRounds() async {
         guard series.settings.isAttendanceEnabled else {
             attendanceByRound = [:]
             return
         }
 
         var dictionary = attendanceByRound
-        for round in rounds where effectiveStatus(for: round) == .planned {
+        for round in rounds where shouldPreloadAttendance(for: round) {
             dictionary[round.id] = await FirebaseService.shared.fetchSeriesRoundAttendance(
                 seriesID: seriesID,
                 seriesRoundID: round.id
@@ -3126,7 +3141,7 @@ final class SeriesViewModel: ObservableObject, Loggable {
     func refreshLinkedRoundState() async {
         await loadLinkedRounds()
         await syncLinkedRoundState()
-        await loadAttendanceForPlannedRounds()
+        await loadAttendanceForRSVPEligibleRounds()
     }
 
     private func syncLinkedRoundState() async {

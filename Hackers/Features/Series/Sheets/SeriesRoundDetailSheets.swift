@@ -183,8 +183,13 @@ struct SeriesRoundAwardsDetailSheet: View {
                 Text(paragraph)
                     .fontStyle(kFontName, size: 14, weight: .regular)
                     .foregroundStyle(palette.foregroundColor)
+                    .lineSpacing(4)
                     .fixedSize(horizontal: false, vertical: true)
                     .textSelection(.enabled)
+                    .padding(14)
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                    .background(palette.cardEmbeddedRowBackground)
+                    .cornerRadius(14)
             } else {
                 Text("Outcome paragraph will appear once the completed round scores and snapshot are available.")
                     .fontStyle(kFontName, size: 13, weight: .regular)

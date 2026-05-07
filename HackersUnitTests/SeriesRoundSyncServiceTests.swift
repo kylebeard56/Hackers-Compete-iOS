@@ -271,7 +271,7 @@ final class SeriesRoundSyncServiceTests: XCTestCase {
     }
 
     @MainActor
-    func testRoundTileLinkedActionCopyAndRSVPEligibility() {
+    func testRoundTileLinkedActionCopyAndRSVPAttendancePreloadEligibility() {
         let viewModel = SeriesViewModel()
         var settings = SeriesSettings()
         settings.isAttendanceEnabled = true
@@ -291,6 +291,9 @@ final class SeriesRoundSyncServiceTests: XCTestCase {
         XCTAssertTrue(viewModel.isRSVPEligible(for: planned))
         XCTAssertTrue(viewModel.isRSVPEligible(for: lobby))
         XCTAssertFalse(viewModel.isRSVPEligible(for: live))
+        XCTAssertTrue(viewModel.shouldPreloadAttendance(for: planned))
+        XCTAssertTrue(viewModel.shouldPreloadAttendance(for: lobby))
+        XCTAssertFalse(viewModel.shouldPreloadAttendance(for: live))
     }
 
     func testTeamLinks_filtersMappings() {
@@ -533,6 +536,53 @@ final class SeriesRoundSyncServiceTests: XCTestCase {
         XCTAssertEqual(out.first?.teeBoxID, "tee_white")
     }
 
+    func testParticipantsWithPlayerDataSyncPreservesDecimalIndexForCourseHandicap() {
+        let p = RoundParticipant(
+            id: "part1",
+            userID: "u1",
+            playerID: "pl1",
+            name: Name("Old", "Name"),
+            teeBoxID: "tee_white",
+            originalHandicap: 4,
+            adjustedHandicap: 4,
+            leagueHandicapStrokesAtCreation: 4,
+            seriesMemberID: "mem1",
+            createdAt: t0,
+            lastUpdatedAt: t0,
+            parentID: "round1"
+        )
+        let member = SeriesMember(
+            id: "mem1",
+            userID: "u1",
+            playerID: "pl1",
+            name: Name("New", "Name"),
+            defaultTeeBoxID: "tee_white",
+            createdAt: t0,
+            lastUpdatedAt: t0,
+            parentID: "series1"
+        )
+
+        let out = SeriesRoundSyncPlanning.participantsWithPlayerDataSync(
+            participants: [p],
+            roundID: "round1",
+            participatingMembers: [member],
+            teamLinks: [:],
+            memberAssignments: [:],
+            handicaps: [
+                "mem1": SeriesMemberHandicap(id: "mem1", memberID: "mem1", computedIndex: 6.2),
+            ],
+            courseSegment: testCourseSegment(),
+            handicapEntryFormat: .courseHandicap,
+            hostPlayerID: nil,
+            preserveManualHandicapEdits: false
+        )
+
+        XCTAssertEqual(out.first?.handicapIndex, 6.2)
+        XCTAssertEqual(out.first?.originalHandicap, 6)
+        XCTAssertEqual(out.first?.adjustedHandicap, 6)
+        XCTAssertEqual(out.first?.leagueHandicapStrokesAtCreation, 6)
+    }
+
     func testParticipantsWithPlayerDataSync_capsSeriesHandicapWhenNotPreservingManualEdit() {
         let p = RoundParticipant(
             id: "part1",
@@ -593,7 +643,13 @@ final class SeriesRoundSyncServiceTests: XCTestCase {
 
     func testResolvedPlanCarriesSeriesHandicapBasisForSync() {
         var settings = SeriesSettings()
-        settings.handicapConfig = SeriesHandicapConfig(isEnabled: true, config: .league2025, strokeBasis: .nineHole)
+        var handicapConfig = HandicapComputationConfig.league2025
+        handicapConfig.maximumHandicap = 18
+        settings.handicapConfig = SeriesHandicapConfig(
+            isEnabled: true,
+            config: HandicapComputationConfigDTO(from: handicapConfig),
+            strokeBasis: .nineHole
+        )
         let series = Series(id: "series1", settings: settings)
         let member = SeriesMember(
             id: "mem1",
@@ -629,6 +685,7 @@ final class SeriesRoundSyncServiceTests: XCTestCase {
         )
 
         XCTAssertEqual(plan.roundConfiguration.handicapStrokeBasis, .nineHole)
+        XCTAssertEqual(plan.roundConfiguration.leagueHandicapMaximum, 18)
     }
 
     func testTeeGroupsWithLeagueSchedule_usesExistingFirstTimeWhenNoScheduledDate() throws {

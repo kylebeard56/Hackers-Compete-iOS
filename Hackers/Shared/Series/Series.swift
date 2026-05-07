@@ -3296,9 +3296,20 @@ struct SeriesMemberHandicap: Hashable, Codable, Identifiable {
     }
 
     func cappedDisplayText(maximumHandicap: Int) -> String? {
-        guard effectiveIndex != nil else { return nil }
+        guard let effectiveIndex else { return nil }
         let strokes = effectiveStrokes(maximumHandicap: maximumHandicap)
-        return isCappedByMaximumHandicap(maximumHandicap) ? "\(strokes)*" : "\(strokes)"
+        if isCappedByMaximumHandicap(maximumHandicap) {
+            return "\(strokes)*"
+        }
+        return Self.formatHandicapIndexForDisplay(max(effectiveIndex, 0))
+    }
+
+    static func formatHandicapIndexForDisplay(_ value: Double) -> String {
+        let roundedTenth = (value * 10).rounded(.toNearestOrAwayFromZero) / 10
+        if abs(roundedTenth - roundedTenth.rounded()) < 0.000_001 {
+            return "\(Int(roundedTenth.rounded()))"
+        }
+        return String(format: "%.1f", roundedTenth)
     }
 }
 

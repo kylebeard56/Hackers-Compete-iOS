@@ -314,12 +314,13 @@ struct SeriesHandicapHistoryTests {
         ))
 
         let paragraph = narrative.paragraph
-        let bobRange = try #require(paragraph.range(of: "Bob Player net 8 (-3, gross 12, HCP 4, next week HCP 3.4)"))
-        let aliceRange = try #require(paragraph.range(of: "Alice Player net 9 (-2, gross 11, HCP 2, next week HCP 5)"))
-        let charlieRange = try #require(paragraph.range(of: "Charlie Player net 10 (-1, gross 11, HCP 1, next week HCP unavailable)"))
+        #expect(paragraph.contains("Week 2 is scored.\n\nLeaderboard (low-to-high net):"))
+        let bobRange = try #require(paragraph.range(of: "1. Bob Player: net 8 (-3), gross 12, HCP used 4, next week HCP 3.4"))
+        let aliceRange = try #require(paragraph.range(of: "2. Alice Player: net 9 (-2), gross 11, HCP used 2, next week HCP 5"))
+        let charlieRange = try #require(paragraph.range(of: "3. Charlie Player: net 10 (-1), gross 11, HCP used 1, next week HCP unavailable"))
         #expect(bobRange.lowerBound < aliceRange.lowerBound)
         #expect(aliceRange.lowerBound < charlieRange.lowerBound)
-        #expect(paragraph.contains("Birdies: Alice Player on #2."))
+        #expect(paragraph.contains("\n\nBirdies:\nAlice Player on #2"))
         #expect(paragraph.contains("Best round: Bob Player with net 8 (-3)."))
         #expect(paragraph.contains("Bounce-back player: Alice Player, improving 5 strokes from the prior Series round."))
     }
@@ -364,7 +365,7 @@ struct SeriesHandicapHistoryTests {
             )
         ))
 
-        #expect(narrative.paragraph.contains("Alice Player net 8 (-3, gross 10, HCP 2, next week HCP 4.6)"))
+        #expect(narrative.paragraph.contains("1. Alice Player: net 8 (-3), gross 10, HCP used 2, next week HCP 4.6"))
     }
 
     private static func outcomeMembers() -> [SeriesMember] {
