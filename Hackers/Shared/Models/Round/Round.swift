@@ -273,6 +273,8 @@ struct RoundConfiguration: Hashable, Codable {
     var scoresRevealed: Bool?              // Host flips this to true to unveil all scores
     /// Basis for interpreting participant handicap values in net scoring. Missing legacy docs infer from hole count.
     var handicapStrokeBasis: SeriesHandicapStrokeBasis?
+    /// Explicit gross/net switch for modern round docs. Missing legacy docs infer from the primary format.
+    var handicapsEnabled: Bool?
     /// Optional format-specific allowance for shared-score scoring units, applied by handicap rank.
     var sharedScoreHandicapConfig: HandicapConfiguration?
     /// How lobby handicap entries should be interpreted before storing participant strokes.
@@ -314,6 +316,7 @@ struct RoundConfiguration: Hashable, Codable {
         secretScoring: Bool? = nil,
         scoresRevealed: Bool? = nil,
         handicapStrokeBasis: SeriesHandicapStrokeBasis? = nil,
+        handicapsEnabled: Bool? = nil,
         sharedScoreHandicapConfig: HandicapConfiguration? = nil,
         handicapEntryFormat: HandicapEntryFormat = .strokes,
         handicapNormalizationMode: HandicapNormalizationMode = .off,
@@ -342,6 +345,7 @@ struct RoundConfiguration: Hashable, Codable {
         self.secretScoring = secretScoring
         self.scoresRevealed = scoresRevealed
         self.handicapStrokeBasis = handicapStrokeBasis
+        self.handicapsEnabled = handicapsEnabled
         self.sharedScoreHandicapConfig = sharedScoreHandicapConfig
         self.handicapEntryFormat = handicapEntryFormat
         self.handicapNormalizationMode = handicapNormalizationMode
@@ -379,6 +383,7 @@ struct RoundConfiguration: Hashable, Codable {
         case secretScoring = "secret_scoring"
         case scoresRevealed = "scores_revealed"
         case handicapStrokeBasis = "handicap_stroke_basis"
+        case handicapsEnabled = "use_handicaps"
         case sharedScoreHandicapConfig = "shared_score_handicap_config"
         case handicapEntryFormat = "handicap_entry_format"
         case handicapNormalizationMode = "handicap_normalization_mode"
@@ -389,7 +394,7 @@ struct RoundConfiguration: Hashable, Codable {
     }
 
     var useHandicaps: Bool {
-        primaryFormat.configuration.basis == .net
+        handicapsEnabled ?? (primaryFormat.configuration.basis == .net)
     }
 
     func resolvedHandicapStrokeBasis(holeCount: Int) -> SeriesHandicapStrokeBasis {
@@ -465,6 +470,7 @@ struct RoundConfiguration: Hashable, Codable {
         secretScoring = try c.decodeIfPresent(Bool.self, forKey: .secretScoring)
         scoresRevealed = try c.decodeIfPresent(Bool.self, forKey: .scoresRevealed)
         handicapStrokeBasis = try c.decodeIfPresent(SeriesHandicapStrokeBasis.self, forKey: .handicapStrokeBasis)
+        handicapsEnabled = try c.decodeIfPresent(Bool.self, forKey: .handicapsEnabled)
         sharedScoreHandicapConfig = try c.decodeIfPresent(HandicapConfiguration.self, forKey: .sharedScoreHandicapConfig)
         handicapEntryFormat = try c.decodeIfPresent(HandicapEntryFormat.self, forKey: .handicapEntryFormat) ?? .strokes
         handicapNormalizationMode = try c.decodeIfPresent(HandicapNormalizationMode.self, forKey: .handicapNormalizationMode) ?? .off
@@ -513,6 +519,7 @@ struct RoundConfiguration: Hashable, Codable {
         try c.encodeIfPresent(secretScoring, forKey: .secretScoring)
         try c.encodeIfPresent(scoresRevealed, forKey: .scoresRevealed)
         try c.encodeIfPresent(handicapStrokeBasis, forKey: .handicapStrokeBasis)
+        try c.encodeIfPresent(handicapsEnabled, forKey: .handicapsEnabled)
         try c.encodeIfPresent(sharedScoreHandicapConfig, forKey: .sharedScoreHandicapConfig)
         try c.encode(handicapEntryFormat, forKey: .handicapEntryFormat)
         try c.encode(handicapNormalizationMode, forKey: .handicapNormalizationMode)

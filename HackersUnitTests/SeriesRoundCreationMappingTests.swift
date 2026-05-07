@@ -236,6 +236,8 @@ final class SeriesRoundCreationMappingTests: XCTestCase {
         XCTAssertEqual(roundConfig.handicapNormalizationMode, .matchup)
         XCTAssertEqual(roundConfig.handicapStrokeBasis, .nineHole)
         XCTAssertEqual(roundConfig.leagueHandicapMaximum, 21)
+        XCTAssertEqual(roundConfig.handicapsEnabled, true)
+        XCTAssertTrue(roundConfig.useHandicaps)
     }
 
     func testRoundConfigurationCarriesSeriesHandicapMaximumWhenEnabled() {
@@ -247,6 +249,38 @@ final class SeriesRoundCreationMappingTests: XCTestCase {
         )
 
         XCTAssertEqual(roundConfig.leagueHandicapMaximum, 18)
+    }
+
+    func testRoundConfigurationForcesCourseHandicapOffWithoutDefaultTee() {
+        var cfg = SeriesRoundConfiguration()
+        cfg.handicapEntryFormat = .courseHandicap
+        let tee = Tee(
+            id: "white",
+            name: "White",
+            gender: "male",
+            totalHoles: 18,
+            holes: (1...18).map { makeHole($0) },
+            ratingFull: 72.0,
+            slopeFull: 113,
+            ratingFront: nil,
+            slopeFront: nil,
+            ratingBack: nil,
+            slopeBack: nil
+        )
+        let segment = CourseSegment(
+            courseInfo: CourseInfo(id: "course1", name: "Test Course", totalHoles: 18, tees: [tee]),
+            holeRange: HoleRange(startHole: 1, endHole: 18),
+            defaultTee: nil
+        )
+
+        let roundConfig = SeriesRoundCreationMapping.roundConfiguration(
+            series: makeSeries(handicapsEnabled: true),
+            seriesRound: SeriesRound(id: "sr_no_default_tee", roundConfig: cfg, parentID: "series1"),
+            courseSegment: segment,
+            competitionScope: .field
+        )
+
+        XCTAssertEqual(roundConfig.handicapEntryFormat, .strokes)
     }
 
     func testTeeGroupPlansWithAdjacentPartnershipsKeepsPairsTogether() {

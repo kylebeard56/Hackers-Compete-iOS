@@ -116,7 +116,12 @@ struct SeriesRoundSyncService: Loggable {
         }
 
         if options.syncHandicapSettings {
-            workingRound.configuration.handicapEntryFormat = seriesRound.roundConfig.handicapEntryFormat
+            let resolvedHandicapEntryFormat: HandicapEntryFormat = seriesRound.roundConfig.handicapEntryFormat == .courseHandicap
+                && !HandicapCalculator.hasCourseHandicapData(courseSegment: courseSegment)
+                ? .strokes
+                : seriesRound.roundConfig.handicapEntryFormat
+            workingRound.configuration.handicapsEnabled = resolvedPlan.roundConfiguration.useHandicaps
+            workingRound.configuration.handicapEntryFormat = resolvedHandicapEntryFormat
             workingRound.configuration.handicapNormalizationMode = seriesRound.roundConfig.handicapNormalizationMode
             workingRound.configuration.handicapStrokeBasis = seriesRound.roundConfig.handicapStrokeBasis
             workingRound.configuration.leagueHandicapMaximum = series.handicapConfig.isEnabled
@@ -297,7 +302,15 @@ struct SeriesRoundSyncService: Loggable {
             workingParticipants = workingParticipants.map { existing in
                 guard let memberID = existing.seriesMemberID else { return existing }
                 if options.preserveManualHandicapEdits, existing.isLeagueHandicapModifiedFromCreation {
-                    return existing
+                    guard workingRound.configuration.handicapEntryFormat == .courseHandicap,
+                          existing.handicapIndex == nil,
+                          let effectiveIndex = handicaps[memberID]?.effectiveIndex else {
+                        return existing
+                    }
+                    var preserved = existing
+                    preserved.handicapIndex = effectiveIndex
+                    preserved.lastUpdatedAt = .init()
+                    return preserved
                 }
                 let input = handicaps[memberID]?.effectiveIndex
                     ?? existing.handicapIndex

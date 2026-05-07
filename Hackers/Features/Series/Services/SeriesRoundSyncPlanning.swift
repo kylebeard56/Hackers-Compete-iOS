@@ -423,7 +423,7 @@ enum SeriesRoundSyncPlanning {
             if preserveManualHandicapEdits, existing.isLeagueHandicapModifiedFromCreation {
                 next.originalHandicap = existing.originalHandicap
                 next.adjustedHandicap = existing.adjustedHandicap
-                next.handicapIndex = existing.handicapIndex
+                next.handicapIndex = existing.handicapIndex ?? next.handicapIndex
                 next.leagueHandicapStrokesAtCreation = existing.leagueHandicapStrokesAtCreation
             }
 
@@ -608,7 +608,11 @@ enum SeriesRoundSyncPlanning {
 
         var round = snapshot.round
         round.players = workingParticipants.compactMap(\.playerID)
+        round.configuration.handicapsEnabled = resolvedPlan.roundConfiguration.useHandicaps
         round.configuration.handicapStrokeBasis = seriesRound.roundConfig.handicapStrokeBasis
+        round.configuration.leagueHandicapMaximum = series.handicapConfig.isEnabled
+            ? series.handicapConfig.config.maximumHandicap
+            : nil
         round.lastUpdatedAt = .init()
 
         let mappingsToPut = buildSeriesRoundMappings(

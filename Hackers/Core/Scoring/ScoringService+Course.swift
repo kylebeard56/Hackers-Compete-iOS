@@ -95,7 +95,7 @@ enum HandicapCalculator {
         } else if let defaultTeeID = courseSegment.defaultTee {
             tee = courseSegment.tee(from: defaultTeeID)
         } else {
-            tee = courseSegment.courseInfo.tees.first
+            tee = nil
         }
         guard let tee else { return false }
         return courseHandicap(index: 0, tee: tee, segment: courseSegment.holeSegment) != nil
@@ -238,7 +238,7 @@ enum HandicapCalculator {
         if let defaultTeeID = courseSegment.defaultTee, let tee = courseSegment.tee(from: defaultTeeID) {
             return tee
         }
-        return courseSegment.courseInfo.tees.first
+        return nil
     }
 
     private static func capped(_ value: Int, maximumHandicap: Int?) -> Int {
@@ -249,6 +249,29 @@ enum HandicapCalculator {
 }
 
 enum CourseHandicapRosterDisplay {
+    static func label(
+        participant: RoundParticipant,
+        courseSegment: CourseSegment?,
+        handicapStrokeBasis: SeriesHandicapStrokeBasis,
+        defaultTee: Tee?,
+        tees: [Tee],
+        maximumHandicap: Int?,
+        allowOriginalHandicapFallback: Bool = true
+    ) -> String? {
+        guard let index = participant.handicapIndex ?? (allowOriginalHandicapFallback ? Double(participant.originalHandicap) : nil) else {
+            return nil
+        }
+        return label(
+            index: index,
+            participant: participant,
+            courseSegment: courseSegment,
+            handicapStrokeBasis: handicapStrokeBasis,
+            defaultTee: defaultTee,
+            tees: tees,
+            maximumHandicap: maximumHandicap
+        )
+    }
+
     static func label(
         index: Double,
         participant: RoundParticipant,

@@ -16,12 +16,13 @@ extension RoundSession {
         
         do {
             let desiredBasis: ScoreBasis = value ? .net : .gross
+            snapshot.round.configuration.handicapsEnabled = value
             
             // Legacy dual-write (kept for backward compatibility)
             if snapshot.round.configuration.primaryFormat.configuration.basis != desiredBasis {
                 snapshot.round.configuration.primaryFormat.configuration.basis = desiredBasis
-                _ = try await snapshot.round.put().get()
             }
+            _ = try await snapshot.round.put().get()
             
             if var mainSegment = snapshot.segments.first, mainSegment.gameFormat.configuration.basis != desiredBasis {
                 mainSegment.gameFormat.configuration.basis = desiredBasis
@@ -199,16 +200,20 @@ extension RoundSession {
     func setHandicapEntryFormat(_ format: HandicapEntryFormat, maximumHandicap: Int? = nil) async {
         addBreadcrumb()
         let previous = snapshot.configuration.handicapEntryFormat
+        let resolvedFormat: HandicapEntryFormat = format == .courseHandicap
+            && !HandicapCalculator.hasCourseHandicapData(courseSegment: snapshot.courseSegment)
+            ? .strokes
+            : format
 
         do {
-            if snapshot.round.configuration.handicapEntryFormat != format {
-                snapshot.round.configuration.handicapEntryFormat = format
+            if snapshot.round.configuration.handicapEntryFormat != resolvedFormat {
+                snapshot.round.configuration.handicapEntryFormat = resolvedFormat
                 _ = try await snapshot.round.put().get()
             }
 
             let recomputed = HandicapCalculator.recomputedParticipants(
                 snapshot.participants,
-                format: format,
+                format: resolvedFormat,
                 courseSegment: snapshot.courseSegment,
                 maximumHandicap: maximumHandicap,
                 handicapStrokeBasis: snapshot.handicapStrokeBasis
@@ -221,7 +226,7 @@ extension RoundSession {
             emitRoundSetupEvent(
                 "round_setup.handicap_entry_format_changed",
                 extra: [
-                    "value": format.rawValue,
+                    "value": resolvedFormat.rawValue,
                     "previous_value": previous.rawValue
                 ]
             )

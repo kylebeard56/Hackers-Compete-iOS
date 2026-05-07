@@ -221,6 +221,11 @@ struct GameLobby: View, Loggable {
             handicapEntryFormat = s.configuration.handicapEntryFormat
             handicapNormalizationMode = s.configuration.handicapNormalizationMode
             handicapStrokeBasis = s.configuration.handicapStrokeBasis
+            if s.configuration.handicapEntryFormat == .courseHandicap,
+               !HandicapCalculator.hasCourseHandicapData(courseSegment: s.courseSegment) {
+                handicapEntryFormat = .strokes
+                Task { await roundSession.setHandicapEntryFormat(.strokes, maximumHandicap: effectiveSeriesLeagueHandicapMaximum) }
+            }
             sharedScoreAllowanceText = Self.allowanceText(
                 from: s.configuration.sharedScoreHandicapConfig ?? s.resolvedActiveTemplate.requirements.defaultHandicapConfig
             )

@@ -82,7 +82,9 @@ struct HandicapEntryView: View {
         .padding(16)
         .background(palette.backgroundColor)
         .onAppear {
-            let currentValue = participant.handicapIndex ?? Double(participant.adjustedHandicap)
+            let currentValue = entryFormat == .courseHandicap
+                ? participant.handicapIndex ?? Double(participant.originalHandicap)
+                : Double(participant.adjustedHandicap)
             handicapValue = min(max(currentValue, 0), Double(maximumValue))
             handicapString = entryFormat == .courseHandicap ? String(format: "%.1f", handicapValue) : String(Int(handicapValue.rounded()))
         }

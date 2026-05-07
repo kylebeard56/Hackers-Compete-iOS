@@ -101,11 +101,16 @@ enum SeriesRoundCreationMapping {
         competitionScope: CompetitionScope
     ) -> RoundConfiguration {
         let template = seriesRound.roundConfig.template
+        let primaryFormat = primaryGameFormat(series: series, seriesRound: seriesRound)
+        let handicapEntryFormat = seriesRound.roundConfig.handicapEntryFormat == .courseHandicap
+            && !HandicapCalculator.hasCourseHandicapData(courseSegment: courseSegment)
+            ? .strokes
+            : seriesRound.roundConfig.handicapEntryFormat
         let scoreOwnerScope: RoundScoreOwnerScope = template.scoreSource == .shared
             ? seriesRound.roundConfig.scoreOwnerScope
             : .individual
         return RoundConfiguration(
-            primaryFormat: primaryGameFormat(series: series, seriesRound: seriesRound),
+            primaryFormat: primaryFormat,
             formatSummary: RoundFormatSummary(from: template),
             courses: [courseSegment],
             competitionScope: competitionScope,
@@ -119,8 +124,9 @@ enum SeriesRoundCreationMapping {
             selectionDomain: resolvedSelectionDomain(for: seriesRound),
             sequentialTeeStartsEnabled: seriesRound.roundConfig.sequentialTeeStartsEnabled ?? false,
             handicapStrokeBasis: seriesRound.roundConfig.handicapStrokeBasis,
+            handicapsEnabled: primaryFormat.configuration.basis == .net,
             sharedScoreHandicapConfig: seriesRound.roundConfig.sharedScoreHandicapConfig,
-            handicapEntryFormat: seriesRound.roundConfig.handicapEntryFormat,
+            handicapEntryFormat: handicapEntryFormat,
             handicapNormalizationMode: seriesRound.roundConfig.handicapNormalizationMode,
             leagueHandicapMaximum: series.handicapConfig.isEnabled ? series.handicapConfig.config.maximumHandicap : nil,
             attendanceConfirmationEnabled: series.settings.isAttendanceEnabled
@@ -600,7 +606,11 @@ enum SeriesRoundCreationMapping {
         hostPlayerID: String?,
         presenceStatusByMemberID: [String: RoundParticipantPresenceStatus] = [:]
     ) -> [RoundParticipant] {
-        members.map { member in
+        let resolvedHandicapEntryFormat: HandicapEntryFormat = handicapEntryFormat == .courseHandicap
+            && !HandicapCalculator.hasCourseHandicapData(courseSegment: courseSegment)
+            ? .strokes
+            : handicapEntryFormat
+        return members.map { member in
             let assignment = memberAssignments[member.id]
             let effectiveIndex = handicaps[member.id]?.effectiveIndex
             let effectiveHandicap = handicaps[member.id]?.effectiveStrokes(maximumHandicap: maximumHandicap) ?? 0
@@ -614,14 +624,14 @@ enum SeriesRoundCreationMapping {
             let computedHandicap = effectiveIndex.map {
                 HandicapCalculator.strokes(
                     for: $0,
-                    format: handicapEntryFormat,
+                    format: resolvedHandicapEntryFormat,
                     participant: template,
                     courseSegment: courseSegment,
                     maximumHandicap: maximumHandicap,
                     handicapStrokeBasis: handicapStrokeBasis ?? SeriesHandicapStrokeBasis.defaultBasis(holeCount: courseSegment.holeSegment.holeCount)
                 )
             } ?? effectiveHandicap
-            let originalHandicap = handicapEntryFormat == .courseHandicap
+            let originalHandicap = resolvedHandicapEntryFormat == .courseHandicap
                 ? max(0, Int((effectiveIndex ?? 0).rounded()))
                 : effectiveHandicap
             return RoundParticipant(
@@ -632,7 +642,7 @@ enum SeriesRoundCreationMapping {
                 teeBoxID: teeBoxID,
                 originalHandicap: originalHandicap,
                 adjustedHandicap: computedHandicap,
-                handicapIndex: handicapEntryFormat == .courseHandicap ? effectiveIndex : nil,
+                handicapIndex: resolvedHandicapEntryFormat == .courseHandicap ? effectiveIndex : nil,
                 leagueHandicapStrokesAtCreation: computedHandicap,
                 seriesMemberID: member.id,
                 teamID: teamMapping?.roundTeamID,

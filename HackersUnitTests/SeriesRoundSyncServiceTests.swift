@@ -536,6 +536,54 @@ final class SeriesRoundSyncServiceTests: XCTestCase {
         XCTAssertEqual(out.first?.teeBoxID, "tee_white")
     }
 
+    func testParticipantsWithPlayerDataSyncPreserveManualFillsMissingCourseHandicapIndex() {
+        let p = RoundParticipant(
+            id: "part1",
+            userID: "u1",
+            playerID: "pl1",
+            name: Name("Old", "Name"),
+            teeBoxID: "tee_white",
+            originalHandicap: 12,
+            adjustedHandicap: 14,
+            handicapIndex: nil,
+            leagueHandicapStrokesAtCreation: 12,
+            seriesMemberID: "mem1",
+            createdAt: t0,
+            lastUpdatedAt: t0,
+            parentID: "round1"
+        )
+        let member = SeriesMember(
+            id: "mem1",
+            userID: "u1",
+            playerID: "pl1",
+            name: Name("New", "Name"),
+            defaultTeeBoxID: "tee_white",
+            createdAt: t0,
+            lastUpdatedAt: t0,
+            parentID: "series1"
+        )
+
+        let out = SeriesRoundSyncPlanning.participantsWithPlayerDataSync(
+            participants: [p],
+            roundID: "round1",
+            participatingMembers: [member],
+            teamLinks: [:],
+            memberAssignments: [:],
+            handicaps: [
+                "mem1": SeriesMemberHandicap(id: "mem1", memberID: "mem1", computedIndex: 6.2),
+            ],
+            courseSegment: testCourseSegment(),
+            handicapEntryFormat: .courseHandicap,
+            hostPlayerID: nil,
+            preserveManualHandicapEdits: true
+        )
+
+        XCTAssertEqual(out.first?.adjustedHandicap, 14)
+        XCTAssertEqual(out.first?.originalHandicap, 12)
+        XCTAssertEqual(out.first?.handicapIndex, 6.2)
+        XCTAssertEqual(out.first?.leagueHandicapStrokesAtCreation, 12)
+    }
+
     func testParticipantsWithPlayerDataSyncPreservesDecimalIndexForCourseHandicap() {
         let p = RoundParticipant(
             id: "part1",
@@ -686,6 +734,8 @@ final class SeriesRoundSyncServiceTests: XCTestCase {
 
         XCTAssertEqual(plan.roundConfiguration.handicapStrokeBasis, .nineHole)
         XCTAssertEqual(plan.roundConfiguration.leagueHandicapMaximum, 18)
+        XCTAssertTrue(plan.roundConfiguration.useHandicaps)
+        XCTAssertEqual(plan.roundConfiguration.handicapsEnabled, true)
     }
 
     func testTeeGroupsWithLeagueSchedule_usesExistingFirstTimeWhenNoScheduledDate() throws {

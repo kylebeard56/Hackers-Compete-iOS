@@ -135,6 +135,22 @@ final class SeriesRoundCodableTests: XCTestCase {
         XCTAssertEqual(dictionary["league_handicap_maximum"] as? Int, 18)
     }
 
+    func testRoundExplicitUseHandicapsRoundTripsAndLegacyFallsBackToPrimaryFormat() throws {
+        let decoder = JSONDecoder()
+        let legacyConfiguration = try decoder.decode(RoundConfiguration.self, from: Data(#"{}"#.utf8))
+        XCTAssertNil(legacyConfiguration.handicapsEnabled)
+        XCTAssertFalse(legacyConfiguration.useHandicaps)
+
+        let configuration = RoundConfiguration(handicapsEnabled: true)
+        let data = try JSONEncoder().encode(configuration)
+        let decoded = try decoder.decode(RoundConfiguration.self, from: data)
+        let dictionary = try configuration.toDictionary()
+
+        XCTAssertEqual(decoded.handicapsEnabled, true)
+        XCTAssertTrue(decoded.useHandicaps)
+        XCTAssertEqual(dictionary["use_handicaps"] as? Bool, true)
+    }
+
     func testRoundSelectionDomainRoundTripsAndDefaultsToNilWhenMissing() throws {
         let decoder = JSONDecoder()
         let legacyConfiguration = try decoder.decode(RoundConfiguration.self, from: Data(#"{}"#.utf8))

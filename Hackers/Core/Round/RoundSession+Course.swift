@@ -28,6 +28,7 @@ extension RoundSession {
                     snapshot.participants,
                     format: .courseHandicap,
                     courseSegment: updatedSegment,
+                    maximumHandicap: snapshot.configuration.leagueHandicapMaximum,
                     handicapStrokeBasis: snapshot.handicapStrokeBasis
                 )
                 for participant in recomputed where snapshot.participants.first(where: { $0.id == participant.id }) != participant {
@@ -83,11 +84,17 @@ extension RoundSession {
         }
 
         do {
+            let previousHandicapEntryFormat = snapshot.configuration.handicapEntryFormat
+            let resolvedHandicapEntryFormat: HandicapEntryFormat = previousHandicapEntryFormat == .courseHandicap
+                && !HandicapCalculator.hasCourseHandicapData(courseSegment: segmentToSave)
+                ? .strokes
+                : previousHandicapEntryFormat
             if snapshot.round.configuration.courses.isEmpty {
                 snapshot.round.configuration.courses = [segmentToSave]
             } else {
                 snapshot.round.configuration.courses[0] = segmentToSave
             }
+            snapshot.round.configuration.handicapEntryFormat = resolvedHandicapEntryFormat
             _ = try await snapshot.round.put().get()
 
             let didSyncSegment = try await syncPrimarySegmentHoleRange(to: segmentToSave.holeRange)
@@ -96,11 +103,12 @@ extension RoundSession {
                 try await resequenceTeeGroupsForSequentialStarts()
             }
 
-            if snapshot.configuration.handicapEntryFormat == .courseHandicap {
+            if previousHandicapEntryFormat == .courseHandicap || resolvedHandicapEntryFormat == .courseHandicap {
                 let recomputed = HandicapCalculator.recomputedParticipants(
                     snapshot.participants,
-                    format: .courseHandicap,
+                    format: resolvedHandicapEntryFormat,
                     courseSegment: segmentToSave,
+                    maximumHandicap: snapshot.configuration.leagueHandicapMaximum,
                     handicapStrokeBasis: snapshot.configuration.resolvedHandicapStrokeBasis(
                         holeCount: segmentToSave.holeSegment.holeCount
                     )

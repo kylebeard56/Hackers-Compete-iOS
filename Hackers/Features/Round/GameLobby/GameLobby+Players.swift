@@ -544,7 +544,9 @@ extension GameLobby {
                         HandicapTextField(
                             id: participant.id,
                             initialValue: participant.adjustedHandicap,
-                            entryValue: participant.handicapIndex,
+                            entryValue: rosterEntryFormat == .courseHandicap
+                                ? participant.handicapIndex ?? Double(participant.originalHandicap)
+                                : participant.handicapIndex,
                             entryFormat: rosterEntryFormat,
                             focusedField: $focus,
                             palette: palette,
@@ -1275,13 +1277,11 @@ extension GameLobby {
 
     private func courseHandicapSubtitle(for participant: RoundParticipant) -> String? {
         guard snapshot.configuration.useHandicaps,
-              snapshot.configuration.handicapEntryFormat == .courseHandicap,
-              let index = participant.handicapIndex else {
+              snapshot.configuration.handicapEntryFormat == .courseHandicap else {
             return nil
         }
 
         return CourseHandicapRosterDisplay.label(
-            index: index,
             participant: participant,
             courseSegment: snapshot.courseSegment,
             handicapStrokeBasis: snapshot.handicapStrokeBasis,

@@ -136,6 +136,7 @@ extension RoundSession {
                     applying: input,
                     format: snapshot.configuration.handicapEntryFormat,
                     courseSegment: snapshot.courseSegment,
+                    maximumHandicap: snapshot.configuration.leagueHandicapMaximum,
                     handicapStrokeBasis: snapshot.handicapStrokeBasis
                 )
             }

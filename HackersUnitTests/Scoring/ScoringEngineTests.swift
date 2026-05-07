@@ -1928,6 +1928,59 @@ final class ScoringEngineTests: XCTestCase {
                 maximumHandicap: nil
             )
         )
+
+        let legacyParticipant = RoundParticipant(id: "legacy", teeBoxID: "white", originalHandicap: 8)
+        XCTAssertEqual(
+            CourseHandicapRosterDisplay.label(
+                participant: legacyParticipant,
+                courseSegment: segment,
+                handicapStrokeBasis: .eighteenHole,
+                defaultTee: white,
+                tees: [white, purple],
+                maximumHandicap: nil
+            ),
+            "Course HCP: 8.0"
+        )
+    }
+
+    func testCourseHandicapAvailabilityRequiresResolvedDefaultOrPlayerTee() {
+        let white = Tee(
+            id: "white",
+            name: "White",
+            gender: "male",
+            totalHoles: 18,
+            holes: makeHoles(),
+            ratingFull: 72.0,
+            slopeFull: 113,
+            ratingFront: nil,
+            slopeFront: nil,
+            ratingBack: nil,
+            slopeBack: nil
+        )
+        let segmentWithoutDefault = CourseSegment(
+            courseInfo: CourseInfo(
+                id: "course1",
+                name: "Test Course",
+                totalHoles: 18,
+                tees: [white]
+            ),
+            holeRange: HoleRange(startHole: 1, endHole: 18),
+            defaultTee: nil
+        )
+        let participantWithTee = RoundParticipant(id: "p1", teeBoxID: "white")
+        let participantWithoutTee = RoundParticipant(id: "p2", teeBoxID: "")
+
+        XCTAssertFalse(HandicapCalculator.hasCourseHandicapData(courseSegment: segmentWithoutDefault))
+        XCTAssertTrue(HandicapCalculator.hasCourseHandicapData(for: participantWithTee, courseSegment: segmentWithoutDefault))
+        XCTAssertFalse(HandicapCalculator.hasCourseHandicapData(for: participantWithoutTee, courseSegment: segmentWithoutDefault))
+        XCTAssertNil(
+            HandicapCalculator.rawCourseHandicap(
+                index: 7.2,
+                participant: participantWithoutTee,
+                courseSegment: segmentWithoutDefault,
+                handicapStrokeBasis: .eighteenHole
+            )
+        )
     }
 
     func testCourseHandicapMissingTeeDataFallsBackToEnteredStrokes() {
