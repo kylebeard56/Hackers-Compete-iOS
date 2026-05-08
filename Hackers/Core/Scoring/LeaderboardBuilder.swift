@@ -50,6 +50,8 @@ struct MatchupResultPresentation: Identifiable {
     let isPointsFormat: Bool
     let winningSideID: String?
     let isTie: Bool
+    let isAutoWin: Bool
+    let minimumCountStatus: MatchupMinimumCountStatus?
     let title: String
     let scorelineDetail: String
     let marginDetail: String
@@ -100,6 +102,7 @@ struct MatchupResultPresentationBuilder {
             matchup: section.matchup,
             matchupRows: matchupResult?.rows ?? [],
             isPointsFormatOverride: matchupResult?.isPointsFormat,
+            minimumCountStatus: matchupResult?.minimumCountStatus,
             basis: basis
         )
     }
@@ -116,6 +119,7 @@ struct MatchupResultPresentationBuilder {
             matchup: matchupResult.matchup,
             matchupRows: matchupResult.rows,
             isPointsFormatOverride: matchupResult.isPointsFormat,
+            minimumCountStatus: matchupResult.minimumCountStatus,
             basis: basis
         )
     }
@@ -142,6 +146,7 @@ struct MatchupResultPresentationBuilder {
         matchup: TeamMatchup,
         matchupRows: [ScoringRow],
         isPointsFormatOverride: Bool?,
+        minimumCountStatus: MatchupMinimumCountStatus?,
         basis: ScoreBasis?
     ) -> MatchupResultPresentation {
         let mode = matchup.effectiveMode
@@ -181,7 +186,12 @@ struct MatchupResultPresentationBuilder {
                 subtitle: sideSubtitle(sideID: sideID, mode: mode, snapshot: snapshot),
                 accentColor: sideAccentColor(sideID: sideID, mode: mode, snapshot: snapshot),
                 total: total,
-                scoreLabel: scoreLabel(for: total, isPointsFormat: isPointsFormat),
+                scoreLabel: scoreLabel(
+                    for: total,
+                    sideID: sideID,
+                    minimumCountStatus: minimumCountStatus,
+                    isPointsFormat: isPointsFormat
+                ),
                 participants: participants,
                 countingParticipantIDs: Set(countingParticipantIDs),
                 countingScope: countingScope,
@@ -200,18 +210,31 @@ struct MatchupResultPresentationBuilder {
         }
 
         let hasTwoCompleteSides = sides.count >= 2 && completeSides.count >= 2
-        let isTie = hasTwoCompleteSides && completeSides.allSatisfy {
+        let autoWinnerSideID = minimumCountStatus?.autoWinnerSideID
+        let isMinimumCountTie = minimumCountStatus?.bothSidesUnderMinimum == true
+        let isScoreTie = hasTwoCompleteSides && completeSides.allSatisfy {
             abs(($0.total ?? 0) - (completeSides[0].total ?? 0)) < 0.0001
         }
-        let winningSide = isTie ? nil : sortedSides.first
+        let isTie = isMinimumCountTie || (autoWinnerSideID == nil && isScoreTie)
+        let winningSide = autoWinnerSideID.flatMap { winnerID in
+            sides.first { $0.id == winnerID }
+        } ?? (isTie ? nil : sortedSides.first)
         let losingSide = winningSide.flatMap { winner in
-            sortedSides.first { $0.id != winner.id }
+            sides.first { $0.id != winner.id }
         }
 
         let title: String
         let scorelineDetail: String
         let marginDetail: String
-        if isTie, let first = sides.first {
+        if isMinimumCountTie {
+            title = "Match tied"
+            scorelineDetail = "Both sides need \(minimumCountStatus?.requiredCount ?? 1)"
+            marginDetail = scorelineDetail
+        } else if autoWinnerSideID != nil, let winningSide, let losingSide {
+            title = "\(winningSide.title) wins"
+            scorelineDetail = "Auto-win: \(losingSide.title) needs \(minimumCountStatus?.requiredCount ?? 1)"
+            marginDetail = scorelineDetail
+        } else if isTie, let first = sides.first {
             title = "Match tied"
             scorelineDetail = isPointsFormat ? "Tied at \(first.scoreLabel) pts" : "Tied at \(first.scoreLabel)"
             marginDetail = scorelineDetail
@@ -233,11 +256,26 @@ struct MatchupResultPresentationBuilder {
             isPointsFormat: isPointsFormat,
             winningSideID: winningSide?.id,
             isTie: isTie,
+            isAutoWin: autoWinnerSideID != nil,
+            minimumCountStatus: minimumCountStatus,
             title: title,
             scorelineDetail: scorelineDetail,
             marginDetail: marginDetail,
             countingScopeLabel: countingScopeLabel(for: teamScoring)
         )
+    }
+
+    private static func scoreLabel(
+        for total: Double?,
+        sideID: String,
+        minimumCountStatus: MatchupMinimumCountStatus?,
+        isPointsFormat: Bool
+    ) -> String {
+        if let sideStatus = minimumCountStatus?.sideStatus(for: sideID),
+           sideStatus.isUnderMinimum {
+            return "Needs \(sideStatus.requiredCount)"
+        }
+        return scoreLabel(for: total, isPointsFormat: isPointsFormat)
     }
 
     private static func marginText(

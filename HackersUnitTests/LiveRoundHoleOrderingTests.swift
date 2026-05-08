@@ -729,6 +729,57 @@ final class LiveRoundViewModelHoleOrderingTests: XCTestCase {
         XCTAssertTrue(presentation.side(id: "team_blue")?.isParticipantActive(snapshot.participants[7]) == false)
     }
 
+    func testTeamMatchupBestNAutoWinShowsImmediatelyForStructuralShortage() async throws {
+        var snapshot = MockLiveRoundBest2of4Matchup.snapshot
+        snapshot.participants = snapshot.participants.filter { $0.teamID != "team_blue" || $0.id == "p03" }
+        snapshot.scoring = snapshot.scoring.filter { entry in
+            snapshot.participants.contains { $0.id == entry.scoringUnitID }
+        }
+
+        let vm = await boundViewModel(snapshot: snapshot, participantID: "p01")
+        let section = try XCTUnwrap(vm.matchupSections.first)
+        let presentation = vm.matchupPresentation(in: section)
+        let status = vm.outcomeMatchupStatus(for: section)
+
+        XCTAssertEqual(presentation.minimumCountStatus?.autoWinnerSideID, "team_red")
+        XCTAssertEqual(status.title, "Red Team wins")
+        XCTAssertEqual(status.detail, "Auto-win: Blue Team needs 2")
+        XCTAssertEqual(vm.liveMatchupResultChipTitle(for: "team_red", in: section, presentation: presentation), "Auto-win")
+    }
+
+    func testTeamMatchupBestNMissingScoresStaysPendingWhileLive() async throws {
+        var snapshot = MockLiveRoundBest2of4Matchup.snapshot
+        snapshot.round.configuration.teamScoring = .init(mode: .bestN, count: 2, scope: .perHole)
+        snapshot.scoring = snapshot.scoring.filter { !($0.scoringUnitID == "p04" && $0.holeNumber == 1) }
+
+        let vm = await boundViewModel(snapshot: snapshot, participantID: "p01")
+        let section = try XCTUnwrap(vm.matchupSections.first)
+        let presentation = vm.matchupPresentation(in: section)
+        let status = vm.outcomeMatchupStatus(for: section)
+
+        XCTAssertEqual(presentation.minimumCountStatus?.sideStatus(for: "team_blue")?.shortageKind, .missingScores)
+        XCTAssertEqual(status.title, "Matchup pending")
+        XCTAssertEqual(status.detail, "Waiting for required scores to count")
+        XCTAssertNil(vm.liveMatchupResultChipTitle(for: "team_red", in: section, presentation: presentation))
+    }
+
+    func testTeamMatchupBestNMissingScoresAutoWinsWhenRoundComplete() async throws {
+        var snapshot = MockLiveRoundBest2of4Matchup.snapshot
+        snapshot.round.status = .complete
+        snapshot.round.configuration.teamScoring = .init(mode: .bestN, count: 2, scope: .perHole)
+        snapshot.scoring = snapshot.scoring.filter { !($0.scoringUnitID == "p04" && $0.holeNumber == 1) }
+
+        let vm = await boundViewModel(snapshot: snapshot, participantID: "p01")
+        let section = try XCTUnwrap(vm.matchupSections.first)
+        let presentation = vm.matchupPresentation(in: section)
+        let status = vm.outcomeMatchupStatus(for: section)
+
+        XCTAssertEqual(presentation.minimumCountStatus?.autoWinnerSideID, "team_red")
+        XCTAssertEqual(status.title, "Red Team wins")
+        XCTAssertEqual(status.detail, "Auto-win: Blue Team needs 2")
+        XCTAssertEqual(vm.liveMatchupResultChipTitle(for: "team_red", in: section, presentation: presentation), "Auto-win")
+    }
+
     func testOutcomeMatchupsResolveScoresSavedUnderObservedSegmentID() async throws {
         var snapshot = MockLiveRoundBest2of4Matchup.snapshot
         snapshot.scoringGroups = Self.best2ScoringGroups()

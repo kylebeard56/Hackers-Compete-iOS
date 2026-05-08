@@ -37,11 +37,70 @@ struct MatchupScoringResult: Identifiable {
     let matchup: TeamMatchup
     var rows: [ScoringRow]
     var isPointsFormat: Bool?
+    var minimumCountStatus: MatchupMinimumCountStatus?
 
-    init(matchup: TeamMatchup, rows: [ScoringRow], isPointsFormat: Bool? = nil) {
+    init(
+        matchup: TeamMatchup,
+        rows: [ScoringRow],
+        isPointsFormat: Bool? = nil,
+        minimumCountStatus: MatchupMinimumCountStatus? = nil
+    ) {
         self.matchup = matchup
         self.rows = rows
         self.isPointsFormat = isPointsFormat
+        self.minimumCountStatus = minimumCountStatus
+    }
+}
+
+enum MatchupMinimumCountShortageKind: Equatable {
+    case structural
+    case missingScores
+}
+
+struct MatchupMinimumCountSideStatus: Equatable {
+    let sideID: String
+    let requiredCount: Int
+    let actualCount: Int
+    let availableParticipantCount: Int
+    let shortageKind: MatchupMinimumCountShortageKind?
+
+    var isUnderMinimum: Bool {
+        actualCount < requiredCount
+    }
+}
+
+struct MatchupMinimumCountStatus: Equatable {
+    let requiredCount: Int
+    let scope: AggregationScope
+    let sideStatuses: [MatchupMinimumCountSideStatus]
+
+    var underMinimumSideIDs: [String] {
+        sideStatuses.filter(\.isUnderMinimum).map(\.sideID)
+    }
+
+    var hasUnderMinimumSide: Bool {
+        underMinimumSideIDs.isPopulated
+    }
+
+    var hasStructuralShortage: Bool {
+        sideStatuses.contains { $0.shortageKind == .structural }
+    }
+
+    var bothSidesUnderMinimum: Bool {
+        sideStatuses.count >= 2 && sideStatuses.allSatisfy(\.isUnderMinimum)
+    }
+
+    var autoWinnerSideID: String? {
+        guard sideStatuses.count == 2,
+              let winner = sideStatuses.first(where: { !$0.isUnderMinimum }),
+              sideStatuses.filter(\.isUnderMinimum).count == 1 else {
+            return nil
+        }
+        return winner.sideID
+    }
+
+    func sideStatus(for sideID: String) -> MatchupMinimumCountSideStatus? {
+        sideStatuses.first { $0.sideID == sideID }
     }
 }
 
@@ -505,7 +564,21 @@ struct ScoringEngine {
                     teamScoring: teamScoring,
                     perHoleWinPoints: perHoleWinPoints
                 ) {
-                    matchupResults.append(MatchupScoringResult(matchup: matchup, rows: rows))
+                    let minimumStatus = minimumCountStatus(
+                        matchup: matchup,
+                        values: matchupBaseValues,
+                        participants: matchupParticipants,
+                        teams: teams,
+                        scoringGroups: scoringGroups,
+                        scoringUnits: matchupScoringUnits,
+                        holeNumbers: holeNumbers,
+                        teamScoring: teamScoring
+                    )
+                    matchupResults.append(MatchupScoringResult(
+                        matchup: matchup,
+                        rows: rows,
+                        minimumCountStatus: minimumStatus
+                    ))
                     allRows.append(contentsOf: rows)
                     continue
                 }
@@ -841,6 +914,16 @@ struct ScoringEngine {
                 }
                 let rows = matchupRows
                 guard rows.count == 2 else { return nil }
+                let minimumStatus = minimumCountStatus(
+                    matchup: matchup,
+                    values: baseValues,
+                    participants: unnormalizedParticipants ?? participants,
+                    teams: teams,
+                    scoringGroups: [],
+                    scoringUnits: [],
+                    holeNumbers: holeNumbers,
+                    teamScoring: teamScoring
+                )
                 if matchupScoringStyle == .holeByHolePoints {
                     return MatchupScoringResult(
                         matchup: matchup,
@@ -849,12 +932,18 @@ struct ScoringEngine {
                             holeNumbers: holeNumbers,
                             perHoleWinPoints: perHoleWinPoints
                         ),
-                        isPointsFormat: true
+                        isPointsFormat: true,
+                        minimumCountStatus: minimumStatus
                     )
                 }
                 switch matchupResolutionStyle {
                 case .roundAggregate:
-                    return MatchupScoringResult(matchup: matchup, rows: rows, isPointsFormat: false)
+                    return MatchupScoringResult(
+                        matchup: matchup,
+                        rows: rows,
+                        isPointsFormat: false,
+                        minimumCountStatus: minimumStatus
+                    )
                 }
             }
         } else {
@@ -1252,6 +1341,72 @@ struct ScoringEngine {
         case .worstN:
             return Array(orderedScores.suffix(max(1, teamScoring.count)))
         }
+    }
+
+    private static func minimumCountStatus(
+        matchup: TeamMatchup,
+        values: [String: [Int: PipelineHoleValue]],
+        participants: [RoundParticipant],
+        teams: [RoundTeam],
+        scoringGroups: [RoundScoringGroup],
+        scoringUnits: [ScoringUnit],
+        holeNumbers: [Int],
+        teamScoring: RoundTeamScoringConfiguration
+    ) -> MatchupMinimumCountStatus? {
+        guard teamScoring.mode != .all else { return nil }
+        let requiredCount = max(1, teamScoring.count)
+        let participantByID = Dictionary(uniqueKeysWithValues: participants.map { ($0.id, $0) })
+        let sides = resolvedMatchupSides(
+            matchup: matchup,
+            participants: participants,
+            teams: teams,
+            scoringGroups: scoringGroups,
+            scoringUnits: scoringUnits
+        )
+        guard sides.count == 2 else { return nil }
+
+        let sideStatuses = sides.map { side in
+            let sideParticipants = side.participantIDs.compactMap { participantByID[$0] }
+            let actualCount: Int
+            switch teamScoring.scope {
+            case .perRound:
+                actualCount = sideParticipants.filter { participant in
+                    holeNumbers.contains { values[participant.id]?[$0] != nil }
+                }.count
+            case .perHole:
+                if holeNumbers.isEmpty {
+                    actualCount = 0
+                } else {
+                    actualCount = holeNumbers.map { holeNumber in
+                        sideParticipants.filter { values[$0.id]?[holeNumber] != nil }.count
+                    }.min() ?? 0
+                }
+            }
+
+            let shortageKind: MatchupMinimumCountShortageKind?
+            if sideParticipants.count < requiredCount {
+                shortageKind = .structural
+            } else if actualCount < requiredCount {
+                shortageKind = .missingScores
+            } else {
+                shortageKind = nil
+            }
+
+            return MatchupMinimumCountSideStatus(
+                sideID: side.sideID,
+                requiredCount: requiredCount,
+                actualCount: min(actualCount, requiredCount),
+                availableParticipantCount: sideParticipants.count,
+                shortageKind: shortageKind
+            )
+        }
+
+        guard sideStatuses.contains(where: \.isUnderMinimum) else { return nil }
+        return MatchupMinimumCountStatus(
+            requiredCount: requiredCount,
+            scope: teamScoring.scope,
+            sideStatuses: sideStatuses
+        )
     }
 
     /// Builds per-participant raw values for each hole.

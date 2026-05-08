@@ -1614,6 +1614,89 @@ final class ScoringEngineTests: XCTestCase {
         XCTAssertEqual(Set(row?.countingParticipantIDs ?? []), Set(["david", "karis"]))
     }
 
+    func testTeamScoringMatchupBestTwoPerRoundAutoWinsWhenOpponentStructurallyShort() {
+        let holes = [Hole(number: 1, par: 4, yardage: 400, handicap: 1)]
+        let participants = [
+            makeParticipant(id: "r1", name: "Red One", teamID: "red"),
+            makeParticipant(id: "r2", name: "Red Two", teamID: "red"),
+            makeParticipant(id: "b1", name: "Blue One", teamID: "blue")
+        ]
+        let teams = [
+            RoundTeam(id: "red", name: "Red", color: "red", index: 0, createdAt: .init()),
+            RoundTeam(id: "blue", name: "Blue", color: "blue", index: 1, createdAt: .init())
+        ]
+        let segment = RoundSegment(
+            id: "seg1",
+            roundID: "round1",
+            holeRange: HoleRange(startHole: 1, endHole: 1),
+            matchups: [TeamMatchup(id: "match1", teamIDs: ["red", "blue"], mode: .team)],
+            competitionScope: .matchup
+        )
+        let scores = [
+            makeScoreEntry(participantID: "r1", holeNumber: 1, strokes: 8),
+            makeScoreEntry(participantID: "r2", holeNumber: 1, strokes: 8),
+            makeScoreEntry(participantID: "b1", holeNumber: 1, strokes: 4)
+        ]
+
+        let result = ScoringEngine.computeWithTeamScoring(
+            scores: scores,
+            participants: participants,
+            teams: teams,
+            segment: segment,
+            holes: holes,
+            basis: .gross,
+            template: FormatTemplateRegistry.strokePlayGross,
+            teamScoring: RoundTeamScoringConfiguration(mode: .bestN, count: 2, scope: .perRound),
+            matchupResolutionStyle: .roundAggregate,
+            resolvedCompetitionScope: .matchup
+        )
+
+        let matchupResult = result.matchupResults.first
+        XCTAssertEqual(matchupResult?.minimumCountStatus?.autoWinnerSideID, "red")
+        XCTAssertEqual(matchupResult?.minimumCountStatus?.sideStatus(for: "blue")?.shortageKind, .structural)
+        XCTAssertEqual(matchupResult?.minimumCountStatus?.sideStatus(for: "blue")?.actualCount, 1)
+    }
+
+    func testTeamScoringMatchupBestTwoPerRoundBothShortTreatsAsTie() {
+        let holes = [Hole(number: 1, par: 4, yardage: 400, handicap: 1)]
+        let participants = [
+            makeParticipant(id: "r1", name: "Red One", teamID: "red"),
+            makeParticipant(id: "b1", name: "Blue One", teamID: "blue")
+        ]
+        let teams = [
+            RoundTeam(id: "red", name: "Red", color: "red", index: 0, createdAt: .init()),
+            RoundTeam(id: "blue", name: "Blue", color: "blue", index: 1, createdAt: .init())
+        ]
+        let segment = RoundSegment(
+            id: "seg1",
+            roundID: "round1",
+            holeRange: HoleRange(startHole: 1, endHole: 1),
+            matchups: [TeamMatchup(id: "match1", teamIDs: ["red", "blue"], mode: .team)],
+            competitionScope: .matchup
+        )
+        let scores = [
+            makeScoreEntry(participantID: "r1", holeNumber: 1, strokes: 4),
+            makeScoreEntry(participantID: "b1", holeNumber: 1, strokes: 8)
+        ]
+
+        let result = ScoringEngine.computeWithTeamScoring(
+            scores: scores,
+            participants: participants,
+            teams: teams,
+            segment: segment,
+            holes: holes,
+            basis: .gross,
+            template: FormatTemplateRegistry.strokePlayGross,
+            teamScoring: RoundTeamScoringConfiguration(mode: .bestN, count: 2, scope: .perRound),
+            matchupResolutionStyle: .roundAggregate,
+            resolvedCompetitionScope: .matchup
+        )
+
+        let status = result.matchupResults.first?.minimumCountStatus
+        XCTAssertTrue(status?.bothSidesUnderMinimum == true)
+        XCTAssertNil(status?.autoWinnerSideID)
+    }
+
     func testTeamScoringMatchupBestTwoPerHoleAggregatesEachHoleSelection() {
         let holes = [
             Hole(number: 1, par: 4, yardage: 400, handicap: 1),
@@ -1669,6 +1752,57 @@ final class ScoringEngineTests: XCTestCase {
         let row = result.matchupResults.first?.rows.first { $0.scoringUnitID == "team1" }
         XCTAssertEqual(row?.total, 14)
         XCTAssertEqual(Set(row?.countingParticipantIDs ?? []), Set(["p1", "p2", "p3"]))
+    }
+
+    func testTeamScoringMatchupBestTwoPerHoleRequiresEnoughScoresOnEveryHole() {
+        let holes = [
+            Hole(number: 1, par: 4, yardage: 400, handicap: 1),
+            Hole(number: 2, par: 4, yardage: 410, handicap: 2)
+        ]
+        let participants = [
+            makeParticipant(id: "r1", name: "Red One", teamID: "red"),
+            makeParticipant(id: "r2", name: "Red Two", teamID: "red"),
+            makeParticipant(id: "b1", name: "Blue One", teamID: "blue"),
+            makeParticipant(id: "b2", name: "Blue Two", teamID: "blue")
+        ]
+        let teams = [
+            RoundTeam(id: "red", name: "Red", color: "red", index: 0, createdAt: .init()),
+            RoundTeam(id: "blue", name: "Blue", color: "blue", index: 1, createdAt: .init())
+        ]
+        let segment = RoundSegment(
+            id: "seg1",
+            roundID: "round1",
+            holeRange: HoleRange(startHole: 1, endHole: 2),
+            matchups: [TeamMatchup(id: "match1", teamIDs: ["red", "blue"], mode: .team)],
+            competitionScope: .matchup
+        )
+        let scores = [
+            makeScoreEntry(participantID: "r1", holeNumber: 1, strokes: 4),
+            makeScoreEntry(participantID: "r2", holeNumber: 1, strokes: 4),
+            makeScoreEntry(participantID: "r1", holeNumber: 2, strokes: 4),
+            makeScoreEntry(participantID: "r2", holeNumber: 2, strokes: 4),
+            makeScoreEntry(participantID: "b1", holeNumber: 1, strokes: 3),
+            makeScoreEntry(participantID: "b2", holeNumber: 1, strokes: 3),
+            makeScoreEntry(participantID: "b1", holeNumber: 2, strokes: 3)
+        ]
+
+        let result = ScoringEngine.computeWithTeamScoring(
+            scores: scores,
+            participants: participants,
+            teams: teams,
+            segment: segment,
+            holes: holes,
+            basis: .gross,
+            template: FormatTemplateRegistry.strokePlayGross,
+            teamScoring: RoundTeamScoringConfiguration(mode: .bestN, count: 2, scope: .perHole),
+            matchupResolutionStyle: .roundAggregate,
+            resolvedCompetitionScope: .matchup
+        )
+
+        let status = result.matchupResults.first?.minimumCountStatus
+        XCTAssertEqual(status?.autoWinnerSideID, "red")
+        XCTAssertEqual(status?.sideStatus(for: "blue")?.shortageKind, .missingScores)
+        XCTAssertEqual(status?.sideStatus(for: "blue")?.actualCount, 1)
     }
 
     func testMaxScoreOverParSelectableCasesIncludeQuintAndSext() {

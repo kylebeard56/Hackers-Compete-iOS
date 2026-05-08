@@ -4497,6 +4497,7 @@ final class SeriesViewModel: ObservableObject, Loggable {
                 winningSideID: presentation.winningSideID,
                 isTie: presentation.isTie,
                 showsResultChip: showsResultChip,
+                resultChipLabel: presentation.isAutoWin ? "Auto-win" : nil,
                 usesNetScores: snapshot.configuration.useHandicaps
             )
         }
@@ -4547,6 +4548,7 @@ final class SeriesViewModel: ObservableObject, Loggable {
                 winningSideID: nil,
                 isTie: false,
                 showsResultChip: false,
+                resultChipLabel: nil,
                 usesNetScores: snapshot.configuration.useHandicaps
             )
         }
@@ -5103,15 +5105,30 @@ final class SeriesViewModel: ObservableObject, Loggable {
         var competitors: [AwardCompetitor] = []
         for matchupResult in result.matchupResults {
             let highestWins = matchupResult.isPointsFormat ?? (result.template.leaderboardSort == .highestWins)
-            let sortedRows = matchupResult.rows.sorted {
-                if $0.total != $1.total {
-                    return highestWins ? $0.total > $1.total : $0.total < $1.total
+            let sortedRows: [ScoringRow]
+            let isMinimumCountTie: Bool
+            if shouldResolveMinimumCountResult(matchupResult.minimumCountStatus, snapshot: snapshot),
+               let minimumStatus = matchupResult.minimumCountStatus,
+               minimumStatus.hasUnderMinimumSide {
+                sortedRows = minimumCountResolvedRows(
+                    matchupResult.rows,
+                    matchup: matchupResult.matchup,
+                    status: minimumStatus,
+                    highestWins: highestWins
+                )
+                isMinimumCountTie = minimumStatus.bothSidesUnderMinimum
+            } else {
+                sortedRows = matchupResult.rows.sorted {
+                    if $0.total != $1.total {
+                        return highestWins ? $0.total > $1.total : $0.total < $1.total
+                    }
+                    return $0.scoringUnitID < $1.scoringUnitID
                 }
-                return $0.scoringUnitID < $1.scoringUnitID
+                isMinimumCountTie = false
             }
 
             guard let first = sortedRows.first else { continue }
-            let isTie = sortedRows.count > 1 && sortedRows.allSatisfy { $0.total == first.total }
+            let isTie = isMinimumCountTie || (sortedRows.count > 1 && sortedRows.allSatisfy { $0.total == first.total })
             for row in sortedRows {
                 let competitorType: SeriesCompetitorType = awardTrack == .team ? .team : .member
                 let placement = isTie ? 1 : (row.scoringUnitID == first.scoringUnitID ? 1 : 2)
@@ -5135,6 +5152,47 @@ final class SeriesViewModel: ObservableObject, Loggable {
             }
         }
         return competitors
+    }
+
+    private func shouldResolveMinimumCountResult(
+        _ status: MatchupMinimumCountStatus?,
+        snapshot: RoundSnapshot
+    ) -> Bool {
+        guard let status, status.hasUnderMinimumSide else {
+            return true
+        }
+        return status.hasStructuralShortage || snapshot.round.status == .complete
+    }
+
+    private func minimumCountResolvedRows(
+        _ rows: [ScoringRow],
+        matchup: TeamMatchup,
+        status: MatchupMinimumCountStatus,
+        highestWins: Bool
+    ) -> [ScoringRow] {
+        let pairingOrder = matchup.pairingIDs()
+        let rowByID = Dictionary(uniqueKeysWithValues: rows.map { ($0.scoringUnitID, $0) })
+        if let winnerID = status.autoWinnerSideID,
+           let winner = rowByID[winnerID] {
+            let losers = pairingOrder
+                .filter { $0 != winnerID }
+                .compactMap { rowByID[$0] }
+            let extras = rows.filter { row in
+                row.scoringUnitID != winnerID && !pairingOrder.contains(row.scoringUnitID)
+            }
+            return [winner] + losers + extras
+        }
+        if status.bothSidesUnderMinimum {
+            let ordered = pairingOrder.compactMap { rowByID[$0] }
+            let extras = rows.filter { !pairingOrder.contains($0.scoringUnitID) }
+            return ordered + extras
+        }
+        return rows.sorted {
+            if $0.total != $1.total {
+                return highestWins ? $0.total > $1.total : $0.total < $1.total
+            }
+            return $0.scoringUnitID < $1.scoringUnitID
+        }
     }
 
     private struct AwardPlacementRow {

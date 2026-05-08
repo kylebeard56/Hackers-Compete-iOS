@@ -1909,6 +1909,16 @@ final class LiveRoundViewModel: ObservableObject, Loggable {
         let presentation = presentation ?? matchupPresentation(in: section)
         guard presentation.hasCompleteSides else { return nil }
 
+        if presentation.minimumCountStatus?.hasUnderMinimumSide == true {
+            guard shouldResolveMinimumCountResult(presentation) else { return nil }
+            if presentation.isAutoWin, presentation.winningSideID == sideID {
+                return "Auto-win"
+            }
+            if presentation.isTie {
+                return "Tie"
+            }
+        }
+
         let isFullyScored = isLiveMatchupFullyScored(section)
         if presentation.winningSideID == sideID {
             return isFullyScored ? "Winner" : "Leader"
@@ -1917,6 +1927,52 @@ final class LiveRoundViewModel: ObservableObject, Loggable {
             return "Tie"
         }
         return nil
+    }
+
+    private func shouldResolveMinimumCountResult(_ presentation: MatchupResultPresentation) -> Bool {
+        guard let status = presentation.minimumCountStatus,
+              status.hasUnderMinimumSide else {
+            return true
+        }
+        return shouldResolveMinimumCountResult(status)
+    }
+
+    private func shouldResolveMinimumCountResult(_ status: MatchupMinimumCountStatus?) -> Bool {
+        guard let status, status.hasUnderMinimumSide else {
+            return true
+        }
+        return status.hasStructuralShortage || snapshot.round.status == .complete
+    }
+
+    private static func minimumCountResolvedRows(
+        _ rows: [ScoringRow],
+        matchup: TeamMatchup,
+        status: MatchupMinimumCountStatus,
+        highestWins: Bool
+    ) -> [ScoringRow] {
+        let pairingOrder = matchup.pairingIDs()
+        let rowByID = Dictionary(uniqueKeysWithValues: rows.map { ($0.scoringUnitID, $0) })
+        if let winnerID = status.autoWinnerSideID,
+           let winner = rowByID[winnerID] {
+            let losers = pairingOrder
+                .filter { $0 != winnerID }
+                .compactMap { rowByID[$0] }
+            let extras = rows.filter { row in
+                row.scoringUnitID != winnerID && !pairingOrder.contains(row.scoringUnitID)
+            }
+            return [winner] + losers + extras
+        }
+        if status.bothSidesUnderMinimum {
+            let ordered = pairingOrder.compactMap { rowByID[$0] }
+            let extras = rows.filter { !pairingOrder.contains($0.scoringUnitID) }
+            return ordered + extras
+        }
+        return rows.sorted {
+            if $0.total != $1.total {
+                return highestWins ? $0.total > $1.total : $0.total < $1.total
+            }
+            return $0.scoringUnitID < $1.scoringUnitID
+        }
     }
 
     func isLiveMatchupFullyScored(_ section: MatchupLeaderboardSection) -> Bool {
@@ -3109,6 +3165,15 @@ final class LiveRoundViewModel: ObservableObject, Loggable {
         }
 
         let presentation = matchupPresentation(in: section)
+        if presentation.minimumCountStatus?.hasUnderMinimumSide == true,
+           !shouldResolveMinimumCountResult(presentation) {
+            return OutcomeMatchupStatus(
+                title: "Matchup pending",
+                detail: "Waiting for required scores to count",
+                winningScoringUnitID: nil,
+                isTie: false
+            )
+        }
         guard presentation.hasCompleteSides else {
             return OutcomeMatchupStatus(
                 title: "Matchup pending",
@@ -4401,14 +4466,29 @@ final class LiveRoundViewModel: ObservableObject, Loggable {
             let rows = matchupResult.rows
             guard rows.contains(where: { $0.holesPlayed > 0 || abs($0.total) > 0.000_001 }) else { continue }
             let highestWins = matchupResult.isPointsFormat ?? (result.template.leaderboardSort == .highestWins)
-            let sortedRows = rows.sorted {
-                if $0.total != $1.total {
-                    return highestWins ? $0.total > $1.total : $0.total < $1.total
+            let sortedRows: [ScoringRow]
+            let isMinimumCountTie: Bool
+            if shouldResolveMinimumCountResult(matchupResult.minimumCountStatus),
+               let minimumStatus = matchupResult.minimumCountStatus,
+               minimumStatus.hasUnderMinimumSide {
+                sortedRows = Self.minimumCountResolvedRows(
+                    rows,
+                    matchup: matchupResult.matchup,
+                    status: minimumStatus,
+                    highestWins: highestWins
+                )
+                isMinimumCountTie = minimumStatus.bothSidesUnderMinimum
+            } else {
+                sortedRows = rows.sorted {
+                    if $0.total != $1.total {
+                        return highestWins ? $0.total > $1.total : $0.total < $1.total
+                    }
+                    return $0.scoringUnitID < $1.scoringUnitID
                 }
-                return $0.scoringUnitID < $1.scoringUnitID
+                isMinimumCountTie = false
             }
             guard let first = sortedRows.first else { continue }
-            let isTie = sortedRows.count > 1 && sortedRows.allSatisfy { abs($0.total - first.total) < 0.000_001 }
+            let isTie = isMinimumCountTie || (sortedRows.count > 1 && sortedRows.allSatisfy { abs($0.total - first.total) < 0.000_001 })
             let tieGroupSize = isTie ? sortedRows.count : 1
 
             for row in sortedRows {

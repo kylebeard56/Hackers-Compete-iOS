@@ -2721,6 +2721,7 @@ struct SeriesMatchupOutcome: Identifiable {
     let winningSideID: String?
     let isTie: Bool
     let showsResultChip: Bool
+    let resultChipLabel: String?
     let usesNetScores: Bool
 
     struct Side: Identifiable {

@@ -358,7 +358,7 @@ private struct SeriesAwardMatchupOutcomeCard: View {
                         .layoutPriority(1)
 
                     if outcome.showsResultChip && isWinner {
-                        resultChip("Winner", tint: accent)
+                        resultChip(outcome.resultChipLabel ?? "Winner", tint: accent)
                     } else if outcome.showsResultChip && outcome.isTie {
                         resultChip("Tie", tint: Color.neutral)
                     }
