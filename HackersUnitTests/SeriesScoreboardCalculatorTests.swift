@@ -21,6 +21,125 @@ final class SeriesScoreboardCalculatorTests: XCTestCase {
         }))
     }
 
+    func testTeamInsightRosterSubtitleUsesFirstNameLastInitial() {
+        let members = [
+            SeriesMember(id: "ada", name: Name("Ada", "Lovelace"), teamID: "red"),
+            SeriesMember(id: "grace", name: Name("Grace", "Hopper"), teamID: "red"),
+            SeriesMember(id: "inactive", name: Name("Inactive", "Player"), teamID: "red", isActive: false),
+        ]
+
+        let subtitle = SeriesTeamInsightBuilder.rosterSubtitle(for: members.filter(\.isActive))
+
+        XCTAssertEqual(subtitle, "Ada L, Grace H")
+        XCTAssertNil(SeriesTeamInsightBuilder.rosterSubtitle(for: []))
+    }
+
+    func testTeamInsightBuildsScheduleRowsForWinLossTieAndPlacement() {
+        let teams = [
+            SeriesTeam(id: "red", name: "Red", color: "red", index: 0),
+            SeriesTeam(id: "blue", name: "Blue", color: "blue", index: 1),
+        ]
+        let rounds = [
+            teamMatchupRound(id: "win", index: 0),
+            teamMatchupRound(id: "tie", index: 1),
+            teamMatchupRound(id: "loss", index: 2),
+            SeriesRound(id: "placement", title: "Placement", index: 3, status: .complete),
+            SeriesRound(id: "planned", title: "Planned", index: 4, status: .planned),
+        ]
+        let awards = [
+            teamAward(roundID: "win", teamID: "red", name: "Red", points: 3, placement: 1),
+            teamAward(roundID: "win", teamID: "blue", name: "Blue", points: 1, placement: 2),
+            teamAward(roundID: "tie", teamID: "red", name: "Red", points: 2, placement: 1),
+            teamAward(roundID: "tie", teamID: "blue", name: "Blue", points: 2, placement: 1),
+            teamAward(roundID: "loss", teamID: "red", name: "Red", points: 0, placement: 2),
+            teamAward(roundID: "loss", teamID: "blue", name: "Blue", points: 3, placement: 1),
+            teamAward(roundID: "placement", teamID: "red", name: "Red", points: 5, placement: 1),
+        ]
+
+        let insight = SeriesTeamInsightBuilder.build(
+            team: teams[0],
+            standing: nil,
+            teams: teams,
+            members: [],
+            rounds: rounds,
+            pointAwards: awards,
+            snapshotsBySeriesRoundID: [:]
+        )
+
+        XCTAssertEqual(insight.record, SeriesTeamRecord(wins: 1, losses: 1, ties: 1))
+        XCTAssertEqual(insight.scheduleRows.map(\.outcomeLabel), ["Win", "Tie", "Loss", "#1", "Planned"])
+        XCTAssertEqual(insight.scheduleRows.map(\.opponentName), ["Blue", "Blue", "Blue", "Field", "Field"])
+    }
+
+    func testTeamInsightUsesPointsFirstForAveragesAndTopContributor() {
+        let team = SeriesTeam(id: "red", name: "Red", color: "red", index: 0)
+        let members = [
+            SeriesMember(id: "m1", name: Name("Ada", "Lovelace"), teamID: "red"),
+            SeriesMember(id: "m2", name: Name("Grace", "Hopper"), teamID: "red"),
+        ]
+        let rounds = [
+            SeriesRound(id: "r1", title: "One", index: 0, status: .complete),
+            SeriesRound(id: "r2", title: "Two", index: 1, status: .complete),
+        ]
+        let awards = [
+            teamAward(roundID: "r1", teamID: "red", name: "Red", points: 4, placement: 1),
+            teamAward(roundID: "r2", teamID: "red", name: "Red", points: 2, placement: 2),
+            individualAward(roundID: "r1", memberID: "m1", name: "Ada Lovelace", points: 3),
+            individualAward(roundID: "r2", memberID: "m1", name: "Ada Lovelace", points: 1),
+            individualAward(roundID: "r1", memberID: "m2", name: "Grace Hopper", points: 2),
+        ]
+
+        let insight = SeriesTeamInsightBuilder.build(
+            team: team,
+            standing: nil,
+            teams: [team],
+            members: members,
+            rounds: rounds,
+            pointAwards: awards,
+            snapshotsBySeriesRoundID: [:]
+        )
+
+        XCTAssertEqual(insight.totalPoints, 6)
+        XCTAssertEqual(insight.averagePoints, 3)
+        XCTAssertEqual(insight.topContributorName, "Ada Lovelace")
+        XCTAssertEqual(insight.topContributorDetail, "4 player pts")
+        XCTAssertEqual(insight.playerPerformances.first { $0.memberID == "m1" }?.roundsPlayed, 2)
+    }
+
+    func testTeamInsightBuildsScoreAveragesBestScoresAndSpread() {
+        let team = SeriesTeam(id: "red", name: "Red", color: "red", index: 0)
+        let members = [
+            SeriesMember(id: "m1", name: Name("Ada", "Lovelace"), teamID: "red"),
+            SeriesMember(id: "m2", name: Name("Grace", "Hopper"), teamID: "red"),
+        ]
+        let rounds = [
+            SeriesRound(id: "r1", title: "One", index: 0, status: .complete, roundID: "linked1"),
+            SeriesRound(id: "r2", title: "Two", index: 1, status: .complete, roundID: "linked2"),
+        ]
+        let snapshots = [
+            "r1": scoreSnapshot(roundID: "linked1", grossByMemberID: ["m1": 40, "m2": 45], members: members),
+            "r2": scoreSnapshot(roundID: "linked2", grossByMemberID: ["m1": 37, "m2": 43], members: members),
+        ]
+
+        let insight = SeriesTeamInsightBuilder.build(
+            team: team,
+            standing: nil,
+            teams: [team],
+            members: members,
+            rounds: rounds,
+            pointAwards: [],
+            snapshotsBySeriesRoundID: snapshots
+        )
+
+        XCTAssertEqual(insight.averageGrossScore ?? 0, 41.25, accuracy: 0.001)
+        XCTAssertEqual(insight.scoreSpread ?? 0, 3.031, accuracy: 0.001)
+
+        let ada = insight.playerPerformances.first { $0.memberID == "m1" }
+        XCTAssertEqual(ada?.averageGross ?? 0, 38.5, accuracy: 0.001)
+        XCTAssertEqual(ada?.bestGross, 37)
+        XCTAssertEqual(ada?.trendLabel, "Improved 3")
+    }
+
     func testRTJStyleTripDerivesSixHundredFortyAvailablePoints() {
         let teams = [
             SeriesTeam(id: "red", name: "Red", color: "red", index: 0, isLocked: true),
@@ -315,6 +434,89 @@ final class SeriesScoreboardCalculatorTests: XCTestCase {
         )
 
         XCTAssertEqual(summary.example, "Andrew + Chris shoot 71. Henry + Justin shoot 69. Blue wins 40.")
+    }
+
+    private func teamMatchupRound(id: String, index: Int) -> SeriesRound {
+        SeriesRound(
+            id: id,
+            title: id.capitalized,
+            index: index,
+            status: .complete,
+            roundConfig: SeriesRoundConfiguration(competitionScope: .matchup, matchupMode: .teamVsTeam),
+            matchupPlans: [
+                SeriesRoundMatchupPlan(id: "\(id)_match", teamAID: "red", teamBID: "blue", index: 0),
+            ]
+        )
+    }
+
+    private func teamAward(
+        roundID: String,
+        teamID: String,
+        name: String,
+        points: Double,
+        placement: Int
+    ) -> SeriesPointAward {
+        SeriesPointAward(
+            id: "\(roundID)_team_\(teamID)",
+            seriesRoundID: roundID,
+            awardTrack: .team,
+            competitorType: .team,
+            competitorID: teamID,
+            competitorName: name,
+            placement: placement,
+            totalPoints: points
+        )
+    }
+
+    private func individualAward(
+        roundID: String,
+        memberID: String,
+        name: String,
+        points: Double
+    ) -> SeriesPointAward {
+        SeriesPointAward(
+            id: "\(roundID)_individual_\(memberID)",
+            seriesRoundID: roundID,
+            awardTrack: .individual,
+            competitorType: .member,
+            competitorID: memberID,
+            competitorName: name,
+            placement: 1,
+            totalPoints: points
+        )
+    }
+
+    private func scoreSnapshot(
+        roundID: String,
+        grossByMemberID: [String: Int],
+        members: [SeriesMember]
+    ) -> RoundSnapshot {
+        let participants = members.map { member in
+            RoundParticipant(
+                id: "participant_\(member.id)",
+                playerID: member.playerID,
+                name: member.name,
+                seriesMemberID: member.id,
+                teamID: member.teamID
+            )
+        }
+        let scoring = participants.compactMap { participant -> ScoreEntry? in
+            guard let memberID = participant.seriesMemberID,
+                  let gross = grossByMemberID[memberID] else { return nil }
+            return ScoreEntry(
+                id: "\(roundID)_\(participant.id)",
+                holeNumber: 1,
+                scoringUnitID: participant.id,
+                participantIDs: [participant.id],
+                strokes: gross
+            )
+        }
+
+        return RoundSnapshot(
+            round: Round(id: roundID, status: .complete),
+            participants: participants,
+            scoring: scoring
+        )
     }
 
     private func partnershipRound(id: String, index: Int, profileID: String) -> SeriesRound {

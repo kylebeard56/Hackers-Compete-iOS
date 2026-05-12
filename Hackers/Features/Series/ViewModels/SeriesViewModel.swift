@@ -632,6 +632,7 @@ final class SeriesViewModel: ObservableObject, Loggable {
     @Published var attendanceByMember: [String: SeriesRoundAttendance] = [:]
     @Published var attendanceByRound: [String: [SeriesRoundAttendance]] = [:]
     @Published var linkedRounds: [String: Round] = [:]
+    private var linkedRoundSnapshotCache: [String: RoundSnapshot] = [:]
     @Published var isLoading = true
     @Published var isEnriching = false
     @Published var isSaving = false
@@ -1363,11 +1364,13 @@ final class SeriesViewModel: ObservableObject, Loggable {
         let roundIDs = Array(Set(rounds.compactMap(\.roundID).filter(\.isPopulated)))
         guard roundIDs.isPopulated else {
             linkedRounds = [:]
+            linkedRoundSnapshotCache = [:]
             return
         }
 
         let fetched = await FirebaseService.shared.getRoundsByIDs(roundIDs)
         linkedRounds = Dictionary(uniqueKeysWithValues: fetched.map { ($0.id, $0) })
+        linkedRoundSnapshotCache = linkedRoundSnapshotCache.filter { roundIDs.contains($0.key) }
     }
 
     func shouldPreloadAttendance(for seriesRound: SeriesRound) -> Bool {
@@ -2791,6 +2794,14 @@ final class SeriesViewModel: ObservableObject, Loggable {
     }
 
     private func handicapGrossForIndex(_ score: SeriesHandicapScore, config: HandicapComputationConfig) -> Double {
+        if score.source == .baseline, score.baselineStrokeBasis == .eighteenHole {
+            return normalizedBaselineGrossForHandicapIndex(
+                gross: score.score,
+                par: score.par,
+                defaultParForIndex: config.defaultParForIndex
+            ) ?? score.score
+        }
+
         guard config.usesCourseRatingSlopeAdjustment, score.source == .round else { return score.score }
         guard let rating = score.courseRating,
               let slope = score.courseSlope,
@@ -4010,6 +4021,37 @@ final class SeriesViewModel: ObservableObject, Loggable {
             }
     }
 
+    func teamRosterSubtitle(for teamID: String) -> String? {
+        let roster = activeMembers.filter { $0.teamID == teamID }
+        return SeriesTeamInsightBuilder.rosterSubtitle(for: roster)
+    }
+
+    func teamInsight(for standing: SeriesStanding) async -> SeriesTeamInsight? {
+        guard standing.awardTrack == .team,
+              let team = teams.first(where: { $0.id == standing.competitorID }) else {
+            return nil
+        }
+
+        var snapshotsBySeriesRoundID: [String: RoundSnapshot] = [:]
+        for round in rounds where round.roundID?.isPopulated == true {
+            if let snapshot = await cachedLinkedRoundSnapshot(for: round) {
+                snapshotsBySeriesRoundID[round.id] = snapshot
+            }
+        }
+
+        let statusBySeriesRoundID = Dictionary(uniqueKeysWithValues: rounds.map { ($0.id, effectiveStatus(for: $0)) })
+        return SeriesTeamInsightBuilder.build(
+            team: team,
+            standing: standing,
+            teams: teams,
+            members: members,
+            rounds: rounds,
+            pointAwards: pointAwards,
+            snapshotsBySeriesRoundID: snapshotsBySeriesRoundID,
+            statusBySeriesRoundID: statusBySeriesRoundID
+        )
+    }
+
     func teeChoices(for course: SeriesCourseSelection?) -> [Tee] {
         guard let course, course.courseID.isPopulated else { return [] }
         if let cached = seriesCourseTeesByCourseID[course.courseID], cached.isPopulated {
@@ -4382,7 +4424,23 @@ final class SeriesViewModel: ObservableObject, Loggable {
 
     func loadLinkedRoundSnapshot(for seriesRound: SeriesRound) async -> RoundSnapshot? {
         guard let roundID = seriesRound.roundID else { return nil }
-        return await loadRoundSnapshot(roundID: roundID)
+        return await cachedLinkedRoundSnapshot(roundID: roundID)
+    }
+
+    private func cachedLinkedRoundSnapshot(for seriesRound: SeriesRound) async -> RoundSnapshot? {
+        guard let roundID = seriesRound.roundID else { return nil }
+        return await cachedLinkedRoundSnapshot(roundID: roundID)
+    }
+
+    private func cachedLinkedRoundSnapshot(roundID: String) async -> RoundSnapshot? {
+        if let cached = linkedRoundSnapshotCache[roundID] {
+            return cached
+        }
+        guard let snapshot = await loadRoundSnapshot(roundID: roundID) else {
+            return nil
+        }
+        linkedRoundSnapshotCache[roundID] = snapshot
+        return snapshot
     }
 
     func roundOutcomeNarrative(for seriesRound: SeriesRound) async -> SeriesRoundOutcomeNarrative? {

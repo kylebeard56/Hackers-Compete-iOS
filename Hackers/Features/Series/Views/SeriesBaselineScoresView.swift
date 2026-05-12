@@ -15,6 +15,7 @@ struct SeriesBaselineScoresView: View {
     @State private var newScore = ""
     @State private var addCaption = ""
     @State private var addMode: HandicapAddMode = .manual
+    @State private var baselineStrokeBasis: SeriesHandicapStrokeBasis = .nineHole
     @State private var selectedSeriesRoundID: String?
     @State private var isAdding = false
     @State private var editingScore: SeriesHandicapScore?
@@ -201,6 +202,13 @@ struct SeriesBaselineScoresView: View {
                     .padding(12)
                     .background(palette.cardEmbeddedRowBackground)
                     .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
+
+                Picker("Holes", selection: $baselineStrokeBasis) {
+                    ForEach(SeriesHandicapStrokeBasis.allCases, id: \.self) { basis in
+                        Text(basis.displayName).tag(basis)
+                    }
+                }
+                .pickerStyle(.segmented)
             } else {
                 if roundPickerRounds.isEmpty {
                     Text("No linked rounds yet. Link a round to the schedule first.")
@@ -244,14 +252,16 @@ struct SeriesBaselineScoresView: View {
                     isAdding = true
                     focus = false
                     Task {
-                        let par = viewModel.series.handicapConfig.config.defaultParForIndex
                         switch addMode {
                         case .manual:
+                            let par = baselineStrokeBasis.baselineDefaultPar(
+                                defaultParForIndex: viewModel.series.handicapConfig.config.defaultParForIndex
+                            )
                             await viewModel.addHandicapScore(
                                 memberID: member.id,
                                 score: score,
                                 par: par,
-                                segment: .front9,
+                                segment: baselineStrokeBasis.baselineStorageSegment,
                                 source: .baseline,
                                 sourceRoundID: nil,
                                 caption: addCaption,
@@ -265,6 +275,7 @@ struct SeriesBaselineScoresView: View {
                                 isAdding = false
                                 return
                             }
+                            let par = viewModel.series.handicapConfig.config.defaultParForIndex
                             await viewModel.addHandicapScore(
                                 memberID: member.id,
                                 score: score,
@@ -370,7 +381,7 @@ struct SeriesBaselineScoresView: View {
 
                 VStack(alignment: .trailing, spacing: 4) {
                     HStack(spacing: 4) {
-                        Text(score.holeSegment.title)
+                        Text(scoreHoleCountLabel(for: score))
                             .fontStyle(kFontName, size: 12, weight: .regular)
                             .foregroundStyle(Color.neutral)
                         if isEditableBaselineScore(score) {
@@ -495,6 +506,15 @@ struct SeriesBaselineScoresView: View {
                 return "Round \(roundID.prefix(6))…"
             }
             return "Round"
+        }
+    }
+
+    private func scoreHoleCountLabel(for score: SeriesHandicapScore) -> String {
+        switch score.source {
+        case .baseline:
+            return score.baselineHoleCountDisplayName
+        case .round:
+            return score.holeSegment.title
         }
     }
 
@@ -794,7 +814,7 @@ struct SeriesMemberHandicapBreakdownView: View {
 
                 VStack(alignment: .trailing, spacing: 4) {
                     HStack(spacing: 4) {
-                        Text(score.holeSegment.title)
+                        Text(scoreHoleCountLabel(for: score))
                             .fontStyle(kFontName, size: 12, weight: .regular)
                             .foregroundStyle(Color.neutral)
                         if isEditableBaselineScore(score) {
@@ -919,6 +939,15 @@ struct SeriesMemberHandicapBreakdownView: View {
                 return "Round \(roundID.prefix(6))…"
             }
             return "Round"
+        }
+    }
+
+    private func scoreHoleCountLabel(for score: SeriesHandicapScore) -> String {
+        switch score.source {
+        case .baseline:
+            return score.baselineHoleCountDisplayName
+        case .round:
+            return score.holeSegment.title
         }
     }
 

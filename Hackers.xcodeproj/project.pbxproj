@@ -170,6 +170,7 @@
 		B4AB59A42E4B5A93007232FB /* Double.swift in Sources */ = {isa = PBXBuildFile; fileRef = B4AB59A32E4B5A91007232FB /* Double.swift */; };
 		B4AB59A62E4B615E007232FB /* Color.swift in Sources */ = {isa = PBXBuildFile; fileRef = B4AB59A52E4B615B007232FB /* Color.swift */; };
 		B4AB59A82E4DED57007232FB /* GameLobby+AI.swift in Sources */ = {isa = PBXBuildFile; fileRef = B4AB59A72E4DED56007232FB /* GameLobby+AI.swift */; };
+		B4ABCD012FA000100ABCDEF /* SeriesTeamInsightBuilder.swift in Sources */ = {isa = PBXBuildFile; fileRef = B4ABCD022FA000100ABCDEF /* SeriesTeamInsightBuilder.swift */; };
 		B4AI00012F6C0001007D8846 /* AIModelConfig.swift in Sources */ = {isa = PBXBuildFile; fileRef = B4AI00022F6C0001007D8846 /* AIModelConfig.swift */; };
 		B4AI00032F6C0002007D8846 /* LLMProviderProtocol.swift in Sources */ = {isa = PBXBuildFile; fileRef = B4AI00042F6C0002007D8846 /* LLMProviderProtocol.swift */; };
 		B4AI00052F6C0003007D8846 /* OpenAIProvider.swift in Sources */ = {isa = PBXBuildFile; fileRef = B4AI00062F6C0003007D8846 /* OpenAIProvider.swift */; };
@@ -539,6 +540,7 @@
 		B4AB59A32E4B5A91007232FB /* Double.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Double.swift; sourceTree = "<group>"; };
 		B4AB59A52E4B615B007232FB /* Color.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Color.swift; sourceTree = "<group>"; };
 		B4AB59A72E4DED56007232FB /* GameLobby+AI.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "GameLobby+AI.swift"; sourceTree = "<group>"; };
+		B4ABCD022FA000100ABCDEF /* SeriesTeamInsightBuilder.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SeriesTeamInsightBuilder.swift; sourceTree = "<group>"; };
 		B4AI00022F6C0001007D8846 /* AIModelConfig.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AIModelConfig.swift; sourceTree = "<group>"; };
 		B4AI00042F6C0002007D8846 /* LLMProviderProtocol.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LLMProviderProtocol.swift; sourceTree = "<group>"; };
 		B4AI00062F6C0003007D8846 /* OpenAIProvider.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OpenAIProvider.swift; sourceTree = "<group>"; };
@@ -1091,6 +1093,7 @@
 				B45843492F68231500B96E60 /* SeriesRoundCreationService.swift */,
 				B40A1A3F2F851B2300C0FF09 /* SeriesRoundSyncPlanning.swift */,
 				B40A1A402F851B2300C0FF09 /* SeriesRoundSyncService.swift */,
+				B4ABCD022FA000100ABCDEF /* SeriesTeamInsightBuilder.swift */,
 				B40A1A502F851B2300C0FF09 /* SeriesRoundTileCopy.swift */,
 			);
 			path = Services;
@@ -2220,6 +2223,7 @@
 				B45207A42F5C682900E6495F /* SegmentResolver.swift in Sources */,
 				B458434D2F68231500B96E60 /* SeriesViewModel.swift in Sources */,
 				B4COMMG0012F90000700ABCDEF /* CommissionerGrossScoreDistributer.swift in Sources */,
+				B4ABCD012FA000100ABCDEF /* SeriesTeamInsightBuilder.swift in Sources */,
 				B4HSED0012F90000700ABCDEF /* SeriesHandicapScoreEditorSheet.swift in Sources */,
 				B458434E2F68231500B96E60 /* NewSeriesView.swift in Sources */,
 				B458434F2F68231500B96E60 /* SeriesRosterView.swift in Sources */,
@@ -2467,7 +2471,7 @@
 				CODE_SIGN_ENTITLEMENTS = Hackers/Hackers.entitlements;
 				CODE_SIGN_IDENTITY = "Apple Development";
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 2026.05.05.1;
+				CURRENT_PROJECT_VERSION = 2026.05.12.1;
 				DEAD_CODE_STRIPPING = YES;
 				DEEP_LINK_URL_SCHEME = hackersgolfsandbox;
 				DEVELOPMENT_ASSET_PATHS = "";
@@ -2527,7 +2531,7 @@
 				CODE_SIGN_ENTITLEMENTS = Hackers/Hackers.entitlements;
 				CODE_SIGN_IDENTITY = "Apple Development";
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 2026.05.05.1;
+				CURRENT_PROJECT_VERSION = 2026.05.12.1;
 				DEAD_CODE_STRIPPING = YES;
 				DEEP_LINK_URL_SCHEME = hackersgolf;
 				DEVELOPMENT_ASSET_PATHS = "";

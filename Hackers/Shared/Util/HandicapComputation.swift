@@ -145,6 +145,15 @@ func normalizedGrossForHandicapIndex(
     return defaultParForIndex + ((gross - rating) * 113.0 / Double(slope))
 }
 
+func normalizedBaselineGrossForHandicapIndex(
+    gross: Double,
+    par: Double,
+    defaultParForIndex: Double
+) -> Double? {
+    guard gross.isFinite, par.isFinite, defaultParForIndex.isFinite, par > 0, defaultParForIndex > 0 else { return nil }
+    return defaultParForIndex + ((gross - par) * defaultParForIndex / par)
+}
+
 func computeHandicapIndex(
     scores: [Double],
     config: HandicapComputationConfig = .league2025

@@ -39,6 +39,121 @@ struct SeriesHandicapHistoryTests {
         #expect(decoded.countsTowardHandicapIndex == true)
     }
 
+    @Test("Baseline hole count maps front and back nine to 9 holes")
+    func baselineHoleCountDisplayMapsLegacyNineHoleSegments() throws {
+        let front = SeriesHandicapScore(holeSegment: .front9, source: .baseline)
+        let back = SeriesHandicapScore(holeSegment: .back9, source: .baseline)
+        let full = SeriesHandicapScore(holeSegment: .full18, source: .baseline)
+
+        #expect(front.baselineStrokeBasis == .nineHole)
+        #expect(back.baselineStrokeBasis == .nineHole)
+        #expect(front.baselineHoleCountDisplayName == "9 holes")
+        #expect(back.baselineHoleCountDisplayName == "9 holes")
+        #expect(full.baselineStrokeBasis == .eighteenHole)
+        #expect(full.baselineHoleCountDisplayName == "18 holes")
+        #expect(SeriesHandicapStrokeBasis.nineHole.baselineStorageSegment == .front9)
+        #expect(SeriesHandicapStrokeBasis.eighteenHole.baselineStorageSegment == .full18)
+    }
+
+    @Test("18-hole baseline score normalizes to 9-hole index basis")
+    func eighteenHoleBaselineNormalizesForIndex() throws {
+        let member = SeriesMember(
+            id: "m1",
+            userID: "u1",
+            playerID: "p1",
+            name: Name("Test", "Player"),
+            role: .member,
+            isActive: true,
+            createdAt: .init(),
+            lastUpdatedAt: .init(),
+            parentID: "series1"
+        )
+
+        let recorded = Time(iso: "2024-01-01T00:00:00Z", unix: 100)
+        let score = SeriesHandicapScore(
+            id: "eighteen",
+            memberID: "m1",
+            score: 92,
+            par: 72,
+            holeSegment: .full18,
+            source: .baseline,
+            sourceRoundID: nil,
+            caption: nil,
+            recordedAt: recorded,
+            sortOrder: 0,
+            createdAt: recorded,
+            lastUpdatedAt: recorded,
+            parentID: "series1"
+        )
+
+        let viewModel = SeriesViewModel()
+        viewModel.series = Series(id: "series1", commissionerUserID: "c1")
+        viewModel.series.handicapConfig = SeriesHandicapConfig(isEnabled: true, config: .league2025)
+        viewModel.members = [member]
+        viewModel.handicapScores = [score]
+        viewModel.recomputeAllHandicaps()
+
+        let config = viewModel.series.handicapConfig.config.toConfig()
+        let normalized = try #require(normalizedBaselineGrossForHandicapIndex(
+            gross: 92,
+            par: 72,
+            defaultParForIndex: config.defaultParForIndex
+        ))
+        #expect(normalized == 46)
+
+        let expected = computeHandicapIndex(
+            samples: [HandicapScoreSample(id: "eighteen", gross: 46, recordedAt: recorded, sortOrder: 0)],
+            config: config
+        )
+        #expect(viewModel.memberHandicaps["m1"]?.computedIndex == expected?.handicapIndex)
+    }
+
+    @Test("9-hole baseline score keeps existing gross index behavior")
+    func nineHoleBaselineKeepsGrossForIndex() throws {
+        let member = SeriesMember(
+            id: "m1",
+            userID: "u1",
+            playerID: "p1",
+            name: Name("Test", "Player"),
+            role: .member,
+            isActive: true,
+            createdAt: .init(),
+            lastUpdatedAt: .init(),
+            parentID: "series1"
+        )
+
+        let recorded = Time(iso: "2024-01-01T00:00:00Z", unix: 100)
+        let score = SeriesHandicapScore(
+            id: "nine",
+            memberID: "m1",
+            score: 46,
+            par: 36,
+            holeSegment: .front9,
+            source: .baseline,
+            sourceRoundID: nil,
+            caption: nil,
+            recordedAt: recorded,
+            sortOrder: 0,
+            createdAt: recorded,
+            lastUpdatedAt: recorded,
+            parentID: "series1"
+        )
+
+        let viewModel = SeriesViewModel()
+        viewModel.series = Series(id: "series1", commissionerUserID: "c1")
+        viewModel.series.handicapConfig = SeriesHandicapConfig(isEnabled: true, config: .league2025)
+        viewModel.members = [member]
+        viewModel.handicapScores = [score]
+        viewModel.recomputeAllHandicaps()
+
+        let config = viewModel.series.handicapConfig.config.toConfig()
+        let expected = computeHandicapIndex(
+            samples: [HandicapScoreSample(id: "nine", gross: 46, recordedAt: recorded, sortOrder: 0)],
+            config: config
+        )
+        #expect(viewModel.memberHandicaps["m1"]?.computedIndex == expected?.handicapIndex)
+    }
+
     @Test("recomputeAllHandicaps uses same score ordering as computeHandicapIndex input")
     func recomputeMatchesSortedScoresForIndex() throws {
         let member = SeriesMember(

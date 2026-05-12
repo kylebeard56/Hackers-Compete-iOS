@@ -499,6 +499,21 @@ enum SeriesHandicapStrokeBasis: String, CaseIterable, Codable {
     static func defaultBasis(holeCount: Int) -> SeriesHandicapStrokeBasis {
         holeCount <= 9 ? .nineHole : .eighteenHole
     }
+
+    static func baselineBasis(for segment: HoleSegment) -> SeriesHandicapStrokeBasis {
+        segment.holeCount <= 9 ? .nineHole : .eighteenHole
+    }
+
+    var baselineStorageSegment: HoleSegment {
+        switch self {
+        case .nineHole: return .front9
+        case .eighteenHole: return .full18
+        }
+    }
+
+    func baselineDefaultPar(defaultParForIndex: Double) -> Double {
+        defaultParForIndex * Double(holeCount) / 9.0
+    }
 }
 
 extension SeriesHandicapMode {
@@ -3214,6 +3229,14 @@ struct SeriesHandicapScore: FirebaseSubcollectable {
         try c.encode(parentID, forKey: .parentID)
         try c.encode(schema, forKey: .schema)
         try c.encode(countsTowardHandicapIndex, forKey: .countsTowardHandicapIndex)
+    }
+
+    var baselineStrokeBasis: SeriesHandicapStrokeBasis {
+        SeriesHandicapStrokeBasis.baselineBasis(for: holeSegment)
+    }
+
+    var baselineHoleCountDisplayName: String {
+        baselineStrokeBasis.displayName
     }
 }
 

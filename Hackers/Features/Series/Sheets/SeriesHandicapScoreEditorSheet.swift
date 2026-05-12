@@ -16,7 +16,7 @@ struct SeriesHandicapScoreEditorSheet: View {
     @State private var captionText: String = ""
     @State private var scoreText: String = ""
     @State private var parText: String = ""
-    @State private var segment: HoleSegment = .front9
+    @State private var baselineStrokeBasis: SeriesHandicapStrokeBasis = .nineHole
     @State private var recordedDate: Date = .init()
     @State private var isSaving = false
     @State private var isDeleting = false
@@ -82,21 +82,15 @@ struct SeriesHandicapScoreEditorSheet: View {
 
                     SeriesSheetCard(palette: palette) {
                         VStack(alignment: .leading, spacing: 12) {
-                            Text("Segment".uppercased())
+                            Text("Holes".uppercased())
                                 .fontStyle(kFontName, size: 13, weight: .semibold)
                                 .foregroundStyle(palette.foregroundColor)
-                            if case .custom = segment {
-                                Text(segment.title)
-                                    .fontStyle(kFontName, size: 15, weight: .regular)
-                                    .foregroundStyle(Color.neutral)
-                            } else {
-                                Picker("Segment", selection: $segment) {
-                                    Text(HoleSegment.full18.title).tag(HoleSegment.full18)
-                                    Text(HoleSegment.front9.title).tag(HoleSegment.front9)
-                                    Text(HoleSegment.back9.title).tag(HoleSegment.back9)
+                            Picker("Holes", selection: $baselineStrokeBasis) {
+                                ForEach(SeriesHandicapStrokeBasis.allCases, id: \.self) { basis in
+                                    Text(basis.displayName).tag(basis)
                                 }
-                                .pickerStyle(.menu)
                             }
+                            .pickerStyle(.segmented)
                         }
                     }
 
@@ -165,9 +159,12 @@ struct SeriesHandicapScoreEditorSheet: View {
         .onAppear {
             captionText = score.caption ?? ""
             scoreText = String(format: "%.0f", score.score)
-            parText = score.par == floor(score.par) ? String(format: "%.0f", score.par) : String(format: "%.1f", score.par)
-            segment = score.holeSegment
+            parText = Self.formattedPar(score.par)
+            baselineStrokeBasis = score.baselineStrokeBasis
             recordedDate = Date(timeIntervalSince1970: score.recordedAt.unix)
+        }
+        .onChange(of: baselineStrokeBasis) { oldValue, newValue in
+            updateParTextForBasisChange(from: oldValue, to: newValue)
         }
     }
 
@@ -186,11 +183,27 @@ struct SeriesHandicapScoreEditorSheet: View {
         updated.caption = trimmed.isPopulated ? trimmed : nil
         updated.score = gross
         updated.par = par
-        updated.holeSegment = segment
+        updated.holeSegment = baselineStrokeBasis.baselineStorageSegment
         updated.recordedAt = Time(for: recordedDate)
         updated.lastUpdatedAt = .init()
         let ok = await viewModel.updateHandicapScoreEntry(updated)
         isSaving = false
         if ok { dismiss() }
+    }
+
+    private func updateParTextForBasisChange(
+        from oldValue: SeriesHandicapStrokeBasis,
+        to newValue: SeriesHandicapStrokeBasis
+    ) {
+        let defaultParForIndex = viewModel.series.handicapConfig.config.defaultParForIndex
+        let oldDefault = oldValue.baselineDefaultPar(defaultParForIndex: defaultParForIndex)
+        let currentPar = Double(parText.trimmingCharacters(in: .whitespaces))
+        guard currentPar == nil || abs((currentPar ?? oldDefault) - oldDefault) < 0.001 else { return }
+        let newDefault = newValue.baselineDefaultPar(defaultParForIndex: defaultParForIndex)
+        parText = Self.formattedPar(newDefault)
+    }
+
+    private static func formattedPar(_ par: Double) -> String {
+        par == floor(par) ? String(format: "%.0f", par) : String(format: "%.1f", par)
     }
 }
