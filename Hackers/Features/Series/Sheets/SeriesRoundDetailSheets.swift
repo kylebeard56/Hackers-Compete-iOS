@@ -2146,6 +2146,10 @@ struct SeriesCompletionReviewSheet: View {
                         .foregroundStyle(palette.foregroundColor)
                         .lineLimit(1)
 
+                    if let chipTitle = scoreCompletenessChipTitle(playerID: playerID) {
+                        scoreCompletenessChip(chipTitle)
+                    }
+
                     if let asset = row.scorecardAsset {
                         Button {
                             Haptics.fire(.light)
@@ -2206,6 +2210,34 @@ struct SeriesCompletionReviewSheet: View {
         .padding(12)
         .glassCardEffect(cornerRadius: 12)
         .accessibilityLabel(scoreReviewAccessibilityLabel(name: name, row: row, trailing: trailing))
+    }
+
+    private func scoreCompletenessChipTitle(playerID: String) -> String? {
+        guard let reviewSnapshot,
+              let participantID = reviewParticipantsByPlayerID[playerID]?.id else {
+            return nil
+        }
+        return RoundScoreCompleteness
+            .classify(participantID: participantID, snapshot: reviewSnapshot)
+            .reviewChipTitle
+    }
+
+    private func scoreCompletenessChip(_ title: String) -> some View {
+        HStack(spacing: 4) {
+            Image(systemName: "exclamationmark.triangle.fill")
+                .font(.system(size: 9, weight: .semibold))
+            Text(title)
+                .fontStyle(kFontName, size: 10, weight: .semibold)
+                .lineLimit(1)
+        }
+        .foregroundStyle(Color.accentYellow)
+        .padding(.horizontal, 7)
+        .padding(.vertical, 4)
+        .background(
+            Capsule()
+                .fill(Color.accentYellow.opacity(0.14))
+        )
+        .fixedSize(horizontal: true, vertical: false)
     }
 
     private func resolvedScoreReviewName(playerID: String) -> String {

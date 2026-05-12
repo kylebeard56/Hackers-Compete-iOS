@@ -273,7 +273,7 @@ struct MatchupResultPresentationBuilder {
     ) -> String {
         if let sideStatus = minimumCountStatus?.sideStatus(for: sideID),
            sideStatus.isUnderMinimum {
-            return "Needs \(sideStatus.requiredCount)"
+            return "—"
         }
         return scoreLabel(for: total, isPointsFormat: isPointsFormat)
     }

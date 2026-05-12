@@ -248,6 +248,123 @@ enum HandicapCalculator {
     }
 }
 
+enum ParticipantScoreCompleteness: Equatable {
+    case complete(scored: Int)
+    case incomplete(scored: Int, required: Int)
+    case noScores(required: Int)
+
+    var isComplete: Bool {
+        if case .complete = self { return true }
+        return false
+    }
+
+    var scoredCount: Int {
+        switch self {
+        case .complete(let scored), .incomplete(let scored, _):
+            return scored
+        case .noScores:
+            return 0
+        }
+    }
+
+    var requiredCount: Int {
+        switch self {
+        case .complete(let scored):
+            return scored
+        case .incomplete(_, let required), .noScores(let required):
+            return required
+        }
+    }
+
+    var reviewChipTitle: String? {
+        switch self {
+        case .complete:
+            return nil
+        case .incomplete:
+            return "Incomplete scores"
+        case .noScores:
+            return "No scores"
+        }
+    }
+
+    var outcomeStatusTitle: String? {
+        switch self {
+        case .complete:
+            return nil
+        case .incomplete:
+            return "Incomplete"
+        case .noScores:
+            return "No scores"
+        }
+    }
+}
+
+enum RoundScoreCompleteness {
+    static func classify(participantID: String, snapshot: RoundSnapshot) -> ParticipantScoreCompleteness {
+        let holeNumbers = snapshot.roundSegment?.holeRange.holeNumbers ?? snapshot.holeSegment.holeRange.holeNumbers
+        return classify(
+            participantID: participantID,
+            scores: snapshot.scoring,
+            holeNumbers: holeNumbers,
+            holes: snapshot.defaultTee?.holes ?? [],
+            scoreLookupSegmentIDs: snapshot.segmentScoreLookupSegmentIDs
+        )
+    }
+
+    static func classify(
+        participantID: String,
+        scores: [ScoreEntry],
+        holeNumbers: [Int],
+        holes: [Hole],
+        scoreLookupSegmentIDs: [String] = []
+    ) -> ParticipantScoreCompleteness {
+        let required = holeNumbers.count
+        guard required > 0 else { return .noScores(required: 0) }
+
+        let holeMap = Dictionary(uniqueKeysWithValues: holes.map { ($0.number, $0) })
+        let segmentIDs = Set(scoreLookupSegmentIDs.filter(\.isPopulated))
+        var validScoreCount = 0
+        var hasAnyScoreEntry = false
+
+        for holeNumber in holeNumbers {
+            let entry = scores.first { entry in
+                entry.scoringUnitID == participantID
+                    && entry.holeNumber == holeNumber
+                    && (segmentIDs.isEmpty || segmentIDs.contains(entry.segmentID))
+            }
+            guard let entry else { continue }
+
+            if entry.hasRecordedScore {
+                hasAnyScoreEntry = true
+            }
+            if validGrossStrokes(entry: entry, par: holeMap[holeNumber]?.par) != nil {
+                validScoreCount += 1
+            }
+        }
+
+        if validScoreCount == required {
+            return .complete(scored: validScoreCount)
+        }
+        if hasAnyScoreEntry {
+            return .incomplete(scored: validScoreCount, required: required)
+        }
+        return .noScores(required: required)
+    }
+
+    static func validGrossStrokes(entry: ScoreEntry, par: Int?) -> Int? {
+        if let strokes = entry.strokes, strokes > 0 {
+            return strokes
+        }
+        if let relativeToPar = entry.relativeToPar,
+           let par,
+           par > 0 {
+            let strokes = par + relativeToPar
+            return strokes > 0 ? strokes : nil
+        }
+        return nil
+    }
+}
+
 enum CourseHandicapRosterDisplay {
     static func label(
         participant: RoundParticipant,

@@ -2404,6 +2404,7 @@ final class LiveRoundViewModel: ObservableObject, Loggable {
         let memberNames: String?
         let sharedHandicapLabel: String?
         let isSharedScoreUnit: Bool
+        let scoreCompleteness: ParticipantScoreCompleteness?
 
         init(
             participant: RoundParticipant,
@@ -2419,7 +2420,8 @@ final class LiveRoundViewModel: ObservableObject, Loggable {
             teamColor: Color? = nil,
             memberNames: String? = nil,
             sharedHandicapLabel: String? = nil,
-            isSharedScoreUnit: Bool = false
+            isSharedScoreUnit: Bool = false,
+            scoreCompleteness: ParticipantScoreCompleteness? = nil
         ) {
             self.participant = participant
             self.participants = participants ?? [participant]
@@ -2435,6 +2437,47 @@ final class LiveRoundViewModel: ObservableObject, Loggable {
             self.memberNames = memberNames
             self.sharedHandicapLabel = sharedHandicapLabel
             self.isSharedScoreUnit = isSharedScoreUnit
+            self.scoreCompleteness = scoreCompleteness
+        }
+
+        func withPlaceLabel(_ placeLabel: String) -> LeaderboardRow {
+            LeaderboardRow(
+                participant: participant,
+                participants: participants,
+                scoringUnitID: scoringUnitID,
+                thru: thru,
+                scoreToPar: scoreToPar,
+                totalPoints: totalPoints,
+                isPinned: isPinned,
+                placeLabel: placeLabel,
+                teamID: teamID,
+                teamName: teamName,
+                teamColor: teamColor,
+                memberNames: memberNames,
+                sharedHandicapLabel: sharedHandicapLabel,
+                isSharedScoreUnit: isSharedScoreUnit,
+                scoreCompleteness: scoreCompleteness
+            )
+        }
+
+        func withScoreCompleteness(_ scoreCompleteness: ParticipantScoreCompleteness?) -> LeaderboardRow {
+            LeaderboardRow(
+                participant: participant,
+                participants: participants,
+                scoringUnitID: scoringUnitID,
+                thru: thru,
+                scoreToPar: scoreToPar,
+                totalPoints: totalPoints,
+                isPinned: isPinned,
+                placeLabel: placeLabel,
+                teamID: teamID,
+                teamName: teamName,
+                teamColor: teamColor,
+                memberNames: memberNames,
+                sharedHandicapLabel: sharedHandicapLabel,
+                isSharedScoreUnit: isSharedScoreUnit,
+                scoreCompleteness: scoreCompleteness
+            )
         }
     }
 
@@ -2449,6 +2492,27 @@ final class LiveRoundViewModel: ObservableObject, Loggable {
     var displayLeaderboardRows: [LeaderboardRow] {
         guard !showScorelessLeaderboardRows else { return effectiveLeaderboardRows }
         return effectiveLeaderboardRows.filter { $0.thru > 0 }
+    }
+
+    var outcomeLeaderboardRows: [LeaderboardRow] {
+        let rowsWithCompleteness = effectiveLeaderboardRows.map { row in
+            row.withScoreCompleteness(outcomeScoreCompleteness(for: row))
+        }
+        let completeRows = rowsWithCompleteness.filter { $0.scoreCompleteness?.isComplete == true }
+        let invalidRows = rowsWithCompleteness.filter { $0.scoreCompleteness?.isComplete != true }
+        let labels = outcomeLeaderboardPlaceLabels(for: completeRows)
+
+        let rankedRows = completeRows.map { row in
+            row.withPlaceLabel(labels[row.id] ?? "-")
+        }
+        let unrankedRows = invalidRows
+            .sorted { lhs, rhs in
+                let lhsName = lhs.teamName ?? lhs.participant.alphabeticName
+                let rhsName = rhs.teamName ?? rhs.participant.alphabeticName
+                return lhsName < rhsName
+            }
+            .map { $0.withPlaceLabel("—") }
+        return rankedRows + unrankedRows
     }
 
     var displayTeamLeaderboardSections: [GroupedLeaderboardSection] {
@@ -2603,6 +2667,59 @@ final class LiveRoundViewModel: ObservableObject, Loggable {
             place += group.count
         }
         
+        return labels
+    }
+
+    private func outcomeScoreCompleteness(for row: LeaderboardRow) -> ParticipantScoreCompleteness {
+        let statuses = row.participants.map {
+            RoundScoreCompleteness.classify(participantID: $0.id, snapshot: snapshot)
+        }
+        if statuses.allSatisfy(\.isComplete) {
+            return .complete(scored: statuses.map(\.scoredCount).max() ?? 0)
+        }
+        if statuses.contains(where: { status in
+            if case .incomplete = status { return true }
+            return false
+        }) {
+            return .incomplete(
+                scored: statuses.map(\.scoredCount).max() ?? 0,
+                required: statuses.map(\.requiredCount).max() ?? 0
+            )
+        }
+        return .noScores(required: statuses.map(\.requiredCount).max() ?? 0)
+    }
+
+    private func outcomeLeaderboardPlaceLabels(for rows: [LeaderboardRow]) -> [String: String] {
+        let isHighestWins = snapshot.resolvedActiveTemplate.leaderboardSort == .highestWins
+        let ordered = rows.sorted {
+            let a = $0.totalPoints ?? Double($0.scoreToPar)
+            let b = $1.totalPoints ?? Double($1.scoreToPar)
+            if a != b { return isHighestWins ? a > b : a < b }
+            return ($0.teamName ?? $0.participant.alphabeticName) < ($1.teamName ?? $1.participant.alphabeticName)
+        }
+
+        var labels: [String: String] = [:]
+        var place = 1
+        var index = 0
+
+        while index < ordered.count {
+            let value = ordered[index].totalPoints ?? Double(ordered[index].scoreToPar)
+            var group: [LeaderboardRow] = []
+
+            while index < ordered.count,
+                  (ordered[index].totalPoints ?? Double(ordered[index].scoreToPar)) == value {
+                group.append(ordered[index])
+                index += 1
+            }
+
+            let label = group.count > 1 ? "T-\(place)." : "\(place)."
+            for row in group {
+                labels[row.id] = label
+            }
+
+            place += group.count
+        }
+
         return labels
     }
     

@@ -1,0 +1,9 @@
+{
+  "name": "hackers-compete-ios",
+  "private": true,
+  "scripts": {
+    "sim:run": "bash scripts/run-sim.sh",
+    "sim:serve": "bash scripts/serve-sim.sh",
+    "sim:preview": "bash scripts/preview-sim.sh"
+  }
+}

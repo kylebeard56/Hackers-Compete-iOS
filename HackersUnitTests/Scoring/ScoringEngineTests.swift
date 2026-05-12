@@ -108,6 +108,65 @@ final class ScoringEngineTests: XCTestCase {
         )
     }
 
+    // MARK: - Score Completeness
+
+    func testRoundScoreCompletenessFullScorecardIsComplete() {
+        let holes = makeHoles(count: 9)
+        let scores = (1...9).map { makeScoreEntry(participantID: "p1", holeNumber: $0, strokes: 4) }
+
+        let result = RoundScoreCompleteness.classify(
+            participantID: "p1",
+            scores: scores,
+            holeNumbers: Array(1...9),
+            holes: holes,
+            scoreLookupSegmentIDs: ["seg1"]
+        )
+
+        XCTAssertEqual(result, .complete(scored: 9))
+    }
+
+    func testRoundScoreCompletenessPartialScorecardIsIncomplete() {
+        let holes = makeHoles(count: 9)
+        let scores = (1...4).map { makeScoreEntry(participantID: "p1", holeNumber: $0, strokes: 4) }
+
+        let result = RoundScoreCompleteness.classify(
+            participantID: "p1",
+            scores: scores,
+            holeNumbers: Array(1...9),
+            holes: holes,
+            scoreLookupSegmentIDs: ["seg1"]
+        )
+
+        XCTAssertEqual(result, .incomplete(scored: 4, required: 9))
+    }
+
+    func testRoundScoreCompletenessNoScoresIsNoScores() {
+        let result = RoundScoreCompleteness.classify(
+            participantID: "p1",
+            scores: [],
+            holeNumbers: Array(1...9),
+            holes: makeHoles(count: 9),
+            scoreLookupSegmentIDs: ["seg1"]
+        )
+
+        XCTAssertEqual(result, .noScores(required: 9))
+    }
+
+    func testRoundScoreCompletenessZeroStrokeEntriesAreInvalidGrossScores() {
+        var scores = (1...9).map { makeScoreEntry(participantID: "p1", holeNumber: $0, strokes: 4) }
+        scores[0] = makeScoreEntry(participantID: "p1", holeNumber: 1, strokes: 0)
+
+        let result = RoundScoreCompleteness.classify(
+            participantID: "p1",
+            scores: scores,
+            holeNumbers: Array(1...9),
+            holes: makeHoles(count: 9),
+            scoreLookupSegmentIDs: ["seg1"]
+        )
+
+        XCTAssertEqual(result, .incomplete(scored: 8, required: 9))
+    }
+
     // MARK: - Stroke Play Gross
 
     func testStrokePlayGross_4Players18Holes() {

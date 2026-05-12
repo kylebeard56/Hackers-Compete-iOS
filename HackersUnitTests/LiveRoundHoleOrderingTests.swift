@@ -744,6 +744,7 @@ final class LiveRoundViewModelHoleOrderingTests: XCTestCase {
         XCTAssertEqual(presentation.minimumCountStatus?.autoWinnerSideID, "team_red")
         XCTAssertEqual(status.title, "Red Team wins")
         XCTAssertEqual(status.detail, "Auto-win: Blue Team needs 2")
+        XCTAssertEqual(presentation.side(id: "team_blue")?.scoreLabel, "—")
         XCTAssertEqual(vm.liveMatchupResultChipTitle(for: "team_red", in: section, presentation: presentation), "Auto-win")
     }
 

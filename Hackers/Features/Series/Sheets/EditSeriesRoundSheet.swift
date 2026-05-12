@@ -702,60 +702,24 @@ struct EditSeriesRoundSheet: View {
     }
 
     private var handicapOptionsMenu: some View {
-        Menu {
-            Button(courseHandicapMenuTitle) {
-                guard courseHandicapAvailable else { return }
-                handicapEntryFormat = handicapEntryFormat == .courseHandicap ? .strokes : .courseHandicap
-            }
-            .disabled(!courseHandicapAvailable)
-
-            Button(normalizeHandicapsMenuTitle) {
-                handicapNormalizationMode = handicapNormalizationMode == .off
-                    ? normalizedHandicapNormalizationMode(.field, for: competitionScope)
-                    : .off
-            }
-
-            Menu {
-                Button(handicapStrokeBasis == nil ? "✓ Auto" : "Auto") {
-                    handicapStrokeBasis = nil
-                }
-
-                ForEach(SeriesHandicapStrokeBasis.allCases, id: \.self) { basis in
-                    Button(handicapStrokeBasis == basis ? "✓ \(basis.displayName)" : basis.displayName) {
-                        handicapStrokeBasis = basis
-                    }
-                }
-            } label: {
-                Text("Hole Basis\n\(handicapStrokeBasisDescription)")
-            }
-        } label: {
-            Image(systemName: "pencil.circle.fill")
-                .font(.system(size: 28, weight: .semibold))
-                .foregroundStyle(palette.foregroundColor)
-                .accessibilityLabel("Handicap options")
-        }
+        HandicapOptionsMenu(
+            handicapEntryFormat: $handicapEntryFormat,
+            handicapNormalizationMode: $handicapNormalizationMode,
+            handicapStrokeBasis: $handicapStrokeBasis,
+            courseHandicapAvailable: courseHandicapAvailable,
+            competitionScope: competitionScope,
+            resolvedAutoBasis: nil,
+            palette: palette,
+            courseHandicapSubtitle: courseHandicapAvailable
+                ? "Use member index and this round's selected tee to seed playing strokes"
+                : "Select a course and tee with rating/slope to use course handicap"
+        )
     }
 
     private var handicapOptionsSummary: String {
         let course = handicapEntryFormat == .courseHandicap ? "Course HCP on" : "Course HCP off"
         let normalized = handicapNormalizationMode == .off ? "Normalize off" : "Normalize on"
         return "\(course) - \(normalized) - \(handicapStrokeBasisDisplay)"
-    }
-
-    private var courseHandicapMenuTitle: String {
-        let state = handicapEntryFormat == .courseHandicap ? "✓" : "○"
-        let subtitle = courseHandicapAvailable
-            ? "Use member index and this round's selected tee to seed playing strokes"
-            : "Select a course and tee with rating/slope to use course handicap"
-        return "\(state) Course Handicap\n\(subtitle)"
-    }
-
-    private var normalizeHandicapsMenuTitle: String {
-        let state = handicapNormalizationMode == .off ? "○" : "✓"
-        let subtitle = competitionScope == .matchup
-            ? "Play each matchup from the lowest handicap in that pairing"
-            : "Play the field from the lowest handicap"
-        return "\(state) Normalize Handicaps\n\(subtitle)"
     }
 
     private var handicapStrokeBasisDisplay: String {

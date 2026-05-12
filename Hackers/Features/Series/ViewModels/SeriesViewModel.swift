@@ -3660,10 +3660,21 @@ final class SeriesViewModel: ObservableObject, Loggable {
 
             let entries = scoreEntriesByParticipant[participant.id] ?? []
             let tee = teeByParticipant[participant.id] ?? nil
-            let scoredEntries = entries.filter { $0.strokes != nil }
-            guard scoredEntries.isPopulated else { continue }
+            let holeNumbers = snapshot.roundSegment?.holeRange.holeNumbers ?? snapshot.holeSegment.holeRange.holeNumbers
+            let completeness = RoundScoreCompleteness.classify(
+                participantID: participant.id,
+                scores: snapshot.scoring,
+                holeNumbers: holeNumbers,
+                holes: tee?.holes ?? snapshot.defaultTee?.holes ?? [],
+                scoreLookupSegmentIDs: snapshot.segmentScoreLookupSegmentIDs
+            )
+            guard completeness.isComplete else { continue }
 
-            let total = Double(scoredEntries.compactMap(\.strokes).reduce(0, +))
+            let holeMap = Dictionary(uniqueKeysWithValues: (tee?.holes ?? snapshot.defaultTee?.holes ?? []).map { ($0.number, $0.par) })
+            let total = Double(entries.compactMap { entry in
+                guard holeNumbers.contains(entry.holeNumber) else { return nil }
+                return RoundScoreCompleteness.validGrossStrokes(entry: entry, par: holeMap[entry.holeNumber])
+            }.reduce(0, +))
             let par = Double(tee?.par(for: snapshot.holeSegment) ?? snapshot.courseSegment?.courseInfo.tees.first?.par(for: snapshot.holeSegment) ?? Int(series.handicapConfig.config.defaultParForIndex))
             let resolvedTeeBoxID = participant.teeBoxID.isPopulated ? participant.teeBoxID : tee?.id
             let courseRating = tee?.rating(for: snapshot.holeSegment)
@@ -4759,6 +4770,9 @@ final class SeriesViewModel: ObservableObject, Loggable {
             handicapStrokeBasis: snapshot.handicapStrokeBasis
         )
         guard let participant = snapshot.participants.first(where: { $0.playerID == playerID }) else { return nil }
+        guard RoundScoreCompleteness.classify(participantID: participant.id, snapshot: snapshot).isComplete else {
+            return nil
+        }
         guard let row = result.rows.first(where: { $0.scoringUnitID == participant.id }),
               row.holesPlayed > 0 else { return nil }
         let relStr = Self.scoreReviewFormatRelative(Int(row.total.rounded()))

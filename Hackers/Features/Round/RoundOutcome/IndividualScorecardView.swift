@@ -212,6 +212,13 @@ struct IndividualScorecardView: View {
                     Text("HCP \(participant.adjustedHandicap)")
                         .fontStyle(kFontName, size: 13, weight: .regular)
                         .foregroundStyle(Color.neutral)
+                    if let detail = courseHandicapDetailText {
+                        Text(detail)
+                            .fontStyle(kFontName, size: 12, weight: .regular)
+                            .foregroundStyle(Color.neutral)
+                            .lineLimit(2)
+                            .fixedSize(horizontal: false, vertical: true)
+                    }
                 }
             }
 
@@ -458,6 +465,23 @@ struct IndividualScorecardView: View {
 
     private var participantName: String {
         participant.name.fullName.trimmingCharacters(in: .whitespacesAndNewlines)
+    }
+
+    private var courseHandicapDetailText: String? {
+        guard viewModel.snapshot.configuration.handicapEntryFormat == .courseHandicap else { return nil }
+        let index = participant.handicapIndex ?? Double(participant.originalHandicap)
+        guard let label = CourseHandicapRosterDisplay.label(
+            index: index,
+            participant: participant,
+            courseSegment: viewModel.snapshot.courseSegment,
+            handicapStrokeBasis: viewModel.snapshot.handicapStrokeBasis,
+            defaultTee: viewModel.snapshot.defaultTee,
+            tees: viewModel.snapshot.tees,
+            maximumHandicap: viewModel.snapshot.configuration.leagueHandicapMaximum
+        ) else {
+            return nil
+        }
+        return "Index \(SeriesMemberHandicap.formatHandicapIndexForDisplay(index)) \(kDot) \(label)"
     }
 
     private var totalGross: Int {

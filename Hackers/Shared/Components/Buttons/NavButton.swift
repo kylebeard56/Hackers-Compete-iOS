@@ -75,6 +75,128 @@ struct NavButton: View {
     .colorScheme(.light)
 }
 
+struct HandicapOptionsMenu: View {
+    @Binding var handicapEntryFormat: HandicapEntryFormat
+    @Binding var handicapNormalizationMode: HandicapNormalizationMode
+    @Binding var handicapStrokeBasis: SeriesHandicapStrokeBasis?
+
+    let courseHandicapAvailable: Bool
+    let competitionScope: CompetitionScope
+    let resolvedAutoBasis: SeriesHandicapStrokeBasis?
+    let palette: DesignPalette
+    var courseHandicapSubtitle: String?
+    var onEntryFormatChanged: (HandicapEntryFormat) -> Void = { _ in }
+    var onNormalizationModeChanged: (HandicapNormalizationMode) -> Void = { _ in }
+    var onStrokeBasisChanged: (SeriesHandicapStrokeBasis?) -> Void = { _ in }
+
+    var body: some View {
+        Menu {
+            Button {
+                guard courseHandicapAvailable else { return }
+                Haptics.fire(.light)
+                let next: HandicapEntryFormat = handicapEntryFormat == .courseHandicap ? .strokes : .courseHandicap
+                handicapEntryFormat = next
+                onEntryFormatChanged(next)
+            } label: {
+                Label(
+                    "Course Handicap",
+                    systemImage: handicapEntryFormat == .courseHandicap ? "checkmark.circle.fill" : "circle"
+                )
+                Text(courseHandicapMenuSubtitle)
+            }
+            .menuActionDismissBehavior(.disabled)
+            .disabled(!courseHandicapAvailable)
+
+            Button {
+                Haptics.fire(.light)
+                let next: HandicapNormalizationMode = handicapNormalizationMode == .off
+                    ? (competitionScope == .matchup ? .matchup : .field)
+                    : .off
+                handicapNormalizationMode = next
+                onNormalizationModeChanged(next)
+            } label: {
+                Label(
+                    "Normalize Handicaps",
+                    systemImage: handicapNormalizationMode == .off ? "circle" : "checkmark.circle.fill"
+                )
+                Text(normalizeHandicapsMenuSubtitle)
+            }
+            .menuActionDismissBehavior(.disabled)
+
+            Menu {
+                Button {
+                    Haptics.fire(.light)
+                    handicapStrokeBasis = nil
+                    onStrokeBasisChanged(nil)
+                } label: {
+                    HStack {
+                        Text("Auto")
+                        if handicapStrokeBasis == nil {
+                            Image(systemName: "checkmark")
+                        }
+                    }
+                }
+
+                ForEach(SeriesHandicapStrokeBasis.allCases, id: \.self) { basis in
+                    Button {
+                        Haptics.fire(.light)
+                        handicapStrokeBasis = basis
+                        onStrokeBasisChanged(basis)
+                    } label: {
+                        HStack {
+                            Text(basis.displayName)
+                            if handicapStrokeBasis == basis {
+                                Image(systemName: "checkmark")
+                            }
+                        }
+                    }
+                }
+            } label: {
+                Text("Hole Basis")
+                Text(handicapStrokeBasisDescription)
+            }
+            .menuActionDismissBehavior(.disabled)
+        } label: {
+            Icon(name: "f141", size: 20, weight: .solid)
+                .foregroundStyle(Color.charcoal)
+                .frame(width: 40, height: 40)
+                .glassCardEffect(cornerRadius: 20, tint: palette.whiteGlassButtonColor, shadowOpacity: 0)
+                .whiteGlassCardShadow(color: palette.shadowColor)
+                .accessibilityLabel("Handicap options")
+        }
+        .menuActionDismissBehavior(.disabled)
+    }
+
+    private var courseHandicapMenuSubtitle: String {
+        if let courseHandicapSubtitle {
+            return courseHandicapSubtitle
+        }
+        return courseHandicapAvailable
+            ? "Convert index entries using the selected tee rating and slope"
+            : "Select a course and tee with rating/slope to use index entries"
+    }
+
+    private var normalizeHandicapsMenuSubtitle: String {
+        competitionScope == .matchup
+            ? "Play each matchup from the lowest handicap in that pairing"
+            : "Play the field from the lowest handicap"
+    }
+
+    private var handicapStrokeBasisDisplay: String {
+        handicapStrokeBasis?.displayName ?? "Auto"
+    }
+
+    private var handicapStrokeBasisDescription: String {
+        if let resolvedAutoBasis, handicapStrokeBasis == nil {
+            return "Auto currently uses \(resolvedAutoBasis.displayName)"
+        }
+        if handicapStrokeBasis == nil {
+            return "Auto - infer 9-hole or 18-hole from the round"
+        }
+        return "\(handicapStrokeBasisDisplay) values"
+    }
+}
+
 #Preview("Primary Dark") {
     HStack {
         NavButton(icon: "f00d")

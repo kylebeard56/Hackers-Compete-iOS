@@ -125,11 +125,7 @@ struct RoundOutcomeView: View {
 
             Spacer(minLength: 0)
 
-            Text("Round outcome".uppercased())
-                .fontStyle(kFontName, size: 15, weight: .semibold)
-                .foregroundStyle(palette.foregroundColor)
-                .lineLimit(1)
-                .minimumScaleFactor(0.7)
+            outcomeTitleCard
 
             Spacer(minLength: 0)
 
@@ -176,9 +172,20 @@ struct RoundOutcomeView: View {
                 }
             } else {
                 Color.clear
-                    .frame(width: 44, height: 44)
+                    .frame(width: 40, height: 40)
             }
         }
+    }
+
+    private var outcomeTitleCard: some View {
+        Text("Round outcome".uppercased())
+            .fontStyle(kFontName, size: 15, weight: .semibold)
+            .foregroundStyle(palette.foregroundColor)
+            .lineLimit(1)
+            .minimumScaleFactor(0.7)
+            .padding(.vertical, 7)
+            .padding(.horizontal, 24)
+            .glassCardEffect()
     }
 
     private var formattedDate: String {
@@ -294,7 +301,8 @@ struct RoundOutcomeView: View {
                     .padding(.vertical, 20)
                     .alignCenter()
             } else {
-                outcomeLeaderboardList(rows: viewModel.effectiveLeaderboardRows)
+                outcomeLeaderboardHeader
+                outcomeLeaderboardList(rows: viewModel.outcomeLeaderboardRows)
             }
         }
         .padding(16)
@@ -304,9 +312,10 @@ struct RoundOutcomeView: View {
 
     private func outcomeLeaderboardList(rows: [LiveRoundViewModel.LeaderboardRow]) -> some View {
         let isHighestWins = snapshot.resolvedActiveTemplate.leaderboardSort == .highestWins
-        let avg = viewModel.overallAvgForDisplay
+        let completeRows = rows.filter { $0.scoreCompleteness?.isComplete == true }
+        let avg = viewModel.averageForDisplay(rows: completeRows) ?? viewModel.overallAvgForDisplay
         let avgBreakParticipantID: String? = {
-            let scoreOrdered = rows.filter { !$0.isPinned }.sorted {
+            let scoreOrdered = completeRows.filter { !$0.isPinned }.sorted {
                 let a = $0.totalPoints ?? Double($0.scoreToPar)
                 let b = $1.totalPoints ?? Double($1.scoreToPar)
                 if a != b { return isHighestWins ? a > b : a < b }
@@ -333,6 +342,7 @@ struct RoundOutcomeView: View {
                     nameDisplayFormat: viewModel.nameDisplayFormat,
                     usesFormatDisplay: row.totalPoints != nil,
                     isHighestWinsFormat: isHighestWins,
+                    showsHandicap: viewModel.handicapsEnabled,
                     onTap: { handleOutcomeRowTap(row) }
                 )
 
@@ -343,6 +353,25 @@ struct RoundOutcomeView: View {
                 }
             }
         }
+    }
+
+    private var outcomeLeaderboardHeader: some View {
+        HStack(spacing: 10) {
+            Text("Place")
+                .frame(width: 44, alignment: .center)
+            Text("Player")
+                .frame(maxWidth: .infinity, alignment: .leading)
+            if viewModel.handicapsEnabled {
+                Text("HCP")
+                    .frame(width: 38, alignment: .center)
+            }
+            Text(viewModel.scoreBasis == .net ? "Net" : "Gross")
+                .frame(width: 44, alignment: .center)
+            Text("Holes")
+                .frame(width: 42, alignment: .center)
+        }
+        .fontStyle(kFontName, size: 11, weight: .medium)
+        .foregroundStyle(Color.neutral)
     }
 
     private func outcomeAvgBreaklineDivider(_ avg: Double) -> some View {
