@@ -431,6 +431,19 @@ final class LiveRoundViewModel: ObservableObject, Loggable {
         snapshot.teeGroups.sorted { $0.index < $1.index }
     }
 
+    var visibleTeeGroup: TeeTimeGroup? {
+        guard let visibleTeeGroupID else { return nil }
+        return orderedTeeGroups.first(where: { $0.id == visibleTeeGroupID })
+    }
+
+    var visibleStartingHole: Int? {
+        visibleTeeGroup?.startingHole
+    }
+
+    var startingHoleMenuNumbers: [Int] {
+        snapshot.holeRange?.holeNumbers ?? Array(1...18)
+    }
+
     var actualParticipant: RoundParticipant? {
         guard let id = currentParticipantID else { return nil }
         return snapshot.participants.first(where: { $0.id == id })
@@ -489,6 +502,10 @@ final class LiveRoundViewModel: ObservableObject, Loggable {
         isSeriesCommissioner && resolvedSeriesID?.isPopulated == true && orderedTeeGroups.count > 1
     }
 
+    var canChangeVisibleGroupStartingHole: Bool {
+        !isSpectator && currentParticipantID != nil && visibleTeeGroup != nil
+    }
+
     func canEditScorecard(participant: RoundParticipant) -> Bool {
         canEditActualGroupScores
             && isPresenceActive(participant)
@@ -528,6 +545,32 @@ final class LiveRoundViewModel: ObservableObject, Loggable {
             .map { formatDisplayName(for: $0) }
             .filter { $0.isPopulated }
             .joined(separator: ", ")
+    }
+
+    func changeVisibleTeeGroupStartingHole(to hole: Int) async {
+        guard canChangeVisibleGroupStartingHole,
+              let roundSession,
+              var group = visibleTeeGroup else { return }
+
+        let validHoles = startingHoleMenuNumbers
+        let resolvedHole = validHoles.contains(hole) ? hole : (validHoles.first ?? 1)
+        guard group.startingHole != resolvedHole else {
+            selectHole(resolvedHole)
+            return
+        }
+
+        group.startingHole = resolvedHole
+        do {
+            try await roundSession.update(group)
+            selectHole(resolvedHole)
+            visibleGroupSwitchRequest = VisibleGroupSwitchRequest(
+                groupID: group.id,
+                targetHoleNumber: resolvedHole,
+                revisionID: UUID()
+            )
+        } catch {
+            addBreadcrumb(level: .error, message: "Failed to update visible tee group starting hole", error: error)
+        }
     }
 
     struct TeamSection: Identifiable {
@@ -2287,6 +2330,14 @@ final class LiveRoundViewModel: ObservableObject, Loggable {
         let isTie: Bool
     }
 
+    struct OrderedMatchupSection: Identifiable {
+        let originalIndex: Int
+        let section: MatchupLeaderboardSection
+
+        var id: String { section.id }
+        var displayIndex: Int { originalIndex + 1 }
+    }
+
     enum OutcomeHoleSort: String, CaseIterable {
         case holeNumber
         case difficulty
@@ -3390,6 +3441,39 @@ final class LiveRoundViewModel: ObservableObject, Loggable {
             }
 
         return (builtSections + expectedMatchups)
+    }
+
+    var orderedMatchupSections: [OrderedMatchupSection] {
+        orderedMatchupSections(from: matchupSections, promotingParticipantID: currentParticipantID)
+    }
+
+    func orderedMatchupSections(
+        from sections: [MatchupLeaderboardSection],
+        promotingParticipantID participantID: String?
+    ) -> [OrderedMatchupSection] {
+        let indexed = sections.enumerated().map { index, section in
+            OrderedMatchupSection(originalIndex: index, section: section)
+        }
+
+        guard let participantID, participantID.isPopulated else { return indexed }
+
+        return indexed.sorted { lhs, rhs in
+            let lhsContains = matchupSection(lhs.section, containsParticipantID: participantID)
+            let rhsContains = matchupSection(rhs.section, containsParticipantID: participantID)
+            if lhsContains != rhsContains { return lhsContains }
+            return lhs.originalIndex < rhs.originalIndex
+        }
+    }
+
+    func matchupSection(
+        _ section: MatchupLeaderboardSection,
+        containsParticipantID participantID: String
+    ) -> Bool {
+        guard participantID.isPopulated else { return false }
+        return section.matchup.pairingIDs().contains { sideID in
+            matchupSideParticipants(scoringUnitID: sideID, matchup: section.matchup)
+                .contains { $0.id == participantID }
+        }
     }
 
     private func shouldDisplayMatchup(_ matchup: TeamMatchup) -> Bool {

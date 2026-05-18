@@ -395,6 +395,16 @@ extension LiveRound {
                         Label("Change group", systemImage: "arrow.left.arrow.right")
                     }
                 }
+
+                if viewModel.canChangeVisibleGroupStartingHole {
+                    Menu {
+                        ForEach(viewModel.startingHoleMenuNumbers, id: \.self) { hole in
+                            startingHoleMenuButton(hole)
+                        }
+                    } label: {
+                        Label("Starting hole", systemImage: "flag")
+                    }
+                }
                 
                 Divider()
                 
@@ -455,8 +465,8 @@ extension LiveRound {
                         Label(
                             "Show scoreless",
                             systemImage: viewModel.showScorelessLeaderboardRows
-                            ? "checkmark.circle.fill"
-                            : "circle"
+                            ? "circle"
+                            : "checkmark.circle.fill"
                         )
                         Text("Choose leaderboard visibility for those who have no scores")
                     }
@@ -536,6 +546,20 @@ extension LiveRound {
                 if subtitle.isPopulated {
                     Text(subtitle)
                 }
+            }
+        }
+    }
+
+    @ViewBuilder
+    private func startingHoleMenuButton(_ hole: Int) -> some View {
+        Button {
+            Haptics.fire(.light)
+            Task { await viewModel.changeVisibleTeeGroupStartingHole(to: hole) }
+        } label: {
+            if viewModel.visibleStartingHole == hole {
+                Label("Hole \(hole)", systemImage: "checkmark")
+            } else {
+                Text("Hole \(hole)")
             }
         }
     }

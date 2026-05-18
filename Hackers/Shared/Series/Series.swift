@@ -2728,6 +2728,7 @@ extension SeriesStanding {
 /// Outcome summary for a linked matchup round (Round Awards sheet).
 struct SeriesMatchupOutcome: Identifiable {
     let id: String
+    let matchIndex: Int
     let title: String
     let detail: String
     let mode: MatchupMode
@@ -2749,6 +2750,7 @@ struct SeriesMatchupOutcome: Identifiable {
 
     struct Player: Identifiable {
         let id: String
+        let participantID: String
         let ownerID: String
         let name: String
         let handicap: String

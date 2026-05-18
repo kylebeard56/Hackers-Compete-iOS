@@ -379,6 +379,46 @@ final class SeriesRoundCreationMappingTests: XCTestCase {
         XCTAssertEqual(shotgun.flatMap(\.seats).map(\.source), [.manualOverride, .manualOverride])
     }
 
+    func testPlannedTeeGroupsWithSchedule_preserveStartingHolesKeepsSavedValues() throws {
+        let scheduled = try XCTUnwrap(ISO8601DateFormatter().date(from: "2026-05-01T14:00:00Z"))
+        let existing = [
+            SeriesRoundPlannedTeeGroup(id: "g1", index: 4, teeTime: "2026-05-01T13:00:00Z", startingHole: 7),
+            SeriesRoundPlannedTeeGroup(id: "g2", index: 8, teeTime: "2026-05-01T13:08:00Z", startingHole: 13),
+        ]
+
+        let shotgun = SeriesRoundCreationMapping.plannedTeeGroupsWithSchedule(
+            existing,
+            holeRange: HoleRange(startHole: 1, endHole: 18),
+            useShotgunStart: true,
+            scheduledTeeTime: scheduled,
+            preserveStartingHoles: true
+        )
+
+        XCTAssertEqual(shotgun.map(\.index), [0, 1])
+        XCTAssertEqual(shotgun.map(\.startingHole), [7, 13])
+        XCTAssertEqual(Set(shotgun.compactMap(\.teeTime)), ["2026-05-01T14:00:00Z"])
+    }
+
+    func testNormalizePlannedTeeGroups_replacesOutOfRangeStartingHole() {
+        let existing = [
+            SeriesRoundPlannedTeeGroup(
+                id: "g1",
+                index: 0,
+                startingHole: 99,
+                seats: [SeriesRoundPlannedSeat(id: "m1", memberID: "m1", teeOrder: 1)]
+            ),
+        ]
+
+        let normalized = SeriesRoundPlanningService.normalizePlannedTeeGroups(
+            existing,
+            fallback: [],
+            allMembers: [makeMember(id: "m1", name: "Member")],
+            holeRange: HoleRange(startHole: 1, endHole: 18)
+        )
+
+        XCTAssertEqual(normalized.map(\.startingHole), [1])
+    }
+
     func testRoundDraft_leagueHandicapsOn_defaultsPrimaryFormatToNet() {
         let sr = fieldSeriesRound()
         let segment = makeCourseSegment()

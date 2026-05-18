@@ -22,10 +22,10 @@ extension LiveRound {
                         .padding(.vertical, 24)
                         .alignCenter()
                 } else {
-                    ForEach(Array(viewModel.matchupSections.enumerated()), id: \.element.id) { index, section in
+                    ForEach(viewModel.orderedMatchupSections) { item in
                         MatchupTileView(
-                            section: section,
-                            matchIndex: index + 1,
+                            section: item.section,
+                            matchIndex: item.displayIndex,
                             viewModel: viewModel,
                             palette: palette,
                             snapshot: snapshot

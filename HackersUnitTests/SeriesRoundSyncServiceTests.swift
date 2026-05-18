@@ -289,10 +289,10 @@ final class SeriesRoundSyncServiceTests: XCTestCase {
         XCTAssertEqual(viewModel.openLinkedRoundButtonTitle(for: lobby), "Open lobby")
         XCTAssertEqual(viewModel.openLinkedRoundButtonTitle(for: live), "Continue playing")
         XCTAssertTrue(viewModel.isRSVPEligible(for: planned))
-        XCTAssertTrue(viewModel.isRSVPEligible(for: lobby))
+        XCTAssertFalse(viewModel.isRSVPEligible(for: lobby))
         XCTAssertFalse(viewModel.isRSVPEligible(for: live))
         XCTAssertTrue(viewModel.shouldPreloadAttendance(for: planned))
-        XCTAssertTrue(viewModel.shouldPreloadAttendance(for: lobby))
+        XCTAssertFalse(viewModel.shouldPreloadAttendance(for: lobby))
         XCTAssertFalse(viewModel.shouldPreloadAttendance(for: live))
     }
 
@@ -836,7 +836,7 @@ final class SeriesRoundSyncServiceTests: XCTestCase {
                 RoundParticipant(id: "part1", playerID: "p1", name: member1.name, seriesMemberID: "m1", groupID: "g1", teeOrder: 1, createdAt: t0, parentID: "round1"),
                 RoundParticipant(id: "part2", playerID: "p2", name: member2.name, seriesMemberID: "m2", groupID: "g1", teeOrder: 2, createdAt: t0, parentID: "round1"),
             ],
-            teeGroups: [TeeTimeGroup(id: "g1", index: 0, createdAt: t0, parentID: "round1")],
+            teeGroups: [TeeTimeGroup(id: "g1", index: 0, startingHole: 7, createdAt: t0, parentID: "round1")],
             segments: [RoundSegment(id: "seg1", parentID: "round1")]
         )
 
@@ -855,6 +855,7 @@ final class SeriesRoundSyncServiceTests: XCTestCase {
 
         XCTAssertEqual(plan.participantsToDelete.map(\.id), ["part2"])
         XCTAssertEqual(plan.participantsToPut.map(\.seriesMemberID), ["m1"])
+        XCTAssertEqual(plan.teeGroupsToPut.first?.startingHole, 7)
         XCTAssertEqual(plan.round.players, ["p1"])
 
         var scored = snapshot

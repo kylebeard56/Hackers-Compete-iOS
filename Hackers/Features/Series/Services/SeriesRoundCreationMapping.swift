@@ -453,7 +453,8 @@ enum SeriesRoundCreationMapping {
         useShotgunStart: Bool,
         scheduledTeeTime: Date? = nil,
         fallbackTeeTime: String? = nil,
-        intervalMinutes: Int = 8
+        intervalMinutes: Int = 8,
+        preserveStartingHoles: Bool = false
     ) -> [SeriesRoundPlannedTeeGroup] {
         let ordered = groups.sorted { $0.index < $1.index }
         let base = scheduledTeeTime
@@ -464,9 +465,11 @@ enum SeriesRoundCreationMapping {
         return ordered.enumerated().map { index, group in
             var updated = group
             updated.index = index
-            updated.startingHole = useShotgunStart
-                ? TeeTimeGroup.sequentialStartingHole(forSequenceIndex: index, in: holeRange)
-                : holeRange.startHole
+            updated.startingHole = preserveStartingHoles
+                ? group.startingHole
+                : (useShotgunStart
+                    ? TeeTimeGroup.sequentialStartingHole(forSequenceIndex: index, in: holeRange)
+                    : holeRange.startHole)
             if let base {
                 let date = useShotgunStart
                     ? base

@@ -59,15 +59,8 @@ struct PlayerScoringRow: View {
     }
     private var canScoreParticipant: Bool { viewModel.isPresenceActive(participant) }
     private var canEditPresence: Bool { viewModel.canEditPresence(participant: participant) }
-    private var hasRecordedScores: Bool { viewModel.hasRecordedScores(for: participant) }
-    private var canShowActivePresenceMenu: Bool {
-        presenceStatus == .active && canEditPresence && !hasRecordedScores
-    }
     private var nameColor: Color {
         canScoreParticipant ? palette.foregroundColor : Color.neutral
-    }
-    private var secondaryTextColor: Color {
-        canScoreParticipant ? effectiveAccent : Color.neutral2
     }
     
 //    private var quickScores: [Int] {
@@ -242,12 +235,13 @@ struct PlayerScoringRow: View {
     @ViewBuilder
     private var trailingControl: some View {
         switch presenceStatus {
-        case .active, .unconfirmed:
-            HStack(spacing: 8) {
-                enterScoreContent
-                if canShowActivePresenceMenu || (presenceStatus == .unconfirmed && canEditPresence) {
-                    presenceMenuIcon
-                }
+        case .active:
+            enterScoreContent
+        case .unconfirmed:
+            if canEditPresence {
+                presenceMenuButton(title: "RSVP", tint: palette.whiteGlassButtonColor, foreground: palette.foregroundColor)
+            } else {
+                statusChip(title: "RSVP", tint: palette.whiteGlassButtonColor, foreground: palette.foregroundColor)
             }
         case .noShow:
             if canEditPresence {
@@ -255,33 +249,6 @@ struct PlayerScoringRow: View {
             } else {
                 statusChip(title: "Not here", tint: Color.neutral6.opacity(colorScheme.translucent(0.14, 0.18)), foreground: Color.neutral2)
             }
-        }
-    }
-
-    private var presenceMenuIcon: some View {
-        Menu {
-            if presenceStatus != .active {
-                Button {
-                    Task { await viewModel.markParticipantPlaying(participant) }
-                } label: {
-                    Label("They're here", systemImage: "checkmark.circle")
-                }
-            }
-            Button {
-                Task { await viewModel.markParticipantNoShow(participant) }
-            } label: {
-                Label("Mark not here", systemImage: "person.crop.circle.badge.xmark")
-            }
-            Button {
-                Task { await viewModel.resetParticipantToUnconfirmed(participant) }
-            } label: {
-                Label("Set back to unconfirmed", systemImage: "questionmark.circle")
-            }
-        } label: {
-            Image(systemName: "ellipsis.circle")
-                .font(.system(size: 18, weight: .semibold))
-                .foregroundStyle(secondaryTextColor)
-                .frame(width: 28, height: 28)
         }
     }
 

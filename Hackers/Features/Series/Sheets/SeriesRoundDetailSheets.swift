@@ -11,6 +11,7 @@ import UIKit
 struct SeriesRoundAwardsDetailSheet: View {
     @Environment(\.colorScheme) private var colorScheme
     @Environment(\.dismiss) private var dismiss
+    @EnvironmentObject private var appSession: AppSession
 
     @ObservedObject var viewModel: SeriesViewModel
     let seriesRound: SeriesRound
@@ -59,7 +60,8 @@ struct SeriesRoundAwardsDetailSheet: View {
         .toast(isPresenting: $showOutcomeCopiedToast) { .completeTile("Outcome paragraph copied") }
         .task(id: seriesRound.id) {
             isOutcomeNarrativeLoading = true
-            async let outcomes = viewModel.matchupOutcomes(for: seriesRound)
+            let participantID = await viewModel.viewerParticipantID(for: seriesRound, appSession: appSession)
+            async let outcomes = viewModel.matchupOutcomes(for: seriesRound, promotingParticipantID: participantID)
             async let narrative = viewModel.roundOutcomeNarrative(for: seriesRound)
             matchupOutcomes = await outcomes
             outcomeNarrative = await narrative
@@ -105,10 +107,10 @@ struct SeriesRoundAwardsDetailSheet: View {
                         .fontStyle(kFontName, size: 12, weight: .semibold)
                         .foregroundStyle(Color.neutral)
 
-                    ForEach(Array(matchupOutcomes.enumerated()), id: \.element.id) { index, outcome in
+                    ForEach(matchupOutcomes, id: \.id) { outcome in
                         SeriesAwardMatchupOutcomeCard(
                             outcome: outcome,
-                            matchIndex: index + 1,
+                            matchIndex: outcome.matchIndex,
                             palette: palette
                         )
                     }
@@ -180,7 +182,7 @@ struct SeriesRoundAwardsDetailSheet: View {
                 }
                 .padding(.vertical, 4)
             } else if let paragraph = outcomeNarrative?.paragraph {
-                Text(paragraph)
+                Text(markdownAttributedString(paragraph))
                     .fontStyle(kFontName, size: 14, weight: .regular)
                     .foregroundStyle(palette.foregroundColor)
                     .lineSpacing(4)
@@ -200,6 +202,13 @@ struct SeriesRoundAwardsDetailSheet: View {
         .frame(maxWidth: .infinity, alignment: .leading)
         .background(palette.cardColor)
         .cornerRadius(20)
+    }
+
+    private func markdownAttributedString(_ markdown: String) -> AttributedString {
+        let options = AttributedString.MarkdownParsingOptions(
+            interpretedSyntax: .inlineOnlyPreservingWhitespace
+        )
+        return (try? AttributedString(markdown: markdown, options: options)) ?? AttributedString(markdown)
     }
 
     private func awardsSection(title: String, subtitle: String, awards: [SeriesPointAward]) -> some View {
@@ -471,6 +480,319 @@ private struct SeriesAwardMatchupOutcomeCard: View {
 private extension SeriesMatchupOutcome.Player {
     var netLabel: String {
         net ?? "—"
+    }
+}
+
+struct SeriesRoundTeeSheetPreviewSheet: View {
+    @Environment(\.colorScheme) private var colorScheme
+    @Environment(\.dismiss) private var dismiss
+
+    @ObservedObject var viewModel: SeriesViewModel
+    let seriesRound: SeriesRound
+
+    private var palette: DesignPalette { .init(theme: .primary, scheme: colorScheme) }
+
+    private var membersByID: [String: SeriesMember] {
+        Dictionary(uniqueKeysWithValues: viewModel.eligibleMembers.map { ($0.id, $0) })
+    }
+
+    private var teamsByID: [String: SeriesTeam] {
+        Dictionary(uniqueKeysWithValues: viewModel.sortedTeams.map { ($0.id, $0) })
+    }
+
+    private var courseSelection: SeriesCourseSelection? {
+        seriesRound.resolvedCourse(using: viewModel.series)
+    }
+
+    private var plannedStructure: SeriesRoundPlannedStructure {
+        SeriesRoundPlanningService.resolvedPlannedStructure(
+            series: viewModel.series,
+            seriesRound: seriesRound,
+            members: viewModel.eligibleMembers,
+            teams: viewModel.sortedTeams,
+            pods: viewModel.sortedPods,
+            courseSelection: courseSelection
+        )
+    }
+
+    private var partnershipPlans: [SeriesRoundPartnershipPlan] {
+        SeriesRoundCreationMapping.resolvedPartnershipPlans(
+            seriesRound: seriesRound,
+            teams: viewModel.sortedTeams,
+            pods: viewModel.sortedPods,
+            members: viewModel.eligibleMembers
+        )
+    }
+
+    private var sortedGroups: [SeriesRoundPlannedTeeGroup] {
+        plannedStructure.teeGroups.sorted { $0.index < $1.index }
+    }
+
+    private var visibleMatchups: [SeriesRoundPlannedMatchup] {
+        plannedStructure.matchups.sorted { $0.matchupPlan.index < $1.matchupPlan.index }
+    }
+
+    private var unassignedMembers: [SeriesMember] {
+        let assigned = Set(sortedGroups.flatMap(\.memberIDs))
+        return viewModel.eligibleMembers
+            .filter { !assigned.contains($0.id) }
+            .sorted { $0.name.fullName.localizedCaseInsensitiveCompare($1.name.fullName) == .orderedAscending }
+    }
+
+    var body: some View {
+        VStack(spacing: 0) {
+            SeriesSheetHeader(
+                palette: palette,
+                title: "Tee Sheet",
+                subtitle: seriesRound.title.isPopulated ? seriesRound.title : "Round \(seriesRound.index + 1)",
+                onClose: { dismiss() }
+            )
+
+            ScrollView(showsIndicators: false) {
+                VStack(spacing: 16) {
+                    summarySection
+                    teeGroupsSection
+                    if visibleMatchups.isPopulated {
+                        matchupsSection
+                    }
+                    if unassignedMembers.isPopulated {
+                        unassignedSection
+                    }
+                    Spacer(minLength: 0)
+                        .frame(height: 24)
+                }
+                .padding(16)
+            }
+            .background(palette.backgroundColor)
+        }
+        .background(palette.backgroundColor.ignoresSafeArea())
+    }
+
+    private var summarySection: some View {
+        SeriesSheetCard(palette: palette) {
+            HStack(alignment: .top, spacing: 12) {
+                VStack(alignment: .leading, spacing: 6) {
+                    Text(courseSelection?.cachedName ?? "Course TBD")
+                        .fontStyle(kFontName, size: 17, weight: .semibold)
+                        .foregroundStyle(palette.foregroundColor)
+
+                    if let scheduledAt = seriesRound.scheduledAt {
+                        Text(Date(timeIntervalSince1970: scheduledAt.unix).formatted(date: .abbreviated, time: .shortened))
+                            .fontStyle(kFontName, size: 13, weight: .medium)
+                            .foregroundStyle(Color.neutral)
+                    }
+                }
+
+                Spacer(minLength: 0)
+
+                Chip(
+                    text: "\(sortedGroups.count) groups",
+                    size: .xSmall,
+                    foreground: Color.accentGreen,
+                    background: Color.accentGreen.opacity(colorScheme.translucent)
+                )
+            }
+        }
+    }
+
+    private var teeGroupsSection: some View {
+        SeriesSheetCard(palette: palette) {
+            Text("Tee Groups")
+                .fontStyle(kFontName, size: 15, weight: .semibold)
+                .foregroundStyle(palette.foregroundColor)
+
+            if sortedGroups.isEmpty {
+                Text("No tee groups have been set yet.")
+                    .fontStyle(kFontName, size: 13, weight: .regular)
+                    .foregroundStyle(Color.neutral)
+                    .frame(maxWidth: .infinity, alignment: .leading)
+            } else {
+                VStack(spacing: 10) {
+                    ForEach(sortedGroups) { group in
+                        teeGroupCard(group)
+                    }
+                }
+            }
+        }
+    }
+
+    private var matchupsSection: some View {
+        SeriesSheetCard(palette: palette) {
+            Text("Matchups")
+                .fontStyle(kFontName, size: 15, weight: .semibold)
+                .foregroundStyle(palette.foregroundColor)
+
+            VStack(spacing: 10) {
+                ForEach(visibleMatchups) { matchup in
+                    SeriesSheetRow(palette: palette) {
+                        VStack(alignment: .leading, spacing: 4) {
+                            Text("Match \(matchup.matchupPlan.index + 1)")
+                                .fontStyle(kFontName, size: 12, weight: .semibold)
+                                .foregroundStyle(Color.neutral)
+                            Text(matchupLabel(for: matchup.matchupPlan))
+                                .fontStyle(kFontName, size: 14, weight: .semibold)
+                                .foregroundStyle(palette.foregroundColor)
+                                .fixedSize(horizontal: false, vertical: true)
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    private var unassignedSection: some View {
+        SeriesSheetCard(palette: palette) {
+            Text("Unassigned")
+                .fontStyle(kFontName, size: 15, weight: .semibold)
+                .foregroundStyle(palette.foregroundColor)
+
+            VStack(spacing: 8) {
+                ForEach(unassignedMembers, id: \.id) { member in
+                    playerRow(memberID: member.id)
+                }
+            }
+        }
+    }
+
+    private func teeGroupCard(_ group: SeriesRoundPlannedTeeGroup) -> some View {
+        SeriesSheetRow(palette: palette, rowBackground: palette.cardNestedGroupBackground) {
+            VStack(alignment: .leading, spacing: 12) {
+                HStack(alignment: .top, spacing: 8) {
+                    VStack(alignment: .leading, spacing: 4) {
+                        Text("Group \(group.index + 1)")
+                            .fontStyle(kFontName, size: 14, weight: .semibold)
+                            .foregroundStyle(palette.foregroundColor)
+                        Text(groupSubtitle(group))
+                            .fontStyle(kFontName, size: 12, weight: .medium)
+                            .foregroundStyle(Color.neutral)
+                    }
+
+                    Spacer(minLength: 0)
+
+                    Chip(
+                        text: "Hole \(group.startingHole)",
+                        size: .xSmall,
+                        foreground: palette.foregroundColor,
+                        background: palette.cardEmbeddedRowBackground
+                    )
+                }
+
+                if group.seats.isEmpty {
+                    Text("No players assigned yet.")
+                        .fontStyle(kFontName, size: 13, weight: .regular)
+                        .foregroundStyle(Color.neutral)
+                } else {
+                    VStack(spacing: 8) {
+                        ForEach(group.seats.sorted { $0.teeOrder < $1.teeOrder }) { seat in
+                            playerRow(memberID: seat.memberID, teeOrder: seat.teeOrder)
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    private func playerRow(memberID: String, teeOrder: Int? = nil) -> some View {
+        HStack(alignment: .top, spacing: 10) {
+            if let teeOrder {
+                teeOrderBadge(teeOrder)
+            }
+
+            VStack(alignment: .leading, spacing: 3) {
+                Text(playerName(for: memberID))
+                    .fontStyle(kFontName, size: 13, weight: .semibold)
+                    .foregroundStyle(palette.foregroundColor)
+
+                let metadata = playerMetadata(for: memberID)
+                if metadata.isPopulated {
+                    Text(metadata)
+                        .fontStyle(kFontName, size: 11, weight: .regular)
+                        .foregroundStyle(Color.neutral)
+                }
+            }
+
+            Spacer(minLength: 0)
+        }
+        .padding(.vertical, 8)
+        .padding(.horizontal, 10)
+        .background(palette.cardEmbeddedRowBackground)
+        .clipShape(RoundedRectangle(cornerRadius: 14, style: .continuous))
+    }
+
+    private func teeOrderBadge(_ teeOrder: Int) -> some View {
+        ZStack {
+            Circle()
+                .fill(Color.neutral.opacity(0.18))
+            Text("\(teeOrder)")
+                .fontStyle(kFontName, size: 11, weight: .semibold)
+                .foregroundStyle(Color.neutral)
+                .minimumScaleFactor(0.6)
+        }
+        .frame(width: 24, height: 24)
+    }
+
+    private func groupSubtitle(_ group: SeriesRoundPlannedTeeGroup) -> String {
+        if let teeTime = group.teeTime, teeTime.isPopulated {
+            return teeTime.formattedTeeTime
+        }
+        return "\(group.seats.count) players"
+    }
+
+    private func playerName(for memberID: String) -> String {
+        guard let name = membersByID[memberID]?.name.trimmedFullName, name.isPopulated else {
+            return "Unknown player"
+        }
+        return name
+    }
+
+    private func playerMetadata(for memberID: String) -> String {
+        var components: [String] = []
+        if let teamID = membersByID[memberID]?.teamID,
+           let teamName = teamsByID[teamID]?.name,
+           teamName.isPopulated {
+            components.append(teamName)
+        }
+        if viewModel.series.handicapConfig.isEnabled,
+           let handicap = handicapText(for: memberID) {
+            components.append("HCP \(handicap)")
+        }
+        return components.joined(separator: " \(kDot) ")
+    }
+
+    private func handicapText(for memberID: String) -> String? {
+        guard let handicap = viewModel.effectiveHandicap(for: memberID), handicap.isFinite else { return nil }
+        let rounded = handicap.rounded(.toNearestOrAwayFromZero)
+        if abs(handicap - rounded) < 0.05 {
+            return String(Int(rounded))
+        }
+        let oneDecimal = String(format: "%.1f", handicap)
+        return oneDecimal.hasSuffix(".0") ? String(oneDecimal.dropLast(2)) : oneDecimal
+    }
+
+    private func matchupLabel(for plan: SeriesRoundMatchupPlan) -> String {
+        if plan.validTeamPairing {
+            return "\(teamName(for: plan.teamAID, fallback: "Team A")) vs \(teamName(for: plan.teamBID, fallback: "Team B"))"
+        }
+        if let pairAID = plan.pairAID,
+           let pairBID = plan.pairBID {
+            return "\(pairName(for: pairAID)) vs \(pairName(for: pairBID))"
+        }
+        if let memberAID = plan.memberAID,
+           let memberBID = plan.memberBID {
+            return "\(playerName(for: memberAID)) vs \(playerName(for: memberBID))"
+        }
+        return "Incomplete matchup"
+    }
+
+    private func teamName(for teamID: String, fallback: String) -> String {
+        let name = teamsByID[teamID]?.name
+        return name?.isPopulated == true ? name! : fallback
+    }
+
+    private func pairName(for pairID: String) -> String {
+        guard let plan = partnershipPlans.first(where: { $0.id == pairID }) else { return "Pair" }
+        let names = plan.memberIDs.map { playerName(for: $0) }
+        return names.isPopulated ? names.joined(separator: " + ") : "Pair"
     }
 }
 

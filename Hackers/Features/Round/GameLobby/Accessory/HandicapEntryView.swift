@@ -71,7 +71,7 @@ struct HandicapEntryView: View {
                 .alignCenter()
 
             if entryFormat == .courseHandicap, let computedCourseHandicap {
-                Text("Course HCP: \(String(format: "%.1f", computedCourseHandicap))")
+                Text("Course HCP: \(Int(computedCourseHandicap.rounded(.toNearestOrAwayFromZero)))")
                     .fontStyle(kFontName, size: 15, weight: .semibold)
                     .foregroundStyle(Color.neutral)
                     .alignLeading()

@@ -411,7 +411,8 @@ enum CourseHandicapRosterDisplay {
             .map { min(rawCourseHandicap, Double($0)) }
             ?? rawCourseHandicap
         let capSuffix = displayedCourseHandicap < rawCourseHandicap ? "*" : ""
-        var label = "Course HCP: \(String(format: "%.1f", displayedCourseHandicap))\(capSuffix)"
+        let roundedCourseHandicap = Int(displayedCourseHandicap.rounded(.toNearestOrAwayFromZero))
+        var label = "Course HCP: \(roundedCourseHandicap)\(capSuffix)"
 
         if let defaultTee,
            participant.teeBoxID != defaultTee.id,

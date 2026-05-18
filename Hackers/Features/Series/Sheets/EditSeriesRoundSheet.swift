@@ -1455,7 +1455,8 @@ struct EditSeriesRoundSheet: View {
                 plannedTeeGroups,
                 holeRange: planningHoleRange,
                 useShotgunStart: sequentialTeeStartsEnabled,
-                scheduledTeeTime: planningDraftRound.scheduledAt.map { Date(timeIntervalSince1970: $0.unix) }
+                scheduledTeeTime: planningDraftRound.scheduledAt.map { Date(timeIntervalSince1970: $0.unix) },
+                preserveStartingHoles: true
             )
         }
     }

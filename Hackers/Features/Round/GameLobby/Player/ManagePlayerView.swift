@@ -303,7 +303,7 @@ extension ManagePlayerView {
             }
 
             if snapshot.configuration.handicapEntryFormat == .courseHandicap, let computedCourseHandicapValue {
-                Text("Course HCP: \(String(format: "%.1f", computedCourseHandicapValue))")
+                Text("Course HCP: \(Int(computedCourseHandicapValue.rounded(.toNearestOrAwayFromZero)))")
                     .fontStyle(kFontName, size: 13, weight: .semibold)
                     .foregroundStyle(Color.neutral)
                     .alignLeading()

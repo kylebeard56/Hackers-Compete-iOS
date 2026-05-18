@@ -1486,25 +1486,21 @@ extension GameLobby {
             
             // Starting hole
             Menu {
-                Menu {
-                    ForEach(snapshot.holeRange?.holeNumbers ?? Array(1...18), id: \.self) { hole in
-                        Button {
-                            Haptics.fire(.light)
-                            Task {
-                                var g = group
-                                g.startingHole = hole
-                                try? await roundSession.update(g)
-                            }
-                        } label: {
-                            if group.startingHole == hole {
-                                Label("Hole \(hole)", systemImage: "checkmark")
-                            } else {
-                                Text("Hole \(hole)")
-                            }
+                ForEach(snapshot.holeRange?.holeNumbers ?? Array(1...18), id: \.self) { hole in
+                    Button {
+                        Haptics.fire(.light)
+                        Task {
+                            var g = group
+                            g.startingHole = hole
+                            try? await roundSession.update(g)
+                        }
+                    } label: {
+                        if group.startingHole == hole {
+                            Label("Hole \(hole)", systemImage: "checkmark")
+                        } else {
+                            Text("Hole \(hole)")
                         }
                     }
-                } label: {
-                    Label("Change starting hole", systemImage: "flag")
                 }
             } label: {
                 StackedSubtitle(

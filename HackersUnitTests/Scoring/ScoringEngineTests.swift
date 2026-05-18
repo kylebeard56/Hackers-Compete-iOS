@@ -2084,7 +2084,7 @@ final class ScoringEngineTests: XCTestCase {
                 tees: [white, purple],
                 maximumHandicap: nil
             ),
-            "Course HCP: 7.2"
+            "Course HCP: 7"
         )
         XCTAssertEqual(
             CourseHandicapRosterDisplay.label(
@@ -2096,7 +2096,7 @@ final class ScoringEngineTests: XCTestCase {
                 tees: [white, purple],
                 maximumHandicap: nil
             ),
-            "Course HCP: 7.2 (Purple tees)"
+            "Course HCP: 7 (Purple tees)"
         )
         XCTAssertEqual(
             CourseHandicapRosterDisplay.label(
@@ -2108,7 +2108,7 @@ final class ScoringEngineTests: XCTestCase {
                 tees: [white, purple],
                 maximumHandicap: 18
             ),
-            "Course HCP: 18.0*"
+            "Course HCP: 18*"
         )
         XCTAssertNil(
             CourseHandicapRosterDisplay.label(
@@ -2132,7 +2132,7 @@ final class ScoringEngineTests: XCTestCase {
                 tees: [white, purple],
                 maximumHandicap: nil
             ),
-            "Course HCP: 8.0"
+            "Course HCP: 8"
         )
     }
 

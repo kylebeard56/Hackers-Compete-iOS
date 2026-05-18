@@ -8,6 +8,36 @@
 import Flow
 import SwiftUI
 
+private enum RoundOutcomeTab: String, CaseIterable {
+    case leaderboard
+    case matchups
+
+    var icon: String {
+        switch self {
+        case .leaderboard: "list.number"
+        case .matchups: "f71d"
+        }
+    }
+
+    var iconType: IconType {
+        switch self {
+        case .leaderboard: .sanFrancisco
+        case .matchups: .fontAwesome
+        }
+    }
+
+    func fontWeight(_ selection: Bool) -> FontModule.Weight {
+        selection ? iconType.activeWeight : iconType.normalWeight
+    }
+
+    var title: String {
+        switch self {
+        case .leaderboard: "Leaderboard"
+        case .matchups: "Matchups"
+        }
+    }
+}
+
 struct RoundOutcomeView: View {
     @Environment(\.colorScheme) var colorScheme
     @Environment(\.dismiss) var dismiss
@@ -24,6 +54,7 @@ struct RoundOutcomeView: View {
     @State private var isCourseBreakdownExpanded = false
     @State private var holeSort: LiveRoundViewModel.OutcomeHoleSort = .holeNumber
     @State private var holeMetricMode: LiveRoundViewModel.OutcomeHoleMetricMode = .total
+    @State private var selectedOutcomeTab: RoundOutcomeTab = .leaderboard
 
     private var snapshot: RoundSnapshot { roundSession.snapshot }
     private var palette: DesignPalette { .init(theme: .glass, scheme: colorScheme) }
@@ -32,50 +63,28 @@ struct RoundOutcomeView: View {
         ZStack {
             BackgroundTheme(palette: palette, theme: .yellow)
 
-            GeometryReader { proxy in
-                ScrollView(showsIndicators: false) {
-                    VStack(spacing: 16) {
-                        if let summary = viewModel.outcomePersonalSummary {
-                            OutcomeSummaryTilesView(
-                                palette: palette,
-                                summary: summary,
-                                adjustedIndexSubtitle: viewModel.outcomeAdjustedIndexSubtitle(for: summary.participant),
-                                scoreFormatter: { viewModel.scoreToParLabel($0) }
-                            )
-                        }
+            if visibleOutcomeTabs.count > 1 {
+                TabView(selection: $selectedOutcomeTab) {
+                    leaderboardPage
+                        .tag(RoundOutcomeTab.leaderboard)
 
-                        courseTile
-                        outcomeScoringChips
-                        viewFullScorecardButton
-                        leaderboardTile
-
-                        ForEach(viewModel.outcomeGroupedSectionSets) { set in
-                            OutcomeGroupedLeaderboardTileView(
-                                title: set.title,
-                                sections: set.sections,
-                                palette: palette,
-                                nameDisplayFormat: viewModel.nameDisplayFormat,
-                                showsSectionTotal: viewModel.showsGroupedLeaderboardSectionTotal,
-                                formattedGroupedSectionSum: viewModel.formattedGroupedSectionSum(_:),
-                                formattedAvgScore: viewModel.formattedAvgScore(_:),
-                                onRowTap: { handleOutcomeRowTap($0) }
-                            )
-                        }
-
-                        if viewModel.matchupSections.isPopulated {
-                            matchupsSection
-                        }
-                    }
-                    .padding(.horizontal, 16)
-                    .padding(.top, UIApplication.shared.topSafeAreaInset)
-                    .padding(.bottom, 100)
-                    .frame(width: proxy.size.width, alignment: .top)
+                    matchupsPage
+                        .tag(RoundOutcomeTab.matchups)
                 }
+                .tabViewStyle(.page(indexDisplayMode: .never))
+            } else {
+                leaderboardPage
             }
 
             outcomeNavHeader
                 .padding(.horizontal, 16)
                 .alignTop()
+
+            if visibleOutcomeTabs.count > 1 {
+                roundOutcomeTabStripContainer
+                    .padding(.horizontal, 16)
+                    .alignBottom()
+            }
         }
         .navigationBarBackButtonHidden(true)
         .task {
@@ -83,6 +92,11 @@ struct RoundOutcomeView: View {
                 await roundSession.activate(roundID: id, profile: .roundOutcome)
             }
             viewModel.bind(appSession: appSession, roundSession: roundSession)
+        }
+        .onChange(of: visibleOutcomeTabs) { _, tabs in
+            if !tabs.contains(selectedOutcomeTab) {
+                selectedOutcomeTab = .leaderboard
+            }
         }
         .fullScreenCover(isPresented: $showEditRoundSheet) {
             GameLobby(isEditMode: true)
@@ -106,6 +120,64 @@ struct RoundOutcomeView: View {
                 participant: participant
             )
             .presentationBackground(.ultraThinMaterial)
+        }
+    }
+
+    private var visibleOutcomeTabs: [RoundOutcomeTab] {
+        viewModel.matchupSections.isPopulated ? [.leaderboard, .matchups] : [.leaderboard]
+    }
+
+    private var leaderboardPage: some View {
+        outcomePageScroll {
+            if let summary = viewModel.outcomePersonalSummary {
+                OutcomeSummaryTilesView(
+                    palette: palette,
+                    summary: summary,
+                    adjustedIndexSubtitle: viewModel.outcomeAdjustedIndexSubtitle(for: summary.participant),
+                    scoreFormatter: { viewModel.scoreToParLabel($0) }
+                )
+            }
+
+            courseTile
+            viewFullScorecardButton
+            leaderboardTile
+        }
+    }
+
+    private var matchupsPage: some View {
+        outcomePageScroll {
+            if viewModel.matchupSections.isEmpty {
+                Text("No matchup results yet.")
+                    .fontStyle(kFontName, size: 14, weight: .regular)
+                    .foregroundStyle(Color.neutral)
+                    .padding(.vertical, 24)
+                    .alignCenter()
+            } else {
+                ForEach(viewModel.orderedMatchupSections) { item in
+                    OutcomeMatchupTileView(
+                        section: item.section,
+                        matchIndex: item.displayIndex,
+                        viewModel: viewModel,
+                        palette: palette,
+                        snapshot: snapshot,
+                        onParticipantTap: { presentedParticipant = $0 }
+                    )
+                }
+            }
+        }
+    }
+
+    private func outcomePageScroll<Content: View>(@ViewBuilder content: @escaping () -> Content) -> some View {
+        GeometryReader { proxy in
+            ScrollView(showsIndicators: false) {
+                VStack(spacing: 16) {
+                    navPadding
+                    content()
+                }
+                .padding(.horizontal, 16)
+                .padding(.bottom, 100)
+                .frame(width: proxy.size.width, alignment: .top)
+            }
         }
     }
 
@@ -178,7 +250,7 @@ struct RoundOutcomeView: View {
     }
 
     private var outcomeTitleCard: some View {
-        Text("Round outcome".uppercased())
+        Text(selectedOutcomeTab.title.uppercased())
             .fontStyle(kFontName, size: 15, weight: .semibold)
             .foregroundStyle(palette.foregroundColor)
             .lineLimit(1)
@@ -223,44 +295,30 @@ struct RoundOutcomeView: View {
     @ViewBuilder
     private var outcomeScoringChips: some View {
         let chips = viewModel.availableLeaderboardChips
-        let showsScoreBasis = viewModel.handicapsEnabled
 
-        if chips.count > 1 || showsScoreBasis {
-            VStack(alignment: .leading, spacing: 10) {
-                if chips.count > 1 {
-                    HFlow(spacing: 8) {
-                        ForEach(chips, id: \.rawValue) { chip in
-                            let isSelected = viewModel.effectiveLeaderboardChip == chip
-                            Button {
-                                Haptics.fire(.light)
-                                viewModel.selectedLeaderboardChip = chip
-                            } label: {
-                                Text(chip.label)
-                                    .fontStyle(kFontName, size: 13, weight: isSelected ? .semibold : .medium)
-                                    .foregroundStyle(isSelected ? palette.foregroundColor : Color.neutral2)
-                                    .lineLimit(1)
-                                    .padding(.horizontal, 12)
-                                    .padding(.vertical, 6)
-                            }
-                            .buttonStyle(.plain)
-                            .background(
-                                RoundedRectangle(cornerRadius: 8)
-                                    .fill(isSelected ? palette.foregroundColor.opacity(colorScheme.translucent) : Color.clear)
-                            )
-                        }
+        if chips.count > 1 {
+            HFlow(spacing: 8) {
+                ForEach(chips, id: \.rawValue) { chip in
+                    let isSelected = viewModel.effectiveLeaderboardChip == chip
+                    Button {
+                        Haptics.fire(.light)
+                        viewModel.selectedLeaderboardChip = chip
+                    } label: {
+                        Text(chip.label)
+                            .fontStyle(kFontName, size: 13, weight: isSelected ? .semibold : .medium)
+                            .foregroundStyle(isSelected ? palette.foregroundColor : Color.neutral2)
+                            .lineLimit(1)
+                            .padding(.horizontal, 12)
+                            .padding(.vertical, 6)
                     }
-                    .frame(maxWidth: .infinity, alignment: .leading)
-                }
-
-                if showsScoreBasis {
-                    Picker("", selection: $viewModel.scoreBasis) {
-                        Text("Gross").tag(ScoreBasis.gross)
-                        Text("Net").tag(ScoreBasis.net)
-                    }
-                    .pickerStyle(.segmented)
-                    .frame(width: 150)
+                    .buttonStyle(.plain)
+                    .background(
+                        RoundedRectangle(cornerRadius: 8)
+                            .fill(isSelected ? palette.foregroundColor.opacity(colorScheme.translucent) : Color.clear)
+                    )
                 }
             }
+            .frame(maxWidth: .infinity, alignment: .leading)
         }
     }
 
@@ -294,6 +352,9 @@ struct RoundOutcomeView: View {
 
             Line()
 
+            outcomeScoringChips
+            outcomeLeaderboardPickers
+
             if viewModel.effectiveLeaderboardRows.isEmpty {
                 Text("No players in this round yet.")
                     .fontStyle(kFontName, size: 14, weight: .regular)
@@ -301,13 +362,64 @@ struct RoundOutcomeView: View {
                     .padding(.vertical, 20)
                     .alignCenter()
             } else {
-                outcomeLeaderboardHeader
-                outcomeLeaderboardList(rows: viewModel.outcomeLeaderboardRows)
+                switch viewModel.leaderboardMode {
+                case .individual:
+                    outcomeLeaderboardHeader
+                    outcomeLeaderboardList(rows: viewModel.outcomeLeaderboardRows)
+                case .team:
+                    outcomeGroupedLeaderboardList(sections: viewModel.displayTeamLeaderboardSections)
+                case .teeGroup:
+                    outcomeGroupedLeaderboardList(sections: viewModel.displayTeeGroupLeaderboardSections)
+                }
             }
         }
         .padding(16)
         .frame(maxWidth: .infinity)
         .glassCardEffect(interactive: false)
+    }
+
+    private var outcomeLeaderboardPickers: some View {
+        let modes = viewModel.availableLeaderboardModes
+        let showModePicker = modes.count > 1
+
+        return ViewThatFits(in: .horizontal) {
+            HStack(spacing: 10) {
+                if showModePicker {
+                    outcomeLeaderboardModePicker(modes: modes)
+                }
+                Spacer(minLength: 0)
+                if viewModel.handicapsEnabled {
+                    outcomeScoreBasisPicker
+                }
+            }
+
+            VStack(spacing: 8) {
+                if showModePicker {
+                    outcomeLeaderboardModePicker(modes: modes)
+                }
+                if viewModel.handicapsEnabled {
+                    outcomeScoreBasisPicker
+                }
+            }
+        }
+    }
+
+    private func outcomeLeaderboardModePicker(modes: [LiveRoundViewModel.LeaderboardMode]) -> some View {
+        Picker("", selection: $viewModel.leaderboardMode) {
+            ForEach(modes, id: \.self) { mode in
+                Text(viewModel.leaderboardModeLabel(for: mode)).tag(mode)
+            }
+        }
+        .pickerStyle(.segmented)
+    }
+
+    private var outcomeScoreBasisPicker: some View {
+        Picker("", selection: $viewModel.scoreBasis) {
+            Text("Gross").tag(ScoreBasis.gross)
+            Text("Net").tag(ScoreBasis.net)
+        }
+        .pickerStyle(.segmented)
+        .frame(width: 130)
     }
 
     private func outcomeLeaderboardList(rows: [LiveRoundViewModel.LeaderboardRow]) -> some View {
@@ -384,24 +496,113 @@ struct RoundOutcomeView: View {
         }
     }
 
-    private var matchupsSection: some View {
-        VStack(alignment: .leading, spacing: 12) {
-            Text("Matchups".uppercased())
-                .fontStyle(kFontName, size: 14, weight: .semibold)
-                .foregroundStyle(palette.foregroundColor)
+    private func outcomeGroupedLeaderboardList(sections: [LiveRoundViewModel.GroupedLeaderboardSection]) -> some View {
+        VStack(spacing: 4) {
+            ForEach(sections) { section in
+                outcomeGroupSectionHeader(section)
 
-            ForEach(Array(viewModel.matchupSections.enumerated()), id: \.element.id) { index, section in
-                OutcomeMatchupTileView(
-                    section: section,
-                    matchIndex: index + 1,
-                    viewModel: viewModel,
-                    palette: palette,
-                    snapshot: snapshot,
-                    onParticipantTap: { presentedParticipant = $0 }
-                )
+                VStack(spacing: 8) {
+                    ForEach(section.rows) { row in
+                        OutcomeLeaderboardRowView(
+                            palette: palette,
+                            placeLabel: row.placeLabel,
+                            row: row,
+                            teamColor: row.teamColor ?? viewModel.teamColor(for: row.participant),
+                            nameDisplayFormat: viewModel.nameDisplayFormat,
+                            usesFormatDisplay: row.totalPoints != nil,
+                            isHighestWinsFormat: snapshot.resolvedActiveTemplate.leaderboardSort == .highestWins,
+                            showsHandicap: viewModel.handicapsEnabled,
+                            onTap: { handleOutcomeRowTap(row) }
+                        )
+
+                        if row.id != section.rows.last?.id {
+                            Divider().opacity(0.15)
+                        }
+                    }
+                }
+                .padding(.leading, 6)
+
+                if section.id != sections.last?.id {
+                    Line(color: Color.white.opacity(colorScheme.isDark ? 0.10 : 0.16))
+                        .padding(.vertical, 4)
+                }
             }
         }
-        .frame(maxWidth: .infinity, alignment: .leading)
+    }
+
+    private func outcomeGroupSectionHeader(_ section: LiveRoundViewModel.GroupedLeaderboardSection) -> some View {
+        HStack(spacing: 8) {
+            Text(section.name.uppercased())
+                .fontStyle(kFontName, size: 13, weight: .semibold)
+                .foregroundStyle(section.color ?? Color.neutral)
+
+            Spacer(minLength: 0)
+
+            HStack(spacing: 12) {
+                if viewModel.showsGroupedLeaderboardSectionTotal {
+                    outcomeGroupStatLabel("Tot", value: viewModel.formattedGroupedSectionSum(section.sumAggregatedScore))
+                }
+                outcomeGroupStatLabel("Avg", value: viewModel.formattedAvgScore(section.avgScoreToPar))
+            }
+        }
+        .padding(.vertical, 4)
+    }
+
+    private func outcomeGroupStatLabel(_ label: String, value: String) -> some View {
+        HStack(spacing: 4) {
+            Text(label + ":")
+                .fontStyle(kFontName, size: 13, weight: .medium)
+                .foregroundStyle(Color.neutral2)
+            Text(value)
+                .fontStyle(kFontName, size: 13, weight: .semibold)
+                .foregroundStyle(palette.foregroundColor)
+        }
+    }
+
+    private var roundOutcomeTabStripContainer: some View {
+        HStack(spacing: 8) {
+            roundOutcomeTabStrip
+                .padding(.vertical, 4)
+                .padding(.horizontal, 4)
+        }
+        .glassCardEffect(
+            shape: .capsule,
+            material: .bar,
+            interactive: true,
+            tint: nil
+        )
+        .animation(.spring(response: 0.35, dampingFraction: 0.8), value: visibleOutcomeTabs.count)
+    }
+
+    private var roundOutcomeTabStrip: some View {
+        let tabWidth: CGFloat = 72
+        let tabHeight: CGFloat = 48
+        let tabs = visibleOutcomeTabs
+        let selectedIndex = tabs.firstIndex(of: selectedOutcomeTab) ?? 0
+
+        return ZStack(alignment: .leading) {
+            HStack(spacing: 0) {
+                ForEach(tabs, id: \.self) { tab in
+                    Button {
+                        Haptics.fire(.light)
+                        selectedOutcomeTab = tab
+                    } label: {
+                        Icon(name: tab.icon, size: 20, weight: tab.fontWeight(selectedOutcomeTab == tab))
+                            .foregroundStyle(selectedOutcomeTab == tab ? palette.foregroundColor : Color.charcoal)
+                            .frame(width: tabWidth, height: tabHeight)
+                            .contentShape(Rectangle())
+                    }
+                    .buttonStyle(.plain)
+                }
+            }
+
+            Capsule()
+                .fill(palette.foregroundColor.opacity(0.125))
+                .frame(width: tabWidth, height: tabHeight)
+                .offset(x: CGFloat(selectedIndex) * tabWidth)
+                .animation(.spring(response: 0.35, dampingFraction: 0.8), value: selectedOutcomeTab)
+        }
+        .frame(width: tabWidth * CGFloat(tabs.count), height: tabHeight)
     }
 
     private var courseLocationText: String? {

@@ -521,10 +521,13 @@ enum SeriesRoundSyncPlanning {
         )
         let existingGroups = snapshot.teeGroups.sorted { $0.index < $1.index }
         let teeGroupsToPut = templateGroups.enumerated().map { index, template -> TeeTimeGroup in
+            let existingGroup = index < existingGroups.count ? existingGroups[index] : nil
             var group = index < existingGroups.count ? existingGroups[index] : template
             group.index = index
             group.teeTime = template.teeTime
-            group.startingHole = template.startingHole
+            group.startingHole = existingGroup
+                .flatMap { courseSegment.holeRange.holeNumbers.contains($0.startingHole) ? $0.startingHole : nil }
+                ?? template.startingHole
             group.parentID = snapshot.round.id
             group.lastUpdatedAt = .init()
             return group

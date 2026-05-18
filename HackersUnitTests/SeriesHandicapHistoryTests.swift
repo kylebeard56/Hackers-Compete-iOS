@@ -393,7 +393,7 @@ struct SeriesHandicapHistoryTests {
         #expect(viewModel.canReviewScores(for: complete) == false)
     }
 
-    @Test("Round outcome narrative sorts net leaderboard and includes handicaps, gross scores, birdies, and bounce back")
+    @Test("Round outcome narrative sorts net leaderboard and includes markdown, handicaps, score highlights, team context, and bounce back")
     func roundOutcomeNarrativeIncludesRequiredRoundFacts() throws {
         let members = Self.outcomeMembers()
         let currentRound = SeriesRound(id: "series_round_2", title: "Week 2", index: 1, roundID: "round_2")
@@ -407,6 +407,58 @@ struct SeriesHandicapHistoryTests {
             ],
             handicaps: ["p_alice": 2, "p_bob": 4, "p_charlie": 1]
         )
+        let teams = [
+            SeriesTeam(id: "team_1", name: "Team 1", index: 0, parentID: "series1"),
+            SeriesTeam(id: "team_2", name: "Team 2", index: 1, parentID: "series1"),
+        ]
+        let pointAwards = [
+            SeriesPointAward(
+                id: "award_team_1",
+                seriesRoundID: currentRound.id,
+                awardTrack: .team,
+                competitorType: .team,
+                competitorID: "team_1",
+                competitorName: "Team 1",
+                profileKind: .winTieLoss,
+                placement: 2,
+                totalPoints: 0,
+                parentID: "series1"
+            ),
+            SeriesPointAward(
+                id: "award_team_2",
+                seriesRoundID: currentRound.id,
+                awardTrack: .team,
+                competitorType: .team,
+                competitorID: "team_2",
+                competitorName: "Team 2",
+                profileKind: .winTieLoss,
+                placement: 1,
+                totalPoints: 2,
+                parentID: "series1"
+            ),
+        ]
+        let standings = [
+            SeriesStanding(
+                id: SeriesStanding.standingID(for: .team, competitorID: "team_1"),
+                awardTrack: .team,
+                competitorType: .team,
+                competitorID: "team_1",
+                competitorName: "Team 1",
+                totalPoints: 4,
+                rank: 2,
+                parentID: "series1"
+            ),
+            SeriesStanding(
+                id: SeriesStanding.standingID(for: .team, competitorID: "team_2"),
+                awardTrack: .team,
+                competitorType: .team,
+                competitorID: "team_2",
+                competitorName: "Team 2",
+                totalPoints: 5,
+                rank: 1,
+                parentID: "series1"
+            ),
+        ]
         let priorSnapshot = Self.outcomeSnapshot(
             roundID: "round_1",
             scores: [
@@ -425,19 +477,25 @@ struct SeriesHandicapHistoryTests {
             memberHandicaps: [
                 "m_alice": SeriesMemberHandicap(id: "m_alice", memberID: "m_alice", computedIndex: 5),
                 "m_bob": SeriesMemberHandicap(id: "m_bob", memberID: "m_bob", computedIndex: 3.4),
-            ]
+            ],
+            pointAwards: pointAwards,
+            standings: standings,
+            teams: teams
         ))
 
         let paragraph = narrative.paragraph
-        #expect(paragraph.contains("Week 2 is scored.\n\nLeaderboard (low-to-high net):"))
-        let bobRange = try #require(paragraph.range(of: "1. Bob Player: net 8 (-3), gross 12, HCP used 4, next week HCP 3.4"))
-        let aliceRange = try #require(paragraph.range(of: "2. Alice Player: net 9 (-2), gross 11, HCP used 2, next week HCP 5"))
-        let charlieRange = try #require(paragraph.range(of: "3. Charlie Player: net 10 (-1), gross 11, HCP used 1, next week HCP unavailable"))
+        #expect(paragraph.contains("**Week 2 is scored.**\n\n**Leaderboard (low-to-high net)**"))
+        let bobRange = try #require(paragraph.range(of: "**1st - Bob Player**\nScore: -3 (Net 8 / Gross 12)\nHCP: 4 -> 3.4 next week"))
+        let aliceRange = try #require(paragraph.range(of: "**2nd - Alice Player**\nScore: -2 (Net 9 / Gross 11)\nHCP: 2 -> 5 next week"))
+        let charlieRange = try #require(paragraph.range(of: "**3rd - Charlie Player**\nScore: -1 (Net 10 / Gross 11)\nHCP: 1 -> unavailable next week"))
         #expect(bobRange.lowerBound < aliceRange.lowerBound)
         #expect(aliceRange.lowerBound < charlieRange.lowerBound)
-        #expect(paragraph.contains("\n\nBirdies:\nAlice Player on #2"))
-        #expect(paragraph.contains("Best round: Bob Player with net 8 (-3)."))
-        #expect(paragraph.contains("Bounce-back player: Alice Player, improving 5 strokes from the prior Series round."))
+        #expect(paragraph.contains("\n\n**Birdies and Eagles**\n**Alice Player** birdie on #2"))
+        #expect(paragraph.contains("**Team context**"))
+        #expect(paragraph.contains("**Team 2** moved into first after won"))
+        #expect(paragraph.contains("Best round: **Bob Player** with net 8 (-3)."))
+        #expect(paragraph.contains("Bounce-back player: **Alice Player**, improving 5 strokes from the prior Series round."))
+        #expect(paragraph.contains("Strongest finish:"))
     }
 
     @Test("Round outcome narrative handles no birdies and no prior comparable round")
@@ -458,8 +516,66 @@ struct SeriesHandicapHistoryTests {
             memberHandicaps: [:]
         ))
 
-        #expect(narrative.paragraph.contains("No birdies were recorded."))
+        #expect(narrative.paragraph.contains("No birdies or eagles were recorded."))
         #expect(!narrative.paragraph.contains("Bounce-back player"))
+    }
+
+    @Test("Round outcome narrative includes tied ordinal labels, team names, eagles, and absent player HCP")
+    func roundOutcomeNarrativeIncludesTieTeamEagleAndAbsentSections() throws {
+        let teams = [
+            SeriesTeam(id: "team_2", name: "Team 2", index: 1, parentID: "series1")
+        ]
+        let narrative = try #require(SeriesRoundOutcomeNarrativeBuilder.build(
+            seriesRound: SeriesRound(id: "series_round_1", title: "Week 1", index: 0, roundID: "round_1"),
+            snapshot: Self.outcomeSnapshot(
+                roundID: "round_1",
+                scores: [
+                    "p_alice": [1: 2, 2: 4, 3: 3],
+                    "p_bob": [1: 4, 2: 4, 3: 3],
+                    "p_charlie": [:],
+                ],
+                handicaps: ["p_alice": 0, "p_bob": 2, "p_charlie": 7],
+                teamIDs: ["p_alice": "team_2", "p_bob": "team_2", "p_charlie": "team_2"],
+                presenceStatuses: ["p_charlie": .noShow],
+                handicapIndexes: ["p_alice": 3.2]
+            ),
+            priorRoundSnapshots: [],
+            members: Self.outcomeMembers(),
+            handicapScores: [],
+            memberHandicaps: [
+                "m_alice": SeriesMemberHandicap(id: "m_alice", memberID: "m_alice", computedIndex: 2.9),
+                "m_charlie": SeriesMemberHandicap(id: "m_charlie", memberID: "m_charlie", computedIndex: 6.1),
+            ],
+            teams: teams
+        ))
+
+        let paragraph = narrative.paragraph
+        #expect(paragraph.contains("**T-1st - Alice Player, Team 2**"))
+        #expect(paragraph.contains("**T-1st - Bob Player, Team 2**"))
+        #expect(paragraph.contains("HCP: 3.2 -> 2.9 next week"))
+        #expect(paragraph.contains("**Alice Player** eagle-or-better on #1"))
+        #expect(paragraph.contains("**Absent players**"))
+        #expect(paragraph.contains("**Charlie Player** - HCP: 7 -> 6.1 next week"))
+    }
+
+    @Test("Course handicap outcome narrative shows integer course HCP current-to-next values")
+    func roundOutcomeNarrativeUsesCourseHandicapLineWhenEnabled() throws {
+        let narrative = try #require(SeriesRoundOutcomeNarrativeBuilder.build(
+            seriesRound: SeriesRound(id: "series_round_1", title: "Week 1", index: 0, roundID: "round_course_hcp"),
+            snapshot: Self.courseHandicapOutcomeSnapshot(),
+            priorRoundSnapshots: [],
+            members: Self.outcomeMembers(),
+            handicapScores: [],
+            memberHandicaps: [
+                "m_alice": SeriesMemberHandicap(id: "m_alice", memberID: "m_alice", computedIndex: 6.1),
+                "m_charlie": SeriesMemberHandicap(id: "m_charlie", memberID: "m_charlie", computedIndex: 8.2),
+            ]
+        ))
+
+        let paragraph = narrative.paragraph
+        #expect(paragraph.contains("Course HCP: 3 -> 4 next week"))
+        #expect(paragraph.contains("**Charlie Player** - Course HCP: 7 -> 6 next week"))
+        #expect(!paragraph.contains("HCP: 3.2 -> 6.1 next week"))
     }
 
     @Test("SeriesViewModel sync outcome narrative helper uses current view model state")
@@ -480,7 +596,7 @@ struct SeriesHandicapHistoryTests {
             )
         ))
 
-        #expect(narrative.paragraph.contains("1. Alice Player: net 8 (-3), gross 10, HCP used 2, next week HCP 4.6"))
+        #expect(narrative.paragraph.contains("**1st - Alice Player**\nScore: -3 (Net 8 / Gross 10)\nHCP: 2 -> 4.6 next week"))
     }
 
     private static func outcomeMembers() -> [SeriesMember] {
@@ -505,10 +621,88 @@ struct SeriesHandicapHistoryTests {
         )
     }
 
+    private static func courseHandicapOutcomeSnapshot() -> RoundSnapshot {
+        let roundID = "round_course_hcp"
+        let holes = (1...18).map { holeNumber in
+            Hole(number: holeNumber, par: 4, yardage: 360, handicap: holeNumber)
+        }
+        let tee = Tee(
+            id: "course_tee",
+            name: "Member",
+            gender: Gender.male.rawValue,
+            totalHoles: 18,
+            holes: holes,
+            ratingFull: 70,
+            slopeFull: 113,
+            ratingFront: 34,
+            slopeFront: 113,
+            ratingBack: 36,
+            slopeBack: 113
+        )
+        let participants = [
+            RoundParticipant(
+                id: "p_alice",
+                playerID: "p_alice",
+                name: Name("Alice", "Player"),
+                teeBoxID: tee.id,
+                adjustedHandicap: 3,
+                handicapIndex: 3.2,
+                seriesMemberID: "m_alice",
+                parentID: roundID
+            ),
+            RoundParticipant(
+                id: "p_charlie",
+                playerID: "p_charlie",
+                name: Name("Charlie", "Player"),
+                teeBoxID: tee.id,
+                adjustedHandicap: 7,
+                handicapIndex: 7,
+                seriesMemberID: "m_charlie",
+                presenceStatus: .noShow,
+                parentID: roundID
+            ),
+        ]
+        let entries = (1...9).map { holeNumber in
+            ScoreEntry(
+                id: ScoreEntry.makeID(hole: holeNumber, segment: "segment", scoringUnit: "p_alice"),
+                holeNumber: holeNumber,
+                segmentID: "segment",
+                scoringUnitID: "p_alice",
+                participantIDs: ["p_alice"],
+                strokes: 4,
+                parentID: roundID
+            )
+        }
+
+        return RoundSnapshot(
+            round: Round(
+                id: roundID,
+                status: .complete,
+                configuration: RoundConfiguration(
+                    courses: [
+                        CourseSegment(
+                            courseInfo: CourseInfo(id: "course", name: "Test Course", totalHoles: 18, tees: [tee]),
+                            holeRange: HoleRange(startHole: 1, endHole: 9),
+                            defaultTee: tee.id
+                        )
+                    ],
+                    handicapStrokeBasis: .nineHole,
+                    handicapEntryFormat: .courseHandicap
+                )
+            ),
+            participants: participants,
+            segments: [RoundSegment(id: "segment", holeRange: HoleRange(startHole: 1, endHole: 9), parentID: roundID)],
+            scoring: entries
+        )
+    }
+
     private static func outcomeSnapshot(
         roundID: String,
         scores: [String: [Int: Int]],
-        handicaps: [String: Int]
+        handicaps: [String: Int],
+        teamIDs: [String: String] = [:],
+        presenceStatuses: [String: RoundParticipantPresenceStatus] = [:],
+        handicapIndexes: [String: Double] = [:]
     ) -> RoundSnapshot {
         let tee = Tee(
             id: "tee",
@@ -534,7 +728,10 @@ struct SeriesHandicapHistoryTests {
                 name: member.name,
                 teeBoxID: tee.id,
                 adjustedHandicap: handicaps[member.playerID ?? ""] ?? 0,
+                handicapIndex: handicapIndexes[member.playerID ?? ""],
                 seriesMemberID: member.id,
+                teamID: teamIDs[member.playerID ?? ""],
+                presenceStatus: presenceStatuses[member.playerID ?? ""],
                 parentID: roundID
             )
         }

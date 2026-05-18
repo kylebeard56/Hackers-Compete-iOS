@@ -275,6 +275,68 @@ final class LiveRoundOutcomeHolePerformanceTests: XCTestCase {
         XCTAssertEqual(Set(section.rows.map(\.scoringUnitID)), Set(["pair_1", "pair_2"]))
     }
 
+    func testOrderedMatchupSectionsPromotesCurrentParticipantsMatchupAndPreservesMatchNumber() {
+        let viewModel = LiveRoundViewModel()
+        viewModel.set(snapshot: Self.makeTeamMatchupOrderingSnapshot())
+
+        let sections = [
+            MatchupLeaderboardSection(
+                id: "matchup_1",
+                matchup: TeamMatchup(id: "matchup_1", teamIDs: ["team_2", "team_3"], mode: .team),
+                name: "Team 2 vs Team 3",
+                rows: []
+            ),
+            MatchupLeaderboardSection(
+                id: "matchup_2",
+                matchup: TeamMatchup(id: "matchup_2", teamIDs: ["team_1", "team_4"], mode: .team),
+                name: "Team 1 vs Team 4",
+                rows: []
+            ),
+        ]
+
+        let ordered = viewModel.orderedMatchupSections(from: sections, promotingParticipantID: "p1")
+
+        XCTAssertEqual(ordered.map(\.section.id), ["matchup_2", "matchup_1"])
+        XCTAssertEqual(ordered.map(\.displayIndex), [2, 1])
+    }
+
+    func testOrderedMatchupSectionsKeepsOriginalOrderWithoutCurrentParticipant() {
+        let viewModel = LiveRoundViewModel()
+        viewModel.set(snapshot: Self.makeTeamMatchupOrderingSnapshot())
+
+        let sections = [
+            MatchupLeaderboardSection(
+                id: "matchup_1",
+                matchup: TeamMatchup(id: "matchup_1", teamIDs: ["team_2", "team_3"], mode: .team),
+                name: "Team 2 vs Team 3",
+                rows: []
+            ),
+            MatchupLeaderboardSection(
+                id: "matchup_2",
+                matchup: TeamMatchup(id: "matchup_2", teamIDs: ["team_1", "team_4"], mode: .team),
+                name: "Team 1 vs Team 4",
+                rows: []
+            ),
+        ]
+
+        let ordered = viewModel.orderedMatchupSections(from: sections, promotingParticipantID: nil)
+
+        XCTAssertEqual(ordered.map(\.section.id), ["matchup_1", "matchup_2"])
+        XCTAssertEqual(ordered.map(\.displayIndex), [1, 2])
+    }
+
+    private static func makeTeamMatchupOrderingSnapshot() -> RoundSnapshot {
+        RoundSnapshot(
+            round: Round(id: "round_matchup_ordering"),
+            participants: [
+                RoundParticipant(id: "p1", name: Name("One", "Player"), teamID: "team_1", parentID: "round_matchup_ordering"),
+                RoundParticipant(id: "p2", name: Name("Two", "Player"), teamID: "team_2", parentID: "round_matchup_ordering"),
+                RoundParticipant(id: "p3", name: Name("Three", "Player"), teamID: "team_3", parentID: "round_matchup_ordering"),
+                RoundParticipant(id: "p4", name: Name("Four", "Player"), teamID: "team_4", parentID: "round_matchup_ordering"),
+            ]
+        )
+    }
+
     func testSharedScoreOutcomeSummaryUsesScoringUnitTotalOverParticipantAlias() async throws {
         var snapshot = Self.makeSharedPartnershipSnapshot()
         let roundID = snapshot.round.id
@@ -433,7 +495,8 @@ private extension LiveRoundOutcomeHolePerformanceTests {
                     holeRange: HoleRange(startHole: 1, endHole: 18),
                     defaultTee: defaultTee.id
                 )
-            ]
+            ],
+            attendanceConfirmationEnabled: true
         )
 
         snapshot.participants = [

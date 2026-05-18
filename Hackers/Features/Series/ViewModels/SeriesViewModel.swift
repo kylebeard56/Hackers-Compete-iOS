@@ -218,7 +218,17 @@ enum SeriesRoundCSVExporter {
 }
 
 struct SeriesRoundOutcomeNarrative: Equatable {
-    let paragraph: String
+    let markdown: String
+
+    var paragraph: String { markdown }
+
+    init(markdown: String) {
+        self.markdown = markdown
+    }
+
+    init(paragraph: String) {
+        self.markdown = paragraph
+    }
 }
 
 enum SeriesRoundOutcomeNarrativeBuilder {
@@ -236,7 +246,9 @@ enum SeriesRoundOutcomeNarrativeBuilder {
         let netStrokes: Int
         let netToPar: Int
         let handicapUsed: Int
+        let currentHandicap: Double?
         let nextHandicap: Double?
+        let teamName: String?
     }
 
     static func build(
@@ -245,12 +257,16 @@ enum SeriesRoundOutcomeNarrativeBuilder {
         priorRoundSnapshots: [PriorRoundSnapshot],
         members: [SeriesMember],
         handicapScores _: [SeriesHandicapScore],
-        memberHandicaps: [String: SeriesMemberHandicap]
+        memberHandicaps: [String: SeriesMemberHandicap],
+        pointAwards: [SeriesPointAward] = [],
+        standings: [SeriesStanding] = [],
+        teams: [SeriesTeam] = []
     ) -> SeriesRoundOutcomeNarrative? {
         let results = playerResults(
             snapshot: snapshot,
             members: members,
-            memberHandicaps: memberHandicaps
+            memberHandicaps: memberHandicaps,
+            teams: teams
         )
         guard results.isPopulated else { return nil }
 
@@ -261,38 +277,70 @@ enum SeriesRoundOutcomeNarrativeBuilder {
         }
 
         let title = seriesRound.title.isPopulated ? seriesRound.title : "Round \(seriesRound.index + 1)"
+        let placeLabels = placementLabels(for: ordered)
         let leaderboard = ordered.enumerated().map { offset, result in
-            "\(offset + 1). \(result.name): net \(result.netStrokes) (\(scoreToParLabel(result.netToPar))), gross \(result.grossStrokes), HCP used \(result.handicapUsed), next week HCP \(handicapLabel(result.nextHandicap))"
-        }.joined(separator: "\n")
+            let teamSuffix = result.teamName.map { ", \($0)" } ?? ""
+            return """
+            **\(placeLabels[offset]) - \(markdownEscaped(result.name))\(teamSuffix)**
+            Score: \(scoreToParLabel(result.netToPar)) (Net \(result.netStrokes) / Gross \(result.grossStrokes))
+            \(handicapLine(
+                participant: result.participant,
+                currentHandicap: result.currentHandicap,
+                currentCourseHandicap: result.handicapUsed,
+                nextHandicap: result.nextHandicap,
+                snapshot: snapshot
+            ))
+            """
+        }.joined(separator: "\n\n")
 
-        let birdies = birdieHighlights(snapshot: snapshot, members: members)
-        let birdieText = birdies.isEmpty
-            ? "No birdies were recorded."
-            : birdies.joined(separator: "\n")
+        let scoreHighlights = birdieAndEagleHighlights(snapshot: snapshot)
+        let scoreHighlightsText = scoreHighlights.isEmpty
+            ? "No birdies or eagles were recorded."
+            : scoreHighlights.joined(separator: "\n")
+        let absentText = absentPlayerLines(
+            snapshot: snapshot,
+            members: members,
+            memberHandicaps: memberHandicaps
+        )
+        let teamContext = teamContextParagraph(
+            seriesRound: seriesRound,
+            pointAwards: pointAwards,
+            standings: standings,
+            teams: teams
+        )
 
         let best = ordered[0]
-        var highlights = ["Best round: \(best.name) with net \(best.netStrokes) (\(scoreToParLabel(best.netToPar)))."]
+        var highlights = ["Best round: **\(markdownEscaped(best.name))** with net \(best.netStrokes) (\(scoreToParLabel(best.netToPar)))."]
 
         if let bounceBack = bounceBackResult(
             currentResults: results,
             priorRoundSnapshots: priorRoundSnapshots,
             members: members,
-            memberHandicaps: memberHandicaps
+            memberHandicaps: memberHandicaps,
+            teams: teams
         ) {
-            highlights.append("Bounce-back player: \(bounceBack.name), improving \(bounceBack.improvement) \(strokeUnit(bounceBack.improvement)) from the prior Series round.")
+            highlights.append("Bounce-back player: **\(markdownEscaped(bounceBack.name))**, improving \(bounceBack.improvement) \(strokeUnit(bounceBack.improvement)) from the prior Series round.")
         }
 
-        return SeriesRoundOutcomeNarrative(
-            paragraph: """
-            \(title) is scored.
+        if let strongestFinish = strongestFinishResult(snapshot: snapshot) {
+            let names = strongestFinish.names.map { "**\(markdownEscaped($0))**" }.joined(separator: ", ")
+            highlights.append("Strongest finish: \(names) at \(scoreToParLabel(strongestFinish.netToPar)) over the final four holes.")
+        }
 
-            Leaderboard (low-to-high net):
+        let teamContextBlock = teamContext.map { "\n\n**Team context**\n\($0)" } ?? ""
+        let absentBlock = absentText.isEmpty ? "" : "\n\n**Absent players**\n\(absentText.joined(separator: "\n"))"
+
+        return SeriesRoundOutcomeNarrative(
+            markdown: """
+            **\(markdownEscaped(title)) is scored.**
+
+            **Leaderboard (low-to-high net)**
             \(leaderboard)
 
-            Birdies:
-            \(birdieText)
+            **Birdies and Eagles**
+            \(scoreHighlightsText)\(absentBlock)\(teamContextBlock)
 
-            Highlights:
+            **Highlights**
             \(highlights.joined(separator: "\n"))
             """
         )
@@ -301,14 +349,18 @@ enum SeriesRoundOutcomeNarrativeBuilder {
     private static func playerResults(
         snapshot: RoundSnapshot,
         members: [SeriesMember],
-        memberHandicaps: [String: SeriesMemberHandicap]
+        memberHandicaps: [String: SeriesMemberHandicap],
+        teams: [SeriesTeam]
     ) -> [PlayerResult] {
-        snapshot.participants
+        let teamsByID = Dictionary(uniqueKeysWithValues: teams.map { ($0.id, $0.name) })
+        let roundTeamsByID = Dictionary(uniqueKeysWithValues: snapshot.teams.map { ($0.id, $0.name) })
+        return snapshot.participants
             .filter(\.isPresenceActive)
-            .compactMap { participant in
+            .compactMap { participant -> PlayerResult? in
                 guard let totals = totals(for: participant, snapshot: snapshot) else { return nil }
                 let memberID = memberID(for: participant, members: members)
                 let nextHandicap = memberID.flatMap { memberHandicaps[$0]?.effectiveIndex }
+                let teamName = participant.teamID.flatMap { teamsByID[$0] ?? roundTeamsByID[$0] }
                 return PlayerResult(
                     participant: participant,
                     memberID: memberID,
@@ -318,7 +370,9 @@ enum SeriesRoundOutcomeNarrativeBuilder {
                     netStrokes: totals.gross - participant.adjustedHandicap,
                     netToPar: totals.grossToPar - participant.adjustedHandicap,
                     handicapUsed: participant.adjustedHandicap,
-                    nextHandicap: nextHandicap
+                    currentHandicap: participant.handicapIndex ?? participant.leagueHandicapStrokesAtCreation.map(Double.init),
+                    nextHandicap: nextHandicap,
+                    teamName: teamName
                 )
             }
     }
@@ -352,25 +406,36 @@ enum SeriesRoundOutcomeNarrativeBuilder {
         return hasScore ? (gross, grossToPar) : nil
     }
 
-    private static func birdieHighlights(snapshot: RoundSnapshot, members: [SeriesMember]) -> [String] {
+    private static func birdieAndEagleHighlights(snapshot: RoundSnapshot) -> [String] {
         snapshot.participants
             .filter(\.isPresenceActive)
             .flatMap { participant -> [String] in
                 let tee = playedTee(for: participant, snapshot: snapshot)
                 let entries = snapshot.scoring.filter { $0.scoringUnitID == participant.id }
                 let entriesByHole = Dictionary(grouping: entries, by: \.holeNumber).compactMapValues(\.first)
-                let holes = holeNumbers(for: snapshot).filter { holeNumber in
+                let highlights = holeNumbers(for: snapshot).compactMap { holeNumber -> (hole: Int, label: String)? in
                     guard let entry = entriesByHole[holeNumber],
                           let par = par(for: holeNumber, tee: tee),
                           let strokes = grossStrokes(from: entry, par: par) else {
-                        return false
+                        return nil
                     }
-                    return strokes - par == -1
+                    let diff = strokes - par
+                    if diff <= -2 { return (holeNumber, "eagle") }
+                    if diff == -1 { return (holeNumber, "birdie") }
+                    return nil
                 }
-                guard holes.isPopulated else { return [] }
+                guard highlights.isPopulated else { return [] }
                 let name = displayName(for: participant)
-                let holeText = holes.map { "#\($0)" }.joined(separator: ", ")
-                return ["\(name) on \(holeText)"]
+                let eagleHoles = highlights.filter { $0.label == "eagle" }.map { "#\($0.hole)" }
+                let birdieHoles = highlights.filter { $0.label == "birdie" }.map { "#\($0.hole)" }
+                var lines: [String] = []
+                if eagleHoles.isPopulated {
+                    lines.append("**\(markdownEscaped(name))** eagle-or-better on \(eagleHoles.joined(separator: ", "))")
+                }
+                if birdieHoles.isPopulated {
+                    lines.append("**\(markdownEscaped(name))** birdie on \(birdieHoles.joined(separator: ", "))")
+                }
+                return lines
             }
             .sorted()
     }
@@ -379,7 +444,8 @@ enum SeriesRoundOutcomeNarrativeBuilder {
         currentResults: [PlayerResult],
         priorRoundSnapshots: [PriorRoundSnapshot],
         members: [SeriesMember],
-        memberHandicaps: [String: SeriesMemberHandicap]
+        memberHandicaps: [String: SeriesMemberHandicap],
+        teams: [SeriesTeam]
     ) -> (name: String, improvement: Int)? {
         let priorByMemberID = priorRoundSnapshots
             .sorted { $0.seriesRound.index > $1.seriesRound.index }
@@ -387,7 +453,8 @@ enum SeriesRoundOutcomeNarrativeBuilder {
                 for playerResult in playerResults(
                     snapshot: prior.snapshot,
                     members: members,
-                    memberHandicaps: memberHandicaps
+                    memberHandicaps: memberHandicaps,
+                    teams: teams
                 ) {
                     guard let memberID = playerResult.memberID,
                           result[memberID] == nil else { continue }
@@ -460,6 +527,270 @@ enum SeriesRoundOutcomeNarrativeBuilder {
             return "\(Int(rounded.rounded(.towardZero)))"
         }
         return String(format: "%.1f", rounded)
+    }
+
+    private static func placementLabels(for ordered: [PlayerResult]) -> [String] {
+        var labels = Array(repeating: "", count: ordered.count)
+        var index = 0
+        var place = 1
+
+        while index < ordered.count {
+            let net = ordered[index].netStrokes
+            let start = index
+            while index < ordered.count, ordered[index].netStrokes == net {
+                index += 1
+            }
+            let tied = index - start > 1
+            let label = "\(tied ? "T-" : "")\(ordinal(place))"
+            for i in start..<index {
+                labels[i] = label
+            }
+            place += index - start
+        }
+
+        return labels
+    }
+
+    private static func ordinal(_ value: Int) -> String {
+        let ones = value % 10
+        let tens = (value / 10) % 10
+        let suffix: String
+        if tens == 1 {
+            suffix = "th"
+        } else {
+            switch ones {
+            case 1: suffix = "st"
+            case 2: suffix = "nd"
+            case 3: suffix = "rd"
+            default: suffix = "th"
+            }
+        }
+        return "\(value)\(suffix)"
+    }
+
+    private static func absentPlayerLines(
+        snapshot: RoundSnapshot,
+        members: [SeriesMember],
+        memberHandicaps: [String: SeriesMemberHandicap]
+    ) -> [String] {
+        snapshot.participants
+            .filter { !$0.isPresenceActive }
+            .sorted { displayName(for: $0) < displayName(for: $1) }
+            .map { participant in
+                let memberID = memberID(for: participant, members: members)
+                let next = memberID.flatMap { memberHandicaps[$0]?.effectiveIndex }
+                let current = participant.handicapIndex ?? participant.leagueHandicapStrokesAtCreation.map(Double.init) ?? Double(participant.adjustedHandicap)
+                let line = handicapLine(
+                    participant: participant,
+                    currentHandicap: current,
+                    currentCourseHandicap: participant.adjustedHandicap,
+                    nextHandicap: next,
+                    snapshot: snapshot
+                )
+                return "**\(markdownEscaped(displayName(for: participant)))** - \(line)"
+            }
+    }
+
+    private static func handicapLine(
+        participant: RoundParticipant,
+        currentHandicap: Double?,
+        currentCourseHandicap: Int,
+        nextHandicap: Double?,
+        snapshot: RoundSnapshot
+    ) -> String {
+        if snapshot.configuration.handicapEntryFormat == .courseHandicap {
+            let nextCourseHandicap = nextHandicap.flatMap {
+                HandicapCalculator.courseHandicap(
+                    index: $0,
+                    participant: participant,
+                    courseSegment: snapshot.courseSegment,
+                    handicapStrokeBasis: snapshot.handicapStrokeBasis
+                )
+            }
+            return "Course HCP: \(currentCourseHandicap) -> \(courseHandicapLabel(nextCourseHandicap)) next week"
+        }
+
+        return "HCP: \(handicapLabel(currentHandicap ?? Double(currentCourseHandicap))) -> \(handicapLabel(nextHandicap)) next week"
+    }
+
+    private static func courseHandicapLabel(_ value: Int?) -> String {
+        value.map(String.init) ?? "unavailable"
+    }
+
+    private static func strongestFinishResult(snapshot: RoundSnapshot) -> (names: [String], netToPar: Int)? {
+        let finalHoles = Array(holeNumbers(for: snapshot).suffix(4))
+        guard finalHoles.isPopulated else { return nil }
+
+        let results = snapshot.participants
+            .filter(\.isPresenceActive)
+            .compactMap { participant -> (name: String, netToPar: Int)? in
+                let tee = playedTee(for: participant, snapshot: snapshot)
+                let entriesByHole = Dictionary(
+                    grouping: snapshot.scoring.filter { $0.scoringUnitID == participant.id },
+                    by: \.holeNumber
+                ).compactMapValues(\.first)
+                var total = 0
+
+                for holeNumber in finalHoles {
+                    guard let entry = entriesByHole[holeNumber],
+                          let par = par(for: holeNumber, tee: tee),
+                          let strokes = grossStrokes(from: entry, par: par) else {
+                        return nil
+                    }
+                    let received = ScoringEngine.strokesReceived(
+                        handicap: participant.adjustedHandicap,
+                        holeNumber: holeNumber,
+                        holes: tee?.holes ?? [],
+                        playedHoleNumbers: holeNumbers(for: snapshot),
+                        useHandicaps: true,
+                        handicapStrokeBasis: snapshot.handicapStrokeBasis
+                    )
+                    total += strokes - par - received
+                }
+
+                return (displayName(for: participant), total)
+            }
+
+        guard let best = results.map(\.netToPar).min() else { return nil }
+        let names = results
+            .filter { $0.netToPar == best }
+            .map(\.name)
+            .sorted()
+        return (names, best)
+    }
+
+    private static func teamContextParagraph(
+        seriesRound: SeriesRound,
+        pointAwards: [SeriesPointAward],
+        standings: [SeriesStanding],
+        teams: [SeriesTeam]
+    ) -> String? {
+        let currentAwards = pointAwards.filter { $0.seriesRoundID == seriesRound.id && $0.awardTrack == .team }
+        let teamStandings = standings.filter { $0.awardTrack == .team }
+        guard currentAwards.isPopulated, teamStandings.isPopulated else { return nil }
+
+        let awardPoints = Dictionary(grouping: currentAwards, by: \.competitorID)
+            .mapValues { $0.reduce(0.0) { $0 + $1.totalPoints } }
+        let awardsByTeam = Dictionary(grouping: currentAwards, by: \.competitorID)
+        let teamNames = Dictionary(uniqueKeysWithValues: teams.map { ($0.id, $0.name) })
+
+        struct StandingContext {
+            let id: String
+            let name: String
+            let before: Double
+            let after: Double
+            let beforeRank: Int
+            let afterRank: Int
+            let roundPoints: Double
+            let result: String
+        }
+
+        let beforeEntries = teamStandings.map {
+            ($0.competitorID, max(0, $0.totalPoints - (awardPoints[$0.competitorID] ?? 0)), $0.competitorName)
+        }
+        let afterEntries = teamStandings.map {
+            ($0.competitorID, $0.totalPoints, $0.competitorName)
+        }
+        let beforeRanks = ranks(for: beforeEntries)
+        let afterRanks = ranks(for: afterEntries)
+
+        let contexts = teamStandings.map { standing in
+            let awards = awardsByTeam[standing.competitorID] ?? []
+            let result: String
+            if awards.contains(where: { ($0.tieGroupSize ?? 1) > 1 }) {
+                result = "tied"
+            } else if awards.contains(where: { $0.placement == 1 }) {
+                result = "won"
+            } else if awards.contains(where: { $0.placement == 2 }) {
+                result = "lost"
+            } else if let placement = awards.compactMap(\.placement).min() {
+                result = "placed \(ordinal(placement))"
+            } else {
+                result = "earned points"
+            }
+
+            return StandingContext(
+                id: standing.competitorID,
+                name: teamNames[standing.competitorID] ?? standing.competitorName,
+                before: max(0, standing.totalPoints - (awardPoints[standing.competitorID] ?? 0)),
+                after: standing.totalPoints,
+                beforeRank: beforeRanks[standing.competitorID] ?? standing.rank ?? 0,
+                afterRank: afterRanks[standing.competitorID] ?? standing.rank ?? 0,
+                roundPoints: awardPoints[standing.competitorID] ?? 0,
+                result: result
+            )
+        }
+
+        guard contexts.isPopulated else { return nil }
+
+        let leaderBefore = contexts.sorted {
+            if $0.before != $1.before { return $0.before > $1.before }
+            return $0.name < $1.name
+        }.first
+        let leadersAfter = contexts
+            .filter { context in
+                guard let maxAfter = contexts.map(\.after).max() else { return false }
+                return abs(context.after - maxAfter) < 0.000_001
+            }
+            .sorted { $0.name < $1.name }
+
+        var sentences: [String] = []
+        if let leaderBefore, let firstAfter = leadersAfter.first {
+            if leadersAfter.contains(where: { $0.id == leaderBefore.id }) && leadersAfter.count == 1 {
+                sentences.append("**\(markdownEscaped(leaderBefore.name))** stayed on top after \(leaderBefore.result) and adding \(leaderBefore.roundPoints.seriesPointsDisplayString) points.")
+            } else if leadersAfter.count == 1 {
+                sentences.append("**\(markdownEscaped(firstAfter.name))** moved into first after \(firstAfter.result), while **\(markdownEscaped(leaderBefore.name))** slipped from the lead.")
+            } else {
+                let names = leadersAfter.map { "**\(markdownEscaped($0.name))**" }.joined(separator: ", ")
+                sentences.append("\(names) now share first place after this round.")
+            }
+        }
+
+        let movers = contexts
+            .filter { $0.beforeRank != $0.afterRank }
+            .sorted { lhs, rhs in
+                let lhsMove = abs(lhs.beforeRank - lhs.afterRank)
+                let rhsMove = abs(rhs.beforeRank - rhs.afterRank)
+                if lhsMove != rhsMove { return lhsMove > rhsMove }
+                return lhs.afterRank < rhs.afterRank
+            }
+        if let mover = movers.first {
+            let direction = mover.afterRank < mover.beforeRank ? "climbed" : "dropped"
+            sentences.append("**\(markdownEscaped(mover.name))** \(direction) from \(ordinal(mover.beforeRank)) to \(ordinal(mover.afterRank)) with a \(mover.result) worth \(mover.roundPoints.seriesPointsDisplayString) points.")
+        }
+
+        return sentences.isPopulated ? sentences.joined(separator: " ") : nil
+    }
+
+    private static func ranks(for entries: [(id: String, points: Double, name: String)]) -> [String: Int] {
+        let ordered = entries.sorted {
+            if $0.points != $1.points { return $0.points > $1.points }
+            return $0.name < $1.name
+        }
+        var ranks: [String: Int] = [:]
+        var index = 0
+        var rank = 1
+        while index < ordered.count {
+            let points = ordered[index].points
+            let start = index
+            while index < ordered.count, abs(ordered[index].points - points) < 0.000_001 {
+                index += 1
+            }
+            for i in start..<index {
+                ranks[ordered[i].id] = rank
+            }
+            rank += index - start
+        }
+        return ranks
+    }
+
+    private static func markdownEscaped(_ value: String) -> String {
+        value
+            .replacingOccurrences(of: "\\", with: "\\\\")
+            .replacingOccurrences(of: "*", with: "\\*")
+            .replacingOccurrences(of: "_", with: "\\_")
+            .replacingOccurrences(of: "[", with: "\\[")
+            .replacingOccurrences(of: "]", with: "\\]")
     }
 
     private static func strokeUnit(_ count: Int) -> String {
@@ -980,13 +1311,7 @@ final class SeriesViewModel: ObservableObject, Loggable {
     func isRSVPEligible(for seriesRound: SeriesRound) -> Bool {
         guard series.settings.isAttendanceEnabled else { return false }
         let status = effectiveStatus(for: seriesRound)
-        if status == .planned { return true }
-        guard status == .lobby,
-              let roundID = seriesRound.roundID,
-              linkedRounds[roundID]?.status == .lobby else {
-            return false
-        }
-        return true
+        return status == .planned && seriesRound.roundID == nil
     }
 
     /// Returns whether the current user participated in the linked round and their score label.
@@ -4486,21 +4811,54 @@ final class SeriesViewModel: ObservableObject, Loggable {
             priorRoundSnapshots: priorRoundSnapshots,
             members: members,
             handicapScores: handicapScores,
-            memberHandicaps: memberHandicaps
+            memberHandicaps: memberHandicaps,
+            pointAwards: pointAwards,
+            standings: standings,
+            teams: teams
         )
     }
 
-    func matchupOutcomes(for seriesRound: SeriesRound) async -> [SeriesMatchupOutcome] {
+    func viewerParticipantID(for seriesRound: SeriesRound, appSession: AppSession) async -> String? {
+        guard let roundID = seriesRound.roundID,
+              let snapshot = await loadRoundSnapshot(roundID: roundID) else {
+            return nil
+        }
+
+        if let ephemeral = appSession.ephemeralParticipantID, ephemeral.isPopulated,
+           snapshot.participants.contains(where: { $0.id == ephemeral }) {
+            return ephemeral
+        }
+
+        if let user = await AppData.shared.user,
+           let participant = snapshot.participants.first(where: { $0.userID == user.id }) {
+            return participant.id
+        }
+
+        if let primary = await AppData.shared.getPrimaryPlayer(),
+           let participant = snapshot.participants.first(where: { $0.playerID == primary.id }) {
+            return participant.id
+        }
+
+        return nil
+    }
+
+    func matchupOutcomes(
+        for seriesRound: SeriesRound,
+        promotingParticipantID: String? = nil
+    ) async -> [SeriesMatchupOutcome] {
         guard let roundID = seriesRound.roundID,
               let snapshot = await loadRoundSnapshot(roundID: roundID),
               let segment = snapshot.roundSegment else { return [] }
         guard snapshot.configuration.resolvedCompetitionScope == .matchup else { return [] }
 
         if let mismatch = snapshot.primarySegmentHoleRangeMismatch {
-            return diagnosticMatchupOutcomes(
-                mismatch: mismatch,
-                segment: segment,
-                snapshot: snapshot
+            return orderedMatchupOutcomes(
+                diagnosticMatchupOutcomes(
+                    mismatch: mismatch,
+                    segment: segment,
+                    snapshot: snapshot
+                ),
+                promotingParticipantID: promotingParticipantID
             )
         }
 
@@ -4509,7 +4867,7 @@ final class SeriesViewModel: ObservableObject, Loggable {
 
         let highestWins = result.template.leaderboardSort == .highestWins
         let participantSortBasis: ScoreBasis = snapshot.configuration.useHandicaps ? .net : .gross
-        return result.matchupResults.enumerated().compactMap { index, matchupResult in
+        let outcomes = result.matchupResults.enumerated().compactMap { index, matchupResult -> SeriesMatchupOutcome? in
             guard matchupResult.matchup.isValid else { return nil }
             let presentation = MatchupResultPresentationBuilder.build(
                 snapshot: snapshot,
@@ -4544,6 +4902,7 @@ final class SeriesViewModel: ObservableObject, Loggable {
                 .map { item in
                     SeriesMatchupOutcome.Player(
                         id: "\(item.side.id)_\(item.participant.id)",
+                        participantID: item.participant.id,
                         ownerID: item.side.id,
                         name: item.participant.name.fullName,
                         handicap: "\(item.participant.adjustedHandicap)",
@@ -4558,6 +4917,7 @@ final class SeriesViewModel: ObservableObject, Loggable {
 
             return SeriesMatchupOutcome(
                 id: matchupResult.matchup.id,
+                matchIndex: index + 1,
                 title: presentation.hasCompleteSides ? presentation.title : "Match \(index + 1)",
                 detail: presentation.hasCompleteSides ? presentation.scorelineDetail : presentation.scorelineDetail,
                 mode: presentation.mode,
@@ -4570,6 +4930,7 @@ final class SeriesViewModel: ObservableObject, Loggable {
                 usesNetScores: snapshot.configuration.useHandicaps
             )
         }
+        return orderedMatchupOutcomes(outcomes, promotingParticipantID: promotingParticipantID)
     }
 
     private func diagnosticMatchupOutcomes(
@@ -4595,6 +4956,7 @@ final class SeriesViewModel: ObservableObject, Loggable {
                 matchupSideParticipants(sideID: side.id, mode: mode, snapshot: snapshot).map { participant in
                     SeriesMatchupOutcome.Player(
                         id: "\(side.id)_\(participant.id)",
+                        participantID: participant.id,
                         ownerID: side.id,
                         name: participant.name.fullName,
                         handicap: "\(participant.adjustedHandicap)",
@@ -4609,6 +4971,7 @@ final class SeriesViewModel: ObservableObject, Loggable {
 
             return SeriesMatchupOutcome(
                 id: matchup.id,
+                matchIndex: index + 1,
                 title: "\(mismatch.diagnosticTitle) - Match \(index + 1)",
                 detail: mismatch.diagnosticDetail,
                 mode: mode,
@@ -4620,6 +4983,20 @@ final class SeriesViewModel: ObservableObject, Loggable {
                 resultChipLabel: nil,
                 usesNetScores: snapshot.configuration.useHandicaps
             )
+        }
+    }
+
+    private func orderedMatchupOutcomes(
+        _ outcomes: [SeriesMatchupOutcome],
+        promotingParticipantID participantID: String?
+    ) -> [SeriesMatchupOutcome] {
+        guard let participantID, participantID.isPopulated else { return outcomes }
+
+        return outcomes.sorted { lhs, rhs in
+            let lhsContains = lhs.players.contains { $0.participantID == participantID }
+            let rhsContains = rhs.players.contains { $0.participantID == participantID }
+            if lhsContains != rhsContains { return lhsContains }
+            return lhs.matchIndex < rhs.matchIndex
         }
     }
 

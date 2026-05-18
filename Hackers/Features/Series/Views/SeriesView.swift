@@ -74,6 +74,7 @@ struct SeriesView: View {
     @State private var showSetDefaultCourseSheet = false
     @State private var roundToStart: SeriesRound?
     @State private var roundToEdit: SeriesRound?
+    @State private var roundToPreviewTeeSheet: SeriesRound?
     @State private var roundToAttendance: SeriesRound?
     @State private var roundForAwards: SeriesRound?
     @State private var roundToCorrectScores: SeriesRound?
@@ -182,6 +183,11 @@ struct SeriesView: View {
             }
             .presentationDetents([.large])
             .presentationDragIndicator(.visible)
+        }
+        .sheet(item: $roundToPreviewTeeSheet) { round in
+            SeriesRoundTeeSheetPreviewSheet(viewModel: viewModel, seriesRound: round)
+                .presentationDetents([.large])
+                .presentationDragIndicator(.visible)
         }
         .sheet(item: $roundToAttendance) { round in
             SeriesRoundAttendanceView(viewModel: viewModel, seriesRound: round) {
@@ -1223,19 +1229,21 @@ struct SeriesView: View {
                     if viewModel.isCommissioner {
                         commissionerActionButton(for: round, status: status)
                             .frame(maxWidth: .infinity, alignment: .trailing)
-                    } else if round.roundID != nil {
+                    } else {
                         PrimaryButton(
                             appearance: .fill,
-                            title: viewModel.openLinkedRoundButtonTitle(for: round),
-                            labelColor: .white,
-                            buttonColor: viewModel.openLinkedRoundButtonColor(for: round),
+                            title: "Preview tee sheet",
+                            labelColor: palette.foregroundColor,
+                            buttonColor: palette.whiteGlassButtonColor,
                             theme: palette.theme,
                             height: SeriesRoundTileButtonMetrics.height,
+                            fillWidth: true,
                             fontSize: SeriesRoundTileButtonMetrics.fontSize,
                             isDisabled: .false,
                             isLoading: .false,
-                            onTap: { openRound(round) }
+                            onTap: { roundToPreviewTeeSheet = round }
                         )
+                        .frame(maxWidth: .infinity, alignment: .trailing)
                     }
                 }
             } else if status == .lobby {
@@ -1480,6 +1488,18 @@ struct SeriesView: View {
         return linked.status != .complete && linked.status != .archived
     }
 
+    private func canPreviewMatchups(for round: SeriesRound) -> Bool {
+        let plannedStructure = SeriesRoundPlanningService.resolvedPlannedStructure(
+            series: viewModel.series,
+            seriesRound: round,
+            members: viewModel.eligibleMembers,
+            teams: viewModel.sortedTeams,
+            pods: viewModel.sortedPods,
+            courseSelection: round.resolvedCourse(using: viewModel.series)
+        )
+        return plannedStructure.matchups.isPopulated
+    }
+
     private func seriesRoundOverflowMenuButton(round: SeriesRound, status: SeriesRoundStatus) -> some View {
         Menu {
             seriesRoundOverflowMenuContent(round: round, status: status)
@@ -1532,6 +1552,15 @@ struct SeriesView: View {
 
         if viewModel.isCommissioner {
             if status == .planned {
+                if canPreviewMatchups(for: round) {
+                    Button {
+                        Haptics.fire(.light)
+                        roundToPreviewTeeSheet = round
+                    } label: {
+                        Label("Preview matchups", systemImage: "tablecells.badge.ellipsis")
+                    }
+                }
+
                 if round.roundID == nil {
                     Button {
                         Haptics.fire(.light)
