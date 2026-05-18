@@ -972,6 +972,7 @@ final class SeriesViewModel: ObservableObject, Loggable {
     @Published var exportingRoundID: String?
     @Published var exportedCSVURL: URL?
     @Published var seriesCourseTeesByCourseID: [String: [Tee]] = [:]
+    @Published var isRebuildingIndividualStandings = false
 
     var seriesID: String { series.id }
     var currentUserID: String?
@@ -1079,6 +1080,12 @@ final class SeriesViewModel: ObservableObject, Loggable {
         standings
             .filter { $0.awardTrack == .individual }
             .sorted(by: standingsSort)
+    }
+
+    var canRebuildIndividualStandings: Bool {
+        isCommissioner
+            && individualStandings.isEmpty
+            && completedRounds.contains(where: hasIndividualPlacementAwardsConfigured)
     }
 
     var hasTeams: Bool {
@@ -3789,6 +3796,61 @@ final class SeriesViewModel: ObservableObject, Loggable {
         return awards
     }
 
+    private func hasIndividualPlacementAwardsConfigured(_ seriesRound: SeriesRound) -> Bool {
+        guard let profileID = seriesRound.individualScoringProfileID,
+              let profile = scoringProfile(id: profileID) else { return false }
+        return profile.kind == .placement && profile.outcomeSource == .roundIndividualLeaderboard
+    }
+
+    func rebuildIndividualPlacementAwardsAndStandings() async -> Bool {
+        guard isCommissioner, !isRebuildingIndividualStandings else { return false }
+
+        isRebuildingIndividualStandings = true
+        defer { isRebuildingIndividualStandings = false }
+
+        var didChange = false
+        for seriesRound in completedRounds where hasIndividualPlacementAwardsConfigured(seriesRound) {
+            guard let roundID = seriesRound.roundID,
+                  let profileID = seriesRound.individualScoringProfileID,
+                  let profile = scoringProfile(id: profileID),
+                  let snapshot = await loadRoundSnapshot(roundID: roundID) else {
+                continue
+            }
+
+            let result = await buildAwards(
+                seriesRound: seriesRound,
+                snapshot: snapshot,
+                awardTrack: .individual,
+                profile: profile
+            )
+            guard case .success(let newIndividualAwards) = result else { continue }
+
+            let existingIndividualAwards = await FirebaseService.shared
+                .fetchPointAwards(seriesID: seriesID, seriesRoundID: seriesRound.id)
+                .filter { $0.awardTrack == .individual }
+
+            switch await FirebaseService.shared.batchReplacePointAwards(
+                deleting: existingIndividualAwards,
+                upserting: newIndividualAwards
+            ) {
+            case .success:
+                didChange = didChange || existingIndividualAwards.isPopulated || newIndividualAwards.isPopulated
+            case .failure(let error):
+                addBreadcrumb(level: .error, message: "Individual standings rebuild failed", error: error)
+            }
+        }
+
+        pointAwards = await FirebaseService.shared.fetchPointAwards(seriesID: seriesID)
+        await rebuildStandings(only: .individual)
+        standings = await FirebaseService.shared.fetchStandings(seriesID: seriesID)
+
+        addEvent(
+            "series.individual_standings_rebuilt",
+            eventProps: seriesTelemetryProps(["changed": didChange])
+        )
+        return didChange
+    }
+
     private enum AwardBuildResult {
         case success([SeriesPointAward])
         case needsReview
@@ -3902,10 +3964,53 @@ final class SeriesViewModel: ObservableObject, Loggable {
     }
 
     func rebuildStandings() async {
+        await rebuildStandings(only: nil)
+    }
+
+    private func rebuildStandings(only track: SeriesAwardTrack?) async {
         let awards = await FirebaseService.shared.fetchPointAwards(seriesID: seriesID)
         pointAwards = awards
         let existingStandings = await FirebaseService.shared.fetchStandings(seriesID: seriesID)
 
+        let targetAwards = track.map { target in
+            awards.filter { $0.awardTrack == target }
+        } ?? awards
+        let computedForTarget = Self.computedStandings(
+            from: targetAwards,
+            seriesID: seriesID,
+            sort: standingsSort
+        )
+
+        let standingsToDelete = track.map { target in
+            existingStandings.filter { $0.awardTrack == target }
+        } ?? existingStandings
+        for standing in standingsToDelete {
+            _ = await FirebaseService.shared.deleteStanding(standing)
+        }
+        for standing in computedForTarget {
+            _ = await FirebaseService.shared.updateStanding(standing)
+        }
+
+        if let track {
+            standings = existingStandings.filter { $0.awardTrack != track } + computedForTarget
+        } else {
+            standings = computedForTarget
+        }
+
+        let eventName = track == .individual
+            ? "series.individual_standings_recomputed"
+            : "series.standings_recomputed"
+        addEvent(
+            eventName,
+            eventProps: seriesTelemetryProps(["standing_row_count": computedForTarget.count])
+        )
+    }
+
+    static func computedStandings(
+        from awards: [SeriesPointAward],
+        seriesID: String,
+        sort: (SeriesStanding, SeriesStanding) -> Bool
+    ) -> [SeriesStanding] {
         var grouped: [String: SeriesStanding] = [:]
         var roundsCountedByKey: [String: Set<String>] = [:]
 
@@ -3940,25 +4045,16 @@ final class SeriesViewModel: ObservableObject, Loggable {
         }
 
         var computedStandings: [SeriesStanding] = []
-        for standing in existingStandings {
-            _ = await FirebaseService.shared.deleteStanding(standing)
-        }
         for track in SeriesAwardTrack.allCases {
             let sorted = grouped.values
                 .filter { $0.awardTrack == track }
-                .sorted(by: standingsSort)
+                .sorted(by: sort)
             for (index, var standing) in sorted.enumerated() {
                 standing.rank = index + 1
-                _ = await FirebaseService.shared.updateStanding(standing)
                 computedStandings.append(standing)
             }
         }
-
-        standings = computedStandings
-        addEvent(
-            "series.standings_recomputed",
-            eventProps: seriesTelemetryProps(["standing_row_count": computedStandings.count])
-        )
+        return computedStandings
     }
 
     // MARK: - Handicap Ingestion

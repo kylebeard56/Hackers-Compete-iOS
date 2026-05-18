@@ -159,6 +159,25 @@ struct SeriesLeaderboardView: View {
                 subtitle: "Awards and standings from completed rounds will appear here."
             )
             .frame(minHeight: 200)
+
+            if !isTeam, viewModel.canRebuildIndividualStandings {
+                Button {
+                    Haptics.fire(.light)
+                    Task { await viewModel.rebuildIndividualPlacementAwardsAndStandings() }
+                } label: {
+                    Label(
+                        viewModel.isRebuildingIndividualStandings ? "Rebuilding..." : "Rebuild individual standings",
+                        systemImage: "arrow.triangle.2.circlepath"
+                    )
+                    .fontStyle(kFontName, size: 13, weight: .semibold)
+                    .foregroundStyle(Color.accentGreen)
+                    .padding(.horizontal, 14)
+                    .padding(.vertical, 9)
+                    .glassCardEffect(cornerRadius: 12, tint: Color.accentGreen.opacity(0.14), shadowOpacity: 0)
+                }
+                .buttonStyle(.plain)
+                .disabled(viewModel.isRebuildingIndividualStandings)
+            }
         } else {
             standingsHeader
             ForEach(Array(standings.enumerated()), id: \.element.id) { index, standing in

@@ -276,10 +276,25 @@ struct SeriesRoundAwardsDetailSheet: View {
     }
 
     private func awardSubtitle(for award: SeriesPointAward) -> String {
+        if award.awardTrack == .team, award.competitorType == .team {
+            return teamMemberNamesSubtitle(for: award.competitorID)
+                ?? award.source.rawValue.replacingOccurrences(of: "_", with: " ").capitalized
+        }
+
         if let reason = award.reason, reason.isPopulated, !reason.looksLikeOpaqueAwardReasonID {
             return reason
         }
         return award.source.rawValue.replacingOccurrences(of: "_", with: " ").capitalized
+    }
+
+    private func teamMemberNamesSubtitle(for teamID: String) -> String? {
+        let names = viewModel.eligibleMembers
+            .filter { $0.teamID == teamID }
+            .map { $0.name.fullName.trimmingCharacters(in: .whitespacesAndNewlines) }
+            .filter(\.isPopulated)
+
+        guard names.isPopulated else { return nil }
+        return names.joined(separator: ", ")
     }
 
     private func statusTint(for status: SeriesRoundStatus) -> Color {
