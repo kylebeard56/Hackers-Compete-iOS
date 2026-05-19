@@ -973,6 +973,7 @@ final class SeriesViewModel: ObservableObject, Loggable {
     @Published var exportedCSVURL: URL?
     @Published var seriesCourseTeesByCourseID: [String: [Tee]] = [:]
     @Published var isRebuildingIndividualStandings = false
+    @Published var isRebuildingAutomaticAwards = false
 
     var seriesID: String { series.id }
     var currentUserID: String?
@@ -1086,6 +1087,11 @@ final class SeriesViewModel: ObservableObject, Loggable {
         isCommissioner
             && individualStandings.isEmpty
             && completedRounds.contains(where: hasIndividualPlacementAwardsConfigured)
+    }
+
+    var canRebuildAutomaticAwards: Bool {
+        isCommissioner
+            && completedRounds.contains(where: hasAutomaticAwardProfile)
     }
 
     var hasTeams: Bool {
@@ -3518,6 +3524,7 @@ final class SeriesViewModel: ObservableObject, Loggable {
                 && (newStatus == .lobby || newStatus == .live || (newStatus == .complete && previousStatus != .complete))
             let shouldProcessCompletedRound = needsCompletedRoundProcessing(
                 for: rounds[roundIndex],
+                linkedRound: linkedRound,
                 roundID: roundID,
                 previousStatus: previousStatus,
                 newStatus: newStatus
@@ -3557,7 +3564,16 @@ final class SeriesViewModel: ObservableObject, Loggable {
                 }
 
                 if shouldProcessCompletedRound, let snapshot {
-                    let _ = await processCompletedRound(seriesRound: rounds[roundIndex], snapshot: snapshot)
+                    let shouldOverwriteDerivedData = previousStatus == .complete
+                        && completedLinkedRoundChangedAfterAwardsFinalized(
+                            seriesRound: rounds[roundIndex],
+                            linkedRound: linkedRound
+                        )
+                    let _ = await processCompletedRound(
+                        seriesRound: rounds[roundIndex],
+                        snapshot: snapshot,
+                        overwriteDerivedData: shouldOverwriteDerivedData
+                    )
                     didProcessAnyCompleteRoundWithSnapshot = true
                 }
             }
@@ -3582,6 +3598,7 @@ final class SeriesViewModel: ObservableObject, Loggable {
 
     private func needsCompletedRoundProcessing(
         for seriesRound: SeriesRound,
+        linkedRound: Round,
         roundID: String,
         previousStatus: SeriesRoundStatus,
         newStatus: SeriesRoundStatus
@@ -3594,15 +3611,43 @@ final class SeriesViewModel: ObservableObject, Loggable {
             return !handicapScores.contains { $0.source == .round && $0.sourceRoundID == roundID }
         }()
 
-        let hasAssignedAwardProfile =
-            scoringProfile(id: seriesRound.teamScoringProfileID) != nil
-            || scoringProfile(id: seriesRound.individualScoringProfileID) != nil
+        let hasAssignedAwardProfile = hasAssignedAwardProfile(for: seriesRound)
         let hasAwardRows = pointAwards.contains { $0.seriesRoundID == seriesRound.id }
         let needsAwardRefresh = hasAssignedAwardProfile
             && seriesRound.awardsStatus == .pending
             && !hasAwardRows
 
-        return needsHandicapRefresh || needsAwardRefresh
+        let needsFinalizedAwardRefresh = hasAutomaticAwardProfile(for: seriesRound)
+            && hasAwardRows
+            && seriesRound.awardsStatus == .finalized
+            && completedLinkedRoundChangedAfterAwardsFinalized(seriesRound: seriesRound, linkedRound: linkedRound)
+
+        return needsHandicapRefresh || needsAwardRefresh || needsFinalizedAwardRefresh
+    }
+
+    private func hasAssignedAwardProfile(for seriesRound: SeriesRound) -> Bool {
+        scoringProfile(id: seriesRound.teamScoringProfileID) != nil
+            || scoringProfile(id: seriesRound.individualScoringProfileID) != nil
+    }
+
+    private func hasAutomaticAwardProfile(for seriesRound: SeriesRound) -> Bool {
+        [seriesRound.teamScoringProfileID, seriesRound.individualScoringProfileID]
+            .compactMap { $0.flatMap(scoringProfile(id:)) }
+            .contains { profile in
+                profile.kind != .manual && profile.outcomeSource != .manual
+            }
+    }
+
+    private func completedLinkedRoundChangedAfterAwardsFinalized(
+        seriesRound: SeriesRound,
+        linkedRound: Round
+    ) -> Bool {
+        guard seriesRound.status == .complete || SeriesRoundStatus(linkedRoundStatus: linkedRound.status) == .complete else {
+            return false
+        }
+        guard hasAutomaticAwardProfile(for: seriesRound) else { return false }
+        guard let awardsFinalizedAt = seriesRound.awardsFinalizedAt else { return true }
+        return linkedRound.lastUpdatedAt.unix > awardsFinalizedAt.unix
     }
 
     private func processCompletedRound(
@@ -3621,7 +3666,8 @@ final class SeriesViewModel: ObservableObject, Loggable {
 
         let awardsState = await finalizeAwardsIfPossible(seriesRound: seriesRound, snapshot: snapshot)
         if let index = rounds.firstIndex(where: { $0.id == seriesRound.id }) {
-            if rounds[index].awardsStatus != awardsState {
+            let shouldRefreshFinalizedAt = overwriteDerivedData && awardsState == .finalized
+            if rounds[index].awardsStatus != awardsState || shouldRefreshFinalizedAt {
                 rounds[index].awardsStatus = awardsState
                 rounds[index].awardsFinalizedAt = awardsState == .finalized ? .init() : nil
                 rounds[index].lastUpdatedAt = .init()
@@ -3645,25 +3691,33 @@ final class SeriesViewModel: ObservableObject, Loggable {
         var needsReview = false
         var newAwards: [SeriesPointAward] = []
         var individualAwards: [SeriesPointAward] = []
+        var rebuiltTracks = Set<SeriesAwardTrack>()
 
         if let individualProfile {
-            switch await buildAwards(
-                seriesRound: seriesRound,
-                snapshot: snapshot,
-                awardTrack: .individual,
-                profile: individualProfile
-            ) {
-            case .success(let awards):
-                individualAwards = awards
-                newAwards.append(contentsOf: awards)
-            case .needsReview:
+            if individualProfile.kind == .manual || individualProfile.outcomeSource == .manual {
                 needsReview = true
+            } else {
+                switch await buildAwards(
+                    seriesRound: seriesRound,
+                    snapshot: snapshot,
+                    awardTrack: .individual,
+                    profile: individualProfile
+                ) {
+                case .success(let awards):
+                    rebuiltTracks.insert(.individual)
+                    individualAwards = awards
+                    newAwards.append(contentsOf: awards)
+                case .needsReview:
+                    needsReview = true
+                }
             }
         }
 
         if let teamProfile {
             let result: AwardBuildResult
-            if teamProfile.kind == .accrueFromIndividual || teamProfile.outcomeSource == .individualAwardsAggregateToTeam {
+            if teamProfile.kind == .manual || teamProfile.outcomeSource == .manual {
+                result = .needsReview
+            } else if teamProfile.kind == .accrueFromIndividual || teamProfile.outcomeSource == .individualAwardsAggregateToTeam {
                 result = buildTeamAwardsAccruedFromIndividuals(
                     seriesRound: seriesRound,
                     profile: teamProfile,
@@ -3680,19 +3734,24 @@ final class SeriesViewModel: ObservableObject, Loggable {
 
             switch result {
             case .success(let awards):
+                rebuiltTracks.insert(.team)
                 newAwards.append(contentsOf: awards)
             case .needsReview:
                 needsReview = true
             }
         }
 
-        switch await FirebaseService.shared.batchReplacePointAwards(deleting: existingAwards, upserting: newAwards) {
+        let awardsToDelete = existingAwards.filter {
+            rebuiltTracks.contains($0.awardTrack) && $0.source == .automatic
+        }
+
+        switch await FirebaseService.shared.batchReplacePointAwards(deleting: awardsToDelete, upserting: newAwards) {
         case .success:
             addEvent(
                 "series.automatic_point_awards_replaced",
                 eventProps: seriesTelemetryProps([
                     "series_round_id": seriesRound.id,
-                    "deleted_award_count": existingAwards.count,
+                    "deleted_award_count": awardsToDelete.count,
                     "upserted_award_count": newAwards.count
                 ])
             )
@@ -3849,6 +3908,43 @@ final class SeriesViewModel: ObservableObject, Loggable {
             eventProps: seriesTelemetryProps(["changed": didChange])
         )
         return didChange
+    }
+
+    func rebuildAutomaticAwardsAndStandingsForCompletedRounds() async -> Bool {
+        guard isCommissioner, !isRebuildingAutomaticAwards else { return false }
+
+        isRebuildingAutomaticAwards = true
+        defer { isRebuildingAutomaticAwards = false }
+
+        var didChange = false
+        var processedRoundCount = 0
+        for seriesRound in completedRounds where hasAutomaticAwardProfile(for: seriesRound) {
+            guard let roundID = seriesRound.roundID,
+                  let snapshot = await loadRoundSnapshot(roundID: roundID) else {
+                continue
+            }
+            let changed = await processCompletedRound(
+                seriesRound: seriesRound,
+                snapshot: snapshot,
+                overwriteDerivedData: true
+            )
+            didChange = didChange || changed
+            processedRoundCount += 1
+        }
+
+        pointAwards = await FirebaseService.shared.fetchPointAwards(seriesID: seriesID)
+        standings = await FirebaseService.shared.fetchStandings(seriesID: seriesID)
+        handicapScores = await FirebaseService.shared.fetchHandicapScores(seriesID: seriesID)
+        recomputeAllHandicaps()
+
+        addEvent(
+            "series.automatic_awards_rebuilt",
+            eventProps: seriesTelemetryProps([
+                "processed_round_count": processedRoundCount,
+                "changed": didChange || processedRoundCount > 0
+            ])
+        )
+        return didChange || processedRoundCount > 0
     }
 
     private enum AwardBuildResult {

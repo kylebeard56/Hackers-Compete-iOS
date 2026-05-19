@@ -87,6 +87,7 @@ enum SeriesTeamInsightBuilder {
             teamsByID: teamsByID,
             rounds: rounds,
             pointAwards: pointAwards,
+            snapshotsBySeriesRoundID: snapshotsBySeriesRoundID,
             statusBySeriesRoundID: statusBySeriesRoundID
         )
         let record = scheduleRows.reduce(into: SeriesTeamRecord()) { result, row in
@@ -169,17 +170,27 @@ enum SeriesTeamInsightBuilder {
         teamsByID: [String: SeriesTeam],
         rounds: [SeriesRound],
         pointAwards: [SeriesPointAward],
+        snapshotsBySeriesRoundID: [String: RoundSnapshot],
         statusBySeriesRoundID: [String: SeriesRoundStatus]
     ) -> [SeriesTeamScheduleRow] {
         let awardsByRoundID = Dictionary(grouping: pointAwards.filter { $0.awardTrack == .team }, by: \.seriesRoundID)
         return rounds.sorted { $0.index < $1.index }.map { round in
             let roundAwards = awardsByRoundID[round.id] ?? []
             let teamAward = roundAwards.first { $0.competitorID == team.id }
-            let opponentID = opponentTeamID(for: team.id, round: round)
-            let opponentAward = opponentID.flatMap { id in roundAwards.first { $0.competitorID == id } }
+            let linkedOpponentAward = opponentAward(
+                for: teamAward,
+                roundAwards: roundAwards,
+                snapshot: snapshotsBySeriesRoundID[round.id]
+            )
+            let plannedOpponentID = opponentTeamID(for: team.id, round: round)
+            let opponentAward = linkedOpponentAward ?? plannedOpponentID.flatMap { id in
+                roundAwards.first { $0.competitorID == id }
+            }
             let status = statusBySeriesRoundID[round.id] ?? round.status
             let title = round.title.isPopulated ? round.title : "Round \(round.index + 1)"
-            let opponentName = opponentID.flatMap { teamsByID[$0]?.name } ?? (round.matchupPlans.isPopulated || round.plannedMatchups.isPopulated ? "TBD" : "Field")
+            let opponentName = opponentAward.flatMap { teamsByID[$0.competitorID]?.name }
+                ?? plannedOpponentID.flatMap { teamsByID[$0]?.name }
+                ?? (round.matchupPlans.isPopulated || round.plannedMatchups.isPopulated ? "TBD" : "Field")
             let outcome = outcome(
                 teamAward: teamAward,
                 opponentAward: opponentAward,
@@ -204,6 +215,40 @@ enum SeriesTeamInsightBuilder {
             if plan.teamBID == teamID, plan.teamAID.isPopulated { return plan.teamAID }
             return nil
         }.first
+    }
+
+    private static func opponentAward(
+        for teamAward: SeriesPointAward?,
+        roundAwards: [SeriesPointAward],
+        snapshot: RoundSnapshot?
+    ) -> SeriesPointAward? {
+        guard let teamAward,
+              let roundOwnerID = teamAward.roundOwnerID?.trimmingCharacters(in: .whitespacesAndNewlines),
+              roundOwnerID.isPopulated,
+              let snapshot else { return nil }
+
+        let matchups = snapshot.segments.flatMap { $0.matchups ?? [] }
+        for matchup in matchups {
+            let pairingIDs = matchup.pairingIDs().filter(\.isPopulated)
+            guard pairingIDs.count == 2, pairingIDs.contains(roundOwnerID) else { continue }
+            guard let opponentOwnerID = pairingIDs.first(where: { $0 != roundOwnerID }) else { continue }
+            if let award = roundAwards.first(where: {
+                $0.awardTrack == .team
+                    && $0.roundOwnerID == opponentOwnerID
+                    && $0.competitorID != teamAward.competitorID
+            }) {
+                return award
+            }
+            if let award = roundAwards.first(where: {
+                $0.awardTrack == .team
+                    && $0.competitorID == opponentOwnerID
+                    && $0.competitorID != teamAward.competitorID
+            }) {
+                return award
+            }
+        }
+
+        return nil
     }
 
     private static func outcome(

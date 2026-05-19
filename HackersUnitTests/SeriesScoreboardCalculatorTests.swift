@@ -71,6 +71,57 @@ final class SeriesScoreboardCalculatorTests: XCTestCase {
         XCTAssertEqual(insight.scheduleRows.map(\.opponentName), ["Blue", "Blue", "Blue", "Field", "Field"])
     }
 
+    func testTeamInsightUsesLinkedRoundMatchupBeforePlannedOpponent() {
+        let teams = [
+            SeriesTeam(id: "team2", name: "Team 2", color: "red", index: 1),
+            SeriesTeam(id: "team4", name: "Team 4", color: "yellow", index: 3),
+            SeriesTeam(id: "team6", name: "Team 6", color: "green", index: 5),
+        ]
+        let round = SeriesRound(
+            id: "week2",
+            title: "Week 2",
+            index: 1,
+            status: .complete,
+            roundID: "linked_week2",
+            roundConfig: SeriesRoundConfiguration(competitionScope: .matchup, matchupMode: .teamVsTeam),
+            matchupPlans: [
+                SeriesRoundMatchupPlan(id: "stale_plan", teamAID: "team4", teamBID: "team6", index: 0),
+            ]
+        )
+        let awards = [
+            teamAward(roundID: "week2", teamID: "team4", name: "Team 4", points: 1, placement: 1, roundOwnerID: "round_team4"),
+            teamAward(roundID: "week2", teamID: "team2", name: "Team 2", points: 0, placement: 2, roundOwnerID: "round_team2"),
+            teamAward(roundID: "week2", teamID: "team6", name: "Team 6", points: 1, placement: 1, roundOwnerID: "round_team6"),
+        ]
+        let snapshots = [
+            "week2": RoundSnapshot(
+                round: Round(id: "linked_week2", status: .complete),
+                segments: [
+                    RoundSegment(
+                        id: "seg",
+                        matchups: [
+                            TeamMatchup(id: "actual_match", teamIDs: ["round_team2", "round_team4"], mode: .team),
+                        ]
+                    ),
+                ]
+            ),
+        ]
+
+        let insight = SeriesTeamInsightBuilder.build(
+            team: teams[1],
+            standing: nil,
+            teams: teams,
+            members: [],
+            rounds: [round],
+            pointAwards: awards,
+            snapshotsBySeriesRoundID: snapshots
+        )
+
+        XCTAssertEqual(insight.scheduleRows.first?.opponentName, "Team 2")
+        XCTAssertEqual(insight.scheduleRows.first?.outcomeLabel, "Win")
+        XCTAssertEqual(insight.record, SeriesTeamRecord(wins: 1, losses: 0, ties: 0))
+    }
+
     func testTeamInsightUsesPointsFirstForAveragesAndTopContributor() {
         let team = SeriesTeam(id: "red", name: "Red", color: "red", index: 0)
         let members = [
@@ -454,7 +505,8 @@ final class SeriesScoreboardCalculatorTests: XCTestCase {
         teamID: String,
         name: String,
         points: Double,
-        placement: Int
+        placement: Int,
+        roundOwnerID: String? = nil
     ) -> SeriesPointAward {
         SeriesPointAward(
             id: "\(roundID)_team_\(teamID)",
@@ -464,7 +516,8 @@ final class SeriesScoreboardCalculatorTests: XCTestCase {
             competitorID: teamID,
             competitorName: name,
             placement: placement,
-            totalPoints: points
+            totalPoints: points,
+            roundOwnerID: roundOwnerID
         )
     }
 

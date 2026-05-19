@@ -152,6 +152,25 @@ struct SeriesLeaderboardView: View {
                 .alignCenter()
         }
 
+        if viewModel.canRebuildAutomaticAwards {
+            Button {
+                Haptics.fire(.light)
+                Task { await viewModel.rebuildAutomaticAwardsAndStandingsForCompletedRounds() }
+            } label: {
+                Label(
+                    viewModel.isRebuildingAutomaticAwards ? "Rebuilding..." : "Rebuild awards",
+                    systemImage: "arrow.triangle.2.circlepath"
+                )
+                .fontStyle(kFontName, size: 13, weight: .semibold)
+                .foregroundStyle(Color.accentGreen)
+                .padding(.horizontal, 14)
+                .padding(.vertical, 9)
+                .glassCardEffect(cornerRadius: 12, tint: Color.accentGreen.opacity(0.14), shadowOpacity: 0)
+            }
+            .buttonStyle(.plain)
+            .disabled(viewModel.isRebuildingAutomaticAwards)
+        }
+
         if standings.isEmpty {
             EmptyStateView(
                 imageName: EmptyStatePreset.seriesStandings.imageName,
