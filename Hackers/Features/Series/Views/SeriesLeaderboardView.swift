@@ -22,7 +22,7 @@ struct SeriesLeaderboardView: View {
     var onManageLeagueSettings: (() -> Void)? = nil
 
     @State private var standingsSegment: LeaderboardStandingsSegment = .individual
-    @State private var individualLeaderboardMode: SeriesIndividualLeaderboardMode = .placement
+    @State private var individualLeaderboardMode: SeriesIndividualLeaderboardMode = .stats
     @State private var selectedTeamStanding: SeriesStanding?
 
     var body: some View {
@@ -181,25 +181,6 @@ struct SeriesLeaderboardView: View {
                 .alignCenter()
         }
 
-        if isTeam, viewModel.canRebuildAutomaticAwards {
-            Button {
-                Haptics.fire(.light)
-                Task { await viewModel.rebuildAutomaticAwardsAndStandingsForCompletedRounds() }
-            } label: {
-                Label(
-                    viewModel.isRebuildingAutomaticAwards ? "Rebuilding..." : "Rebuild awards",
-                    systemImage: "arrow.triangle.2.circlepath"
-                )
-                .fontStyle(kFontName, size: 13, weight: .semibold)
-                .foregroundStyle(Color.accentGreen)
-                .padding(.horizontal, 14)
-                .padding(.vertical, 9)
-                .glassCardEffect(cornerRadius: 12, tint: Color.accentGreen.opacity(0.14), shadowOpacity: 0)
-            }
-            .buttonStyle(.plain)
-            .disabled(viewModel.isRebuildingAutomaticAwards)
-        }
-
         if standings.isEmpty {
             EmptyStateView(
                 imageName: EmptyStatePreset.seriesStandings.imageName,
@@ -207,31 +188,49 @@ struct SeriesLeaderboardView: View {
                 subtitle: "Awards and standings from completed rounds will appear here."
             )
             .frame(minHeight: 200)
-
-            if !isTeam, viewModel.canRebuildIndividualStandings {
-                Button {
-                    Haptics.fire(.light)
-                    Task { await viewModel.rebuildIndividualPlacementAwardsAndStandings() }
-                } label: {
-                    Label(
-                        viewModel.isRebuildingIndividualStandings ? "Rebuilding..." : "Rebuild individual standings",
-                        systemImage: "arrow.triangle.2.circlepath"
-                    )
-                    .fontStyle(kFontName, size: 13, weight: .semibold)
-                    .foregroundStyle(Color.accentGreen)
-                    .padding(.horizontal, 14)
-                    .padding(.vertical, 9)
-                    .glassCardEffect(cornerRadius: 12, tint: Color.accentGreen.opacity(0.14), shadowOpacity: 0)
-                }
-                .buttonStyle(.plain)
-                .disabled(viewModel.isRebuildingIndividualStandings)
-            }
         } else {
             standingsHeader(isTeam: isTeam)
             ForEach(Array(standings.enumerated()), id: \.element.id) { index, standing in
                 standingRow(standing, rank: index + 1, isTeam: isTeam)
             }
         }
+
+        if shouldShowRefreshAwardsButton(isTeam: isTeam) {
+            refreshAwardsButton(isTeam: isTeam)
+        }
+    }
+
+    private func shouldShowRefreshAwardsButton(isTeam: Bool) -> Bool {
+        isTeam ? viewModel.canRebuildAutomaticAwards : viewModel.canRebuildIndividualStandings
+    }
+
+    private func refreshAwardsButton(isTeam: Bool) -> some View {
+        let isRefreshing = isTeam
+            ? viewModel.isRebuildingAutomaticAwards
+            : viewModel.isRebuildingIndividualStandings
+
+        return Button {
+            Haptics.fire(.light)
+            Task {
+                if isTeam {
+                    await viewModel.rebuildAutomaticAwardsAndStandingsForCompletedRounds()
+                } else {
+                    await viewModel.rebuildIndividualPlacementAwardsAndStandings()
+                }
+            }
+        } label: {
+            Label(
+                isRefreshing ? "Refreshing..." : "Refresh",
+                systemImage: "arrow.triangle.2.circlepath"
+            )
+            .fontStyle(kFontName, size: 13, weight: .semibold)
+            .foregroundStyle(Color.accentGreen)
+            .padding(.horizontal, 14)
+            .padding(.vertical, 9)
+            .glassCardEffect(cornerRadius: 12, tint: Color.accentGreen.opacity(0.14), shadowOpacity: 0)
+        }
+        .buttonStyle(.plain)
+        .disabled(isRefreshing)
     }
 
     private var individualLeaderboardModeChip: some View {

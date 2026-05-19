@@ -3709,12 +3709,12 @@ final class SeriesViewModel: ObservableObject, Loggable {
 
     private func hasAssignedAwardProfile(for seriesRound: SeriesRound) -> Bool {
         scoringProfile(id: seriesRound.teamScoringProfileID) != nil
-            || scoringProfile(id: seriesRound.individualScoringProfileID) != nil
+            || individualScoringProfile(for: seriesRound) != nil
     }
 
     private func hasAutomaticAwardProfile(for seriesRound: SeriesRound) -> Bool {
-        [seriesRound.teamScoringProfileID, seriesRound.individualScoringProfileID]
-            .compactMap { $0.flatMap(scoringProfile(id:)) }
+        ([seriesRound.teamScoringProfileID.flatMap(scoringProfile(id:)), individualScoringProfile(for: seriesRound)])
+            .compactMap { $0 }
             .contains { profile in
                 profile.kind != .manual && profile.outcomeSource != .manual
             }
@@ -3764,7 +3764,7 @@ final class SeriesViewModel: ObservableObject, Loggable {
 
     private func finalizeAwardsIfPossible(seriesRound: SeriesRound, snapshot: RoundSnapshot) async -> SeriesAwardsStatus {
         let teamProfile = seriesRound.teamScoringProfileID.flatMap { scoringProfile(id: $0) }
-        let individualProfile = seriesRound.individualScoringProfileID.flatMap { scoringProfile(id: $0) }
+        let individualProfile = individualScoringProfile(for: seriesRound)
 
         guard teamProfile != nil || individualProfile != nil else { return .pending }
 
@@ -3938,10 +3938,16 @@ final class SeriesViewModel: ObservableObject, Loggable {
     }
 
     private func hasIndividualPlacementAwardsConfigured(_ seriesRound: SeriesRound) -> Bool {
-        guard series.settings.useIndividualStandings else { return false }
-        guard let profileID = seriesRound.individualScoringProfileID,
-              let profile = scoringProfile(id: profileID) else { return false }
+        guard let profile = individualScoringProfile(for: seriesRound) else { return false }
         return profile.kind == .placement && profile.outcomeSource == .roundIndividualLeaderboard
+    }
+
+    private func individualScoringProfile(for seriesRound: SeriesRound) -> SeriesScoringProfile? {
+        guard series.settings.useIndividualStandings else { return nil }
+        guard let profileID = seriesRound.individualScoringProfileID ?? series.settings.defaultIndividualScoringProfileID else {
+            return nil
+        }
+        return scoringProfile(id: profileID)
     }
 
     private func hasMissingIndividualPlacementAwards(for seriesRound: SeriesRound) -> Bool {
@@ -3974,8 +3980,7 @@ final class SeriesViewModel: ObservableObject, Loggable {
         var didChange = false
         for seriesRound in completedRounds where hasIndividualPlacementAwardsConfigured(seriesRound) {
             guard let roundID = seriesRound.roundID,
-                  let profileID = seriesRound.individualScoringProfileID,
-                  let profile = scoringProfile(id: profileID),
+                  let profile = individualScoringProfile(for: seriesRound),
                   let snapshot = await loadRoundSnapshot(roundID: roundID) else {
                 continue
             }
@@ -4074,16 +4079,28 @@ final class SeriesViewModel: ObservableObject, Loggable {
             return .success([])
         }
 
-        let result = scoringResult(from: snapshot, segment: segment)
         let mappings = await FirebaseService.shared.fetchSeriesRoundMappings(
             seriesID: seriesID,
             seriesRoundID: seriesRound.id
         )
+        if profile.outcomeSource == .roundIndividualLeaderboard {
+            return .success(Self.buildIndividualPlacementAwards(
+                seriesRound: seriesRound,
+                snapshot: snapshot,
+                profile: profile,
+                mappings: mappings,
+                members: members,
+                seriesID: seriesID,
+                awardedByMemberID: currentMemberID
+            ))
+        }
+
+        let result = scoringResult(from: snapshot, segment: segment)
         let competitors: [AwardCompetitor]
 
         switch profile.outcomeSource {
         case .roundIndividualLeaderboard:
-            competitors = buildIndividualCompetitors(result: result, snapshot: snapshot, mappings: mappings)
+            competitors = []
         case .roundTeamLeaderboard:
             competitors = buildTeamCompetitors(result: result, snapshot: snapshot, mappings: mappings)
         case .roundMatchResult:
@@ -4109,7 +4126,7 @@ final class SeriesViewModel: ObservableObject, Loggable {
             if isDirectHolePoints {
                 basePoints = competitor.rawScore ?? 0
             } else {
-                guard let resolved = resolvePoints(
+                guard let resolved = Self.resolvePoints(
                     placement: placement,
                     tieGroupSize: competitor.tieGroupSize ?? 1,
                     profile: profile
@@ -4161,6 +4178,83 @@ final class SeriesViewModel: ObservableObject, Loggable {
         }
 
         return .success(awards)
+    }
+
+    nonisolated static func buildIndividualPlacementAwards(
+        seriesRound: SeriesRound,
+        snapshot: RoundSnapshot,
+        profile: SeriesScoringProfile,
+        mappings: [SeriesRoundMapping],
+        members: [SeriesMember],
+        seriesID: String,
+        awardedByMemberID: String?
+    ) -> [SeriesPointAward] {
+        guard profile.kind == .placement,
+              profile.outcomeSource == .roundIndividualLeaderboard,
+              let segment = snapshot.roundSegment ?? snapshot.segments.first else {
+            return []
+        }
+
+        let result = ScoringEngine.computeStrokePlay(
+            scores: snapshot.scoring,
+            participants: snapshot.participants,
+            segment: segment,
+            holes: scoringHoles(in: snapshot),
+            basis: snapshot.configuration.primaryFormat.configuration.basis,
+            scoreInputMode: snapshot.configuration.scoreInputMode,
+            template: snapshot.resolvedActiveTemplate,
+            scoreLookupSegmentIDs: snapshot.segmentScoreLookupSegmentIDs,
+            handicapStrokeBasis: snapshot.handicapStrokeBasis
+        )
+        let competitors = individualPlacementCompetitors(
+            result: result,
+            snapshot: snapshot,
+            mappings: mappings,
+            members: members
+        )
+
+        return competitors.compactMap { competitor -> SeriesPointAward? in
+            guard let placement = competitor.placement,
+                  let basePoints = resolvePoints(
+                    placement: placement,
+                    tieGroupSize: competitor.tieGroupSize ?? 1,
+                    profile: profile
+                  ) else {
+                return nil
+            }
+            let bonusPoints = profile.bonusRules
+                .filter(\.isEnabled)
+                .reduce(0.0) { partial, rule in
+                    switch rule.type {
+                    case .participation:
+                        return partial + rule.points
+                    case .manual:
+                        return partial
+                    }
+                }
+            return SeriesPointAward(
+                id: "\(seriesRound.id)_\(SeriesAwardTrack.individual.rawValue)_\(competitor.competitorID)",
+                seriesRoundID: seriesRound.id,
+                awardTrack: .individual,
+                competitorType: .member,
+                competitorID: competitor.competitorID,
+                competitorName: competitor.competitorName,
+                profileKind: profile.kind,
+                placement: placement,
+                tieGroupSize: competitor.tieGroupSize,
+                basePoints: basePoints,
+                bonusPoints: bonusPoints,
+                totalPoints: basePoints + bonusPoints,
+                source: .automatic,
+                roundOwnerID: competitor.roundOwnerID,
+                reason: competitor.reason,
+                awardedByMemberID: awardedByMemberID,
+                awardedAt: .init(),
+                createdAt: .init(),
+                lastUpdatedAt: .init(),
+                parentID: seriesID
+            )
+        }
     }
 
     func rebuildStandings() async {
@@ -5778,7 +5872,7 @@ final class SeriesViewModel: ObservableObject, Loggable {
             return (mapping.roundOwnerID, mapping.competitorID)
         })
 
-        return buildPlacementGroups(for: leaderboard.map { row in
+        return Self.buildPlacementGroups(for: leaderboard.map { row in
             let participant = snapshot.participants.first(where: { $0.id == row.scoringUnitID })
             return AwardPlacementRow(
                 roundOwnerID: row.scoringUnitID,
@@ -5791,6 +5885,51 @@ final class SeriesViewModel: ObservableObject, Loggable {
                 score: row.total
             )
         }, highestWins: result.template.leaderboardSort == .highestWins)
+    }
+
+    private nonisolated static func individualPlacementCompetitors(
+        result: ScoringResult,
+        snapshot: RoundSnapshot,
+        mappings: [SeriesRoundMapping],
+        members: [SeriesMember]
+    ) -> [AwardCompetitor] {
+        var mappingByParticipant: [String: String] = [:]
+        for mapping in mappings where mapping.roundOwnerType == .participant && mapping.competitorType == .member {
+            mappingByParticipant[mapping.roundOwnerID] = mapping.competitorID
+        }
+
+        let memberByID = Dictionary(uniqueKeysWithValues: members.map { ($0.id, $0) })
+        let participantByID = Dictionary(uniqueKeysWithValues: snapshot.participants.map { ($0.id, $0) })
+        let rows = result.rows.compactMap { row -> AwardPlacementRow? in
+            guard row.owner == .participant,
+                  row.holesPlayed > 0,
+                  let participant = participantByID[row.scoringUnitID] else {
+                return nil
+            }
+
+            let memberFromPlayer = participant.playerID.flatMap { playerID in
+                members.first { $0.playerID == playerID }
+            }
+            let competitorID = mappingByParticipant[row.scoringUnitID]
+                ?? participant.seriesMemberID
+                ?? memberFromPlayer?.id
+                ?? row.scoringUnitID
+            let competitorName = memberByID[competitorID]?.name.fullName
+                ?? participant.name.fullName
+
+            return AwardPlacementRow(
+                roundOwnerID: row.scoringUnitID,
+                competitorType: .member,
+                competitorID: competitorID,
+                competitorName: competitorName,
+                score: row.total
+            )
+        }
+
+        return buildPlacementGroups(
+            for: rows,
+            highestWins: result.template.leaderboardSort == .highestWins
+        )
     }
 
     private func buildTeamCompetitors(
@@ -5838,7 +5977,7 @@ final class SeriesViewModel: ObservableObject, Loggable {
                 score: section.sectionTotal
             )
         }
-        return buildPlacementGroups(for: rows, highestWins: result.template.leaderboardSort == .highestWins)
+        return Self.buildPlacementGroups(for: rows, highestWins: result.template.leaderboardSort == .highestWins)
     }
 
     private func buildMatchupCompetitors(
@@ -6127,7 +6266,7 @@ final class SeriesViewModel: ObservableObject, Loggable {
         }
     }
 
-    private func buildPlacementGroups(for rows: [AwardPlacementRow], highestWins: Bool) -> [AwardCompetitor] {
+    private nonisolated static func buildPlacementGroups(for rows: [AwardPlacementRow], highestWins: Bool) -> [AwardCompetitor] {
         let sortedRows = rows.sorted {
             if $0.score != $1.score {
                 return highestWins ? $0.score > $1.score : $0.score < $1.score
@@ -6166,7 +6305,7 @@ final class SeriesViewModel: ObservableObject, Loggable {
         return competitors
     }
 
-    private func resolvePoints(placement: Int, tieGroupSize: Int, profile: SeriesScoringProfile) -> Double? {
+    private nonisolated static func resolvePoints(placement: Int, tieGroupSize: Int, profile: SeriesScoringProfile) -> Double? {
         func points(at rank: Int) -> Double {
             profile.placementRules.first(where: { rank >= $0.rankStart && rank <= $0.rankEnd })?.points ?? 0
         }

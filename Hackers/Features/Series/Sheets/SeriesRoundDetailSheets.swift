@@ -714,9 +714,13 @@ struct SeriesRoundTeeSheetPreviewSheet: View {
             }
 
             VStack(alignment: .leading, spacing: 3) {
-                Text(playerName(for: memberID))
-                    .fontStyle(kFontName, size: 13, weight: .semibold)
-                    .foregroundStyle(palette.foregroundColor)
+                HStack(spacing: 7) {
+                    playerTeamDot(memberID: memberID)
+
+                    Text(playerName(for: memberID))
+                        .fontStyle(kFontName, size: 13, weight: .semibold)
+                        .foregroundStyle(palette.foregroundColor)
+                }
 
                 let metadata = playerMetadata(for: memberID)
                 if metadata.isPopulated {
@@ -732,6 +736,23 @@ struct SeriesRoundTeeSheetPreviewSheet: View {
         .padding(.horizontal, 10)
         .background(palette.cardEmbeddedRowBackground)
         .clipShape(RoundedRectangle(cornerRadius: 14, style: .continuous))
+    }
+
+    @ViewBuilder
+    private func playerTeamDot(memberID: String) -> some View {
+        if let teamID = membersByID[memberID]?.teamID,
+           let team = teamsByID[teamID] {
+            Circle()
+                .fill(team.displaySwatchColor ?? Color.neutral4)
+                .frame(width: 10, height: 10)
+                .overlay(Circle().stroke(Color.neutral4.opacity(0.35), lineWidth: 1))
+                .accessibilityHidden(true)
+        } else if viewModel.hasTeams {
+            Circle()
+                .strokeBorder(Color.neutral4, lineWidth: 1.5)
+                .frame(width: 10, height: 10)
+                .accessibilityHidden(true)
+        }
     }
 
     private func teeOrderBadge(_ teeOrder: Int) -> some View {

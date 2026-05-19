@@ -29,6 +29,31 @@ final class SeriesAwardAggregationTests: XCTestCase {
         )
     }
 
+    private func makeParticipant(id: String, memberID: String?, teamID: String, name: String) -> RoundParticipant {
+        RoundParticipant(
+            id: id,
+            playerID: "p_\(memberID ?? id)",
+            name: Name(name, "Player"),
+            seriesMemberID: memberID,
+            teamID: teamID,
+            parentID: "round1"
+        )
+    }
+
+    private func makeScoreEntry(participantID: String, holeNumber: Int, strokes: Int) -> ScoreEntry {
+        ScoreEntry(
+            id: ScoreEntry.makeID(hole: holeNumber, segment: "seg1", scoringUnit: participantID),
+            holeNumber: holeNumber,
+            segmentID: "seg1",
+            scoringUnitID: participantID,
+            participantIDs: [participantID],
+            strokes: strokes,
+            pickedUp: false,
+            entryID: participantID,
+            parentID: "round1"
+        )
+    }
+
     private func standingsSort(_ lhs: SeriesStanding, _ rhs: SeriesStanding) -> Bool {
         if lhs.totalPoints != rhs.totalPoints { return lhs.totalPoints > rhs.totalPoints }
         if lhs.wins != rhs.wins { return lhs.wins > rhs.wins }
@@ -159,6 +184,93 @@ final class SeriesAwardAggregationTests: XCTestCase {
         XCTAssertEqual(standings.first?.roundsCounted, 2)
         XCTAssertEqual(standings.first?.wins, 1)
         XCTAssertEqual(standings.first?.bestPlacement, 1)
+    }
+
+    func testIndividualPlacementAwardsUseParticipantScoresWhenTeamAggregateRowsAreTeamOwned() {
+        let members = [
+            makeMember(id: "m1", teamID: "t1", name: "Alice"),
+            makeMember(id: "m2", teamID: "t2", name: "Bailey"),
+            makeMember(id: "m3", teamID: "t2", name: "Charlie"),
+        ]
+        let participants = [
+            makeParticipant(id: "p1", memberID: nil, teamID: "rt1", name: "Alice"),
+            makeParticipant(id: "p2", memberID: "m2", teamID: "rt2", name: "Bailey"),
+            makeParticipant(id: "p3", memberID: "m3", teamID: "rt2", name: "Charlie"),
+        ]
+        let segment = RoundSegment(
+            id: "seg1",
+            roundID: "round1",
+            holeRange: HoleRange(startHole: 1, endHole: 2)
+        )
+        let round = Round(
+            id: "round1",
+            configuration: RoundConfiguration(
+                primaryFormat: .strokePlay,
+                teamScoring: .init(mode: .bestN, count: 1, scope: .perRound)
+            )
+        )
+        let snapshot = RoundSnapshot(
+            round: round,
+            participants: participants,
+            teams: [
+                RoundTeam(id: "rt1", name: "Round Red", color: "red", index: 0, createdAt: .init(), parentID: "round1"),
+                RoundTeam(id: "rt2", name: "Round Blue", color: "blue", index: 1, createdAt: .init(), parentID: "round1"),
+            ],
+            segments: [segment],
+            scoring: [
+                makeScoreEntry(participantID: "p1", holeNumber: 1, strokes: 4),
+                makeScoreEntry(participantID: "p1", holeNumber: 2, strokes: 4),
+                makeScoreEntry(participantID: "p2", holeNumber: 1, strokes: 5),
+                makeScoreEntry(participantID: "p2", holeNumber: 2, strokes: 5),
+            ]
+        )
+        let mainResult = SeriesViewModel.buildScoringResult(from: snapshot, segment: segment)
+        XCTAssertTrue(mainResult.rows.allSatisfy { $0.owner == .team })
+
+        let profile = SeriesScoringProfile(
+            id: "individual_placement",
+            name: "Individual Placement",
+            outcomeSource: .roundIndividualLeaderboard,
+            competitorType: .member,
+            kind: .placement,
+            placementRules: [
+                .init(rankStart: 1, rankEnd: 1, points: 8),
+                .init(rankStart: 2, rankEnd: 2, points: 7),
+                .init(rankStart: 3, rankEnd: 3, points: 6),
+            ],
+            parentID: "series1"
+        )
+        let awards = SeriesViewModel.buildIndividualPlacementAwards(
+            seriesRound: SeriesRound(id: "series_round1", roundID: "round1", parentID: "series1"),
+            snapshot: snapshot,
+            profile: profile,
+            mappings: [
+                SeriesRoundMapping(
+                    id: "map_p1",
+                    seriesRoundID: "series_round1",
+                    roundOwnerType: .participant,
+                    roundOwnerID: "p1",
+                    competitorType: .member,
+                    competitorID: "m1",
+                    parentID: "series1"
+                ),
+            ],
+            members: members,
+            seriesID: "series1",
+            awardedByMemberID: "commissioner1"
+        )
+        let standings = SeriesViewModel.computedStandings(
+            from: awards,
+            seriesID: "series1",
+            sort: standingsSort
+        )
+
+        XCTAssertEqual(awards.map(\.competitorID), ["m1", "m2"])
+        XCTAssertEqual(awards.map(\.placement), [1, 2])
+        XCTAssertEqual(awards.map(\.totalPoints), [8, 7])
+        XCTAssertFalse(awards.contains { $0.competitorID == "m3" })
+        XCTAssertEqual(standings.map(\.competitorID), ["m1", "m2"])
+        XCTAssertEqual(standings.map(\.rank), [1, 2])
     }
 
     func testIndividualStandingsRebuildLeavesExistingTeamRowsUnchanged() {
