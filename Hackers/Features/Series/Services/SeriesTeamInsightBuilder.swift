@@ -41,8 +41,15 @@ struct SeriesTeamPlayerPerformance: Identifiable, Equatable {
     let averageGross: Double?
     let bestGross: Int?
     let trendLabel: String?
+    let trendKind: SeriesTeamPlayerTrendKind?
 
     var id: String { memberID }
+}
+
+enum SeriesTeamPlayerTrendKind: Equatable {
+    case improved
+    case worse
+    case steady
 }
 
 enum SeriesTeamScheduleOutcomeKind: Equatable {
@@ -118,6 +125,7 @@ enum SeriesTeamInsightBuilder {
             let memberAwards = individualAwardsByMemberID[member.id] ?? []
             let grossScores = (grossScoresByMemberID[member.id] ?? []).sorted { $0.roundIndex < $1.roundIndex }
             let awardRounds = Set(memberAwards.map(\.seriesRoundID)).count
+            let trend = trend(for: grossScores)
             return SeriesTeamPlayerPerformance(
                 memberID: member.id,
                 name: member.name.fullName,
@@ -125,7 +133,8 @@ enum SeriesTeamInsightBuilder {
                 roundsPlayed: max(awardRounds, grossScores.count),
                 averageGross: average(grossScores.map { Double($0.gross) }),
                 bestGross: grossScores.map(\.gross).min(),
-                trendLabel: trendLabel(for: grossScores)
+                trendLabel: trend?.label,
+                trendKind: trend?.kind
             )
         }
         let topContributor = topContributor(from: playerPerformances)
@@ -320,14 +329,14 @@ enum SeriesTeamInsightBuilder {
         return tee?.holes.first { $0.number == holeNumber }?.par
     }
 
-    private static func trendLabel(for grossScores: [GrossScore]) -> String? {
+    private static func trend(for grossScores: [GrossScore]) -> (label: String, kind: SeriesTeamPlayerTrendKind)? {
         guard grossScores.count >= 2,
               let previous = grossScores.dropLast().last,
               let latest = grossScores.last else { return nil }
         let delta = latest.gross - previous.gross
-        if delta == 0 { return "Steady" }
-        if delta < 0 { return "Improved \(abs(delta))" }
-        return "Up \(delta)"
+        if delta == 0 { return ("Gross even vs prev", .steady) }
+        if delta < 0 { return ("Gross -\(abs(delta)) vs prev", .improved) }
+        return ("Gross +\(delta) vs prev", .worse)
     }
 
     private static func topContributor(from performances: [SeriesTeamPlayerPerformance]) -> (name: String, detail: String) {

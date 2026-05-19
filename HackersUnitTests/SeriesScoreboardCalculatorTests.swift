@@ -188,7 +188,8 @@ final class SeriesScoreboardCalculatorTests: XCTestCase {
         let ada = insight.playerPerformances.first { $0.memberID == "m1" }
         XCTAssertEqual(ada?.averageGross ?? 0, 38.5, accuracy: 0.001)
         XCTAssertEqual(ada?.bestGross, 37)
-        XCTAssertEqual(ada?.trendLabel, "Improved 3")
+        XCTAssertEqual(ada?.trendLabel, "Gross -3 vs prev")
+        XCTAssertEqual(ada?.trendKind, .improved)
     }
 
     func testRTJStyleTripDerivesSixHundredFortyAvailablePoints() {
@@ -487,6 +488,46 @@ final class SeriesScoreboardCalculatorTests: XCTestCase {
         XCTAssertEqual(summary.example, "Andrew + Chris shoot 71. Henry + Justin shoot 69. Blue wins 40.")
     }
 
+    func testIndividualStatsRowsSortByAverageDifferentialAndFallbackToGrossToPar() {
+        let members = [
+            SeriesMember(id: "alice", name: Name("Alice", "Able")),
+            SeriesMember(id: "bob", name: Name("Bob", "Baker")),
+            SeriesMember(id: "charlie", name: Name("Charlie", "Clear")),
+        ]
+        let rounds = [
+            SeriesRound(id: "week1", status: .complete, roundID: "round1"),
+            SeriesRound(id: "week2", status: .complete, roundID: "round2"),
+            SeriesRound(id: "planned", status: .planned, roundID: "round3"),
+        ]
+        let scores = [
+            handicapRoundScore(id: "alice1", memberID: "alice", roundID: "round1", score: 45, par: 36, rating: 34, slope: 113),
+            handicapRoundScore(id: "alice2", memberID: "alice", roundID: "round2", score: 45, par: 36),
+            handicapRoundScore(id: "bob1", memberID: "bob", roundID: "round1", score: 40, par: 36),
+            handicapRoundScore(id: "ignored", memberID: "bob", roundID: "round3", score: 30, par: 36),
+        ]
+        let handicaps = [
+            "alice": SeriesMemberHandicap(id: "alice", memberID: "alice", computedIndex: 8.2),
+            "bob": SeriesMemberHandicap(id: "bob", memberID: "bob", computedIndex: 12.4, overrideIndex: 9.7, isOverridden: true),
+        ]
+
+        let rows = SeriesViewModel.individualStatsRows(
+            members: members,
+            handicapScores: scores,
+            completedRounds: rounds.filter { $0.status == .complete },
+            handicaps: handicaps
+        )
+
+        XCTAssertEqual(rows.map(\.memberID), ["bob", "alice", "charlie"])
+        XCTAssertEqual(rows[0].averageDifferential, 4)
+        XCTAssertEqual(rows[0].currentHandicap, 9.7)
+        XCTAssertEqual(rows[0].roundsPlayed, 1)
+        XCTAssertEqual(rows[1].averageDifferential, 10)
+        XCTAssertEqual(rows[1].currentHandicap, 8.2)
+        XCTAssertEqual(rows[1].roundsPlayed, 2)
+        XCTAssertNil(rows[2].averageDifferential)
+        XCTAssertEqual(rows[2].roundsPlayed, 0)
+    }
+
     private func teamMatchupRound(id: String, index: Int) -> SeriesRound {
         SeriesRound(
             id: id,
@@ -536,6 +577,27 @@ final class SeriesScoreboardCalculatorTests: XCTestCase {
             competitorName: name,
             placement: 1,
             totalPoints: points
+        )
+    }
+
+    private func handicapRoundScore(
+        id: String,
+        memberID: String,
+        roundID: String,
+        score: Double,
+        par: Double,
+        rating: Double? = nil,
+        slope: Int? = nil
+    ) -> SeriesHandicapScore {
+        SeriesHandicapScore(
+            id: id,
+            memberID: memberID,
+            score: score,
+            par: par,
+            courseRating: rating,
+            courseSlope: slope,
+            source: .round,
+            sourceRoundID: roundID
         )
     }
 

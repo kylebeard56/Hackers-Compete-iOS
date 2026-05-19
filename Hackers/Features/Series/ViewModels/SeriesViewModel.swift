@@ -29,6 +29,16 @@ struct SeriesRoundCSVDocument: Equatable {
     }
 }
 
+struct SeriesIndividualStatsRow: Identifiable, Equatable {
+    let memberID: String
+    let name: String
+    let averageDifferential: Double?
+    let currentHandicap: Double?
+    let roundsPlayed: Int
+
+    var id: String { memberID }
+}
+
 enum SeriesRoundCSVExporter {
     static func document(seriesRound: SeriesRound, snapshot: RoundSnapshot, members: [SeriesMember]) -> SeriesRoundCSVDocument {
         let holeNumbers = snapshot.holeRange?.holeNumbers ?? snapshot.holeSegment.holeRange.holeNumbers
@@ -1083,10 +1093,27 @@ final class SeriesViewModel: ObservableObject, Loggable {
             .sorted(by: standingsSort)
     }
 
+    var individualStatsRows: [SeriesIndividualStatsRow] {
+        Self.individualStatsRows(
+            members: eligibleMembers,
+            handicapScores: handicapScores,
+            completedRounds: completedRounds,
+            handicaps: memberHandicaps
+        )
+    }
+
+    var hasIndividualPlacementConfigured: Bool {
+        guard series.settings.useIndividualStandings else { return false }
+        let profileIDs = Set(([series.settings.defaultIndividualScoringProfileID] + rounds.map(\.individualScoringProfileID)).compactMap { $0 })
+        return profileIDs.contains { profileID in
+            guard let profile = scoringProfile(id: profileID) else { return false }
+            return profile.kind == .placement && profile.outcomeSource == .roundIndividualLeaderboard
+        }
+    }
+
     var canRebuildIndividualStandings: Bool {
         isCommissioner
-            && individualStandings.isEmpty
-            && completedRounds.contains(where: hasIndividualPlacementAwardsConfigured)
+            && completedRounds.contains(where: hasMissingIndividualPlacementAwards)
     }
 
     var canRebuildAutomaticAwards: Bool {
@@ -1109,6 +1136,61 @@ final class SeriesViewModel: ObservableObject, Loggable {
 
     var hasPlayers: Bool { eligibleMembers.count > 2 }
     var hasScheduledRound: Bool { rounds.isPopulated }
+
+    nonisolated static func individualStatsRows(
+        members: [SeriesMember],
+        handicapScores: [SeriesHandicapScore],
+        completedRounds: [SeriesRound],
+        handicaps: [String: SeriesMemberHandicap]
+    ) -> [SeriesIndividualStatsRow] {
+        let completedRoundIDs = Set(completedRounds.compactMap(\.roundID))
+        let roundScores = handicapScores.filter { score in
+            score.source == .round
+                && score.sourceRoundID.map { completedRoundIDs.contains($0) } == true
+        }
+        let scoresByMemberID = Dictionary(grouping: roundScores, by: \.memberID)
+
+        let rows = members.map { member -> SeriesIndividualStatsRow in
+            let scores = scoresByMemberID[member.id] ?? []
+            let differentials = scores.compactMap { roundDifferential(for: $0) }
+            let averageDifferential = differentials.isEmpty
+                ? nil
+                : differentials.reduce(0, +) / Double(differentials.count)
+            return SeriesIndividualStatsRow(
+                memberID: member.id,
+                name: member.name.fullName,
+                averageDifferential: averageDifferential,
+                currentHandicap: handicaps[member.id]?.effectiveIndex,
+                roundsPlayed: Set(scores.compactMap(\.sourceRoundID)).count
+            )
+        }
+
+        return rows.sorted { lhs, rhs in
+            switch (lhs.averageDifferential, rhs.averageDifferential) {
+            case let (l?, r?) where l != r:
+                return l < r
+            case (.some, nil):
+                return true
+            case (nil, .some):
+                return false
+            default:
+                return lhs.name.localizedCaseInsensitiveCompare(rhs.name) == .orderedAscending
+            }
+        }
+    }
+
+    private nonisolated static func roundDifferential(for score: SeriesHandicapScore) -> Double? {
+        guard score.score.isFinite else { return nil }
+        if let rating = score.courseRating,
+           let slope = score.courseSlope,
+           rating.isFinite,
+           slope > 0 {
+            return (score.score - rating) * 113.0 / Double(slope)
+        }
+        guard score.par.isFinite else { return nil }
+        return score.score - score.par
+    }
+
     var hasScoringRules: Bool { isLeagueRulesConfirmed(for: series.settings) }
     var hasDefaultCourse: Bool { series.settings.defaultCourse?.isConfigured == true }
     var isSeriesScoreboardEligible: Bool {
@@ -3856,9 +3938,31 @@ final class SeriesViewModel: ObservableObject, Loggable {
     }
 
     private func hasIndividualPlacementAwardsConfigured(_ seriesRound: SeriesRound) -> Bool {
+        guard series.settings.useIndividualStandings else { return false }
         guard let profileID = seriesRound.individualScoringProfileID,
               let profile = scoringProfile(id: profileID) else { return false }
         return profile.kind == .placement && profile.outcomeSource == .roundIndividualLeaderboard
+    }
+
+    private func hasMissingIndividualPlacementAwards(for seriesRound: SeriesRound) -> Bool {
+        guard hasIndividualPlacementAwardsConfigured(seriesRound) else { return false }
+        let individualAwards = pointAwards.filter {
+            $0.seriesRoundID == seriesRound.id && $0.awardTrack == .individual
+        }
+        guard let roundID = seriesRound.roundID else {
+            return individualAwards.isEmpty
+        }
+
+        let scoredMemberIDs = Set(handicapScores.compactMap { score -> String? in
+            guard score.source == .round,
+                  score.sourceRoundID == roundID,
+                  score.memberID.isPopulated else { return nil }
+            return score.memberID
+        })
+        guard scoredMemberIDs.isPopulated else { return individualAwards.isEmpty }
+
+        let awardedMemberIDs = Set(individualAwards.map(\.competitorID))
+        return !scoredMemberIDs.isSubset(of: awardedMemberIDs)
     }
 
     func rebuildIndividualPlacementAwardsAndStandings() async -> Bool {

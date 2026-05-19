@@ -10,6 +10,11 @@ private enum LeaderboardStandingsSegment: String, CaseIterable {
     case individual = "Individual"
 }
 
+private enum SeriesIndividualLeaderboardMode: String, CaseIterable {
+    case placement = "Placement"
+    case stats = "Stats"
+}
+
 struct SeriesLeaderboardView: View {
     @ObservedObject var viewModel: SeriesViewModel
     let palette: DesignPalette
@@ -17,6 +22,7 @@ struct SeriesLeaderboardView: View {
     var onManageLeagueSettings: (() -> Void)? = nil
 
     @State private var standingsSegment: LeaderboardStandingsSegment = .individual
+    @State private var individualLeaderboardMode: SeriesIndividualLeaderboardMode = .placement
     @State private var selectedTeamStanding: SeriesStanding?
 
     var body: some View {
@@ -123,7 +129,7 @@ struct SeriesLeaderboardView: View {
                 if standingsSegment == .team {
                     standingsTableContent(sectionTitle: nil, standings: viewModel.teamStandings, isTeam: true)
                 } else {
-                    standingsTableContent(sectionTitle: nil, standings: viewModel.individualStandings, isTeam: false)
+                    individualLeaderboardContent(sectionTitle: nil)
                 }
             }
             .padding(16)
@@ -136,10 +142,33 @@ struct SeriesLeaderboardView: View {
             .glassCardEffect(forceMaterial: true, tint: palette.cardColor)
         } else {
             VStack(spacing: 12) {
-                standingsTableContent(sectionTitle: "Individual Standings", standings: viewModel.individualStandings, isTeam: false)
+                individualLeaderboardContent(sectionTitle: "Individual Standings")
             }
             .padding(16)
             .glassCardEffect(forceMaterial: true, tint: palette.cardColor)
+        }
+    }
+
+    @ViewBuilder
+    private func individualLeaderboardContent(sectionTitle: String?) -> some View {
+        if let sectionTitle {
+            Text(sectionTitle.uppercased())
+                .fontStyle(kFontName, size: 14, weight: .semibold)
+                .foregroundStyle(palette.foregroundColor)
+                .alignCenter()
+        }
+
+        if viewModel.hasIndividualPlacementConfigured {
+            individualLeaderboardModeChip
+
+            switch individualLeaderboardMode {
+            case .placement:
+                standingsTableContent(sectionTitle: nil, standings: viewModel.individualStandings, isTeam: false)
+            case .stats:
+                individualStatsTableContent(rows: viewModel.individualStatsRows)
+            }
+        } else {
+            standingsTableContent(sectionTitle: nil, standings: viewModel.individualStandings, isTeam: false)
         }
     }
 
@@ -152,7 +181,7 @@ struct SeriesLeaderboardView: View {
                 .alignCenter()
         }
 
-        if viewModel.canRebuildAutomaticAwards {
+        if isTeam, viewModel.canRebuildAutomaticAwards {
             Button {
                 Haptics.fire(.light)
                 Task { await viewModel.rebuildAutomaticAwardsAndStandingsForCompletedRounds() }
@@ -198,9 +227,60 @@ struct SeriesLeaderboardView: View {
                 .disabled(viewModel.isRebuildingIndividualStandings)
             }
         } else {
-            standingsHeader
+            standingsHeader(isTeam: isTeam)
             ForEach(Array(standings.enumerated()), id: \.element.id) { index, standing in
                 standingRow(standing, rank: index + 1, isTeam: isTeam)
+            }
+        }
+    }
+
+    private var individualLeaderboardModeChip: some View {
+        HStack {
+            Spacer(minLength: 0)
+
+            Menu {
+                ForEach(SeriesIndividualLeaderboardMode.allCases, id: \.self) { mode in
+                    Button {
+                        Haptics.fire(.light)
+                        individualLeaderboardMode = mode
+                    } label: {
+                        Label(
+                            mode.rawValue,
+                            systemImage: individualLeaderboardMode == mode ? "checkmark" : "circle"
+                        )
+                    }
+                }
+            } label: {
+                HStack(spacing: 6) {
+                    Text(individualLeaderboardMode.rawValue)
+                    Image(systemName: "chevron.down")
+                        .font(.system(size: 10, weight: .semibold))
+                }
+                .fontStyle(kFontName, size: 12, weight: .semibold)
+                .foregroundStyle(palette.foregroundColor)
+                .padding(.horizontal, 12)
+                .padding(.vertical, 7)
+                .glassCardEffect(cornerRadius: 12, tint: palette.whiteGlassButtonColor, shadowOpacity: 0)
+            }
+            .buttonStyle(.plain)
+            .accessibilityLabel("Individual leaderboard mode")
+            .accessibilityValue(individualLeaderboardMode.rawValue)
+        }
+    }
+
+    @ViewBuilder
+    private func individualStatsTableContent(rows: [SeriesIndividualStatsRow]) -> some View {
+        if rows.isEmpty {
+            EmptyStateView(
+                imageName: EmptyStatePreset.seriesStandings.imageName,
+                title: EmptyStatePreset.seriesStandings.title,
+                subtitle: "Round stats from completed rounds will appear here."
+            )
+            .frame(minHeight: 200)
+        } else {
+            individualStatsHeader
+            ForEach(Array(rows.enumerated()), id: \.element.id) { index, row in
+                individualStatsRow(row, rank: index + 1)
             }
         }
     }
@@ -239,18 +319,37 @@ struct SeriesLeaderboardView: View {
         }
     }
 
-    private var standingsHeader: some View {
+    private func standingsHeader(isTeam: Bool) -> some View {
         HStack(spacing: 0) {
             Text("#")
                 .frame(width: 28, alignment: .center)
             Text("Name")
                 .alignLeading()
-            Text("Pts")
-                .frame(width: 44, alignment: .trailing)
-            Text("W")
-                .frame(width: 32, alignment: .trailing)
-            Text("Rds")
-                .frame(width: 36, alignment: .trailing)
+            Text(isTeam ? "Pts" : "Points")
+                .frame(width: isTeam ? 44 : 64, alignment: .trailing)
+            if isTeam {
+                Text("W")
+                    .frame(width: 32, alignment: .trailing)
+                Text("Rds")
+                    .frame(width: 36, alignment: .trailing)
+            }
+        }
+        .fontStyle(kFontName, size: 12, weight: .semibold)
+        .foregroundStyle(Color.neutral)
+    }
+
+    private var individualStatsHeader: some View {
+        HStack(spacing: 0) {
+            Text("#")
+                .frame(width: 28, alignment: .center)
+            Text("Name")
+                .alignLeading()
+            Text("Diff")
+                .frame(width: 52, alignment: .trailing)
+            Text("HCP")
+                .frame(width: 48, alignment: .trailing)
+            Text("Played")
+                .frame(width: 52, alignment: .trailing)
         }
         .fontStyle(kFontName, size: 12, weight: .semibold)
         .foregroundStyle(Color.neutral)
@@ -295,27 +394,70 @@ struct SeriesLeaderboardView: View {
             .alignLeading()
 
             Text(standing.totalPoints.seriesPointsDisplayString)
-                .frame(width: 44, alignment: .trailing)
+                .frame(width: isTeam ? 44 : 64, alignment: .trailing)
                 .fontStyle(kFontName, size: 14, weight: .semibold)
                 .foregroundStyle(palette.foregroundColor)
 
-            Text("\(standing.wins)")
-                .frame(width: 32, alignment: .trailing)
-                .fontStyle(kFontName, size: 13, weight: .regular)
-                .foregroundStyle(Color.neutral)
-
-            Text("\(standing.roundsCounted)")
-                .frame(width: 36, alignment: .trailing)
-                .fontStyle(kFontName, size: 13, weight: .regular)
-                .foregroundStyle(Color.neutral)
-
             if isTeam {
+                Text("\(standing.wins)")
+                    .frame(width: 32, alignment: .trailing)
+                    .fontStyle(kFontName, size: 13, weight: .regular)
+                    .foregroundStyle(Color.neutral)
+
+                Text("\(standing.roundsCounted)")
+                    .frame(width: 36, alignment: .trailing)
+                    .fontStyle(kFontName, size: 13, weight: .regular)
+                    .foregroundStyle(Color.neutral)
+
                 Icon(name: "f054", size: 10, weight: .regular)
                     .foregroundStyle(Color.neutral2)
                     .frame(width: 16, alignment: .trailing)
             }
         }
         .padding(.vertical, 6)
+    }
+
+    private func individualStatsRow(_ row: SeriesIndividualStatsRow, rank: Int) -> some View {
+        HStack(spacing: 0) {
+            Text("\(rank)")
+                .frame(width: 28, alignment: .center)
+                .fontStyle(kFontName, size: 15, weight: rank <= 3 ? .bold : .semibold)
+                .foregroundStyle(palette.foregroundColor)
+
+            Text(row.name)
+                .fontStyle(kFontName, size: 14, weight: .medium)
+                .foregroundStyle(palette.foregroundColor)
+                .lineLimit(1)
+                .alignLeading()
+
+            Text(differentialDisplay(row.averageDifferential))
+                .frame(width: 52, alignment: .trailing)
+                .fontStyle(kFontName, size: 14, weight: .semibold)
+                .foregroundStyle(palette.foregroundColor)
+
+            Text(handicapDisplay(row.currentHandicap))
+                .frame(width: 48, alignment: .trailing)
+                .fontStyle(kFontName, size: 13, weight: .regular)
+                .foregroundStyle(Color.neutral)
+
+            Text("\(row.roundsPlayed)")
+                .frame(width: 52, alignment: .trailing)
+                .fontStyle(kFontName, size: 13, weight: .regular)
+                .foregroundStyle(Color.neutral)
+        }
+        .padding(.vertical, 6)
+    }
+
+    private func differentialDisplay(_ value: Double?) -> String {
+        guard let value, value.isFinite else { return "--" }
+        let rounded = abs(value) < 0.05 ? 0 : value
+        let formatted = String(format: "%.1f", rounded)
+        return rounded > 0 ? "+\(formatted)" : formatted
+    }
+
+    private func handicapDisplay(_ value: Double?) -> String {
+        guard let value, value.isFinite else { return "--" }
+        return String(format: "%.1f", value)
     }
 
     private func roundHistoryRow(_ round: SeriesRound) -> some View {
@@ -586,7 +728,7 @@ private struct SeriesTeamDetailSheet: View {
                 if let trendLabel = player.trendLabel {
                     Text(trendLabel)
                         .fontStyle(kFontName, size: 11, weight: .medium)
-                        .foregroundStyle(Color.accentGreen)
+                        .foregroundStyle(playerTrendTint(for: player.trendKind))
                 }
             }
         }
@@ -651,6 +793,14 @@ private struct SeriesTeamDetailSheet: View {
         case .loss: return .systemError
         case .tie, .placement: return .systemBlue
         case .pending: return .neutral
+        }
+    }
+
+    private func playerTrendTint(for kind: SeriesTeamPlayerTrendKind?) -> Color {
+        switch kind {
+        case .improved: return .accentGreen
+        case .worse: return .systemError
+        case .steady, .none: return .neutral
         }
     }
 }
