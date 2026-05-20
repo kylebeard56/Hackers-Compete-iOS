@@ -14,6 +14,7 @@ extension LiveRound {
         ScrollView(.vertical, showsIndicators: false) {
             VStack(spacing: 16) {
                 navPadding
+                matchupBasisPicker
 
                 if viewModel.matchupSections.isEmpty {
                     Text("No matchup results yet.")
@@ -38,6 +39,22 @@ extension LiveRound {
         }
         .frame(maxHeight: .infinity)
     }
+
+    @ViewBuilder
+    private var matchupBasisPicker: some View {
+        if viewModel.handicapsEnabled {
+            HStack {
+                Spacer(minLength: 0)
+                Picker("", selection: $viewModel.matchupScoreBasis) {
+                    Text("Gross").tag(ScoreBasis.gross)
+                    Text("Net").tag(ScoreBasis.net)
+                }
+                .pickerStyle(.segmented)
+                .frame(width: 130)
+                .accessibilityLabel("Matchup scoring basis")
+            }
+        }
+    }
 }
 
 // MARK: - Matchup Tile
@@ -54,7 +71,7 @@ private struct MatchupTileView: View {
     @State private var isExpanded = false
 
     private var isPointsFormat: Bool {
-        viewModel.engineResult.template.leaderboardSort == .highestWins
+        viewModel.matchupEngineResult.template.leaderboardSort == .highestWins
     }
 
     private var matchupMode: MatchupMode {
@@ -269,8 +286,8 @@ private struct MatchupTileView: View {
     private func sortedTeamParticipants(teamID: String) -> [RoundParticipant] {
         let members = snapshot.participants.filter { $0.teamID == teamID }
         return members.sorted { lhs, rhs in
-            let s1 = viewModel.scoreToPar(for: lhs, basis: viewModel.scoreBasis)
-            let s2 = viewModel.scoreToPar(for: rhs, basis: viewModel.scoreBasis)
+            let s1 = viewModel.scoreToPar(for: lhs, basis: viewModel.matchupScoreBasis)
+            let s2 = viewModel.scoreToPar(for: rhs, basis: viewModel.matchupScoreBasis)
             if isPointsFormat { return s1 > s2 }
             return s1 < s2
         }
@@ -580,8 +597,6 @@ private struct MatchupPlayerRowView: View {
         viewModel.scoreToPar(for: participant, basis: .net)
     }
 
-    private var useNet: Bool { viewModel.handicapsEnabled }
-
     var body: some View {
         HStack(spacing: 12) {
             HStack(spacing: 8) {
@@ -608,13 +623,13 @@ private struct MatchupPlayerRowView: View {
 
             if viewModel.handicapsEnabled {
                 Text(formatScoreToPar(grossScore))
-                    .fontStyle(kFontName, size: 14, weight: .medium)
-                    .foregroundStyle(isActive ? palette.foregroundColor : Color.neutral2)
+                    .fontStyle(kFontName, size: 14, weight: viewModel.matchupScoreBasis == .gross ? .semibold : .medium)
+                    .foregroundStyle(scoreColor(for: .gross))
                     .frame(minWidth: scoreColumnWidth, alignment: .trailing)
 
                 Text(formatScoreToPar(netScore))
-                    .fontStyle(kFontName, size: 14, weight: .semibold)
-                    .foregroundStyle(isActive ? (teamColor ?? palette.foregroundColor) : Color.neutral2)
+                    .fontStyle(kFontName, size: 14, weight: viewModel.matchupScoreBasis == .net ? .semibold : .medium)
+                    .foregroundStyle(scoreColor(for: .net))
                     .frame(minWidth: scoreColumnWidth, alignment: .trailing)
             } else {
                 Text(formatScoreToPar(grossScore))
@@ -630,5 +645,11 @@ private struct MatchupPlayerRowView: View {
         if value == 0 { return "E" }
         if value > 0 { return "+\(value)" }
         return "\(value)"
+    }
+
+    private func scoreColor(for basis: ScoreBasis) -> Color {
+        guard isActive else { return Color.neutral2 }
+        guard viewModel.matchupScoreBasis == basis else { return Color.neutral }
+        return teamColor ?? palette.foregroundColor
     }
 }

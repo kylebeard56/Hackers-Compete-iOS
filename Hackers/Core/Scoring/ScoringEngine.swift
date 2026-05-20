@@ -1364,6 +1364,13 @@ struct ScoringEngine {
             scoringUnits: scoringUnits
         )
         guard sides.count == 2 else { return nil }
+        let activeHoleNumbers = holeNumbers.filter { holeNumber in
+            sides.contains { side in
+                side.participantIDs.contains { participantID in
+                    values[participantID]?[holeNumber] != nil
+                }
+            }
+        }
 
         let sideStatuses = sides.map { side in
             let sideParticipants = side.participantIDs.compactMap { participantByID[$0] }
@@ -1374,10 +1381,10 @@ struct ScoringEngine {
                     holeNumbers.contains { values[participant.id]?[$0] != nil }
                 }.count
             case .perHole:
-                if holeNumbers.isEmpty {
+                if activeHoleNumbers.isEmpty {
                     actualCount = 0
                 } else {
-                    actualCount = holeNumbers.map { holeNumber in
+                    actualCount = activeHoleNumbers.map { holeNumber in
                         sideParticipants.filter { values[$0.id]?[holeNumber] != nil }.count
                     }.min() ?? 0
                 }

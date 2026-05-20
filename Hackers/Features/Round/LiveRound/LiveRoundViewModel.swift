@@ -110,6 +110,7 @@ final class LiveRoundViewModel: ObservableObject, Loggable {
     /// source of truth for "which hole is being viewed."
     @Published var currentHoleIndex: Int = 0
     @Published var scoreBasis: ScoreBasis = .gross
+    @Published var matchupScoreBasis: ScoreBasis = .gross
     @Published var leaderboardMode: LeaderboardMode = .individual
     
     var handicapsEnabled: Bool {
@@ -179,9 +180,10 @@ final class LiveRoundViewModel: ObservableObject, Loggable {
     
     /// O(1) lookup by (participantID, holeNumber). Rebuilt when snapshot changes.
     private var scoreIndex: [String: ScoreEntry] = [:]
-    /// Cached engine result, keyed by the score basis it was computed with.
-    private var cachedEngineResult: (basis: ScoreBasis, result: ScoringResult)?
+    /// Cached engine results, keyed by the score basis each result was computed with.
+    private var cachedEngineResults: [String: ScoringResult] = [:]
     private var hasPerformedInitialHoleNudge = false
+    private var hasSelectedInitialVisibleGroupStartingHole = false
     private var loadedSeriesAccessRoundID: String?
     private var isLoadingSeriesAccess = false
     private var liveSeriesScoreboardContext: LiveSeriesScoreboardContext?
@@ -216,9 +218,7 @@ final class LiveRoundViewModel: ObservableObject, Loggable {
         syncVisibleTeeGroupIfNeeded()
         updateSelectedTeeIfNeeded()
         
-        if snapshot.configuration.useHandicaps {
-            scoreBasis = .net
-        }
+        applyScoreBasisDefaultsForCurrentSnapshot(force: true)
         
         roundSession.$snapshot
             .receive(on: RunLoop.main)
@@ -249,9 +249,7 @@ final class LiveRoundViewModel: ObservableObject, Loggable {
                     self.leaderboardMode = .individual
                 }
 
-                if !s.configuration.useHandicaps {
-                    self.scoreBasis = .gross
-                }
+                self.applyScoreBasisDefaultsForCurrentSnapshot(force: false)
 
                 if !self.hasInitializedVisibilitySelection && self.visibleParticipantIDs.isEmpty && !s.participants.isEmpty {
                     self.visibleParticipantIDs = Set(s.participants.map(\.id))
@@ -301,6 +299,7 @@ final class LiveRoundViewModel: ObservableObject, Loggable {
         syncVisibleTeeGroupIfNeeded()
         updateSelectedTeeIfNeeded()
         refreshSeriesScoreboardProjection()
+        applyScoreBasisDefaultsForCurrentSnapshot(force: true)
         if !hasInitializedVisibilitySelection && visibleParticipantIDs.isEmpty && !snapshot.participants.isEmpty {
             visibleParticipantIDs = Set(snapshot.participants.map(\.id))
             lastAppliedVisibleParticipantIDs = visibleParticipantIDs
@@ -1311,7 +1310,7 @@ final class LiveRoundViewModel: ObservableObject, Loggable {
             }
         }
         scoreIndex = index
-        cachedEngineResult = nil
+        cachedEngineResults.removeAll()
     }
     
     func scoreEntry(for participantID: String, holeNumber: Int) -> ScoreEntry? {
@@ -1691,7 +1690,7 @@ final class LiveRoundViewModel: ObservableObject, Loggable {
     }
 
     func scoringUnitNetStrokes(scoringUnitID: String, holeNumber: Int) -> Int? {
-        if let net = engineResult.rows
+        if let net = engineResult(for: .net).rows
             .first(where: { $0.scoringUnitID == scoringUnitID })?
             .holeValues[holeNumber]?
             .netStrokes {
@@ -1743,7 +1742,7 @@ final class LiveRoundViewModel: ObservableObject, Loggable {
     }
 
     func scoringUnitScoreToPar(scoringUnitID: String, basis: ScoreBasis) -> Int {
-        if let row = engineResult.rows.first(where: { $0.scoringUnitID == scoringUnitID }) {
+        if let row = engineResult(for: basis).rows.first(where: { $0.scoringUnitID == scoringUnitID }) {
             return Int(row.total.rounded())
         }
 
@@ -1805,9 +1804,7 @@ final class LiveRoundViewModel: ObservableObject, Loggable {
         rhs: RoundParticipant,
         isPointsFormat: Bool
     ) -> Bool {
-        let basis: ScoreBasis = isPointsFormat
-            ? scoreBasis
-            : (handicapsEnabled ? .net : .gross)
+        let basis = matchupScoreBasis
         let lhsScore = scoreToPar(for: lhs, basis: basis)
         let rhsScore = scoreToPar(for: rhs, basis: basis)
 
@@ -1844,7 +1841,7 @@ final class LiveRoundViewModel: ObservableObject, Loggable {
         }
 
         if matchup.effectiveMode.usesScoringGroupIDs {
-            if let row = engineResult.matchupResults
+            if let row = matchupEngineResult.matchupResults
                 .first(where: { $0.matchup.id == matchup.id })?
                 .rows
                 .first(where: {
@@ -1870,7 +1867,7 @@ final class LiveRoundViewModel: ObservableObject, Loggable {
             return participantID == teamID
         }
 
-        if let row = engineResult.matchupResults
+        if let row = matchupEngineResult.matchupResults
             .first(where: { $0.matchup.id == matchup.id })?
             .rows
             .first(where: {
@@ -1888,7 +1885,7 @@ final class LiveRoundViewModel: ObservableObject, Loggable {
             return row.participantIDs.contains(participantID)
         }
 
-        if let row = engineResult.rows.first(where: {
+        if let row = matchupEngineResult.rows.first(where: {
             scoringRowIdentityMatches(
                 scoringUnitID: $0.scoringUnitID,
                 owner: $0.owner,
@@ -1938,9 +1935,9 @@ final class LiveRoundViewModel: ObservableObject, Loggable {
     func matchupPresentation(in section: MatchupLeaderboardSection) -> MatchupResultPresentation {
         MatchupResultPresentationBuilder.build(
             snapshot: snapshot,
-            result: engineResult,
+            result: matchupEngineResult,
             section: section,
-            basis: scoreBasis
+            basis: matchupScoreBasis
         )
     }
 
@@ -3398,10 +3395,18 @@ final class LiveRoundViewModel: ObservableObject, Loggable {
     /// Uses computeWithPipeline when template has a non-empty pipeline (field or matchup scope).
     /// Uses computeStrokePlay only when pipeline is empty (plain stroke play).
     var engineResult: ScoringResult {
-        let basis = scoreBasis
-        if let cached = cachedEngineResult, cached.basis == basis {
-            return cached.result
+        engineResult(for: scoreBasis)
+    }
+
+    var matchupEngineResult: ScoringResult {
+        engineResult(for: matchupScoreBasis)
+    }
+
+    func engineResult(for basis: ScoreBasis) -> ScoringResult {
+        if let cached = cachedEngineResults[basis.rawValue] {
+            return cached
         }
+
         let segment = snapshot.roundSegment ?? RoundSegment()
         let holes = defaultTee?.holes ?? []
         let scoreLookupIDs = snapshot.segmentScoreLookupSegmentIDs
@@ -3412,13 +3417,13 @@ final class LiveRoundViewModel: ObservableObject, Loggable {
             basis: basis,
             scoreLookupSegmentIDs: scoreLookupIDs.isEmpty ? nil : scoreLookupIDs
         )
-        cachedEngineResult = (basis, result)
+        cachedEngineResults[basis.rawValue] = result
         return result
     }
 
     /// Matchup sections for the Matchups tab. Empty when not matchup scope or no valid matchups. Only includes sections matching the current mode (requiresTeams).
     var matchupSections: [MatchupLeaderboardSection] {
-        let result = engineResult
+        let result = matchupEngineResult
         let builtSections = LeaderboardBuilder.buildMatchupSections(
             result: result,
             teams: snapshot.teams,
@@ -4433,6 +4438,7 @@ final class LiveRoundViewModel: ObservableObject, Loggable {
         isLoadingSeriesAccess = false
         selectedTeeID = nil
         hasPerformedInitialHoleNudge = false
+        hasSelectedInitialVisibleGroupStartingHole = false
         currentHoleIndex = 0
     }
 
@@ -4461,7 +4467,33 @@ final class LiveRoundViewModel: ObservableObject, Loggable {
             return
         }
 
-        visibleTeeGroupID = defaultVisibleTeeGroupID()
+        guard let defaultGroupID = defaultVisibleTeeGroupID() else {
+            visibleTeeGroupID = nil
+            return
+        }
+
+        visibleTeeGroupID = defaultGroupID
+        selectInitialVisibleGroupStartingHoleIfNeeded(groupID: defaultGroupID)
+    }
+
+    private func selectInitialVisibleGroupStartingHoleIfNeeded(groupID: String) {
+        guard !hasSelectedInitialVisibleGroupStartingHole else { return }
+        let targetHoleNumber = targetHoleNumber(forVisibleGroupID: groupID)
+        selectHole(targetHoleNumber)
+        visibleGroupSwitchRequest = VisibleGroupSwitchRequest(
+            groupID: groupID,
+            targetHoleNumber: targetHoleNumber,
+            revisionID: UUID()
+        )
+        hasSelectedInitialVisibleGroupStartingHole = true
+    }
+
+    private func applyScoreBasisDefaultsForCurrentSnapshot(force: Bool) {
+        let defaultBasis: ScoreBasis = snapshot.configuration.useHandicaps ? .net : .gross
+        if force || !snapshot.configuration.useHandicaps {
+            scoreBasis = defaultBasis
+            matchupScoreBasis = defaultBasis
+        }
     }
 
     private func loadSeriesAccessIfNeeded() async {

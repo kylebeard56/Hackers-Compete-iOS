@@ -248,6 +248,19 @@ final class LiveRoundViewModelHoleOrderingTests: XCTestCase {
         XCTAssertEqual(vm.holeState(for: 8), .unscored)
     }
 
+    func testInitialVisibleGroupSelectionStartsOnBackNineShotgunHole() async {
+        let vm = await boundViewModel(
+            snapshot: Self.makeSnapshotNineHolesStarting(
+                groupStartingHole: 13,
+                holeRange: HoleRange(startHole: 10, endHole: 18)
+            )
+        )
+
+        XCTAssertEqual(vm.holeNumbers, [13, 14, 15, 16, 17, 18, 10, 11, 12])
+        XCTAssertEqual(vm.currentHoleNumber, 13)
+        XCTAssertEqual(vm.visibleGroupSwitchRequest?.targetHoleNumber, 13)
+    }
+
     /// Past hole in play order, still unscored → error styling (skipped).
     func testHoleState_onHole1_withoutScoringHole9_hole9IsError() async {
         let vm = await boundViewModel(snapshot: Self.makeSnapshotNineHolesStarting(groupStartingHole: 9))
@@ -611,6 +624,8 @@ final class LiveRoundViewModelHoleOrderingTests: XCTestCase {
         XCTAssertTrue(snapshot.usesTeamScoringAggregates)
 
         let vm = await boundViewModel(snapshot: snapshot, participantID: "p01")
+        vm.scoreBasis = .gross
+        vm.matchupScoreBasis = .gross
         let result = vm.engineResult
         let matchupResult = try XCTUnwrap(result.matchupResults.first)
         let rowMap = Dictionary(uniqueKeysWithValues: matchupResult.rows.map { ($0.scoringUnitID, $0) })
@@ -631,6 +646,34 @@ final class LiveRoundViewModelHoleOrderingTests: XCTestCase {
         XCTAssertEqual(presentation.side(id: "team_blue")?.scoreLabel, "+2")
     }
 
+    func testMatchupScoreBasisIsIndependentFromLeaderboardScoreBasis() async throws {
+        var snapshot = MockLiveRoundBest2of4Matchup.snapshot
+        snapshot.round.configuration.handicapsEnabled = true
+        snapshot.participants = snapshot.participants.map { participant in
+            var updated = participant
+            updated.adjustedHandicap = participant.teamID == "team_blue" ? 36 : 0
+            return updated
+        }
+
+        let viewModel = await boundViewModel(snapshot: snapshot, participantID: "p01")
+        viewModel.scoreBasis = .gross
+        viewModel.matchupScoreBasis = .net
+
+        let netSection = try XCTUnwrap(viewModel.matchupSections.first)
+        let netStatus = viewModel.outcomeMatchupStatus(for: netSection)
+
+        viewModel.scoreBasis = .net
+        let unchangedNetStatus = viewModel.outcomeMatchupStatus(for: netSection)
+
+        viewModel.matchupScoreBasis = .gross
+        let grossSection = try XCTUnwrap(viewModel.matchupSections.first)
+        let grossStatus = viewModel.outcomeMatchupStatus(for: grossSection)
+
+        XCTAssertEqual(netStatus.winningScoringUnitID, "team_blue")
+        XCTAssertEqual(unchangedNetStatus.winningScoringUnitID, "team_blue")
+        XCTAssertEqual(grossStatus.winningScoringUnitID, "team_red")
+    }
+
     func testTeamMatchupHoleByHolePointsPresentationUsesPointTotals() async throws {
         var snapshot = MockLiveRoundBest2of4Matchup.snapshot
         snapshot.round.configuration.teamScoring = .init(mode: .bestN, count: 1, scope: .perHole)
@@ -646,6 +689,8 @@ final class LiveRoundViewModelHoleOrderingTests: XCTestCase {
         }
 
         let vm = await boundViewModel(snapshot: snapshot, participantID: "p01")
+        vm.scoreBasis = .gross
+        vm.matchupScoreBasis = .gross
         let result = vm.engineResult
         let matchupResult = try XCTUnwrap(result.matchupResults.first)
         let rowMap = Dictionary(uniqueKeysWithValues: matchupResult.rows.map { ($0.scoringUnitID, $0) })
@@ -710,6 +755,7 @@ final class LiveRoundViewModelHoleOrderingTests: XCTestCase {
         ]
 
         let vm = await boundViewModel(snapshot: snapshot, participantID: "p01")
+        vm.matchupScoreBasis = .gross
         let section = try XCTUnwrap(vm.matchupSections.first)
         let presentation = vm.matchupPresentation(in: section)
         let status = vm.outcomeMatchupStatus(for: section)
@@ -737,6 +783,7 @@ final class LiveRoundViewModelHoleOrderingTests: XCTestCase {
         }
 
         let vm = await boundViewModel(snapshot: snapshot, participantID: "p01")
+        vm.matchupScoreBasis = .gross
         let section = try XCTUnwrap(vm.matchupSections.first)
         let presentation = vm.matchupPresentation(in: section)
         let status = vm.outcomeMatchupStatus(for: section)
@@ -751,9 +798,12 @@ final class LiveRoundViewModelHoleOrderingTests: XCTestCase {
     func testTeamMatchupBestNMissingScoresStaysPendingWhileLive() async throws {
         var snapshot = MockLiveRoundBest2of4Matchup.snapshot
         snapshot.round.configuration.teamScoring = .init(mode: .bestN, count: 2, scope: .perHole)
-        snapshot.scoring = snapshot.scoring.filter { !($0.scoringUnitID == "p04" && $0.holeNumber == 1) }
+        snapshot.scoring = snapshot.scoring.filter {
+            !($0.holeNumber == 1 && ["p04", "p07", "p08"].contains($0.scoringUnitID))
+        }
 
         let vm = await boundViewModel(snapshot: snapshot, participantID: "p01")
+        vm.matchupScoreBasis = .gross
         let section = try XCTUnwrap(vm.matchupSections.first)
         let presentation = vm.matchupPresentation(in: section)
         let status = vm.outcomeMatchupStatus(for: section)
@@ -768,9 +818,12 @@ final class LiveRoundViewModelHoleOrderingTests: XCTestCase {
         var snapshot = MockLiveRoundBest2of4Matchup.snapshot
         snapshot.round.status = .complete
         snapshot.round.configuration.teamScoring = .init(mode: .bestN, count: 2, scope: .perHole)
-        snapshot.scoring = snapshot.scoring.filter { !($0.scoringUnitID == "p04" && $0.holeNumber == 1) }
+        snapshot.scoring = snapshot.scoring.filter {
+            !($0.holeNumber == 1 && ["p04", "p07", "p08"].contains($0.scoringUnitID))
+        }
 
         let vm = await boundViewModel(snapshot: snapshot, participantID: "p01")
+        vm.matchupScoreBasis = .gross
         let section = try XCTUnwrap(vm.matchupSections.first)
         let presentation = vm.matchupPresentation(in: section)
         let status = vm.outcomeMatchupStatus(for: section)
@@ -886,6 +939,7 @@ final class LiveRoundViewModelHoleOrderingTests: XCTestCase {
 
     private static func makeSnapshotNineHolesStarting(
         groupStartingHole: Int,
+        holeRange: HoleRange = HoleRange(startHole: 1, endHole: 9),
         scoreAllHoles: Bool = false
     ) -> RoundSnapshot {
         let roundID = "lr_order_test"
@@ -915,7 +969,7 @@ final class LiveRoundViewModelHoleOrderingTests: XCTestCase {
         let segment = RoundSegment(
             id: segmentID,
             roundID: roundID,
-            holeRange: HoleRange(startHole: 1, endHole: 9),
+            holeRange: holeRange,
             scoringUnits: [
                 ScoringUnit(
                     id: "su_p1",
@@ -938,7 +992,7 @@ final class LiveRoundViewModelHoleOrderingTests: XCTestCase {
                 courses: [
                     CourseSegment(
                         courseInfo: CourseInfo(),
-                        holeRange: HoleRange(startHole: 1, endHole: 9),
+                        holeRange: holeRange,
                         defaultTee: "tee1"
                     ),
                 ]
@@ -947,7 +1001,7 @@ final class LiveRoundViewModelHoleOrderingTests: XCTestCase {
 
         var scoring: [ScoreEntry] = []
         if scoreAllHoles {
-            for hole in 1...9 {
+            for hole in holeRange.holeNumbers {
                 scoring.append(
                     ScoreEntry(
                         id: ScoreEntry.makeID(hole: hole, segment: segmentID, scoringUnit: "su_p1"),
