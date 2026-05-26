@@ -878,10 +878,14 @@ final class SeriesRoundSyncServiceTests: XCTestCase {
         )
     }
 
-    func testCSVExporter_addsGroupingAndHandicapColumnsInSortedOrder() {
+    func testCSVExporter_addsSelectableSectionsAndFixedColumnsInSortedOrder() {
         let segment = testCourseSegment(holeRange: HoleRange(startHole: 10, endHole: 11))
         let teamA = RoundTeam(id: "teamA", name: "Team A", color: "red", index: 0, createdAt: t0, parentID: "round1")
         let teamB = RoundTeam(id: "teamB", name: "Team B", color: "blue", index: 1, createdAt: t0, parentID: "round1")
+        let seriesTeamA = SeriesTeam(id: "seriesTeamA", name: "Team A", color: "red", index: 0, createdAt: t0, parentID: "series1")
+        let seriesTeamB = SeriesTeam(id: "seriesTeamB", name: "Team B", color: "blue", index: 1, createdAt: t0, parentID: "series1")
+        let memberA = testMember(id: "ma", playerID: "player_a", teamID: "seriesTeamA")
+        let memberB = testMember(id: "mb", playerID: "player_b", teamID: "seriesTeamB")
         let group1 = TeeTimeGroup(id: "group1", index: 0, teeTime: "2026-05-01T14:00:00Z", startingHole: 10, createdAt: t0, parentID: "round1")
         let group2 = TeeTimeGroup(id: "group2", index: 1, teeTime: "2026-05-01T14:08:00Z", startingHole: 11, createdAt: t0, parentID: "round1")
         let alice = RoundParticipant(id: "pa", playerID: "player_a", name: Name("Alice", "A"), teeBoxID: "tee_white", adjustedHandicap: 5, seriesMemberID: "ma", teamID: "teamA", groupID: "group2", teeOrder: 2, createdAt: t0, parentID: "round1")
@@ -912,19 +916,95 @@ final class SeriesRoundSyncServiceTests: XCTestCase {
             ]
         )
 
-        let doc = SeriesRoundCSVExporter.document(
+        let doc = SeriesCSVExporter.document(
+            series: Series(id: "series1"),
             seriesRound: SeriesRound(id: "sr1", parentID: "series1"),
             snapshot: snapshot,
-            members: []
+            members: [memberA, memberB],
+            teams: [seriesTeamA, seriesTeamB]
+        )
+        let content = doc.content
+
+        XCTAssertEqual(doc.header, SeriesCSVExporter.headerColumns.joined(separator: ","))
+        XCTAssertTrue(doc.header.contains("actual_strokes_used"))
+        XCTAssertTrue(doc.header.contains("handicap_strokes_used"))
+        XCTAssertTrue(content.contains("\"leaderboard\""))
+        XCTAssertTrue(content.contains("\"hole_score\""))
+        XCTAssertTrue(content.contains("\"tee_group\""))
+        XCTAssertTrue(content.contains("\"tee_group_player\""))
+        XCTAssertTrue(content.contains("\"Bob B\""))
+        XCTAssertTrue(content.contains("\"Team B\""))
+        XCTAssertTrue(content.contains("\"match1\""))
+        let bobOffset = content.distance(from: content.startIndex, to: content.range(of: "\"Bob B\"")!.lowerBound)
+        let aliceOffset = content.distance(from: content.startIndex, to: content.range(of: "\"Alice A\"")!.lowerBound)
+        XCTAssertLessThan(bobOffset, aliceOffset)
+    }
+
+    func testCSVExporter_filtersBySeriesTeamAndPlayer() {
+        let segment = testCourseSegment(holeRange: HoleRange(startHole: 10, endHole: 11))
+        let teamA = RoundTeam(id: "teamA", name: "Team A", color: "red", index: 0, createdAt: t0, parentID: "round1")
+        let teamB = RoundTeam(id: "teamB", name: "Team B", color: "blue", index: 1, createdAt: t0, parentID: "round1")
+        let memberA = testMember(id: "ma", playerID: "player_a", teamID: "seriesTeamA")
+        let memberB = testMember(id: "mb", playerID: "player_b", teamID: "seriesTeamB")
+        let alice = RoundParticipant(id: "pa", playerID: "player_a", name: Name("Alice", "A"), teeBoxID: "tee_white", adjustedHandicap: 5, seriesMemberID: "ma", teamID: "teamA", groupID: "group1", teeOrder: 1, createdAt: t0, parentID: "round1")
+        let bob = RoundParticipant(id: "pb", playerID: "player_b", name: Name("Bob", "B"), teeBoxID: "tee_white", adjustedHandicap: 7, seriesMemberID: "mb", teamID: "teamB", groupID: "group1", teeOrder: 2, createdAt: t0, parentID: "round1")
+        let snapshot = RoundSnapshot(
+            round: Round(
+                id: "round1",
+                configuration: RoundConfiguration(
+                    primaryFormat: GameFormat.strokePlay,
+                    courses: [segment]
+                )
+            ),
+            participants: [alice, bob],
+            teams: [teamA, teamB],
+            teeGroups: [TeeTimeGroup(id: "group1", index: 0, startingHole: 10, createdAt: t0, parentID: "round1")],
+            segments: [RoundSegment(id: "seg1", parentID: "round1")],
+            scoring: [
+                ScoreEntry(id: ScoreEntry.makeID(hole: 10, segment: "seg1", scoringUnit: "pa"), holeNumber: 10, segmentID: "seg1", scoringUnitID: "pa", strokes: 5, parentID: "round1"),
+                ScoreEntry(id: ScoreEntry.makeID(hole: 10, segment: "seg1", scoringUnit: "pb"), holeNumber: 10, segmentID: "seg1", scoringUnitID: "pb", strokes: 4, parentID: "round1"),
+            ]
         )
 
-        XCTAssertTrue(doc.header.contains("handicap_strokes"))
-        XCTAssertTrue(doc.header.contains("hole_10_to_par"))
-        XCTAssertFalse(doc.header.contains("hole_1_to_par"))
-        XCTAssertTrue(doc.rows[0].contains("\"Bob B\""))
-        XCTAssertTrue(doc.rows[0].contains("\"Team B\""))
-        XCTAssertTrue(doc.rows[0].contains("\"match1\""))
-        XCTAssertTrue(doc.rows[1].contains("\"Alice A\""))
+        let teamDoc = SeriesCSVExporter.document(
+            seriesRound: SeriesRound(id: "sr1", parentID: "series1"),
+            snapshot: snapshot,
+            members: [memberA, memberB],
+            options: SeriesCSVExportOptions(
+                selectedRoundIDs: ["sr1"],
+                selectedTeamIDs: ["seriesTeamB"],
+                selectedMemberIDs: [],
+                selectedSections: [.holeScores]
+            )
+        )
+
+        XCTAssertTrue(teamDoc.content.contains("\"Bob B\""))
+        XCTAssertFalse(teamDoc.content.contains("\"Alice A\""))
+
+        let playerDoc = SeriesCSVExporter.document(
+            seriesRound: SeriesRound(id: "sr1", parentID: "series1"),
+            snapshot: snapshot,
+            members: [memberA, memberB],
+            options: SeriesCSVExportOptions(
+                selectedRoundIDs: ["sr1"],
+                selectedTeamIDs: [],
+                selectedMemberIDs: ["ma"],
+                selectedSections: [.holeScores]
+            )
+        )
+
+        XCTAssertTrue(playerDoc.content.contains("\"Alice A\""))
+        XCTAssertFalse(playerDoc.content.contains("\"Bob B\""))
+    }
+
+    func testCSVExporter_defaultsAndEscaping() {
+        let linked = SeriesRound(id: "linked", roundID: "round1", parentID: "series1")
+        let planned = SeriesRound(id: "planned", roundID: nil, parentID: "series1")
+        let options = SeriesCSVExportOptions.defaults(for: [linked, planned])
+
+        XCTAssertEqual(options.selectedRoundIDs, ["linked"])
+        XCTAssertEqual(options.selectedSections, Set(SeriesCSVExportSection.allCases))
+        XCTAssertEqual(SeriesCSVExporter.escapedCSV("A \"B\", C"), "\"A \"\"B\"\", C\"")
     }
 
     private func pairMatchupContext() -> (

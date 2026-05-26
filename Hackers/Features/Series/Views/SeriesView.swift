@@ -53,6 +53,19 @@ private struct LeagueDescriptionFullHeightKey: PreferenceKey {
     }
 }
 
+private struct SeriesCSVExportSheetContext: Identifiable {
+    var id: String
+    var preselectedRoundID: String?
+
+    static var series: SeriesCSVExportSheetContext {
+        SeriesCSVExportSheetContext(id: "series", preselectedRoundID: nil)
+    }
+
+    static func round(_ round: SeriesRound) -> SeriesCSVExportSheetContext {
+        SeriesCSVExportSheetContext(id: "round_\(round.id)", preselectedRoundID: round.id)
+    }
+}
+
 struct SeriesView: View {
     @Environment(\.colorScheme) var colorScheme
     @Environment(\.dismiss) var dismiss
@@ -86,6 +99,7 @@ struct SeriesView: View {
     @State private var roundForCompletionReview: SeriesRound?
     @State private var showAnnouncementsSheet = false
     @State private var showShareSeries = false
+    @State private var csvExportSheetContext: SeriesCSVExportSheetContext?
     @State private var announcementEditorContext: SeriesAnnouncementEditorContext?
     @State private var isLeagueDescriptionExpanded = false
     @State private var leagueDescriptionCollapsedHeight: CGFloat = 0
@@ -231,11 +245,20 @@ struct SeriesView: View {
                 .presentationDetents([.medium, .large])
                 .presentationDragIndicator(.visible)
         }
+        .sheet(item: $csvExportSheetContext) { context in
+            SeriesCSVExportOptionsSheet(
+                viewModel: viewModel,
+                preselectedRoundID: context.preselectedRoundID
+            )
+            .presentationDetents([.large])
+            .presentationDragIndicator(.visible)
+        }
         .sheet(isPresented: exportSheetPresented) {
             if let fileURL = viewModel.exportedCSVURL {
                 SeriesCSVShareSheet(
                     fileURL: fileURL,
-                    experiencePreset: viewModel.series.experiencePreset
+                    experiencePreset: viewModel.series.experiencePreset,
+                    skippedRoundTitles: viewModel.skippedCSVExportRoundTitles
                 )
             }
         }
@@ -310,6 +333,13 @@ struct SeriesView: View {
                         showHandicapSettings = true
                     } label: {
                         Label("Handicap settings", systemImage: "figure.golf")
+                    }
+
+                    Button {
+                        Haptics.fire(.light)
+                        csvExportSheetContext = .series
+                    } label: {
+                        Label("Export CSV", systemImage: "square.and.arrow.up")
                     }
                     Divider()
                 } else {
@@ -1612,7 +1642,7 @@ struct SeriesView: View {
                 if round.roundID != nil {
                     Button {
                         Haptics.fire(.light)
-                        Task { _ = await viewModel.exportCSV(for: round) }
+                        csvExportSheetContext = .round(round)
                     } label: {
                         Label("Export CSV", systemImage: "square.and.arrow.up")
                     }
@@ -1736,11 +1766,316 @@ struct SeriesView: View {
     }
 }
 
+private struct SeriesCSVExportOptionsSheet: View {
+    @Environment(\.colorScheme) private var colorScheme
+    @Environment(\.dismiss) private var dismiss
+    @ObservedObject var viewModel: SeriesViewModel
+
+    @State private var options: SeriesCSVExportOptions
+    @State private var isExporting = false
+    @State private var warning: String?
+
+    private var palette: DesignPalette { .init(theme: .primary, scheme: colorScheme) }
+    private var linkedRounds: [SeriesRound] {
+        viewModel.rounds
+            .filter { $0.roundID != nil }
+            .sorted { $0.index < $1.index }
+    }
+    private var exportMembers: [SeriesMember] {
+        viewModel.members
+            .filter { $0.isActive && $0.role != .spectator }
+            .sorted { $0.name.fullName.localizedCaseInsensitiveCompare($1.name.fullName) == .orderedAscending }
+    }
+    private var exportTeams: [SeriesTeam] {
+        viewModel.teams.sorted { lhs, rhs in
+            if lhs.index != rhs.index { return lhs.index < rhs.index }
+            return lhs.name.localizedCaseInsensitiveCompare(rhs.name) == .orderedAscending
+        }
+    }
+    private var selectedRoundCount: Int { options.selectedRoundIDs.count }
+    private var selectedSectionCount: Int { options.selectedSections.count }
+    private var selectedTeamCount: Int { options.selectedTeamIDs.isEmpty ? exportTeams.count : options.selectedTeamIDs.count }
+    private var selectedPlayerCount: Int { options.selectedMemberIDs.isEmpty ? exportMembers.count : options.selectedMemberIDs.count }
+    private var canExport: Bool {
+        options.selectedRoundIDs.isPopulated && options.selectedSections.isPopulated && !isExporting
+    }
+
+    init(viewModel: SeriesViewModel, preselectedRoundID: String?) {
+        self.viewModel = viewModel
+        let defaults: SeriesCSVExportOptions
+        if let preselectedRoundID {
+            defaults = SeriesCSVExportOptions(
+                selectedRoundIDs: [preselectedRoundID],
+                selectedTeamIDs: [],
+                selectedMemberIDs: [],
+                selectedSections: Set(SeriesCSVExportSection.allCases)
+            )
+        } else {
+            defaults = SeriesCSVExportOptions.defaults(for: viewModel.rounds)
+        }
+        _options = State(initialValue: defaults)
+    }
+
+    var body: some View {
+        VStack(spacing: 0) {
+            SeriesSheetHeader(
+                palette: palette,
+                title: "CSV Export",
+                subtitle: "Choose the rounds, sections, teams, and players to include.",
+                onClose: { dismiss() }
+            )
+
+            ScrollView(showsIndicators: false) {
+                VStack(alignment: .leading, spacing: 18) {
+                    summaryStrip
+                    if let warning {
+                        warningBanner(warning)
+                    }
+                    roundsSection
+                    sectionsSection
+                    teamsSection
+                    playersSection
+                    exportButton
+                }
+                .padding(16)
+            }
+            .background(palette.backgroundColor)
+        }
+        .background(palette.backgroundColor.ignoresSafeArea())
+    }
+
+    private var summaryStrip: some View {
+        HStack(spacing: 8) {
+            summaryPill("\(selectedRoundCount) rounds")
+            summaryPill("\(selectedSectionCount) sections")
+            summaryPill(options.selectedTeamIDs.isEmpty ? "All teams" : "\(selectedTeamCount) teams")
+            summaryPill(options.selectedMemberIDs.isEmpty ? "All players" : "\(selectedPlayerCount) players")
+        }
+        .lineLimit(1)
+        .minimumScaleFactor(0.8)
+    }
+
+    private func summaryPill(_ text: String) -> some View {
+        Text(text)
+            .fontStyle(kFontName, size: 12, weight: .semibold)
+            .foregroundStyle(palette.foregroundColor)
+            .padding(.horizontal, 10)
+            .padding(.vertical, 7)
+            .glassCardEffect(cornerRadius: 10, tint: palette.whiteGlassButtonColor, shadowOpacity: 0)
+    }
+
+    private var roundsSection: some View {
+        checklistSection(title: "Rounds") {
+            if linkedRounds.isEmpty {
+                emptyLine("No linked rounds yet.")
+            } else {
+                ForEach(linkedRounds) { round in
+                    checklistRow(
+                        title: round.title.isPopulated ? round.title : "Round \(round.index + 1)",
+                        subtitle: round.status.rawValue.capitalized,
+                        isSelected: options.selectedRoundIDs.contains(round.id)
+                    ) {
+                        toggle(round.id, in: &options.selectedRoundIDs)
+                    }
+                }
+            }
+        }
+    }
+
+    private var sectionsSection: some View {
+        checklistSection(title: "Sections") {
+            ForEach(SeriesCSVExportSection.allCases) { section in
+                checklistRow(
+                    title: section.displayName,
+                    subtitle: section.rawValue,
+                    isSelected: options.selectedSections.contains(section)
+                ) {
+                    toggle(section, in: &options.selectedSections)
+                }
+            }
+        }
+    }
+
+    private var teamsSection: some View {
+        checklistSection(title: "Teams") {
+            checklistRow(
+                title: "All teams",
+                subtitle: "Includes unassigned players",
+                isSelected: options.selectedTeamIDs.isEmpty
+            ) {
+                options.selectedTeamIDs.removeAll()
+            }
+
+            ForEach(exportTeams) { team in
+                checklistRow(
+                    title: team.name,
+                    subtitle: "Team filter",
+                    isSelected: options.selectedTeamIDs.contains(team.id)
+                ) {
+                    if options.selectedTeamIDs.isEmpty {
+                        options.selectedTeamIDs = [team.id]
+                    } else {
+                        toggle(team.id, in: &options.selectedTeamIDs)
+                    }
+                }
+            }
+        }
+    }
+
+    private var playersSection: some View {
+        checklistSection(title: "Players") {
+            checklistRow(
+                title: "All players",
+                subtitle: "Includes every selected-round participant",
+                isSelected: options.selectedMemberIDs.isEmpty
+            ) {
+                options.selectedMemberIDs.removeAll()
+            }
+
+            ForEach(exportMembers) { member in
+                checklistRow(
+                    title: member.name.fullName,
+                    subtitle: member.teamID.flatMap(teamName) ?? "Unassigned",
+                    isSelected: options.selectedMemberIDs.contains(member.id)
+                ) {
+                    if options.selectedMemberIDs.isEmpty {
+                        options.selectedMemberIDs = [member.id]
+                    } else {
+                        toggle(member.id, in: &options.selectedMemberIDs)
+                    }
+                }
+            }
+        }
+    }
+
+    private var exportButton: some View {
+        Button {
+            Task { await export() }
+        } label: {
+            HStack(spacing: 8) {
+                if isExporting {
+                    ProgressView()
+                        .scaleEffect(0.8)
+                }
+                Text(isExporting ? "Building CSV..." : "Export CSV")
+                    .fontStyle(kFontName, size: 15, weight: .semibold)
+            }
+            .foregroundStyle(.white)
+            .frame(maxWidth: .infinity)
+            .padding(.vertical, 12)
+            .background(canExport ? Color.accentGreen : Color.neutral.opacity(0.35))
+            .clipShape(Capsule())
+        }
+        .buttonStyle(.plain)
+        .disabled(!canExport)
+        .padding(.top, 4)
+    }
+
+    private func checklistSection<Content: View>(
+        title: String,
+        @ViewBuilder content: () -> Content
+    ) -> some View {
+        VStack(alignment: .leading, spacing: 10) {
+            Text(title.uppercased())
+                .fontStyle(kFontName, size: 13, weight: .semibold)
+                .foregroundStyle(palette.foregroundColor)
+
+            VStack(spacing: 0) {
+                content()
+            }
+            .padding(.horizontal, 12)
+            .padding(.vertical, 6)
+            .glassCardEffect(forceMaterial: true, tint: palette.cardColor)
+        }
+    }
+
+    private func checklistRow(
+        title: String,
+        subtitle: String?,
+        isSelected: Bool,
+        action: @escaping () -> Void
+    ) -> some View {
+        Button {
+            Haptics.fire(.light)
+            action()
+            warning = nil
+        } label: {
+            HStack(spacing: 12) {
+                Image(systemName: isSelected ? "checkmark.circle.fill" : "circle")
+                    .font(.system(size: 19, weight: .semibold))
+                    .foregroundStyle(isSelected ? Color.accentGreen : Color.neutral)
+
+                VStack(alignment: .leading, spacing: 2) {
+                    Text(title)
+                        .fontStyle(kFontName, size: 14, weight: .semibold)
+                        .foregroundStyle(palette.foregroundColor)
+                        .lineLimit(1)
+                    if let subtitle, subtitle.isPopulated {
+                        Text(subtitle)
+                            .fontStyle(kFontName, size: 11, weight: .regular)
+                            .foregroundStyle(Color.neutral)
+                            .lineLimit(1)
+                    }
+                }
+                Spacer(minLength: 0)
+            }
+            .padding(.vertical, 8)
+            .contentShape(Rectangle())
+        }
+        .buttonStyle(.plain)
+    }
+
+    private func warningBanner(_ text: String) -> some View {
+        Text(text)
+            .fontStyle(kFontName, size: 12, weight: .semibold)
+            .foregroundStyle(Color.systemOrange)
+            .padding(12)
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .glassCardEffect(cornerRadius: 12, tint: Color.systemOrange.opacity(0.14), shadowOpacity: 0)
+    }
+
+    private func emptyLine(_ text: String) -> some View {
+        Text(text)
+            .fontStyle(kFontName, size: 13, weight: .regular)
+            .foregroundStyle(Color.neutral)
+            .padding(.vertical, 8)
+            .frame(maxWidth: .infinity, alignment: .leading)
+    }
+
+    private func export() async {
+        guard canExport else { return }
+        isExporting = true
+        warning = nil
+        let fileURL = await viewModel.exportCSV(options: options)
+        isExporting = false
+        if fileURL == nil {
+            warning = viewModel.skippedCSVExportRoundTitles.isPopulated
+                ? "No CSV was created. The selected rounds could not be loaded."
+                : "No CSV rows matched the current selection."
+            return
+        }
+        dismiss()
+    }
+
+    private func teamName(for teamID: String) -> String? {
+        exportTeams.first { $0.id == teamID }?.name
+    }
+
+    private func toggle<T: Hashable>(_ value: T, in set: inout Set<T>) {
+        if set.contains(value) {
+            set.remove(value)
+        } else {
+            set.insert(value)
+        }
+    }
+}
+
 private struct SeriesCSVShareSheet: View {
     @Environment(\.colorScheme) private var colorScheme
     @Environment(\.dismiss) private var dismiss
     let fileURL: URL
     let experiencePreset: SeriesExperiencePreset
+    let skippedRoundTitles: [String]
 
     private var palette: DesignPalette { .init(theme: .primary, scheme: colorScheme) }
 
@@ -1774,6 +2109,13 @@ private struct SeriesCSVShareSheet: View {
                 Text(fileURL.lastPathComponent)
                     .fontStyle(kFontName, size: 12, weight: .regular)
                     .foregroundStyle(Color.neutral)
+
+                if skippedRoundTitles.isPopulated {
+                    Text("Skipped: \(skippedRoundTitles.joined(separator: ", "))")
+                        .fontStyle(kFontName, size: 12, weight: .semibold)
+                        .foregroundStyle(Color.systemOrange)
+                        .multilineTextAlignment(.center)
+                }
             }
             .padding(24)
             .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .center)

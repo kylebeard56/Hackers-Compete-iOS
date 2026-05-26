@@ -20,7 +20,62 @@ struct SeriesRoundCorrectionContext {
     let entriesByParticipantID: [String: [Int: ScoreEntry]]
 }
 
-struct SeriesRoundCSVDocument: Equatable {
+enum SeriesCSVExportSection: String, CaseIterable, Identifiable {
+    case leaderboard
+    case holeScores = "hole_scores"
+    case matchups
+    case teeGroups = "tee_groups"
+
+    var id: String { rawValue }
+
+    var displayName: String {
+        switch self {
+        case .leaderboard:
+            return "Leaderboard"
+        case .holeScores:
+            return "Hole scores"
+        case .matchups:
+            return "Matchups"
+        case .teeGroups:
+            return "Tee groups"
+        }
+    }
+}
+
+struct SeriesCSVExportOptions: Equatable {
+    var selectedRoundIDs: Set<String>
+    var selectedTeamIDs: Set<String>
+    var selectedMemberIDs: Set<String>
+    var selectedSections: Set<SeriesCSVExportSection>
+
+    init(
+        selectedRoundIDs: Set<String> = [],
+        selectedTeamIDs: Set<String> = [],
+        selectedMemberIDs: Set<String> = [],
+        selectedSections: Set<SeriesCSVExportSection> = Set(SeriesCSVExportSection.allCases)
+    ) {
+        self.selectedRoundIDs = selectedRoundIDs
+        self.selectedTeamIDs = selectedTeamIDs
+        self.selectedMemberIDs = selectedMemberIDs
+        self.selectedSections = selectedSections
+    }
+
+    static func defaults(for rounds: [SeriesRound]) -> SeriesCSVExportOptions {
+        SeriesCSVExportOptions(
+            selectedRoundIDs: Set(rounds.filter { $0.roundID != nil }.map(\.id)),
+            selectedTeamIDs: [],
+            selectedMemberIDs: [],
+            selectedSections: Set(SeriesCSVExportSection.allCases)
+        )
+    }
+}
+
+struct SeriesCSVExportBuildResult: Equatable {
+    var document: SeriesCSVExportDocument?
+    var skippedRoundTitles: [String]
+}
+
+struct SeriesCSVExportDocument: Equatable {
     var header: String
     var rows: [String]
 
@@ -39,22 +94,124 @@ struct SeriesIndividualStatsRow: Identifiable, Equatable {
     var id: String { memberID }
 }
 
-enum SeriesRoundCSVExporter {
-    static func document(seriesRound: SeriesRound, snapshot: RoundSnapshot, members: [SeriesMember]) -> SeriesRoundCSVDocument {
-        let holeNumbers = snapshot.holeRange?.holeNumbers ?? snapshot.holeSegment.holeRange.holeNumbers
-        let usesHandicaps = snapshot.configuration.useHandicaps
-        let header = csvHeader(holeNumbers: holeNumbers, includesHandicap: usesHandicaps)
-        let rows = csvRows(
-            seriesRound: seriesRound,
-            snapshot: snapshot,
-            members: members,
-            holeNumbers: holeNumbers,
-            includesHandicap: usesHandicaps
+enum SeriesCSVExporter {
+    typealias SnapshotProvider = (SeriesRound) async -> RoundSnapshot?
+
+    static let headerColumns = [
+        "row_type",
+        "series_round_id",
+        "series_round_title",
+        "series_round_index",
+        "round_id",
+        "competitor_type",
+        "competitor_id",
+        "participant_id",
+        "series_member_id",
+        "player_id",
+        "player_name",
+        "team_id",
+        "team_name",
+        "tee_group_id",
+        "tee_group_name",
+        "tee_group_index",
+        "tee_time",
+        "starting_hole",
+        "tee_order",
+        "tee_box_id",
+        "matchup_id",
+        "matchup_index",
+        "matchup_side",
+        "matchup_side_id",
+        "matchup_side_name",
+        "opponent_name",
+        "is_winner",
+        "is_tie",
+        "score_label",
+        "leaderboard_rank",
+        "place_label",
+        "leaderboard_score",
+        "gross_strokes",
+        "net_strokes",
+        "actual_strokes_used",
+        "handicap_strokes_used",
+        "handicap_strokes",
+        "holes_played",
+        "hole_number",
+        "par",
+        "raw_strokes",
+        "net_strokes_hole",
+        "handicap_stroke_delta",
+        "gross_to_par",
+        "net_to_par",
+        "picked_up",
+        "counts_for_score",
+        "notes"
+    ]
+
+    static func build(
+        series: Series,
+        rounds: [SeriesRound],
+        members: [SeriesMember],
+        teams: [SeriesTeam],
+        options: SeriesCSVExportOptions,
+        snapshotProvider: SnapshotProvider
+    ) async -> SeriesCSVExportBuildResult {
+        var rows: [String] = []
+        var skipped: [String] = []
+        let selectedRounds = rounds
+            .filter { $0.roundID != nil && options.selectedRoundIDs.contains($0.id) }
+            .sorted { $0.index < $1.index }
+
+        for seriesRound in selectedRounds {
+            guard let snapshot = await snapshotProvider(seriesRound) else {
+                skipped.append(displayTitle(for: seriesRound))
+                continue
+            }
+            rows += csvRows(
+                series: series,
+                seriesRound: seriesRound,
+                snapshot: snapshot,
+                members: members,
+                seriesTeams: teams,
+                options: options
+            )
+        }
+
+        let document = rows.isEmpty ? nil : SeriesCSVExportDocument(
+            header: headerColumns.joined(separator: ","),
+            rows: rows
         )
-        return .init(header: header, rows: rows)
+        return SeriesCSVExportBuildResult(document: document, skippedRoundTitles: skipped)
     }
 
-    private struct ParticipantCSVContext {
+    static func document(
+        series: Series = .init(),
+        seriesRound: SeriesRound,
+        snapshot: RoundSnapshot,
+        members: [SeriesMember],
+        teams: [SeriesTeam] = [],
+        options: SeriesCSVExportOptions? = nil
+    ) -> SeriesCSVExportDocument {
+        let resolvedOptions = options ?? SeriesCSVExportOptions(
+            selectedRoundIDs: [seriesRound.id],
+            selectedTeamIDs: [],
+            selectedMemberIDs: [],
+            selectedSections: Set(SeriesCSVExportSection.allCases)
+        )
+        return SeriesCSVExportDocument(
+            header: headerColumns.joined(separator: ","),
+            rows: csvRows(
+                series: series,
+                seriesRound: seriesRound,
+                snapshot: snapshot,
+                members: members,
+                seriesTeams: teams,
+                options: resolvedOptions
+            )
+        )
+    }
+
+    struct ParticipantCSVContext {
         var matchupIndex: Int?
         var matchupID: String
         var matchupSide: String
@@ -68,89 +225,344 @@ enum SeriesRoundCSVExporter {
     }
 
     private static func csvRows(
+        series: Series,
         seriesRound: SeriesRound,
         snapshot: RoundSnapshot,
         members: [SeriesMember],
-        holeNumbers: [Int],
-        includesHandicap: Bool
+        seriesTeams: [SeriesTeam],
+        options: SeriesCSVExportOptions
     ) -> [String] {
-        let scoreEntriesByParticipant = Dictionary(grouping: snapshot.scoring, by: \.scoringUnitID)
         let teamsByID = Dictionary(uniqueKeysWithValues: snapshot.teams.map { ($0.id, $0) })
         let groupsByID = Dictionary(uniqueKeysWithValues: snapshot.teeGroups.map { ($0.id, $0) })
         let contexts = participantContexts(snapshot: snapshot, teamsByID: teamsByID, groupsByID: groupsByID)
-
-        return snapshot.participants.sorted { lhs, rhs in
-            let lc = contexts[lhs.id]
-            let rc = contexts[rhs.id]
-            if (lc?.matchupIndex ?? Int.max) != (rc?.matchupIndex ?? Int.max) {
-                return (lc?.matchupIndex ?? Int.max) < (rc?.matchupIndex ?? Int.max)
-            }
-            if (lc?.teeGroupIndex ?? Int.max) != (rc?.teeGroupIndex ?? Int.max) {
-                return (lc?.teeGroupIndex ?? Int.max) < (rc?.teeGroupIndex ?? Int.max)
-            }
-            if (lhs.teeOrder ?? Int.max) != (rhs.teeOrder ?? Int.max) {
-                return (lhs.teeOrder ?? Int.max) < (rhs.teeOrder ?? Int.max)
-            }
-            return lhs.name.fullName.localizedCaseInsensitiveCompare(rhs.name.fullName) == .orderedAscending
-        }.map { participant in
-            let context = contexts[participant.id] ?? ParticipantCSVContext(
-                matchupIndex: nil,
-                matchupID: "",
-                matchupSide: "",
-                matchupSideID: "",
-                teeGroupIndex: nil,
-                teeGroupID: participant.groupID ?? "",
-                teeGroupName: participant.groupID.flatMap { groupsByID[$0]?.name } ?? "",
-                teeTime: participant.groupID.flatMap { groupsByID[$0]?.teeTime } ?? "",
-                startingHole: participant.groupID.flatMap { groupsByID[$0]?.startingHole },
-                teamName: participant.teamID.flatMap { teamsByID[$0]?.name } ?? ""
+        let memberByID = Dictionary(uniqueKeysWithValues: members.map { ($0.id, $0) })
+        let memberByPlayerID = Dictionary(uniqueKeysWithValues: members.compactMap { member in
+            member.playerID.map { ($0, member) }
+        })
+        let holes = scoringHoles(in: snapshot)
+        let holesByNumber = Dictionary(uniqueKeysWithValues: holes.map { ($0.number, $0) })
+        let segment = snapshot.roundSegment
+        let result = segment.map {
+            ScoringEngine.computeSnapshotResult(
+                snapshot: snapshot,
+                segment: $0,
+                holes: holes,
+                basis: snapshot.configuration.primaryFormat.configuration.basis,
+                scoreLookupSegmentIDs: snapshot.segmentScoreLookupSegmentIDs
             )
-            let entriesByHole = Dictionary(uniqueKeysWithValues: (scoreEntriesByParticipant[participant.id] ?? []).map { ($0.holeNumber, $0) })
-            let tee = snapshot.courseSegment?.tee(from: participant.teeBoxID)
-                ?? snapshot.courseSegment?.tee(from: snapshot.courseSegment?.defaultTee ?? "")
-                ?? snapshot.courseSegment?.courseInfo.tees.first
-            var totalToPar = 0
-            var holeValues: [String] = []
+        }
+        let includedParticipants = filteredParticipants(
+            snapshot: snapshot,
+            membersByID: memberByID,
+            membersByPlayerID: memberByPlayerID,
+            options: options
+        )
+        let includedParticipantIDs = Set(includedParticipants.map(\.id))
+        var rows: [String] = []
 
-            for holeNumber in holeNumbers {
-                if let strokes = entriesByHole[holeNumber]?.strokes {
-                    let par = tee?.holes.first(where: { $0.number == holeNumber })?.par ?? 4
-                    let toPar = strokes - par
-                    totalToPar += toPar
-                    holeValues.append(String(toPar))
-                } else {
-                    holeValues.append("")
-                }
-            }
+        if let result, options.selectedSections.contains(.leaderboard) {
+            rows += leaderboardRows(
+                series: series,
+                seriesRound: seriesRound,
+                snapshot: snapshot,
+                result: result,
+                participants: includedParticipants,
+                contexts: contexts,
+                membersByID: memberByID,
+                membersByPlayerID: memberByPlayerID,
+                teamsByID: teamsByID,
+                groupsByID: groupsByID,
+                options: options
+            )
+        }
 
-            let memberID = participant.seriesMemberID ?? members.first(where: { $0.playerID == participant.playerID })?.id ?? ""
-            var columns = [
-                seriesRound.id,
-                snapshot.round.id,
-                memberID,
-                participant.playerID ?? "",
-                participant.name.fullName,
-                participant.teamID ?? "",
-                context.teamName,
-                context.matchupIndex.map { String($0 + 1) } ?? "",
-                context.matchupID,
-                context.matchupSide,
-                context.matchupSideID,
-                context.teeGroupIndex.map { String($0 + 1) } ?? "",
-                context.teeGroupID,
-                context.teeGroupName,
-                context.teeTime,
-                context.startingHole.map(String.init) ?? ""
-            ]
-            if includesHandicap {
-                columns.append(String(participant.adjustedHandicap))
+        if options.selectedSections.contains(.holeScores) {
+            rows += holeScoreRows(
+                series: series,
+                seriesRound: seriesRound,
+                snapshot: snapshot,
+                participants: includedParticipants,
+                contexts: contexts,
+                membersByID: memberByID,
+                membersByPlayerID: memberByPlayerID,
+                teamsByID: teamsByID,
+                groupsByID: groupsByID,
+                holesByNumber: holesByNumber
+            )
+        }
+
+        if let result, options.selectedSections.contains(.matchups) {
+            rows += matchupRows(
+                series: series,
+                seriesRound: seriesRound,
+                snapshot: snapshot,
+                result: result,
+                includedParticipantIDs: includedParticipantIDs,
+                contexts: contexts,
+                membersByID: memberByID,
+                membersByPlayerID: memberByPlayerID,
+                teamsByID: teamsByID,
+                groupsByID: groupsByID
+            )
+        }
+
+        if options.selectedSections.contains(.teeGroups) {
+            rows += teeGroupRows(
+                series: series,
+                seriesRound: seriesRound,
+                snapshot: snapshot,
+                participants: includedParticipants,
+                contexts: contexts,
+                membersByID: memberByID,
+                membersByPlayerID: memberByPlayerID,
+                teamsByID: teamsByID,
+                groupsByID: groupsByID,
+                selectedTeamIDs: options.selectedTeamIDs,
+                seriesTeams: seriesTeams
+            )
+        }
+
+        return rows
+    }
+
+    private static func leaderboardRows(
+        series: Series,
+        seriesRound: SeriesRound,
+        snapshot: RoundSnapshot,
+        result: ScoringResult,
+        participants: [RoundParticipant],
+        contexts: [String: ParticipantCSVContext],
+        membersByID: [String: SeriesMember],
+        membersByPlayerID: [String: SeriesMember],
+        teamsByID: [String: RoundTeam],
+        groupsByID: [String: TeeTimeGroup],
+        options: SeriesCSVExportOptions
+    ) -> [String] {
+        let includedParticipantIDs = Set(participants.map(\.id))
+        let rows = result.rows.filter { row in
+            switch row.owner {
+            case .participant:
+                return includedParticipantIDs.contains(row.scoringUnitID)
+            case .team, .scoreOwner:
+                let rowParticipantIDs = Set(row.participantIDs)
+                return rowParticipantIDs.isEmpty || rowParticipantIDs.intersection(includedParticipantIDs).isPopulated
             }
-            columns += holeValues + [String(totalToPar)]
-            return columns.map(escapedCSV).joined(separator: ",")
+        }.filter { row in
+            guard row.owner == .team, options.selectedTeamIDs.isPopulated else { return true }
+            if options.selectedTeamIDs.contains(row.scoringUnitID) { return true }
+            return row.participantIDs.contains { participantID in
+                guard let participant = snapshot.participants.first(where: { $0.id == participantID }) else { return false }
+                return participantMatchesSelectedTeam(
+                    participant,
+                    membersByID: membersByID,
+                    membersByPlayerID: membersByPlayerID,
+                    selectedTeamIDs: options.selectedTeamIDs
+                )
+            }
+        }
+        let sortedRows = rows.sorted {
+            if abs($0.total - $1.total) > 0.0001 {
+                return result.template.leaderboardSort == .highestWins ? $0.total > $1.total : $0.total < $1.total
+            }
+            return $0.scoringUnitID < $1.scoringUnitID
+        }
+
+        return sortedRows.enumerated().map { index, row in
+            let primaryParticipant = row.participantIDs.compactMap { id in
+                snapshot.participants.first { $0.id == id }
+            }.first
+            let participantContext = primaryParticipant.flatMap { contexts[$0.id] }
+            var data = baseData(
+                rowType: "leaderboard",
+                series: series,
+                seriesRound: seriesRound,
+                snapshot: snapshot
+            )
+            data["competitor_type"] = row.owner.rawValue
+            data["competitor_id"] = row.scoringUnitID
+            data["player_name"] = leaderboardName(row: row, snapshot: snapshot)
+            data["team_id"] = leaderboardTeamID(row: row, participant: primaryParticipant)
+            data["team_name"] = data["team_id"].flatMap { teamsByID[$0]?.name } ?? participantContext?.teamName ?? ""
+            applyParticipant(primaryParticipant, to: &data, context: participantContext, membersByID: membersByID, membersByPlayerID: membersByPlayerID, groupsByID: groupsByID)
+            data["leaderboard_rank"] = String(index + 1)
+            data["place_label"] = String(index + 1)
+            data["leaderboard_score"] = formatScore(row.total, isPointsFormat: result.template.leaderboardSort == .highestWins)
+            data["score_label"] = data["leaderboard_score"]
+            data["gross_strokes"] = total(row: row, keyPath: \.rawStrokes)
+            data["net_strokes"] = total(row: row, keyPath: \.netStrokes)
+            data["actual_strokes_used"] = data["gross_strokes"]
+            data["handicap_strokes_used"] = handicapUsed(row: row)
+            data["handicap_strokes"] = primaryParticipant.map { String($0.adjustedHandicap) } ?? ""
+            data["holes_played"] = String(row.holesPlayed)
+            return csvLine(data)
         }
     }
 
-    private static func participantContexts(
+    private static func holeScoreRows(
+        series: Series,
+        seriesRound: SeriesRound,
+        snapshot: RoundSnapshot,
+        participants: [RoundParticipant],
+        contexts: [String: ParticipantCSVContext],
+        membersByID: [String: SeriesMember],
+        membersByPlayerID: [String: SeriesMember],
+        teamsByID: [String: RoundTeam],
+        groupsByID: [String: TeeTimeGroup],
+        holesByNumber: [Int: Hole]
+    ) -> [String] {
+        let scoreEntriesByParticipant = Dictionary(grouping: snapshot.scoring, by: \.scoringUnitID)
+        return participants.sorted { participantSort($0, $1, contexts: contexts) }.flatMap { participant in
+            let context = contexts[participant.id]
+            let entries = Dictionary(uniqueKeysWithValues: (scoreEntriesByParticipant[participant.id] ?? []).map { ($0.holeNumber, $0) })
+            let tee = snapshot.courseSegment?.tee(from: participant.teeBoxID)
+                ?? snapshot.courseSegment?.tee(from: snapshot.courseSegment?.defaultTee ?? "")
+                ?? snapshot.courseSegment?.courseInfo.tees.first
+            let teeHoles = Dictionary(uniqueKeysWithValues: (tee?.holes ?? []).map { ($0.number, $0) })
+            let holeNumbers = (snapshot.holeRange?.holeNumbers ?? snapshot.holeSegment.holeRange.holeNumbers).sorted()
+
+            return holeNumbers.map { holeNumber in
+                let entry = entries[holeNumber]
+                let par = teeHoles[holeNumber]?.par ?? holesByNumber[holeNumber]?.par ?? 4
+                let raw = entry?.strokes
+                let handicapDelta = handicapStrokeDelta(participant: participant, holeNumber: holeNumber, snapshot: snapshot)
+                let net = raw.map { max(1, $0 - handicapDelta) }
+                var data = baseData(rowType: "hole_score", series: series, seriesRound: seriesRound, snapshot: snapshot)
+                applyParticipant(participant, to: &data, context: context, membersByID: membersByID, membersByPlayerID: membersByPlayerID, groupsByID: groupsByID)
+                data["team_name"] = participant.teamID.flatMap { teamsByID[$0]?.name } ?? context?.teamName ?? ""
+                data["hole_number"] = String(holeNumber)
+                data["par"] = String(par)
+                data["raw_strokes"] = raw.map(String.init) ?? ""
+                data["net_strokes_hole"] = net.map(String.init) ?? ""
+                data["handicap_stroke_delta"] = raw == nil ? "" : String(handicapDelta)
+                data["gross_to_par"] = raw.map { String($0 - par) } ?? ""
+                data["net_to_par"] = net.map { String($0 - par) } ?? ""
+                data["picked_up"] = String(entry?.pickedUp ?? false)
+                data["actual_strokes_used"] = raw.map(String.init) ?? ""
+                data["handicap_strokes_used"] = raw == nil ? "" : String(handicapDelta)
+                data["handicap_strokes"] = String(participant.adjustedHandicap)
+                return csvLine(data)
+            }
+        }
+    }
+
+    private static func matchupRows(
+        series: Series,
+        seriesRound: SeriesRound,
+        snapshot: RoundSnapshot,
+        result: ScoringResult,
+        includedParticipantIDs: Set<String>,
+        contexts: [String: ParticipantCSVContext],
+        membersByID: [String: SeriesMember],
+        membersByPlayerID: [String: SeriesMember],
+        teamsByID: [String: RoundTeam],
+        groupsByID: [String: TeeTimeGroup]
+    ) -> [String] {
+        result.matchupResults.enumerated().flatMap { index, matchupResult -> [String] in
+            guard matchupResult.matchup.isValid else { return [] }
+            let presentation = MatchupResultPresentationBuilder.build(
+                snapshot: snapshot,
+                result: result,
+                matchupResult: matchupResult
+            )
+            let visibleSides = presentation.sides.filter { side in
+                side.participants.contains { includedParticipantIDs.contains($0.id) }
+            }
+            guard visibleSides.isPopulated else { return [] }
+            var rows: [String] = []
+
+            for (sideOffset, side) in visibleSides.enumerated() {
+                let opponentName = presentation.sides.first { $0.id != side.id }?.title ?? ""
+                var sideData = baseData(rowType: "matchup_side", series: series, seriesRound: seriesRound, snapshot: snapshot)
+                sideData["matchup_id"] = matchupResult.matchup.id
+                sideData["matchup_index"] = String(index + 1)
+                sideData["matchup_side"] = sideOffset == 0 ? "A" : "B"
+                sideData["matchup_side_id"] = side.id
+                sideData["matchup_side_name"] = side.title
+                sideData["opponent_name"] = opponentName
+                sideData["is_winner"] = String(presentation.winningSideID == side.id)
+                sideData["is_tie"] = String(presentation.isTie)
+                sideData["score_label"] = side.scoreLabel
+                sideData["leaderboard_score"] = side.total.map { formatScore($0, isPointsFormat: presentation.isPointsFormat) } ?? ""
+                sideData["counts_for_score"] = "true"
+                rows.append(csvLine(sideData))
+
+                for participant in side.participants.filter({ includedParticipantIDs.contains($0.id) }).sorted(by: { participantSort($0, $1, contexts: contexts) }) {
+                    let context = contexts[participant.id]
+                    var playerData = baseData(rowType: "matchup_player", series: series, seriesRound: seriesRound, snapshot: snapshot)
+                    applyParticipant(participant, to: &playerData, context: context, membersByID: membersByID, membersByPlayerID: membersByPlayerID, groupsByID: groupsByID)
+                    playerData["team_name"] = participant.teamID.flatMap { teamsByID[$0]?.name } ?? context?.teamName ?? ""
+                    playerData["matchup_id"] = matchupResult.matchup.id
+                    playerData["matchup_index"] = String(index + 1)
+                    playerData["matchup_side"] = sideOffset == 0 ? "A" : "B"
+                    playerData["matchup_side_id"] = side.id
+                    playerData["matchup_side_name"] = side.title
+                    playerData["opponent_name"] = opponentName
+                    playerData["is_winner"] = String(presentation.winningSideID == side.id)
+                    playerData["is_tie"] = String(presentation.isTie)
+                    playerData["score_label"] = side.scoreLabel
+                    playerData["gross_strokes"] = participantStrokeTotal(participant.id, snapshot: snapshot, basis: .gross)
+                    playerData["net_strokes"] = participantStrokeTotal(participant.id, snapshot: snapshot, basis: .net)
+                    playerData["actual_strokes_used"] = playerData["gross_strokes"]
+                    playerData["handicap_strokes_used"] = strokeDifference(gross: playerData["gross_strokes"], net: playerData["net_strokes"])
+                    playerData["handicap_strokes"] = String(participant.adjustedHandicap)
+                    playerData["counts_for_score"] = String(side.isParticipantActive(participant))
+                    rows.append(csvLine(playerData))
+                }
+            }
+            return rows
+        }
+    }
+
+    private static func teeGroupRows(
+        series: Series,
+        seriesRound: SeriesRound,
+        snapshot: RoundSnapshot,
+        participants: [RoundParticipant],
+        contexts: [String: ParticipantCSVContext],
+        membersByID: [String: SeriesMember],
+        membersByPlayerID: [String: SeriesMember],
+        teamsByID: [String: RoundTeam],
+        groupsByID: [String: TeeTimeGroup],
+        selectedTeamIDs: Set<String>,
+        seriesTeams: [SeriesTeam]
+    ) -> [String] {
+        let participantsByGroupID = Dictionary(grouping: participants) { $0.groupID ?? "" }
+        let visibleGroupIDs = Set(participants.map { $0.groupID ?? "" })
+        let selectedSeriesTeamNames = Set(seriesTeams.filter { selectedTeamIDs.contains($0.id) }.map(\.name))
+
+        return snapshot.teeGroups
+            .filter { visibleGroupIDs.contains($0.id) || (selectedTeamIDs.isEmpty && participantsByGroupID[$0.id] != nil) }
+            .sorted { lhs, rhs in
+                if lhs.index != rhs.index { return lhs.index < rhs.index }
+                return lhs.id < rhs.id
+            }
+            .flatMap { group -> [String] in
+                let groupParticipants = (participantsByGroupID[group.id] ?? []).sorted { participantSort($0, $1, contexts: contexts) }
+                guard groupParticipants.isPopulated else { return [] }
+                var groupData = baseData(rowType: "tee_group", series: series, seriesRound: seriesRound, snapshot: snapshot)
+                groupData["tee_group_id"] = group.id
+                groupData["tee_group_name"] = group.name
+                groupData["tee_group_index"] = String(group.index + 1)
+                groupData["tee_time"] = group.teeTime ?? ""
+                groupData["starting_hole"] = String(group.startingHole)
+                groupData["notes"] = selectedSeriesTeamNames.isPopulated ? selectedSeriesTeamNames.sorted().joined(separator: "; ") : ""
+                let playerRows = groupParticipants.map { participant in
+                    let context = contexts[participant.id]
+                    var data = baseData(rowType: "tee_group_player", series: series, seriesRound: seriesRound, snapshot: snapshot)
+                    applyParticipant(participant, to: &data, context: context, membersByID: membersByID, membersByPlayerID: membersByPlayerID, groupsByID: groupsByID)
+                    data["team_name"] = participant.teamID.flatMap { teamsByID[$0]?.name } ?? context?.teamName ?? ""
+                    data["tee_group_id"] = group.id
+                    data["tee_group_name"] = group.name
+                    data["tee_group_index"] = String(group.index + 1)
+                    data["tee_time"] = group.teeTime ?? ""
+                    data["starting_hole"] = String(group.startingHole)
+                    return csvLine(data)
+                }
+                return [csvLine(groupData)] + playerRows
+            }
+    }
+
+    static func participantContexts(
         snapshot: RoundSnapshot,
         teamsByID: [String: RoundTeam],
         groupsByID: [String: TeeTimeGroup]
@@ -196,34 +608,218 @@ enum SeriesRoundCSVExporter {
         return contexts
     }
 
-    private static func csvHeader(holeNumbers: [Int], includesHandicap: Bool) -> String {
-        var base = [
-            "series_round_id",
-            "round_id",
-            "series_member_id",
-            "player_id",
-            "player_name",
-            "team_id",
-            "team_name",
-            "matchup_index",
-            "matchup_id",
-            "matchup_side",
-            "matchup_side_id",
-            "tee_group_index",
-            "tee_group_id",
-            "tee_group_name",
-            "tee_time",
-            "starting_hole"
+    private static func baseData(
+        rowType: String,
+        series _: Series,
+        seriesRound: SeriesRound,
+        snapshot: RoundSnapshot
+    ) -> [String: String] {
+        [
+            "row_type": rowType,
+            "series_round_id": seriesRound.id,
+            "series_round_title": displayTitle(for: seriesRound),
+            "series_round_index": String(seriesRound.index + 1),
+            "round_id": snapshot.round.id
         ]
-        if includesHandicap {
-            base.append("handicap_strokes")
-        }
-        return (base + holeNumbers.map { "hole_\($0)_to_par" } + ["total_to_par"]).joined(separator: ",")
     }
 
-    private static func escapedCSV(_ value: String) -> String {
+    private static func applyParticipant(
+        _ participant: RoundParticipant?,
+        to data: inout [String: String],
+        context: ParticipantCSVContext?,
+        membersByID: [String: SeriesMember],
+        membersByPlayerID: [String: SeriesMember],
+        groupsByID: [String: TeeTimeGroup]
+    ) {
+        guard let participant else { return }
+        let member = participant.seriesMemberID.flatMap { membersByID[$0] }
+            ?? participant.playerID.flatMap { membersByPlayerID[$0] }
+        data["participant_id"] = participant.id
+        data["series_member_id"] = member?.id ?? participant.seriesMemberID ?? ""
+        data["player_id"] = participant.playerID ?? ""
+        data["player_name"] = participant.name.fullName
+        data["team_id"] = participant.teamID ?? ""
+        data["tee_group_id"] = context?.teeGroupID ?? participant.groupID ?? ""
+        data["tee_group_name"] = context?.teeGroupName ?? participant.groupID.flatMap { groupsByID[$0]?.name } ?? ""
+        data["tee_group_index"] = context?.teeGroupIndex.map { String($0 + 1) } ?? ""
+        data["tee_time"] = context?.teeTime ?? ""
+        data["starting_hole"] = context?.startingHole.map(String.init) ?? ""
+        data["tee_order"] = participant.teeOrder.map(String.init) ?? ""
+        data["tee_box_id"] = participant.teeBoxID
+        data["matchup_id"] = context?.matchupID ?? ""
+        data["matchup_index"] = context?.matchupIndex.map { String($0 + 1) } ?? ""
+        data["matchup_side"] = context?.matchupSide ?? ""
+        data["matchup_side_id"] = context?.matchupSideID ?? ""
+    }
+
+    private static func csvLine(_ data: [String: String]) -> String {
+        headerColumns
+            .map { escapedCSV(data[$0] ?? "") }
+            .joined(separator: ",")
+    }
+
+    static func escapedCSV(_ value: String) -> String {
         let escaped = value.replacingOccurrences(of: "\"", with: "\"\"")
         return "\"\(escaped)\""
+    }
+
+    private static func filteredParticipants(
+        snapshot: RoundSnapshot,
+        membersByID: [String: SeriesMember],
+        membersByPlayerID: [String: SeriesMember],
+        options: SeriesCSVExportOptions
+    ) -> [RoundParticipant] {
+        snapshot.participants.filter { participant in
+            if options.selectedMemberIDs.isPopulated && !participantMatchesSelectedMember(participant, membersByID: membersByID, membersByPlayerID: membersByPlayerID, selectedMemberIDs: options.selectedMemberIDs) {
+                return false
+            }
+            if options.selectedTeamIDs.isPopulated && !participantMatchesSelectedTeam(participant, membersByID: membersByID, membersByPlayerID: membersByPlayerID, selectedTeamIDs: options.selectedTeamIDs) {
+                return false
+            }
+            return true
+        }
+    }
+
+    private static func participantMatchesSelectedMember(
+        _ participant: RoundParticipant,
+        membersByID: [String: SeriesMember],
+        membersByPlayerID: [String: SeriesMember],
+        selectedMemberIDs: Set<String>
+    ) -> Bool {
+        let member = participant.seriesMemberID.flatMap { membersByID[$0] }
+            ?? participant.playerID.flatMap { membersByPlayerID[$0] }
+        guard let member else {
+            return participant.playerID.map { selectedMemberIDs.contains($0) } ?? false
+        }
+        return selectedMemberIDs.contains(member.id) || member.playerID.map { selectedMemberIDs.contains($0) } == true
+    }
+
+    private static func participantMatchesSelectedTeam(
+        _ participant: RoundParticipant,
+        membersByID: [String: SeriesMember],
+        membersByPlayerID: [String: SeriesMember],
+        selectedTeamIDs: Set<String>
+    ) -> Bool {
+        let member = participant.seriesMemberID.flatMap { membersByID[$0] }
+            ?? participant.playerID.flatMap { membersByPlayerID[$0] }
+        if let teamID = member?.teamID, selectedTeamIDs.contains(teamID) { return true }
+        return participant.teamID.map { selectedTeamIDs.contains($0) } ?? false
+    }
+
+    private static func participantSort(
+        _ lhs: RoundParticipant,
+        _ rhs: RoundParticipant,
+        contexts: [String: ParticipantCSVContext]
+    ) -> Bool {
+        let lc = contexts[lhs.id]
+        let rc = contexts[rhs.id]
+        if (lc?.matchupIndex ?? Int.max) != (rc?.matchupIndex ?? Int.max) {
+            return (lc?.matchupIndex ?? Int.max) < (rc?.matchupIndex ?? Int.max)
+        }
+        if (lc?.teeGroupIndex ?? Int.max) != (rc?.teeGroupIndex ?? Int.max) {
+            return (lc?.teeGroupIndex ?? Int.max) < (rc?.teeGroupIndex ?? Int.max)
+        }
+        if (lhs.teeOrder ?? Int.max) != (rhs.teeOrder ?? Int.max) {
+            return (lhs.teeOrder ?? Int.max) < (rhs.teeOrder ?? Int.max)
+        }
+        return lhs.name.fullName.localizedCaseInsensitiveCompare(rhs.name.fullName) == .orderedAscending
+    }
+
+    private static func scoringHoles(in snapshot: RoundSnapshot) -> [Hole] {
+        let preferredTeeID = snapshot.courseSegment?.defaultTee
+        let tee = preferredTeeID.flatMap { snapshot.courseSegment?.tee(from: $0) }
+            ?? snapshot.courseSegment?.courseInfo.tees.first
+        let allHoles = tee?.holes ?? []
+        let sliced = Array(allHoles.slice(for: snapshot.holeSegment))
+        return sliced.isEmpty ? allHoles : sliced
+    }
+
+    private static func total(row: ScoringRow, keyPath: KeyPath<ScoringRow.HoleValue, Int?>) -> String {
+        let values = row.holeValues.values.compactMap { $0[keyPath: keyPath] }
+        guard values.isPopulated else { return "" }
+        return String(values.reduce(0, +))
+    }
+
+    private static func handicapUsed(row: ScoringRow) -> String {
+        let values = row.holeValues.values.compactMap { value -> Int? in
+            guard let raw = value.rawStrokes, let net = value.netStrokes else { return nil }
+            return raw - net
+        }
+        guard values.isPopulated else { return "" }
+        return String(values.reduce(0, +))
+    }
+
+    private static func participantStrokeTotal(_ participantID: String, snapshot: RoundSnapshot, basis: ScoreBasis) -> String {
+        let entries = snapshot.scoring.filter { $0.scoringUnitID == participantID }
+        guard entries.contains(where: { $0.strokes != nil }) else { return "" }
+        let total = entries.reduce(0) { partial, entry in
+            guard let raw = entry.strokes else { return partial }
+            if basis == .gross { return partial + raw }
+            let participant = snapshot.participants.first { $0.id == participantID }
+            let delta = participant.map { handicapStrokeDelta(participant: $0, holeNumber: entry.holeNumber, snapshot: snapshot) } ?? 0
+            return partial + max(1, raw - delta)
+        }
+        return String(total)
+    }
+
+    private static func strokeDifference(gross: String?, net: String?) -> String {
+        guard let gross, let net, let grossValue = Int(gross), let netValue = Int(net) else { return "" }
+        return String(grossValue - netValue)
+    }
+
+    private static func handicapStrokeDelta(participant: RoundParticipant, holeNumber: Int, snapshot: RoundSnapshot) -> Int {
+        guard snapshot.configuration.useHandicaps else { return 0 }
+        let holeCount = snapshot.holeRange?.count ?? snapshot.holeSegment.holeCount
+        guard holeCount > 0 else { return 0 }
+        let tee = snapshot.courseSegment?.tee(from: participant.teeBoxID)
+            ?? snapshot.courseSegment?.tee(from: snapshot.courseSegment?.defaultTee ?? "")
+            ?? snapshot.courseSegment?.courseInfo.tees.first
+        guard let strokeIndex = tee?.holes.first(where: { $0.number == holeNumber })?.handicap else { return 0 }
+        let handicap = max(0, participant.adjustedHandicap)
+        let base = handicap / holeCount
+        let remainder = handicap % holeCount
+        let orderedIndex = max(1, min(holeCount, strokeIndex))
+        return base + (orderedIndex <= remainder ? 1 : 0)
+    }
+
+    private static func leaderboardName(row: ScoringRow, snapshot: RoundSnapshot) -> String {
+        switch row.owner {
+        case .participant:
+            return snapshot.participants.first { $0.id == row.scoringUnitID }?.name.fullName ?? row.scoringUnitID
+        case .team:
+            return snapshot.teams.first { $0.id == row.scoringUnitID }?.name ?? row.scoringUnitID
+        case .scoreOwner:
+            if let group = snapshot.scoringGroup(id: row.scoringUnitID),
+               let label = group.label,
+               label.isPopulated {
+                return label
+            }
+            let names = row.participantIDs
+                .compactMap { participantID in
+                    snapshot.participants.first { $0.id == participantID }?.name.fullName
+                }
+                .filter(\.isPopulated)
+            return names.isPopulated ? names.joined(separator: " + ") : row.scoringUnitID
+        }
+    }
+
+    private static func leaderboardTeamID(row: ScoringRow, participant: RoundParticipant?) -> String {
+        if row.owner == .team { return row.scoringUnitID }
+        return participant?.teamID ?? ""
+    }
+
+    private static func formatScore(_ total: Double, isPointsFormat: Bool) -> String {
+        MatchupResultPresentationBuilder.scoreLabel(for: total, isPointsFormat: isPointsFormat)
+    }
+
+    private static func displayTitle(for seriesRound: SeriesRound) -> String {
+        seriesRound.title.isPopulated ? seriesRound.title : "Round \(seriesRound.index + 1)"
+    }
+}
+
+enum SeriesRoundCSVExporter {
+    static func document(seriesRound: SeriesRound, snapshot: RoundSnapshot, members: [SeriesMember]) -> SeriesCSVExportDocument {
+        SeriesCSVExporter.document(seriesRound: seriesRound, snapshot: snapshot, members: members)
     }
 }
 
@@ -981,6 +1577,7 @@ final class SeriesViewModel: ObservableObject, Loggable {
     @Published var correctingRoundID: String?
     @Published var exportingRoundID: String?
     @Published var exportedCSVURL: URL?
+    @Published var skippedCSVExportRoundTitles: [String] = []
     @Published var seriesCourseTeesByCourseID: [String: [Tee]] = [:]
     @Published var isRebuildingIndividualStandings = false
     @Published var isRebuildingAutomaticAwards = false
@@ -4691,25 +5288,49 @@ final class SeriesViewModel: ObservableObject, Loggable {
     // MARK: - CSV Export
 
     func exportCSV(for seriesRound: SeriesRound) async -> URL? {
-        guard let roundID = seriesRound.roundID else { return nil }
+        guard seriesRound.roundID != nil else { return nil }
         exportingRoundID = seriesRound.id
         defer { exportingRoundID = nil }
 
-        guard let snapshot = await loadRoundSnapshot(roundID: roundID) else { return nil }
-        let document = SeriesRoundCSVExporter.document(seriesRound: seriesRound, snapshot: snapshot, members: members)
-        guard document.rows.isPopulated else { return nil }
+        let options = SeriesCSVExportOptions(
+            selectedRoundIDs: [seriesRound.id],
+            selectedTeamIDs: [],
+            selectedMemberIDs: [],
+            selectedSections: Set(SeriesCSVExportSection.allCases)
+        )
+        return await exportCSV(options: options)
+    }
+
+    func exportCSV(options: SeriesCSVExportOptions) async -> URL? {
+        exportingRoundID = "series"
+        skippedCSVExportRoundTitles = []
+        defer { exportingRoundID = nil }
+
+        let exportResult = await SeriesCSVExporter.build(
+            series: series,
+            rounds: rounds,
+            members: members,
+            teams: teams,
+            options: options,
+            snapshotProvider: { [weak self] seriesRound in
+                await self?.cachedLinkedRoundSnapshot(for: seriesRound)
+            }
+        )
+        skippedCSVExportRoundTitles = exportResult.skippedRoundTitles
+        guard let document = exportResult.document, document.rows.isPopulated else { return nil }
 
         let fileURL = FileManager.default.temporaryDirectory
-            .appendingPathComponent("series-round-\(seriesRound.index + 1)-\(seriesRound.id.prefix(6)).csv")
+            .appendingPathComponent(csvExportFileName())
 
         do {
             try document.content.write(to: fileURL, atomically: true, encoding: .utf8)
             exportedCSVURL = fileURL
             addEvent(
-                "series.round_csv_exported",
+                "series.csv_exported",
                 eventProps: seriesTelemetryProps([
-                    "series_round_id": seriesRound.id,
-                    "hole_count": snapshot.holeRange?.count ?? snapshot.holeSegment.holeCount
+                    "round_count": options.selectedRoundIDs.count,
+                    "section_count": options.selectedSections.count,
+                    "skipped_round_count": exportResult.skippedRoundTitles.count
                 ])
             )
             return fileURL
@@ -4717,6 +5338,18 @@ final class SeriesViewModel: ObservableObject, Loggable {
             addBreadcrumb(level: .error, message: "Failed to write series CSV export", error: error)
             return nil
         }
+    }
+
+    private func csvExportFileName() -> String {
+        let slug = series.name
+            .lowercased()
+            .components(separatedBy: CharacterSet.alphanumerics.inverted)
+            .filter(\.isPopulated)
+            .joined(separator: "-")
+        let formatter = DateFormatter()
+        formatter.dateFormat = "yyyyMMdd"
+        let date = formatter.string(from: Date())
+        return "series-\(slug.isPopulated ? slug : series.id)-export-\(date).csv"
     }
 
     func pointAwards(for seriesRound: SeriesRound, track: SeriesAwardTrack? = nil) -> [SeriesPointAward] {
