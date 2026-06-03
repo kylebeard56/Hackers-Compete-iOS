@@ -2074,6 +2074,7 @@ struct SeriesRound: FirebaseSubcollectable, IndexIterable {
     var notes: String?
     var awardsStatus: SeriesAwardsStatus
     var awardsFinalizedAt: Time?
+    var automaticAwardsEngineVersion: Int
     var lastScoreAdjustmentAt: Time?
     var lastScoreAdjustmentByMemberID: String?
     var lastScoreAdjustmentReason: String?
@@ -2106,6 +2107,7 @@ struct SeriesRound: FirebaseSubcollectable, IndexIterable {
         notes: String? = nil,
         awardsStatus: SeriesAwardsStatus = .pending,
         awardsFinalizedAt: Time? = nil,
+        automaticAwardsEngineVersion: Int = 0,
         lastScoreAdjustmentAt: Time? = nil,
         lastScoreAdjustmentByMemberID: String? = nil,
         lastScoreAdjustmentReason: String? = nil,
@@ -2133,6 +2135,7 @@ struct SeriesRound: FirebaseSubcollectable, IndexIterable {
         self.notes = notes
         self.awardsStatus = awardsStatus
         self.awardsFinalizedAt = awardsFinalizedAt
+        self.automaticAwardsEngineVersion = automaticAwardsEngineVersion
         self.lastScoreAdjustmentAt = lastScoreAdjustmentAt
         self.lastScoreAdjustmentByMemberID = lastScoreAdjustmentByMemberID
         self.lastScoreAdjustmentReason = lastScoreAdjustmentReason
@@ -2158,6 +2161,7 @@ struct SeriesRound: FirebaseSubcollectable, IndexIterable {
         case partnershipPlans = "partnership_plans"
         case awardsStatus = "awards_status"
         case awardsFinalizedAt = "awards_finalized_at"
+        case automaticAwardsEngineVersion = "automatic_awards_engine_version"
         case lastScoreAdjustmentAt = "last_score_adjustment_at"
         case lastScoreAdjustmentByMemberID = "last_score_adjustment_by_member_id"
         case lastScoreAdjustmentReason = "last_score_adjustment_reason"
@@ -2188,6 +2192,7 @@ struct SeriesRound: FirebaseSubcollectable, IndexIterable {
         notes = try c.decodeIfPresent(String.self, forKey: .notes)
         awardsStatus = try c.decodeIfPresent(SeriesAwardsStatus.self, forKey: .awardsStatus) ?? .pending
         awardsFinalizedAt = try c.decodeIfPresent(Time.self, forKey: .awardsFinalizedAt)
+        automaticAwardsEngineVersion = try c.decodeIfPresent(Int.self, forKey: .automaticAwardsEngineVersion) ?? 0
         lastScoreAdjustmentAt = try c.decodeIfPresent(Time.self, forKey: .lastScoreAdjustmentAt)
         lastScoreAdjustmentByMemberID = try c.decodeIfPresent(String.self, forKey: .lastScoreAdjustmentByMemberID)
         lastScoreAdjustmentReason = try c.decodeIfPresent(String.self, forKey: .lastScoreAdjustmentReason)
@@ -2218,6 +2223,7 @@ struct SeriesRound: FirebaseSubcollectable, IndexIterable {
         try c.encodeIfPresent(notes, forKey: .notes)
         try c.encode(awardsStatus, forKey: .awardsStatus)
         try c.encodeIfPresent(awardsFinalizedAt, forKey: .awardsFinalizedAt)
+        try c.encode(automaticAwardsEngineVersion, forKey: .automaticAwardsEngineVersion)
         try c.encodeIfPresent(lastScoreAdjustmentAt, forKey: .lastScoreAdjustmentAt)
         try c.encodeIfPresent(lastScoreAdjustmentByMemberID, forKey: .lastScoreAdjustmentByMemberID)
         try c.encodeIfPresent(lastScoreAdjustmentReason, forKey: .lastScoreAdjustmentReason)

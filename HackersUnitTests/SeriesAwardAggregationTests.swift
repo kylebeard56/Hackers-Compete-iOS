@@ -54,6 +54,18 @@ final class SeriesAwardAggregationTests: XCTestCase {
         )
     }
 
+    private func makeTeamRow(teamID: String, participantIDs: [String], total: Double) -> ScoringRow {
+        ScoringRow(
+            scoringUnitID: teamID,
+            participantIDs: participantIDs,
+            countingParticipantIDs: participantIDs,
+            owner: .team,
+            holeValues: [:],
+            total: total,
+            holesPlayed: 1
+        )
+    }
+
     private func standingsSort(_ lhs: SeriesStanding, _ rhs: SeriesStanding) -> Bool {
         if lhs.totalPoints != rhs.totalPoints { return lhs.totalPoints > rhs.totalPoints }
         if lhs.wins != rhs.wins { return lhs.wins > rhs.wins }
@@ -389,5 +401,132 @@ final class SeriesAwardAggregationTests: XCTestCase {
         XCTAssertEqual(teamStandings.first?.totalPoints, 1)
         XCTAssertEqual(individualStandings.first?.competitorID, "m2")
         XCTAssertEqual(individualStandings.first?.totalPoints, 8)
+    }
+
+    func testMatchupAwardRowsHonorMappedAutoWinOverLowerRawScore() {
+        let participants = [
+            makeParticipant(id: "p3a", memberID: "m3a", teamID: "round_team3", name: "Team3A"),
+            makeParticipant(id: "p3b", memberID: "m3b", teamID: "round_team3", name: "Team3B"),
+            makeParticipant(id: "p7a", memberID: "m7a", teamID: "round_team7", name: "Team7A"),
+        ]
+        let snapshot = RoundSnapshot(
+            round: Round(id: "round1", status: .complete),
+            participants: participants,
+            teams: [
+                RoundTeam(id: "round_team3", name: "Round Team 3", color: "orange", index: 0, createdAt: .init(), parentID: "round1"),
+                RoundTeam(id: "round_team7", name: "Round Team 7", color: "blue", index: 1, createdAt: .init(), parentID: "round1"),
+            ],
+            segments: [RoundSegment(id: "seg1", parentID: "round1")]
+        )
+        let rows = [
+            makeTeamRow(teamID: "round_team7", participantIDs: ["p7a"], total: 1),
+            makeTeamRow(teamID: "round_team3", participantIDs: ["p3a", "p3b"], total: 20),
+        ]
+        let matchup = TeamMatchup(id: "match1", teamIDs: ["series_team3", "series_team7"], mode: .team)
+        let status = MatchupMinimumCountStatus(
+            requiredCount: 2,
+            scope: .perRound,
+            sideStatuses: [
+                MatchupMinimumCountSideStatus(
+                    sideID: "series_team3",
+                    requiredCount: 2,
+                    actualCount: 2,
+                    availableParticipantCount: 2,
+                    shortageKind: nil
+                ),
+                MatchupMinimumCountSideStatus(
+                    sideID: "series_team7",
+                    requiredCount: 2,
+                    actualCount: 1,
+                    availableParticipantCount: 1,
+                    shortageKind: .structural
+                ),
+            ]
+        )
+
+        let resolved = SeriesViewModel.resolvedMatchupAwardRows(
+            rows,
+            matchup: matchup,
+            status: status,
+            highestWins: false,
+            snapshot: snapshot,
+            mappings: [
+                SeriesRoundMapping(
+                    id: "map3",
+                    seriesRoundID: "sr1",
+                    roundOwnerType: .team,
+                    roundOwnerID: "round_team3",
+                    competitorType: .team,
+                    competitorID: "series_team3",
+                    parentID: "series1"
+                ),
+                SeriesRoundMapping(
+                    id: "map7",
+                    seriesRoundID: "sr1",
+                    roundOwnerType: .team,
+                    roundOwnerID: "round_team7",
+                    competitorType: .team,
+                    competitorID: "series_team7",
+                    parentID: "series1"
+                ),
+            ],
+            members: []
+        )
+
+        XCTAssertFalse(resolved.isMinimumCountTie)
+        XCTAssertEqual(resolved.rows.map(\.scoringUnitID), ["round_team3", "round_team7"])
+    }
+
+    func testMatchupAwardRowsTreatBothSidesUnderMinimumAsTie() {
+        let participants = [
+            makeParticipant(id: "p1", memberID: "m1", teamID: "team1", name: "One"),
+            makeParticipant(id: "p2", memberID: "m2", teamID: "team2", name: "Two"),
+        ]
+        let snapshot = RoundSnapshot(
+            round: Round(id: "round1", status: .complete),
+            participants: participants,
+            teams: [
+                RoundTeam(id: "team1", name: "Team 1", color: "red", index: 0, createdAt: .init(), parentID: "round1"),
+                RoundTeam(id: "team2", name: "Team 2", color: "blue", index: 1, createdAt: .init(), parentID: "round1"),
+            ],
+            segments: [RoundSegment(id: "seg1", parentID: "round1")]
+        )
+        let rows = [
+            makeTeamRow(teamID: "team2", participantIDs: ["p2"], total: 1),
+            makeTeamRow(teamID: "team1", participantIDs: ["p1"], total: 10),
+        ]
+        let status = MatchupMinimumCountStatus(
+            requiredCount: 2,
+            scope: .perRound,
+            sideStatuses: [
+                MatchupMinimumCountSideStatus(
+                    sideID: "team1",
+                    requiredCount: 2,
+                    actualCount: 1,
+                    availableParticipantCount: 1,
+                    shortageKind: .structural
+                ),
+                MatchupMinimumCountSideStatus(
+                    sideID: "team2",
+                    requiredCount: 2,
+                    actualCount: 1,
+                    availableParticipantCount: 1,
+                    shortageKind: .structural
+                ),
+            ]
+        )
+
+        let resolved = SeriesViewModel.resolvedMatchupAwardRows(
+            rows,
+            matchup: TeamMatchup(id: "match1", teamIDs: ["team1", "team2"], mode: .team),
+            status: status,
+            highestWins: false,
+            snapshot: snapshot,
+            mappings: [],
+            members: []
+        )
+
+        XCTAssertTrue(resolved.isMinimumCountTie)
+        XCTAssertEqual(resolved.rows.map(\.scoringUnitID), ["team1", "team2"])
     }
 }

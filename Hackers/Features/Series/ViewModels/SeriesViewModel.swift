@@ -1551,6 +1551,8 @@ private struct SeriesLeagueRulesSignaturePayload: Codable, Hashable {
 
 @MainActor
 final class SeriesViewModel: ObservableObject, Loggable {
+    nonisolated static let currentAutomaticAwardsEngineVersion = 2
+
     @Published var series: Series = .init()
     @Published var members: [SeriesMember] = []
     @Published var invites: [SeriesInvite] = []
@@ -4244,7 +4246,7 @@ final class SeriesViewModel: ObservableObject, Loggable {
 
                 if shouldProcessCompletedRound, let snapshot {
                     let shouldOverwriteDerivedData = previousStatus == .complete
-                        && completedLinkedRoundChangedAfterAwardsFinalized(
+                        && completedLinkedRoundNeedsFinalizedAutomaticAwardRefresh(
                             seriesRound: rounds[roundIndex],
                             linkedRound: linkedRound
                         )
@@ -4297,9 +4299,8 @@ final class SeriesViewModel: ObservableObject, Loggable {
             && !hasAwardRows
 
         let needsFinalizedAwardRefresh = hasAutomaticAwardProfile(for: seriesRound)
-            && hasAwardRows
             && seriesRound.awardsStatus == .finalized
-            && completedLinkedRoundChangedAfterAwardsFinalized(seriesRound: seriesRound, linkedRound: linkedRound)
+            && (!hasAwardRows || completedLinkedRoundNeedsFinalizedAutomaticAwardRefresh(seriesRound: seriesRound, linkedRound: linkedRound))
 
         return needsHandicapRefresh || needsAwardRefresh || needsFinalizedAwardRefresh
     }
@@ -4317,7 +4318,11 @@ final class SeriesViewModel: ObservableObject, Loggable {
             }
     }
 
-    private func completedLinkedRoundChangedAfterAwardsFinalized(
+    nonisolated static func automaticAwardsNeedEngineRefresh(for seriesRound: SeriesRound) -> Bool {
+        seriesRound.automaticAwardsEngineVersion < currentAutomaticAwardsEngineVersion
+    }
+
+    private func completedLinkedRoundNeedsFinalizedAutomaticAwardRefresh(
         seriesRound: SeriesRound,
         linkedRound: Round
     ) -> Bool {
@@ -4325,6 +4330,9 @@ final class SeriesViewModel: ObservableObject, Loggable {
             return false
         }
         guard hasAutomaticAwardProfile(for: seriesRound) else { return false }
+        if Self.automaticAwardsNeedEngineRefresh(for: seriesRound) {
+            return true
+        }
         guard let awardsFinalizedAt = seriesRound.awardsFinalizedAt else { return true }
         return linkedRound.lastUpdatedAt.unix > awardsFinalizedAt.unix
     }
@@ -4346,9 +4354,15 @@ final class SeriesViewModel: ObservableObject, Loggable {
         let awardsState = await finalizeAwardsIfPossible(seriesRound: seriesRound, snapshot: snapshot)
         if let index = rounds.firstIndex(where: { $0.id == seriesRound.id }) {
             let shouldRefreshFinalizedAt = overwriteDerivedData && awardsState == .finalized
-            if rounds[index].awardsStatus != awardsState || shouldRefreshFinalizedAt {
+            let shouldUpdateAutomaticAwardsEngineVersion = awardsState == .finalized
+                && hasAutomaticAwardProfile(for: rounds[index])
+                && rounds[index].automaticAwardsEngineVersion != Self.currentAutomaticAwardsEngineVersion
+            if rounds[index].awardsStatus != awardsState || shouldRefreshFinalizedAt || shouldUpdateAutomaticAwardsEngineVersion {
                 rounds[index].awardsStatus = awardsState
                 rounds[index].awardsFinalizedAt = awardsState == .finalized ? .init() : nil
+                if shouldUpdateAutomaticAwardsEngineVersion {
+                    rounds[index].automaticAwardsEngineVersion = Self.currentAutomaticAwardsEngineVersion
+                }
                 rounds[index].lastUpdatedAt = .init()
                 _ = await FirebaseService.shared.updateSeriesRound(rounds[index])
                 changed = true
@@ -6478,7 +6492,7 @@ final class SeriesViewModel: ObservableObject, Loggable {
             let ownerRows = result.rows.map { row in
                 OwnerPlacementRow(
                     roundOwnerID: row.scoringUnitID,
-                    roundOwnerType: roundOwnerType(for: row.owner),
+                    roundOwnerType: Self.roundOwnerType(for: row.owner),
                     displayName: ownerDisplayName(for: row, snapshot: snapshot),
                     fallbackParticipantIDs: row.participantIDs,
                     fallbackTeamID: scoreOwnerFallbackTeamID(for: row, snapshot: snapshot),
@@ -6574,7 +6588,7 @@ final class SeriesViewModel: ObservableObject, Loggable {
             let ownerRows = result.rows.filter { $0.owner == .team || $0.owner == .scoreOwner }.map { row in
                 OwnerPlacementRow(
                     roundOwnerID: row.scoringUnitID,
-                    roundOwnerType: roundOwnerType(for: row.owner),
+                    roundOwnerType: Self.roundOwnerType(for: row.owner),
                     displayName: ownerDisplayName(for: row, snapshot: snapshot),
                     fallbackParticipantIDs: row.participantIDs,
                     fallbackTeamID: scoreOwnerFallbackTeamID(for: row, snapshot: snapshot),
@@ -6622,27 +6636,20 @@ final class SeriesViewModel: ObservableObject, Loggable {
         var competitors: [AwardCompetitor] = []
         for matchupResult in result.matchupResults {
             let highestWins = matchupResult.isPointsFormat ?? (result.template.leaderboardSort == .highestWins)
-            let sortedRows: [ScoringRow]
-            let isMinimumCountTie: Bool
-            if shouldResolveMinimumCountResult(matchupResult.minimumCountStatus, snapshot: snapshot),
-               let minimumStatus = matchupResult.minimumCountStatus,
-               minimumStatus.hasUnderMinimumSide {
-                sortedRows = minimumCountResolvedRows(
-                    matchupResult.rows,
-                    matchup: matchupResult.matchup,
-                    status: minimumStatus,
-                    highestWins: highestWins
-                )
-                isMinimumCountTie = minimumStatus.bothSidesUnderMinimum
-            } else {
-                sortedRows = matchupResult.rows.sorted {
-                    if $0.total != $1.total {
-                        return highestWins ? $0.total > $1.total : $0.total < $1.total
-                    }
-                    return $0.scoringUnitID < $1.scoringUnitID
-                }
-                isMinimumCountTie = false
-            }
+            let minimumStatus = shouldResolveMinimumCountResult(matchupResult.minimumCountStatus, snapshot: snapshot)
+                ? matchupResult.minimumCountStatus
+                : nil
+            let resolvedRows = Self.resolvedMatchupAwardRows(
+                matchupResult.rows,
+                matchup: matchupResult.matchup,
+                status: minimumStatus,
+                highestWins: highestWins,
+                snapshot: snapshot,
+                mappings: mappings,
+                members: members
+            )
+            let sortedRows = resolvedRows.rows
+            let isMinimumCountTie = resolvedRows.isMinimumCountTie
 
             guard let first = sortedRows.first else { continue }
             let isTie = isMinimumCountTie || (sortedRows.count > 1 && sortedRows.allSatisfy { $0.total == first.total })
@@ -6651,7 +6658,7 @@ final class SeriesViewModel: ObservableObject, Loggable {
                 let placement = isTie ? 1 : (row.scoringUnitID == first.scoringUnitID ? 1 : 2)
                 let ownerPlacement = OwnerPlacement(
                     roundOwnerID: row.scoringUnitID,
-                    roundOwnerType: roundOwnerType(for: row.owner),
+                    roundOwnerType: Self.roundOwnerType(for: row.owner),
                     displayName: ownerDisplayName(for: row, snapshot: snapshot),
                     fallbackParticipantIDs: row.participantIDs,
                     fallbackTeamID: scoreOwnerFallbackTeamID(for: row, snapshot: snapshot),
@@ -6681,35 +6688,108 @@ final class SeriesViewModel: ObservableObject, Loggable {
         return status.hasStructuralShortage || snapshot.round.status == .complete
     }
 
-    private func minimumCountResolvedRows(
+    nonisolated static func resolvedMatchupAwardRows(
         _ rows: [ScoringRow],
         matchup: TeamMatchup,
-        status: MatchupMinimumCountStatus,
-        highestWins: Bool
-    ) -> [ScoringRow] {
-        let pairingOrder = matchup.pairingIDs()
-        let rowByID = Dictionary(uniqueKeysWithValues: rows.map { ($0.scoringUnitID, $0) })
-        if let winnerID = status.autoWinnerSideID,
-           let winner = rowByID[winnerID] {
-            let losers = pairingOrder
-                .filter { $0 != winnerID }
-                .compactMap { rowByID[$0] }
-            let extras = rows.filter { row in
-                row.scoringUnitID != winnerID && !pairingOrder.contains(row.scoringUnitID)
+        status: MatchupMinimumCountStatus?,
+        highestWins: Bool,
+        snapshot: RoundSnapshot,
+        mappings: [SeriesRoundMapping],
+        members: [SeriesMember]
+    ) -> (rows: [ScoringRow], isMinimumCountTie: Bool) {
+        func sortedByScore() -> [ScoringRow] {
+            rows.sorted {
+                if $0.total != $1.total {
+                    return highestWins ? $0.total > $1.total : $0.total < $1.total
+                }
+                return $0.scoringUnitID < $1.scoringUnitID
             }
-            return [winner] + losers + extras
+        }
+
+        guard let status, status.hasUnderMinimumSide else {
+            return (sortedByScore(), false)
+        }
+
+        let pairingOrder = matchup.pairingIDs()
+        func row(for sideID: String) -> ScoringRow? {
+            rows.first { row in
+                rowAwardSideIDs(
+                    for: row,
+                    snapshot: snapshot,
+                    mappings: mappings,
+                    members: members
+                )
+                .contains(sideID)
+            }
+        }
+
+        let pairedRows = pairingOrder.compactMap(row(for:))
+        let pairedRowIDs = Set(pairedRows.map(\.scoringUnitID))
+
+        if let winnerID = status.autoWinnerSideID,
+           let winner = row(for: winnerID) {
+            let losers = pairedRows.filter { $0.scoringUnitID != winner.scoringUnitID }
+            let extras = rows.filter { !pairedRowIDs.contains($0.scoringUnitID) && $0.scoringUnitID != winner.scoringUnitID }
+            return ([winner] + losers + extras, false)
         }
         if status.bothSidesUnderMinimum {
-            let ordered = pairingOrder.compactMap { rowByID[$0] }
-            let extras = rows.filter { !pairingOrder.contains($0.scoringUnitID) }
-            return ordered + extras
+            let extras = rows.filter { !pairedRowIDs.contains($0.scoringUnitID) }
+            return (pairedRows + extras, true)
         }
-        return rows.sorted {
-            if $0.total != $1.total {
-                return highestWins ? $0.total > $1.total : $0.total < $1.total
+
+        return (sortedByScore(), false)
+    }
+
+    private nonisolated static func rowAwardSideIDs(
+        for row: ScoringRow,
+        snapshot: RoundSnapshot,
+        mappings: [SeriesRoundMapping],
+        members: [SeriesMember]
+    ) -> Set<String> {
+        var ids = Set([row.scoringUnitID])
+        let ownerType = roundOwnerType(for: row.owner)
+        for mapping in mappings where mapping.roundOwnerID == row.scoringUnitID && mapping.roundOwnerType == ownerType {
+            ids.insert(mapping.competitorID)
+        }
+
+        let participantByID = Dictionary(uniqueKeysWithValues: snapshot.participants.map { ($0.id, $0) })
+        var memberByPlayerID: [String: SeriesMember] = [:]
+        for member in members {
+            guard let playerID = member.playerID, memberByPlayerID[playerID] == nil else { continue }
+            memberByPlayerID[playerID] = member
+        }
+
+        for participantID in row.participantIDs {
+            ids.insert(participantID)
+            guard let participant = participantByID[participantID] else { continue }
+            if let teamID = participant.teamID {
+                ids.insert(teamID)
+                for mapping in mappings where mapping.roundOwnerID == teamID && mapping.roundOwnerType == .team {
+                    ids.insert(mapping.competitorID)
+                }
             }
-            return $0.scoringUnitID < $1.scoringUnitID
+            if let memberID = participant.seriesMemberID {
+                ids.insert(memberID)
+            }
+            if let playerID = participant.playerID,
+               let member = memberByPlayerID[playerID] {
+                ids.insert(member.id)
+                if let teamID = member.teamID {
+                    ids.insert(teamID)
+                }
+            }
         }
+
+        if row.owner == .scoreOwner,
+           let scoringGroup = snapshot.scoringGroup(id: row.scoringUnitID),
+           let teamID = scoringGroup.teamID {
+            ids.insert(teamID)
+            for mapping in mappings where mapping.roundOwnerID == teamID && mapping.roundOwnerType == .team {
+                ids.insert(mapping.competitorID)
+            }
+        }
+
+        return ids
     }
 
     private struct AwardPlacementRow {
@@ -6762,7 +6842,7 @@ final class SeriesViewModel: ObservableObject, Loggable {
         }
     }
 
-    private func roundOwnerType(for owner: ScoringOwner) -> SeriesRoundOwnerType {
+    private nonisolated static func roundOwnerType(for owner: ScoringOwner) -> SeriesRoundOwnerType {
         switch owner {
         case .participant: return .participant
         case .team: return .team

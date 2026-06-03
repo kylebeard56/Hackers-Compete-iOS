@@ -4699,27 +4699,20 @@ final class LiveRoundViewModel: ObservableObject, Loggable {
             let rows = matchupResult.rows
             guard rows.contains(where: { $0.holesPlayed > 0 || abs($0.total) > 0.000_001 }) else { continue }
             let highestWins = matchupResult.isPointsFormat ?? (result.template.leaderboardSort == .highestWins)
-            let sortedRows: [ScoringRow]
-            let isMinimumCountTie: Bool
-            if shouldResolveMinimumCountResult(matchupResult.minimumCountStatus),
-               let minimumStatus = matchupResult.minimumCountStatus,
-               minimumStatus.hasUnderMinimumSide {
-                sortedRows = Self.minimumCountResolvedRows(
-                    rows,
-                    matchup: matchupResult.matchup,
-                    status: minimumStatus,
-                    highestWins: highestWins
-                )
-                isMinimumCountTie = minimumStatus.bothSidesUnderMinimum
-            } else {
-                sortedRows = rows.sorted {
-                    if $0.total != $1.total {
-                        return highestWins ? $0.total > $1.total : $0.total < $1.total
-                    }
-                    return $0.scoringUnitID < $1.scoringUnitID
-                }
-                isMinimumCountTie = false
-            }
+            let minimumStatus = shouldResolveMinimumCountResult(matchupResult.minimumCountStatus)
+                ? matchupResult.minimumCountStatus
+                : nil
+            let resolvedRows = SeriesViewModel.resolvedMatchupAwardRows(
+                rows,
+                matchup: matchupResult.matchup,
+                status: minimumStatus,
+                highestWins: highestWins,
+                snapshot: snapshot,
+                mappings: context.currentRoundMappings,
+                members: context.members
+            )
+            let sortedRows = resolvedRows.rows
+            let isMinimumCountTie = resolvedRows.isMinimumCountTie
             guard let first = sortedRows.first else { continue }
             let isTie = isMinimumCountTie || (sortedRows.count > 1 && sortedRows.allSatisfy { abs($0.total - first.total) < 0.000_001 })
             let tieGroupSize = isTie ? sortedRows.count : 1

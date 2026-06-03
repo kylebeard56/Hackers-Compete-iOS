@@ -57,6 +57,26 @@ final class SeriesRoundCodableTests: XCTestCase {
         XCTAssertEqual(dict["schema"] as? Int, 1)
     }
 
+    func testLegacySeriesRoundAwardsEngineVersionDefaultsToRefreshNeeded() throws {
+        let legacyJSON = Data(
+            #"{"id":"round1","title":"Week 1","index":0,"status":"complete","awards_status":"finalized","parent_id":"series1"}"#.utf8
+        )
+        let legacyRound = try JSONDecoder().decode(SeriesRound.self, from: legacyJSON)
+        let currentRound = SeriesRound(
+            id: "round2",
+            title: "Week 2",
+            index: 1,
+            status: .complete,
+            awardsStatus: .finalized,
+            automaticAwardsEngineVersion: SeriesViewModel.currentAutomaticAwardsEngineVersion,
+            parentID: "series1"
+        )
+
+        XCTAssertEqual(legacyRound.automaticAwardsEngineVersion, 0)
+        XCTAssertTrue(SeriesViewModel.automaticAwardsNeedEngineRefresh(for: legacyRound))
+        XCTAssertFalse(SeriesViewModel.automaticAwardsNeedEngineRefresh(for: currentRound))
+    }
+
     func testLegacySeriesHandicapBasisDefaultsFromDefaultPar() throws {
         let decoder = JSONDecoder()
 
