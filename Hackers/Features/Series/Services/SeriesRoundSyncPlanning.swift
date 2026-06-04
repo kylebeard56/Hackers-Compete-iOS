@@ -736,6 +736,7 @@ enum SeriesRoundSyncPlanning {
         }
         if updateMatchups {
             let matchupSeriesRound = scoringSeriesRound ?? seriesRound
+            let sourceExpectsMatchups = SeriesRoundCreationMapping.resolvedCompetitionScope(for: matchupSeriesRound) == .matchup
             let participantIDs = Dictionary(
                 uniqueKeysWithValues: participants.compactMap { p -> (String, String)? in
                     guard let m = p.seriesMemberID else { return nil }
@@ -750,7 +751,13 @@ enum SeriesRoundSyncPlanning {
                 scoringGroups: scoringGroups,
                 participants: participants
             )
-            segment.matchups = resolvedMatchups.isEmpty ? nil : resolvedMatchups
+            if resolvedMatchups.isEmpty {
+                if !(sourceExpectsMatchups && segment.matchups?.isPopulated == true) {
+                    segment.matchups = nil
+                }
+            } else {
+                segment.matchups = resolvedMatchups
+            }
         }
         segment.lastUpdatedAt = .init()
         return segment
@@ -766,7 +773,13 @@ enum SeriesRoundSyncPlanning {
         config.formatTemplateID = roundConfiguration.formatSummary?.templateID
             ?? existingSegment.templateID
             ?? config.formatTemplateID
-        config.competitionScope = roundConfiguration.competitionScope
+        let sourceExpectsMatchups = SeriesRoundCreationMapping.resolvedCompetitionScope(for: seriesRound) == .matchup
+        let linkedRoundIsMatchup = roundConfiguration.resolvedCompetitionScope == .matchup
+        if sourceExpectsMatchups, !linkedRoundIsMatchup {
+            config.competitionScope = seriesRound.roundConfig.competitionScope ?? .matchup
+        } else {
+            config.competitionScope = roundConfiguration.competitionScope
+        }
         config.teamScoring = roundConfiguration.teamScoring
         config.matchupResolutionStyle = roundConfiguration.matchupResolutionStyle
         let template = FormatTemplateRegistry.template(for: config.formatTemplateID)
@@ -778,11 +791,13 @@ enum SeriesRoundSyncPlanning {
         config.selectionDomain = roundConfiguration.selectionDomain
         config.sequentialTeeStartsEnabled = roundConfiguration.sequentialTeeStartsEnabled
         config.sharedScoreHandicapConfig = roundConfiguration.sharedScoreHandicapConfig
-        config.matchupMode = seriesMatchupMode(
-            from: roundConfiguration,
-            segment: existingSegment,
-            fallback: config.matchupMode
-        )
+        if !(sourceExpectsMatchups && !linkedRoundIsMatchup) {
+            config.matchupMode = seriesMatchupMode(
+                from: roundConfiguration,
+                segment: existingSegment,
+                fallback: config.matchupMode
+            )
+        }
         copy.roundConfig = config
         return copy
     }

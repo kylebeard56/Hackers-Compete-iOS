@@ -249,6 +249,112 @@ final class SeriesRoundSyncServiceTests: XCTestCase {
         XCTAssertNil(updated.matchups?.first?.scoreOwnerIDs)
     }
 
+    func testBuildUpdatedSegment_matchupsOnlyDoesNotClearExistingMatchupsWhenLeagueRebuildIsEmpty() {
+        var context = teamVsTeamMatchupContext()
+        context.teamLinks = [:]
+        let existingMatchup = TeamMatchup(id: "existing_match", teamIDs: ["round_red", "round_blue"], mode: .team)
+        let existingSegment = RoundSegment(
+            id: "seg1",
+            matchups: [existingMatchup],
+            competitionScope: .matchup,
+            parentID: "round1"
+        )
+
+        let updated = SeriesRoundSyncPlanning.buildUpdatedSegment(
+            series: context.series,
+            seriesRound: context.seriesRound,
+            courseSegment: testCourseSegment(),
+            participants: context.participants,
+            scoringGroups: [],
+            existingSegment: existingSegment,
+            teams: context.teams,
+            pods: [],
+            participatingMembers: context.members,
+            teamLinks: context.teamLinks,
+            updateFormat: false,
+            updateScoringUnits: false,
+            updateMatchups: true
+        )
+
+        XCTAssertEqual(updated.competitionScope, .matchup)
+        XCTAssertEqual(updated.matchups, [existingMatchup])
+    }
+
+    func testBuildUpdatedSegment_matchupsOnlyUsesSeriesMatchupPlansWhenLinkedRoundWasBackPropagatedToField() {
+        let context = teamVsTeamMatchupContext()
+        let existingSegment = RoundSegment(
+            id: "seg1",
+            matchups: nil,
+            competitionScope: .field,
+            parentID: "round1"
+        )
+        let linkedRoundConfiguration = RoundConfiguration(
+            primaryFormat: context.seriesRound.roundConfig.legacyGameFormat,
+            competitionScope: .field,
+            teamScoring: .init(mode: .bestN, count: 2, scope: .perRound),
+            matchupScoringStyle: .aggregateRoundTotal,
+            selectionDomain: .team
+        )
+        let scoringSeriesRound = SeriesRoundSyncPlanning.scoringSeriesRoundForExistingRound(
+            context.seriesRound,
+            roundConfiguration: linkedRoundConfiguration,
+            existingSegment: existingSegment
+        )
+
+        let updated = SeriesRoundSyncPlanning.buildUpdatedSegment(
+            series: context.series,
+            seriesRound: context.seriesRound,
+            scoringSeriesRound: scoringSeriesRound,
+            courseSegment: testCourseSegment(),
+            participants: context.participants,
+            scoringGroups: [],
+            existingSegment: existingSegment,
+            teams: context.teams,
+            pods: [],
+            participatingMembers: context.members,
+            teamLinks: context.teamLinks,
+            updateFormat: false,
+            updateScoringUnits: false,
+            updateMatchups: true
+        )
+
+        XCTAssertEqual(scoringSeriesRound.roundConfig.resolvedCompetitionScope, .matchup)
+        XCTAssertEqual(scoringSeriesRound.roundConfig.matchupMode, .teamVsTeam)
+        XCTAssertEqual(updated.matchups?.map(\.id), ["team_match"])
+        XCTAssertEqual(updated.matchups?.first?.teamIDs, ["round_red", "round_blue"])
+    }
+
+    func testBuildUpdatedSegment_matchupsOnlyPreservesManualMaxScoreWhenFormatIsNotSynced() {
+        let context = teamVsTeamMatchupContext()
+        var existingFormat = context.seriesRound.roundConfig.legacyGameFormat
+        existingFormat.configuration.maxScoreOverPar = .double
+        let existingSegment = RoundSegment(
+            id: "seg1",
+            gameFormat: existingFormat,
+            matchups: [TeamMatchup(id: "old_match", teamIDs: ["round_red", "round_blue"], mode: .team)],
+            competitionScope: .matchup,
+            parentID: "round1"
+        )
+
+        let updated = SeriesRoundSyncPlanning.buildUpdatedSegment(
+            series: context.series,
+            seriesRound: context.seriesRound,
+            courseSegment: testCourseSegment(),
+            participants: context.participants,
+            scoringGroups: [],
+            existingSegment: existingSegment,
+            teams: context.teams,
+            pods: [],
+            participatingMembers: context.members,
+            teamLinks: context.teamLinks,
+            updateFormat: false,
+            updateScoringUnits: false,
+            updateMatchups: true
+        )
+
+        XCTAssertEqual(updated.gameFormat.configuration.maxScoreOverPar, .double)
+    }
+
     func testScoringSeriesRoundForExistingRoundCopiesSelectionDomain() {
         var roundConfiguration = RoundConfiguration(selectionDomain: .partnership)
         roundConfiguration.competitionScope = .matchup
@@ -356,6 +462,45 @@ final class SeriesRoundSyncServiceTests: XCTestCase {
         seriesRound.roundConfig = seriesConfig
 
         XCTAssertEqual(viewModel.effectiveRoundConfig(for: seriesRound).formatTemplateID, "linked_template")
+    }
+
+    @MainActor
+    func testEffectiveRoundConfig_doesNotDowngradeSeriesMatchupRoundWhenLinkedRoundIsFieldButPlansExist() {
+        let viewModel = SeriesViewModel()
+        let linkedRound = Round(
+            id: "round1",
+            status: .live,
+            configuration: RoundConfiguration(
+                primaryFormat: GameFormat.strokePlay,
+                competitionScope: .field,
+                matchupScoringStyle: .aggregateRoundTotal,
+                selectionDomain: .team
+            )
+        )
+        viewModel.linkedRounds = ["round1": linkedRound]
+
+        var seriesConfig = SeriesRoundConfiguration(
+            formatTemplateID: FormatTemplateRegistry.bestBall.id,
+            competitionScope: .matchup,
+            matchupMode: .teamVsTeam,
+            teamAssignmentMode: .seriesTeams,
+            allowLobbyBackPropagation: true
+        )
+        seriesConfig.teamScoring = .init(mode: .bestN, count: 2, scope: .perRound)
+        let seriesRound = SeriesRound(
+            id: "series_round1",
+            roundID: "round1",
+            roundConfig: seriesConfig,
+            matchupPlans: [
+                SeriesRoundMatchupPlan(id: "team_match", teamAID: "series_red", teamBID: "series_blue")
+            ],
+            parentID: "series1"
+        )
+
+        let effective = viewModel.effectiveRoundConfig(for: seriesRound)
+
+        XCTAssertEqual(effective.resolvedCompetitionScope, .matchup)
+        XCTAssertEqual(effective.matchupMode, .teamVsTeam)
     }
 
     func testOrganizationTeamMappingPreflight_reportsMissingTeamIDs() {
@@ -1086,6 +1231,56 @@ final class SeriesRoundSyncServiceTests: XCTestCase {
         ]
 
         return (series, seriesRound, members, teams, participants, scoringGroups, teamLinks)
+    }
+
+    private func teamVsTeamMatchupContext() -> (
+        series: Series,
+        seriesRound: SeriesRound,
+        members: [SeriesMember],
+        teams: [SeriesTeam],
+        participants: [RoundParticipant],
+        teamLinks: [String: SeriesRoundCreationMapping.SeriesToRoundTeamLink]
+    ) {
+        var settings = SeriesSettings()
+        settings.useTeams = true
+        let series = Series(id: "series1", settings: settings)
+        let members = [
+            testMember(id: "m1", playerID: "player1", teamID: "series_red"),
+            testMember(id: "m2", playerID: "player2", teamID: "series_red"),
+            testMember(id: "m3", playerID: "player3", teamID: "series_blue"),
+            testMember(id: "m4", playerID: "player4", teamID: "series_blue"),
+        ]
+        let teams = [
+            SeriesTeam(id: "series_red", name: "Red", color: "red", index: 0, createdAt: t0, parentID: "series1"),
+            SeriesTeam(id: "series_blue", name: "Blue", color: "blue", index: 1, createdAt: t0, parentID: "series1"),
+        ]
+        let participants = [
+            RoundParticipant(id: "p1", playerID: "player1", seriesMemberID: "m1", teamID: "round_red", groupID: "g1", createdAt: t0, parentID: "round1"),
+            RoundParticipant(id: "p2", playerID: "player2", seriesMemberID: "m2", teamID: "round_red", groupID: "g1", createdAt: t0, parentID: "round1"),
+            RoundParticipant(id: "p3", playerID: "player3", seriesMemberID: "m3", teamID: "round_blue", groupID: "g2", createdAt: t0, parentID: "round1"),
+            RoundParticipant(id: "p4", playerID: "player4", seriesMemberID: "m4", teamID: "round_blue", groupID: "g2", createdAt: t0, parentID: "round1"),
+        ]
+        var cfg = SeriesRoundConfiguration()
+        cfg.formatTemplateID = FormatTemplateRegistry.bestBall.id
+        cfg.competitionScope = .matchup
+        cfg.matchupMode = .teamVsTeam
+        cfg.teamAssignmentMode = .seriesTeams
+        cfg.selectionDomain = .team
+        cfg.teamScoring = .init(mode: .bestN, count: 2, scope: .perRound)
+        let seriesRound = SeriesRound(
+            id: "sr_team_match",
+            roundConfig: cfg,
+            matchupPlans: [
+                SeriesRoundMatchupPlan(id: "team_match", teamAID: "series_red", teamBID: "series_blue")
+            ],
+            parentID: "series1"
+        )
+        let teamLinks: [String: SeriesRoundCreationMapping.SeriesToRoundTeamLink] = [
+            "series_red": .init(seriesTeamID: "series_red", roundTeamID: "round_red"),
+            "series_blue": .init(seriesTeamID: "series_blue", roundTeamID: "round_blue"),
+        ]
+
+        return (series, seriesRound, members, teams, participants, teamLinks)
     }
 
     private func testMember(id: String, playerID: String, teamID: String? = nil) -> SeriesMember {

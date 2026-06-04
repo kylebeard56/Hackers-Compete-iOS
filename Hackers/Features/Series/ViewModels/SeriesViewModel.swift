@@ -1853,6 +1853,9 @@ final class SeriesViewModel: ObservableObject, Loggable {
               let linkedRound = linkedRounds[roundID],
               shouldUseLinkedRoundConfiguration(for: seriesRound, linkedRound: linkedRound)
         else { return seriesRound.roundConfig }
+        if shouldPreserveSeriesMatchupConfig(for: seriesRound, linkedRound: linkedRound) {
+            return seriesRound.roundConfig
+        }
         return roundConfig(from: linkedRound, fallback: seriesRound.roundConfig)
     }
 
@@ -1864,6 +1867,11 @@ final class SeriesViewModel: ObservableObject, Loggable {
         case .archived:
             return false
         }
+    }
+
+    private func shouldPreserveSeriesMatchupConfig(for seriesRound: SeriesRound, linkedRound: Round) -> Bool {
+        linkedRound.configuration.resolvedCompetitionScope != .matchup
+            && SeriesRoundCreationMapping.resolvedCompetitionScope(for: seriesRound) == .matchup
     }
 
     func roundTileFormatCaption(for seriesRound: SeriesRound) -> String {
@@ -4215,11 +4223,13 @@ final class SeriesViewModel: ObservableObject, Loggable {
                 : nil
 
             if let snapshot, shouldBackPropagate {
-                let updatedConfig = roundConfig(
-                    from: linkedRound,
-                    segment: snapshot.roundSegment,
-                    fallback: rounds[roundIndex].roundConfig
-                )
+                let updatedConfig = shouldPreserveSeriesMatchupConfig(for: rounds[roundIndex], linkedRound: linkedRound)
+                    ? rounds[roundIndex].roundConfig
+                    : roundConfig(
+                        from: linkedRound,
+                        segment: snapshot.roundSegment,
+                        fallback: rounds[roundIndex].roundConfig
+                    )
                 if rounds[roundIndex].roundConfig != updatedConfig {
                     rounds[roundIndex].roundConfig = updatedConfig
                     hasChanged = true
@@ -4231,10 +4241,12 @@ final class SeriesViewModel: ObservableObject, Loggable {
                     hasChanged = true
                 }
 
-                let syncedMatchups = await seriesMatchupPlans(from: snapshot, seriesRound: rounds[roundIndex]) ?? []
-                if rounds[roundIndex].matchupPlans != syncedMatchups {
-                    rounds[roundIndex].matchupPlans = syncedMatchups
-                    hasChanged = true
+                if !shouldPreserveSeriesMatchupConfig(for: rounds[roundIndex], linkedRound: linkedRound) {
+                    let syncedMatchups = await seriesMatchupPlans(from: snapshot, seriesRound: rounds[roundIndex]) ?? []
+                    if rounds[roundIndex].matchupPlans != syncedMatchups {
+                        rounds[roundIndex].matchupPlans = syncedMatchups
+                        hasChanged = true
+                    }
                 }
             }
 
