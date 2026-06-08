@@ -198,4 +198,96 @@ final class SeriesRoundCodableTests: XCTestCase {
         XCTAssertEqual(decoded.selectionDomain, .partnership)
         XCTAssertEqual(dictionary["selection_domain"] as? String, "partnership")
     }
+
+    func testSeriesRoundMaxScoreDefaultsToQuadAndRoundTripsWhenPresent() throws {
+        let decoder = JSONDecoder()
+        let legacyConfiguration = try decoder.decode(SeriesRoundConfiguration.self, from: Data(#"{}"#.utf8))
+
+        XCTAssertNil(legacyConfiguration.maxScoreOverPar)
+        XCTAssertEqual(legacyConfiguration.legacyGameFormat.configuration.maxScoreOverPar, .quad)
+
+        let configuration = SeriesRoundConfiguration(maxScoreOverPar: .twoTimesParPlusOne)
+        let data = try JSONEncoder().encode(configuration)
+        let decoded = try decoder.decode(SeriesRoundConfiguration.self, from: data)
+        let dictionary = try configuration.toDictionary()
+
+        XCTAssertEqual(decoded.maxScoreOverPar, .twoTimesParPlusOne)
+        XCTAssertEqual(decoded.legacyGameFormat.configuration.maxScoreOverPar, .twoTimesParPlusOne)
+        XCTAssertEqual(dictionary["max_score_over_par"] as? String, "twoTimesParPlusOne")
+    }
+
+    func testSubstituteRoleAndSettingsRoundTripWithLegacyDefaults() throws {
+        let decoder = JSONDecoder()
+        let legacySettings = try decoder.decode(SeriesSettings.self, from: Data(#"{}"#.utf8))
+        let legacyRoundConfiguration = try decoder.decode(RoundConfiguration.self, from: Data(#"{}"#.utf8))
+
+        XCTAssertFalse(legacySettings.substitutesScore)
+        XCTAssertFalse(legacyRoundConfiguration.substitutesScore)
+        XCTAssertEqual(SeriesMemberRole.substitute.rawValue, "substitute")
+
+        var settings = SeriesSettings()
+        settings.substitutesScore = true
+        let settingsDictionary = try settings.toDictionary()
+        let settingsData = try JSONEncoder().encode(settings)
+        let decodedSettings = try decoder.decode(SeriesSettings.self, from: settingsData)
+
+        XCTAssertTrue(decodedSettings.substitutesScore)
+        XCTAssertEqual(settingsDictionary["substitutes_score"] as? Bool, true)
+
+        let roundConfiguration = RoundConfiguration(substitutesScore: true)
+        let roundData = try JSONEncoder().encode(roundConfiguration)
+        let decodedRoundConfiguration = try decoder.decode(RoundConfiguration.self, from: roundData)
+        let roundDictionary = try roundConfiguration.toDictionary()
+
+        XCTAssertTrue(decodedRoundConfiguration.substitutesScore)
+        XCTAssertEqual(roundDictionary["substitutes_score"] as? Bool, true)
+    }
+
+    func testPlannedSeatSubstituteMetadataRoundTrips() throws {
+        let seat = SeriesRoundPlannedSeat(
+            id: "seat1",
+            memberID: "sub1",
+            teeOrder: 2,
+            source: .manualOverride,
+            isSubstitute: true,
+            substituteForSeriesMemberID: "member1",
+            substituteForName: "Joe Smith",
+            representedTeamID: "team1"
+        )
+
+        let data = try JSONEncoder().encode(seat)
+        let decoded = try JSONDecoder().decode(SeriesRoundPlannedSeat.self, from: data)
+        let dictionary = try seat.toDictionary()
+
+        XCTAssertTrue(decoded.isSubstitute)
+        XCTAssertEqual(decoded.substituteForSeriesMemberID, "member1")
+        XCTAssertEqual(decoded.substituteForName, "Joe Smith")
+        XCTAssertEqual(decoded.representedTeamID, "team1")
+        XCTAssertEqual(dictionary["is_substitute"] as? Bool, true)
+        XCTAssertEqual(dictionary["substitute_for_series_member_id"] as? String, "member1")
+        XCTAssertEqual(dictionary["substitute_for_name"] as? String, "Joe Smith")
+        XCTAssertEqual(dictionary["represented_team_id"] as? String, "team1")
+    }
+
+    func testRoundParticipantSubstituteMetadataRoundTrips() throws {
+        let participant = RoundParticipant(
+            id: "p_sub",
+            name: Name("Sam", "Sub"),
+            isSubstitute: true,
+            substituteForSeriesMemberID: "member1",
+            substituteForName: "Joe Smith",
+            parentID: "round1"
+        )
+
+        let data = try JSONEncoder().encode(participant)
+        let decoded = try JSONDecoder().decode(RoundParticipant.self, from: data)
+        let dictionary = try participant.toDictionary()
+
+        XCTAssertTrue(decoded.isSubstitute)
+        XCTAssertEqual(decoded.substituteForSeriesMemberID, "member1")
+        XCTAssertEqual(decoded.substituteForName, "Joe Smith")
+        XCTAssertEqual(dictionary["is_substitute"] as? Bool, true)
+        XCTAssertEqual(dictionary["substitute_for_series_member_id"] as? String, "member1")
+        XCTAssertEqual(dictionary["substitute_for_name"] as? String, "Joe Smith")
+    }
 }

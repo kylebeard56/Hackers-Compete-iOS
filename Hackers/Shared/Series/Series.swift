@@ -336,16 +336,18 @@ enum SeriesMemberRole: String, CaseIterable, Codable {
     case commissioner
     case captain
     case member
+    case substitute
     case spectator
 }
 
 extension SeriesMemberRole {
-    /// Commissioner > Captain > Member > Spectator
+    /// Commissioner > Captain > Member > Substitute > Spectator
     var rank: Int {
         switch self {
-        case .commissioner: return 3
-        case .captain: return 2
-        case .member: return 1
+        case .commissioner: return 4
+        case .captain: return 3
+        case .member: return 2
+        case .substitute: return 1
         case .spectator: return 0
         }
     }
@@ -582,6 +584,8 @@ struct SeriesRoundConfiguration: Hashable, Codable {
     var scoreBasisOverride: ScoreBasis?
     /// Optional format-specific allowance for shared-score scoring units, applied by handicap rank.
     var sharedScoreHandicapConfig: HandicapConfiguration?
+    /// Optional max score cap for rounds created from this series config. Nil falls back to Quad for legacy leagues.
+    var maxScoreOverPar: MaxScoreOverPar?
     /// Optional basis for round playing handicaps. Nil means infer from the round hole count.
     var handicapStrokeBasis: SeriesHandicapStrokeBasis?
     var handicapEntryFormat: HandicapEntryFormat
@@ -611,6 +615,7 @@ struct SeriesRoundConfiguration: Hashable, Codable {
         allowLobbyBackPropagation: Bool = true,
         scoreBasisOverride: ScoreBasis? = nil,
         sharedScoreHandicapConfig: HandicapConfiguration? = nil,
+        maxScoreOverPar: MaxScoreOverPar? = nil,
         handicapStrokeBasis: SeriesHandicapStrokeBasis? = nil,
         handicapEntryFormat: HandicapEntryFormat = .strokes,
         handicapNormalizationMode: HandicapNormalizationMode = .off,
@@ -638,6 +643,7 @@ struct SeriesRoundConfiguration: Hashable, Codable {
         self.allowLobbyBackPropagation = allowLobbyBackPropagation
         self.scoreBasisOverride = scoreBasisOverride
         self.sharedScoreHandicapConfig = sharedScoreHandicapConfig
+        self.maxScoreOverPar = maxScoreOverPar
         self.handicapStrokeBasis = handicapStrokeBasis
         self.handicapEntryFormat = handicapEntryFormat
         self.handicapNormalizationMode = handicapNormalizationMode
@@ -669,6 +675,7 @@ struct SeriesRoundConfiguration: Hashable, Codable {
         case allowLobbyBackPropagation = "allow_lobby_back_propagation"
         case scoreBasisOverride = "score_basis_override"
         case sharedScoreHandicapConfig = "shared_score_handicap_config"
+        case maxScoreOverPar = "max_score_over_par"
         case handicapStrokeBasis = "handicap_stroke_basis"
         case handicapEntryFormat = "handicap_entry_format"
         case handicapNormalizationMode = "handicap_normalization_mode"
@@ -727,6 +734,7 @@ struct SeriesRoundConfiguration: Hashable, Codable {
         allowLobbyBackPropagation = try c.decodeIfPresent(Bool.self, forKey: .allowLobbyBackPropagation) ?? true
         scoreBasisOverride = try c.decodeIfPresent(ScoreBasis.self, forKey: .scoreBasisOverride)
         sharedScoreHandicapConfig = try c.decodeIfPresent(HandicapConfiguration.self, forKey: .sharedScoreHandicapConfig)
+        maxScoreOverPar = try c.decodeIfPresent(MaxScoreOverPar.self, forKey: .maxScoreOverPar)
         handicapStrokeBasis = try c.decodeIfPresent(SeriesHandicapStrokeBasis.self, forKey: .handicapStrokeBasis)
         handicapEntryFormat = try c.decodeIfPresent(HandicapEntryFormat.self, forKey: .handicapEntryFormat) ?? .strokes
         handicapNormalizationMode = try c.decodeIfPresent(HandicapNormalizationMode.self, forKey: .handicapNormalizationMode) ?? .off
@@ -775,6 +783,7 @@ struct SeriesRoundConfiguration: Hashable, Codable {
         try c.encode(allowLobbyBackPropagation, forKey: .allowLobbyBackPropagation)
         try c.encodeIfPresent(scoreBasisOverride, forKey: .scoreBasisOverride)
         try c.encodeIfPresent(sharedScoreHandicapConfig, forKey: .sharedScoreHandicapConfig)
+        try c.encodeIfPresent(maxScoreOverPar, forKey: .maxScoreOverPar)
         try c.encodeIfPresent(handicapStrokeBasis, forKey: .handicapStrokeBasis)
         try c.encode(handicapEntryFormat, forKey: .handicapEntryFormat)
         try c.encode(handicapNormalizationMode, forKey: .handicapNormalizationMode)
@@ -884,6 +893,7 @@ struct SeriesSettings: Hashable, Codable {
     var useIndividualStandings: Bool
     var useTeamStandings: Bool
     var showScoreboardTile: Bool
+    var substitutesScore: Bool
     /// Minutes since local midnight for default round tee time (e.g. 990 = 4:30 PM).
     var defaultScheduledTeeTimeMinutesFromMidnight: Int?
     /// `Calendar` weekday integers (1 = Sunday … 7 = Saturday). Empty/nil = no fixed play-day filter.
@@ -906,6 +916,7 @@ struct SeriesSettings: Hashable, Codable {
         useIndividualStandings: Bool = true,
         useTeamStandings: Bool = false,
         showScoreboardTile: Bool = false,
+        substitutesScore: Bool = false,
         defaultScheduledTeeTimeMinutesFromMidnight: Int? = nil,
         recurringPlayWeekdays: [Int]? = nil
     ) {
@@ -925,6 +936,7 @@ struct SeriesSettings: Hashable, Codable {
         self.useIndividualStandings = useIndividualStandings
         self.useTeamStandings = useTeamStandings
         self.showScoreboardTile = showScoreboardTile
+        self.substitutesScore = substitutesScore
         self.defaultScheduledTeeTimeMinutesFromMidnight = defaultScheduledTeeTimeMinutesFromMidnight
         self.recurringPlayWeekdays = recurringPlayWeekdays
     }
@@ -946,6 +958,7 @@ struct SeriesSettings: Hashable, Codable {
         case useIndividualStandings = "use_individual_standings"
         case useTeamStandings = "use_team_standings"
         case showScoreboardTile = "show_scoreboard_tile"
+        case substitutesScore = "substitutes_score"
         case defaultScheduledTeeTimeMinutesFromMidnight = "default_scheduled_tee_time_minutes_from_midnight"
         case recurringPlayWeekdays = "recurring_play_weekdays"
     }
@@ -968,6 +981,7 @@ struct SeriesSettings: Hashable, Codable {
         useIndividualStandings = try c.decodeIfPresent(Bool.self, forKey: .useIndividualStandings) ?? true
         useTeamStandings = try c.decodeIfPresent(Bool.self, forKey: .useTeamStandings) ?? false
         showScoreboardTile = try c.decodeIfPresent(Bool.self, forKey: .showScoreboardTile) ?? false
+        substitutesScore = try c.decodeIfPresent(Bool.self, forKey: .substitutesScore) ?? false
         defaultScheduledTeeTimeMinutesFromMidnight = try c.decodeIfPresent(Int.self, forKey: .defaultScheduledTeeTimeMinutesFromMidnight)
         recurringPlayWeekdays = try c.decodeIfPresent([Int].self, forKey: .recurringPlayWeekdays)
     }
@@ -990,6 +1004,7 @@ struct SeriesSettings: Hashable, Codable {
         try c.encode(useIndividualStandings, forKey: .useIndividualStandings)
         try c.encode(useTeamStandings, forKey: .useTeamStandings)
         try c.encode(showScoreboardTile, forKey: .showScoreboardTile)
+        try c.encode(substitutesScore, forKey: .substitutesScore)
         try c.encodeIfPresent(defaultScheduledTeeTimeMinutesFromMidnight, forKey: .defaultScheduledTeeTimeMinutesFromMidnight)
         try c.encodeIfPresent(recurringPlayWeekdays, forKey: .recurringPlayWeekdays)
     }
@@ -1595,17 +1610,29 @@ struct SeriesRoundPlannedSeat: Hashable, Codable, Identifiable {
     var memberID: String
     var teeOrder: Int
     var source: SeriesRoundPlanSource
+    var isSubstitute: Bool
+    var substituteForSeriesMemberID: String?
+    var substituteForName: String?
+    var representedTeamID: String?
 
     init(
         id: String = "",
         memberID: String = "",
         teeOrder: Int = 0,
-        source: SeriesRoundPlanSource = .autoGenerated
+        source: SeriesRoundPlanSource = .autoGenerated,
+        isSubstitute: Bool = false,
+        substituteForSeriesMemberID: String? = nil,
+        substituteForName: String? = nil,
+        representedTeamID: String? = nil
     ) {
         self.id = id.isPopulated ? id : memberID
         self.memberID = memberID
         self.teeOrder = teeOrder
         self.source = source
+        self.isSubstitute = isSubstitute
+        self.substituteForSeriesMemberID = substituteForSeriesMemberID
+        self.substituteForName = substituteForName
+        self.representedTeamID = representedTeamID
     }
 
     enum CodingKeys: String, CodingKey {
@@ -1613,6 +1640,34 @@ struct SeriesRoundPlannedSeat: Hashable, Codable, Identifiable {
         case memberID = "member_id"
         case teeOrder = "tee_order"
         case source
+        case isSubstitute = "is_substitute"
+        case substituteForSeriesMemberID = "substitute_for_series_member_id"
+        case substituteForName = "substitute_for_name"
+        case representedTeamID = "represented_team_id"
+    }
+
+    init(from decoder: Decoder) throws {
+        let c = try decoder.container(keyedBy: CodingKeys.self)
+        memberID = try c.decodeIfPresent(String.self, forKey: .memberID) ?? ""
+        id = try c.decodeIfPresent(String.self, forKey: .id) ?? memberID
+        teeOrder = try c.decodeIfPresent(Int.self, forKey: .teeOrder) ?? 0
+        source = try c.decodeIfPresent(SeriesRoundPlanSource.self, forKey: .source) ?? .autoGenerated
+        isSubstitute = try c.decodeIfPresent(Bool.self, forKey: .isSubstitute) ?? false
+        substituteForSeriesMemberID = try c.decodeIfPresent(String.self, forKey: .substituteForSeriesMemberID)
+        substituteForName = try c.decodeIfPresent(String.self, forKey: .substituteForName)
+        representedTeamID = try c.decodeIfPresent(String.self, forKey: .representedTeamID)
+    }
+
+    func encode(to encoder: Encoder) throws {
+        var c = encoder.container(keyedBy: CodingKeys.self)
+        try c.encode(id, forKey: .id)
+        try c.encode(memberID, forKey: .memberID)
+        try c.encode(teeOrder, forKey: .teeOrder)
+        try c.encode(source, forKey: .source)
+        try c.encode(isSubstitute, forKey: .isSubstitute)
+        try c.encodeIfPresent(substituteForSeriesMemberID, forKey: .substituteForSeriesMemberID)
+        try c.encodeIfPresent(substituteForName, forKey: .substituteForName)
+        try c.encodeIfPresent(representedTeamID, forKey: .representedTeamID)
     }
 }
 
@@ -2745,6 +2800,7 @@ struct SeriesMatchupOutcome: Identifiable {
     let showsResultChip: Bool
     let resultChipLabel: String?
     let usesNetScores: Bool
+    let showsSubstituteScoringFootnote: Bool
 
     struct Side: Identifiable {
         let id: String
@@ -2763,6 +2819,7 @@ struct SeriesMatchupOutcome: Identifiable {
         let gross: String
         let net: String?
         let scoreCounts: Bool
+        let isSubstitute: Bool
         let accentColor: Color?
     }
 }
@@ -3400,7 +3457,7 @@ extension SeriesRoundConfiguration {
             basis: resolvedBasis,
             handicap: template.requirements.defaultHandicapConfig,
             requiresTeams: requiresTeams,
-            maxScoreOverPar: template.requirements.defaultMaxScoreOverPar
+            maxScoreOverPar: maxScoreOverPar ?? .quad
         )
         return GameFormat(type: type, configuration: config)
     }

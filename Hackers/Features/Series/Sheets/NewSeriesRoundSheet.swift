@@ -3,6 +3,7 @@
 //  Hackers
 //
 
+import Flow
 import SwiftUI
 
 struct NewSeriesRoundSheet: View {
@@ -85,6 +86,7 @@ struct NewSeriesRoundSheet: View {
     @State private var holeWinPoints: Double = 1
     @State private var matchWinnerBonusPoints: Double = 0
     @State private var sharedScoreAllowanceText = ""
+    @State private var maxScoreOverPar: MaxScoreOverPar = .quad
     @State private var teamScoring = RoundTeamScoringConfiguration(mode: .bestN, count: 2, scope: .perRound)
     @State private var selectionDomain: ScoringSelectionDomain?
     @State private var sequentialTeeStartsEnabled = false
@@ -233,6 +235,7 @@ struct NewSeriesRoundSheet: View {
             sharedScoreAllowanceText = allowanceText(
                 from: defaults.sharedScoreHandicapConfig ?? FormatTemplateRegistry.template(for: selectedTemplateID).requirements.defaultHandicapConfig
             )
+            maxScoreOverPar = defaults.maxScoreOverPar ?? .quad
             teamScoring = defaults.teamScoring
             sequentialTeeStartsEnabled = defaults.sequentialTeeStartsEnabled ?? false
             podGroupingStrategy = defaults.podGroupingStrategy
@@ -534,71 +537,95 @@ struct NewSeriesRoundSheet: View {
                 }
             }
 
+            builderField(
+                title: "Max score",
+                subtitle: "Highest score allowed per hole."
+            ) {
+                Menu {
+                    ForEach(MaxScoreOverPar.selectableCases(hasCoursePars: true), id: \.self) { option in
+                        Button {
+                            maxScoreOverPar = option
+                        } label: {
+                            HStack {
+                                Text(option.displayName)
+                                if option == maxScoreOverPar {
+                                    Image(systemName: "checkmark")
+                                }
+                            }
+                        }
+                    }
+                } label: {
+                    menuChipLabel(maxScoreOverPar.displayName)
+                }
+                .buttonStyle(.plain)
+            }
+
             if viewModel.usesTeams {
                 builderField(
                     title: "Count scores",
                     subtitle: "Choose which scores count and how they're computed for leaderboard."
                 ) {
-                    VStack(alignment: .trailing, spacing: 8) {
+                    HFlow(
+                        horizontalAlignment: .leading,
+                        verticalAlignment: .center,
+                        horizontalSpacing: 8,
+                        verticalSpacing: 8
+                    ) {
                         if teamScoring.mode == .bestN || teamScoring.mode == .worstN {
-                            HStack(spacing: 8) {
-                                Menu {
-                                    countScoresMenuButtons
-                                } label: {
-                                    menuChipLabel(teamScoringModeLabel)
-                                }
-                                .buttonStyle(.plain)
-
-                                Text("per")
-                                    .fontStyle(kFontName, size: 15, weight: .regular)
-                                    .foregroundStyle(Color.secondary)
-
-                                Menu {
-                                    ForEach(AggregationScope.allCases, id: \.self) { scope in
-                                        Button {
-                                            teamScoring.scope = scope
-                                        } label: {
-                                            HStack {
-                                                Text(scope == .perRound ? "Round" : "Hole")
-                                                if teamScoring.scope == scope { Image(systemName: "checkmark") }
-                                            }
-                                        }
-                                    }
-                                } label: {
-                                    menuChipLabel(teamScoringScopeLabel)
-                                }
-                                .buttonStyle(.plain)
+                            Menu {
+                                countScoresMenuButtons
+                            } label: {
+                                menuChipLabel(teamScoringModeLabel)
                             }
+                            .buttonStyle(.plain)
 
-                            HStack(spacing: 8) {
-                                Text("from")
-                                    .fontStyle(kFontName, size: 15, weight: .regular)
-                                    .foregroundStyle(Color.secondary)
+                            Text("per")
+                                .fontStyle(kFontName, size: 15, weight: .regular)
+                                .foregroundStyle(Color.secondary)
 
-                                Menu {
+                            Menu {
+                                ForEach(AggregationScope.allCases, id: \.self) { scope in
                                     Button {
-                                        selectionDomain = nil
+                                        teamScoring.scope = scope
                                     } label: {
                                         HStack {
-                                            Text("Auto")
-                                            if selectionDomain == nil { Image(systemName: "checkmark") }
+                                            Text(scope == .perRound ? "Round" : "Hole")
+                                            if teamScoring.scope == scope { Image(systemName: "checkmark") }
                                         }
                                     }
-                                    ForEach(ScoringSelectionDomain.allCases, id: \.self) { domain in
-                                        Button {
-                                            selectionDomain = domain
-                                        } label: {
-                                            HStack {
-                                                Text(selectionDomainTitle(for: domain))
-                                                if selectionDomain == domain { Image(systemName: "checkmark") }
-                                            }
-                                        }
-                                    }
-                                } label: {
-                                    menuChipLabel(selectionDomainLabel)
                                 }
-                                .buttonStyle(.plain)
+                            } label: {
+                                menuChipLabel(teamScoringScopeLabel)
                             }
+                            .buttonStyle(.plain)
+
+                            Text("from")
+                                .fontStyle(kFontName, size: 15, weight: .regular)
+                                .foregroundStyle(Color.secondary)
+
+                            Menu {
+                                Button {
+                                    selectionDomain = nil
+                                } label: {
+                                    HStack {
+                                        Text("Auto")
+                                        if selectionDomain == nil { Image(systemName: "checkmark") }
+                                    }
+                                }
+                                ForEach(ScoringSelectionDomain.allCases, id: \.self) { domain in
+                                    Button {
+                                        selectionDomain = domain
+                                    } label: {
+                                        HStack {
+                                            Text(selectionDomainTitle(for: domain))
+                                            if selectionDomain == domain { Image(systemName: "checkmark") }
+                                        }
+                                    }
+                                }
+                            } label: {
+                                menuChipLabel(selectionDomainLabel)
+                            }
+                            .buttonStyle(.plain)
                         } else {
                             Menu {
                                 countScoresMenuButtons
@@ -608,7 +635,7 @@ struct NewSeriesRoundSheet: View {
                             .buttonStyle(.plain)
                         }
                     }
-                    .frame(maxWidth: .infinity, alignment: .trailing)
+                    .alignLeading()
                 }
             }
 
@@ -964,6 +991,7 @@ struct NewSeriesRoundSheet: View {
             teeGroupMode: podGroupingStrategy.usesPodAlignment ? .podAligned : .auto,
             notes: notes.isEmpty ? nil : notes,
             sharedScoreHandicapConfig: sharedScoreAllowanceConfig,
+            maxScoreOverPar: maxScoreOverPar,
             handicapStrokeBasis: handicapStrokeBasis,
             handicapEntryFormat: resolvedHandicapEntryFormat,
             handicapNormalizationMode: resolvedHandicapNormalizationMode(for: competitionScope),
@@ -1017,6 +1045,7 @@ struct NewSeriesRoundSheet: View {
             teeGroupMode: podGroupingStrategy.usesPodAlignment ? .podAligned : .auto,
             notes: notes.isEmpty ? nil : notes,
             sharedScoreHandicapConfig: sharedScoreAllowanceConfig,
+            maxScoreOverPar: maxScoreOverPar,
             handicapStrokeBasis: handicapStrokeBasis,
             handicapEntryFormat: resolvedHandicapEntryFormat,
             handicapNormalizationMode: resolvedHandicapNormalizationMode(for: competitionScope),
@@ -1331,6 +1360,7 @@ struct NewSeriesRoundSheet: View {
             teeGroupMode: podGroupingStrategy.usesPodAlignment ? .podAligned : .auto,
             notes: notes.isEmpty ? nil : notes,
             sharedScoreHandicapConfig: sharedScoreAllowanceConfig,
+            maxScoreOverPar: maxScoreOverPar,
             handicapStrokeBasis: handicapStrokeBasis,
             handicapEntryFormat: resolvedHandicapEntryFormat,
             handicapNormalizationMode: resolvedHandicapNormalizationMode(for: competitionScope),
@@ -2611,6 +2641,7 @@ struct NewSeriesRoundSheet: View {
         if selectedTemplateID != d.formatTemplateID { return .confirmed }
         if competitionScope != d.resolvedCompetitionScope { return .confirmed }
         if resolvedMatchupMode(for: competitionScope) != d.matchupMode { return .confirmed }
+        if maxScoreOverPar != (d.maxScoreOverPar ?? .quad) { return .confirmed }
         if teamScoring != d.teamScoring { return .confirmed }
         if sequentialTeeStartsEnabled != (d.sequentialTeeStartsEnabled ?? false) { return .confirmed }
         if podGroupingStrategy != d.podGroupingStrategy { return .confirmed }
@@ -3090,9 +3121,14 @@ struct SeriesRoundTeeSheetPlanningCard: View {
                     Text(playerDisplayName(for: seat.memberID))
                         .fontStyle(kFontName, size: 13, weight: .semibold)
                         .foregroundStyle(palette.foregroundColor)
-                    if let teamName = playerTeamSubtitle(for: seat.memberID) {
+                    if let substituteSubtitle = substituteSubtitle(for: seat) {
+                        Text(substituteSubtitle)
+                            .fontStyle(kFontName, size: 11, weight: .regular)
+                            .foregroundStyle(Color.neutral)
+                    }
+                    if let teamName = playerTeamSubtitle(for: seat) {
                         HStack(spacing: 6) {
-                            teamSwatch(for: seat.memberID)
+                            teamSwatch(for: seat)
                             Text(teamName)
                                 .fontStyle(kFontName, size: 11, weight: .regular)
                                 .foregroundStyle(Color.neutral)
@@ -3123,11 +3159,18 @@ struct SeriesRoundTeeSheetPlanningCard: View {
     }
 
     @ViewBuilder
-    private func teamSwatch(for memberID: String) -> some View {
-        if let teamID = membersByID[memberID]?.teamID,
+    private func teamSwatch(for seat: SeriesRoundPlannedSeat) -> some View {
+        let isSubstitute = isSubstituteSeat(seat)
+        if let teamID = effectiveTeamID(for: seat),
            let color = teamsByID[teamID]?.displaySwatchColor {
             Circle()
-                .fill(color)
+                .fill(isSubstitute ? Color.clear : color)
+                .overlay(Circle().stroke(color, lineWidth: isSubstitute ? 1.5 : 0))
+                .frame(width: 6, height: 6)
+                .accessibilityHidden(true)
+        } else if isSubstitute {
+            Circle()
+                .strokeBorder(Color.neutral4, lineWidth: 1.5)
                 .frame(width: 6, height: 6)
                 .accessibilityHidden(true)
         }
@@ -3169,6 +3212,23 @@ struct SeriesRoundTeeSheetPlanningCard: View {
                         playerMenuLabel(for: partner.id)
                     }
                 }
+            }
+            Section("Substitute") {
+                Button("Playing as regular") {
+                    clearSubstituteAssignment(for: seat, in: group.id)
+                }
+                .disabled(!isSubstituteSeat(seat) && seat.substituteForSeriesMemberID == nil)
+
+                Menu("Playing for...") {
+                    ForEach(substituteTargets(for: seat), id: \.id) { target in
+                        Button {
+                            setSubstituteAssignment(for: seat, in: group.id, target: target)
+                        } label: {
+                            playerMenuLabel(for: target.id)
+                        }
+                    }
+                }
+                .disabled(substituteTargets(for: seat).isEmpty)
             }
         } label: {
             ZStack {
@@ -3220,8 +3280,8 @@ struct SeriesRoundTeeSheetPlanningCard: View {
         return "Unknown player"
     }
 
-    private func playerTeamSubtitle(for memberID: String) -> String? {
-        guard let teamName = teamName(for: memberID), teamName.isPopulated else { return nil }
+    private func playerTeamSubtitle(for seat: SeriesRoundPlannedSeat) -> String? {
+        guard let teamName = teamName(for: seat), teamName.isPopulated else { return nil }
         return teamName
     }
 
@@ -3232,6 +3292,29 @@ struct SeriesRoundTeeSheetPlanningCard: View {
     private func teamName(for memberID: String) -> String? {
         guard let teamID = membersByID[memberID]?.teamID else { return nil }
         return teamsByID[teamID]?.name
+    }
+
+    private func teamName(for seat: SeriesRoundPlannedSeat) -> String? {
+        guard let teamID = effectiveTeamID(for: seat) else { return nil }
+        return teamsByID[teamID]?.name
+    }
+
+    private func effectiveTeamID(for seat: SeriesRoundPlannedSeat) -> String? {
+        if let representedTeamID = seat.representedTeamID, representedTeamID.isPopulated {
+            return representedTeamID
+        }
+        return membersByID[seat.memberID]?.teamID
+    }
+
+    private func isSubstituteSeat(_ seat: SeriesRoundPlannedSeat) -> Bool {
+        seat.isSubstitute || membersByID[seat.memberID]?.role == .substitute
+    }
+
+    private func substituteSubtitle(for seat: SeriesRoundPlannedSeat) -> String? {
+        guard isSubstituteSeat(seat),
+              let name = seat.substituteForName,
+              name.isPopulated else { return nil }
+        return "Playing for \(name)"
     }
 
     private func formattedPlayerLabel(for memberID: String) -> String {
@@ -3353,12 +3436,14 @@ struct SeriesRoundTeeSheetPlanningCard: View {
     }
 
     private func pairablePartners(for memberID: String, in group: SeriesRoundPlannedTeeGroup) -> [SeriesMember] {
-        guard let teamID = membersByID[memberID]?.teamID, teamID.isPopulated else { return [] }
+        guard let memberSeat = group.seats.first(where: { $0.memberID == memberID }),
+              let teamID = effectiveTeamID(for: memberSeat),
+              teamID.isPopulated else { return [] }
         let currentPartnerID = partnerPlan(for: memberID)?.memberIDs.first(where: { $0 != memberID })
         return group.seats.compactMap { seat -> SeriesMember? in
             guard seat.memberID != memberID,
                   let member = membersByID[seat.memberID],
-                  member.teamID == teamID else {
+                  effectiveTeamID(for: seat) == teamID else {
                 return nil
             }
             if let partnerPlan = partnerPlan(for: seat.memberID),
@@ -3420,14 +3505,51 @@ struct SeriesRoundTeeSheetPlanningCard: View {
         updateGroup(groupID) { group in
             guard !group.seats.contains(where: { $0.memberID == memberID }) else { return }
             group.source = .manualOverride
+            let member = membersByID[memberID]
             group.seats.append(
                 SeriesRoundPlannedSeat(
                     id: HackersID.string(),
                     memberID: memberID,
                     teeOrder: group.seats.count + 1,
-                    source: .manualOverride
+                    source: .manualOverride,
+                    isSubstitute: member?.role == .substitute
                 )
             )
+        }
+    }
+
+    private func substituteTargets(for seat: SeriesRoundPlannedSeat) -> [SeriesMember] {
+        eligibleMembers
+            .filter { member in
+                member.id != seat.memberID
+                    && member.role != .substitute
+                    && member.role != .spectator
+                    && member.isActive
+            }
+            .sorted { $0.name.fullName.localizedCaseInsensitiveCompare($1.name.fullName) == .orderedAscending }
+    }
+
+    private func setSubstituteAssignment(for seat: SeriesRoundPlannedSeat, in groupID: String, target: SeriesMember) {
+        updateGroup(groupID) { group in
+            guard let index = group.seats.firstIndex(where: { $0.id == seat.id }) else { return }
+            group.source = .manualOverride
+            group.seats[index].source = .manualOverride
+            group.seats[index].isSubstitute = true
+            group.seats[index].substituteForSeriesMemberID = target.id
+            group.seats[index].substituteForName = target.name.trimmedFullName
+            group.seats[index].representedTeamID = target.teamID
+        }
+    }
+
+    private func clearSubstituteAssignment(for seat: SeriesRoundPlannedSeat, in groupID: String) {
+        updateGroup(groupID) { group in
+            guard let index = group.seats.firstIndex(where: { $0.id == seat.id }) else { return }
+            group.source = .manualOverride
+            group.seats[index].source = .manualOverride
+            group.seats[index].isSubstitute = false
+            group.seats[index].substituteForSeriesMemberID = nil
+            group.seats[index].substituteForName = nil
+            group.seats[index].representedTeamID = nil
         }
     }
 

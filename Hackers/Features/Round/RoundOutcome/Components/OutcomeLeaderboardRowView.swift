@@ -25,6 +25,10 @@ struct OutcomeLeaderboardRowView: View {
     var showsHandicap: Bool = false
     let onTap: Callback
 
+    private var showsSubstituteMarker: Bool {
+        row.participant.isSubstitute && row.memberNames == nil && !row.isSharedScoreUnit
+    }
+
     var body: some View {
         Button {
             Haptics.fire(.light)
@@ -40,7 +44,11 @@ struct OutcomeLeaderboardRowView: View {
 
                 if let teamColor {
                     RoundedRectangle(cornerRadius: 3)
-                        .fill(teamColor.opacity(0.9))
+                        .fill(showsSubstituteMarker ? Color.clear : teamColor.opacity(0.9))
+                        .overlay(
+                            RoundedRectangle(cornerRadius: 3)
+                                .stroke(teamColor.opacity(0.9), lineWidth: showsSubstituteMarker ? 1.5 : 0)
+                        )
                         .frame(width: row.memberNames != nil ? 4 : teamDotSize,
                                height: row.memberNames != nil ? (row.isSharedScoreUnit ? 36 : 28) : teamDotSize)
                 }
@@ -144,14 +152,18 @@ struct OutcomeLeaderboardRowView: View {
         row.participant.name.fullName.trimmingCharacters(in: .whitespacesAndNewlines)
     }
 
+    private var markedFullParticipantName: String {
+        row.participant.isSubstitute ? "\(fullParticipantName)*" : fullParticipantName
+    }
+
     private var displayName: String {
         if row.isSharedScoreUnit {
-            return fullParticipantName
+            return markedFullParticipantName
         }
         if let teamName = row.teamName, teamName.isPopulated {
             return teamName
         }
-        return fullParticipantName
+        return markedFullParticipantName
     }
 
     private var compactDisplayName: String {
@@ -168,13 +180,21 @@ struct OutcomeLeaderboardRowView: View {
         let given = row.participant.name.givenName.trimmingCharacters(in: .whitespacesAndNewlines)
         let family = row.participant.name.familyName.trimmingCharacters(in: .whitespacesAndNewlines)
         guard given.isPopulated || family.isPopulated else { return fullParticipantName }
+        let compact: String
         switch nameDisplayFormat {
         case .firstInitialLastName:
-            guard let g = given.first else { return family }
-            return "\(g). \(family)"
+            if let g = given.first {
+                compact = "\(g). \(family)"
+            } else {
+                compact = family
+            }
         case .firstNameLastInitial:
-            guard let f = family.first else { return given }
-            return "\(given) \(f)."
+            if let f = family.first {
+                compact = "\(given) \(f)."
+            } else {
+                compact = given
+            }
         }
+        return row.participant.isSubstitute ? "\(compact)*" : compact
     }
 }

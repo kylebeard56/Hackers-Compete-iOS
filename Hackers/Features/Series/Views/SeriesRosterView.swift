@@ -249,7 +249,8 @@ struct SeriesRosterView: View {
         case .commissioner: return 0
         case .captain: return 1
         case .member: return 2
-        case .spectator: return 3
+        case .substitute: return 3
+        case .spectator: return 4
         }
     }
 
@@ -439,6 +440,15 @@ struct SeriesRosterView: View {
                         )
                     }
 
+                    if member.role == .substitute {
+                        Chip(
+                            text: "Sub",
+                            size: .tiny,
+                            foreground: Color.neutral,
+                            background: Color.neutral5
+                        )
+                    }
+
                     if !member.hasLinkedUserID {
                         Chip(
                             text: "Offline",
@@ -492,7 +502,11 @@ struct SeriesRosterView: View {
 
     @ViewBuilder
     private func memberRowTeamSwatch(_ member: SeriesMember) -> some View {
-        if let tid = member.teamID, let team = viewModel.teams.first(where: { $0.id == tid }) {
+        if member.role == .substitute {
+            Circle()
+                .strokeBorder(Color.neutral4, lineWidth: 1.5)
+                .frame(width: 10, height: 10)
+        } else if let tid = member.teamID, let team = viewModel.teams.first(where: { $0.id == tid }) {
             if let dot = team.displaySwatchColor {
                 Circle()
                     .fill(dot)
@@ -654,7 +668,7 @@ struct SeriesRosterView: View {
                 Label("Role", systemImage: "person.text.rectangle")
             }
 
-            if viewModel.hasTeams {
+            if viewModel.hasTeams, member.role != .substitute {
                 Menu {
                     Button {
                         Task { await viewModel.updateMemberTeam(member, teamID: nil) }
@@ -1091,6 +1105,7 @@ struct SeriesRosterView: View {
         case .commissioner: return "Commissioner"
         case .captain: return "Captain"
         case .member: return "Member"
+        case .substitute: return "Substitute"
         case .spectator: return "Spectator"
         }
     }

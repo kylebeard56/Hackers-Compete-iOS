@@ -55,13 +55,15 @@ final class SeriesRoundCreationMappingTests: XCTestCase {
         name: String,
         playerID: String? = nil,
         teamID: String? = nil,
-        defaultTeeBoxID: String? = nil
+        defaultTeeBoxID: String? = nil,
+        role: SeriesMemberRole = .member
     ) -> SeriesMember {
         SeriesMember(
             id: id,
             userID: "u_\(id)",
             playerID: playerID,
             name: Name(name, "Player"),
+            role: role,
             teamID: teamID,
             defaultTeeBoxID: defaultTeeBoxID,
             createdAt: t0,
@@ -96,8 +98,8 @@ final class SeriesRoundCreationMappingTests: XCTestCase {
         )
     }
 
-    private func fieldSeriesRound() -> SeriesRound {
-        var cfg = SeriesRoundConfiguration()
+    private func fieldSeriesRound(config: SeriesRoundConfiguration = .init()) -> SeriesRound {
+        var cfg = config
         cfg.matchupMode = .field
         cfg.teamAssignmentMode = .manual
         return SeriesRound(id: "sr_field", roundConfig: cfg, parentID: "series1")
@@ -175,7 +177,9 @@ final class SeriesRoundCreationMappingTests: XCTestCase {
     }
 
     func testRoundDraft_carriesPlayerIDsAndConfiguration() {
-        let sr = fieldSeriesRound()
+        var config = SeriesRoundConfiguration()
+        config.maxScoreOverPar = .twoTimesPar
+        let sr = fieldSeriesRound(config: config)
         let segment = makeCourseSegment()
         let members = [
             makeMember(id: "m1", name: "Alice", playerID: "p1"),
@@ -197,6 +201,7 @@ final class SeriesRoundCreationMappingTests: XCTestCase {
         XCTAssertEqual(Set(draft.players), Set(["p1", "p2"]))
         XCTAssertEqual(draft.configuration.courses.count, 1)
         XCTAssertEqual(draft.configuration.courses.first?.holeRange, segment.holeRange)
+        XCTAssertEqual(draft.configuration.primaryFormat.configuration.maxScoreOverPar, .twoTimesPar)
     }
 
     func testRoundConfigurationCopiesSharedScoreHandicapConfig() {
@@ -625,6 +630,24 @@ final class SeriesRoundCreationMappingTests: XCTestCase {
         XCTAssertEqual(plans[0].id, "group_0")
         // Early team (index 1) before late team (index 5); then name order within team
         XCTAssertEqual(plans[0].memberIDs, ["m2", "m3", "m1"])
+    }
+
+    func testBuildTeeGroupPlans_excludesSubstitutesFromAutomaticGroups() {
+        let teams = [makeTeam(id: "t1", name: "Team", index: 0)]
+        let members = [
+            makeMember(id: "m1", name: "Regular", teamID: "t1"),
+            makeMember(id: "sub1", name: "Sub", role: .substitute),
+        ]
+
+        let plans = SeriesRoundCreationMapping.buildTeeGroupPlans(
+            members: members,
+            teams: teams,
+            pods: [],
+            matchupPlans: [],
+            seriesRound: fieldSeriesRound()
+        )
+
+        XCTAssertEqual(plans.flatMap(\.memberIDs), ["m1"])
     }
 
     func testBuildTeeGroupPlans_alignPairsKeepsSameIndexPodsTogether() {
@@ -1072,6 +1095,45 @@ final class SeriesRoundCreationMappingTests: XCTestCase {
 
         XCTAssertEqual(payloads[0].resolvedPresenceStatus, .active)
         XCTAssertEqual(payloads[1].resolvedPresenceStatus, .unconfirmed)
+    }
+
+    func testBuildParticipantPayloads_appliesRoundLocalSubstituteMetadataAndRepresentedTeam() {
+        let members = [
+            makeMember(id: "regular", name: "Regular", playerID: "p_regular", teamID: "red"),
+            makeMember(id: "sub", name: "Sam", playerID: "p_sub", teamID: nil, role: .substitute),
+        ]
+        let plannedSeatsByMemberID = [
+            "sub": SeriesRoundPlannedSeat(
+                id: "seat_sub",
+                memberID: "sub",
+                teeOrder: 2,
+                source: .manualOverride,
+                isSubstitute: true,
+                substituteForSeriesMemberID: "regular",
+                substituteForName: "Regular Player",
+                representedTeamID: "red"
+            )
+        ]
+        let payloads = SeriesRoundCreationMapping.buildParticipantPayloads(
+            members: members,
+            roundID: "roundZ",
+            teamMappings: ["red": .init(seriesTeamID: "red", roundTeamID: "round_red")],
+            memberAssignments: [
+                "regular": .init(groupID: "g1", teeOrder: 1),
+                "sub": .init(groupID: "g1", teeOrder: 2),
+            ],
+            handicaps: [:],
+            courseSegment: makeCourseSegment(),
+            hostPlayerID: nil,
+            plannedSeatsByMemberID: plannedSeatsByMemberID
+        )
+
+        let substitute = payloads.first { $0.seriesMemberID == "sub" }
+        XCTAssertNil(members.first { $0.id == "sub" }?.teamID)
+        XCTAssertTrue(substitute?.isSubstitute == true)
+        XCTAssertEqual(substitute?.teamID, "round_red")
+        XCTAssertEqual(substitute?.substituteForSeriesMemberID, "regular")
+        XCTAssertEqual(substitute?.substituteForName, "Regular Player")
     }
 
     func testParticipatingMembersAndPresenceStatuses_attendanceDisabledIncludesEligibleMembersWithoutPresenceOverrides() {

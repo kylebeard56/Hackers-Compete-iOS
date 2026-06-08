@@ -46,6 +46,7 @@ private struct TeeGroupSlotRow: View {
 
     private func filledSlot(for participant: RoundParticipant) -> some View {
         let teamColor = teamsEnabled ? snapshot.teamColor(for: participant) : nil
+        let avatarFillColor = participant.isSubstitute ? nil : teamColor
 
         return HStack(spacing: 12) {
             Button {
@@ -56,14 +57,20 @@ private struct TeeGroupSlotRow: View {
                     PlayerAvatarView(
                         initials: participant.name.initials,
                         size: playerAvatarSize,
-                        fillColor: teamColor,
+                        fillColor: avatarFillColor,
                         glassTint: Color.neutral6,
-                        initialsColor: teamColor != nil ? .white : palette.foregroundColor
+                        initialsColor: avatarFillColor != nil ? .white : palette.foregroundColor
                     )
+                    .overlay {
+                        if participant.isSubstitute {
+                            Circle()
+                                .stroke(teamColor ?? Color.neutral4, lineWidth: 2)
+                        }
+                    }
                     .frame(width: playerAvatarSize, height: playerAvatarSize)
 
                     VStack(spacing: 2) {
-                        Text(participant.name.fullName)
+                        Text(participant.isSubstitute ? "\(participant.name.fullName)*" : participant.name.fullName)
                             .fontStyle(kFontName, size: 15, weight: .semibold)
                             .foregroundStyle(palette.foregroundColor)
                             .alignLeading()
@@ -1313,23 +1320,30 @@ extension GameLobby {
         @ViewBuilder callToAction: () -> Content = { EmptyView() }
     ) -> some View {
         let teamColor: Color? = teamsEnabled ? snapshot.teamColor(for: participant) : nil
+        let avatarFillColor = participant.isSubstitute ? nil : teamColor
         let circleTint: Color = tint ?? palette.glassButtonColor
 
         HStack(spacing: 12) {
             PlayerAvatarView(
                 initials: participant.name.initials,
                 size: playerAvatarSize,
-                fillColor: teamColor,
+                fillColor: avatarFillColor,
                 glassTint: circleTint,
                 badgeIcon: badgeIcon,
                 badgeIconColor: Color.neutral,
                 badgeBackgroundColor: Color.clear,//accentGreen.opacity(0.25),
-                initialsColor: teamColor != nil ? .white : nil
+                initialsColor: avatarFillColor != nil ? .white : nil
             )
+            .overlay {
+                if participant.isSubstitute {
+                    Circle()
+                        .stroke(teamColor ?? Color.neutral4, lineWidth: 2)
+                }
+            }
             .frame(width: playerAvatarSize, height: playerAvatarSize)
             
             VStack(spacing: 2) {
-                Text(participant.name.fullName)
+                Text(participant.isSubstitute ? "\(participant.name.fullName)*" : participant.name.fullName)
                     .fontStyle(kFontName, size: 15, weight: .semibold)
                     .foregroundStyle(palette.foregroundColor)
                     .alignLeading()
@@ -1770,6 +1784,7 @@ private struct TeamSlotRow: View {
 
     private func filledSlot(for participant: RoundParticipant) -> some View {
         let teamColor = teamsEnabled ? snapshot.teamColor(for: participant) : nil
+        let avatarFillColor = participant.isSubstitute ? nil : teamColor
 
         return HStack(spacing: 12) {
             Button {
@@ -1780,14 +1795,20 @@ private struct TeamSlotRow: View {
                     PlayerAvatarView(
                         initials: participant.name.initials,
                         size: playerAvatarSize,
-                        fillColor: teamColor,
+                        fillColor: avatarFillColor,
                         glassTint: .neutral6,
-                        initialsColor: teamColor != nil ? .white : nil
+                        initialsColor: avatarFillColor != nil ? .white : nil
                     )
+                    .overlay {
+                        if participant.isSubstitute {
+                            Circle()
+                                .stroke(teamColor ?? Color.neutral4, lineWidth: 2)
+                        }
+                    }
                     .frame(width: playerAvatarSize, height: playerAvatarSize)
 
                     VStack(spacing: 2) {
-                        Text(participant.name.fullName)
+                        Text(participant.isSubstitute ? "\(participant.name.fullName)*" : participant.name.fullName)
                             .fontStyle(kFontName, size: 15, weight: .semibold)
                             .foregroundStyle(palette.foregroundColor)
                             .alignLeading()

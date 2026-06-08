@@ -26,6 +26,10 @@ struct LeaderboardRowView: View {
     var onHiddenScoreTap: Callback? = nil
     let onTogglePinned: Callback
     let onTap: Callback
+
+    private var showsSubstituteMarker: Bool {
+        row.participant.isSubstitute && row.memberNames == nil && !row.isSharedScoreUnit
+    }
     
     var body: some View {
         HStack(spacing: rowSpacing) {
@@ -49,7 +53,11 @@ struct LeaderboardRowView: View {
 
                     if let teamColor {
                         RoundedRectangle(cornerRadius: 3)
-                            .fill(teamColor.opacity(0.9))
+                            .fill(showsSubstituteMarker ? Color.clear : teamColor.opacity(0.9))
+                            .overlay(
+                                RoundedRectangle(cornerRadius: 3)
+                                    .stroke(teamColor.opacity(0.9), lineWidth: showsSubstituteMarker ? 1.5 : 0)
+                            )
                             .frame(width: row.memberNames != nil ? 4 : teamDotSize,
                                    height: row.memberNames != nil ? accentBarHeight : teamDotSize)
                     }
@@ -113,13 +121,20 @@ struct LeaderboardRowView: View {
                         .foregroundStyle(palette.foregroundColor)
                         .lineLimit(1)
                 } else {
-                    LiveRoundAdaptiveNameText(
-                        name: row.participant.name,
-                        format: nameDisplayFormat,
-                        fontSize: 15,
-                        weight: .semibold,
-                        color: palette.foregroundColor
-                    )
+                    HStack(spacing: 1) {
+                        LiveRoundAdaptiveNameText(
+                            name: row.participant.name,
+                            format: nameDisplayFormat,
+                            fontSize: 15,
+                            weight: .semibold,
+                            color: palette.foregroundColor
+                        )
+                        if row.participant.isSubstitute {
+                            Text("*")
+                                .fontStyle(kFontName, size: 15, weight: .semibold)
+                                .foregroundStyle(palette.foregroundColor)
+                        }
+                    }
                 }
 
                 if let names = row.memberNames {

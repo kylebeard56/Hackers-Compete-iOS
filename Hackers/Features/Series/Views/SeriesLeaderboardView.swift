@@ -15,6 +15,31 @@ private enum SeriesIndividualLeaderboardMode: String, CaseIterable {
     case stats = "Stats"
 }
 
+private enum SeriesIndividualStatsSort: String, CaseIterable {
+    case averageDifferential = "Avg Diff"
+    case handicapIndex = "Handicap Index"
+    case roundsPlayed = "Rounds Played"
+
+    var label: String {
+        rawValue
+    }
+
+    var menuSubtitle: String? {
+        switch self {
+        case .averageDifferential:
+            return "Compares completed round scores to rating/slope when available, otherwise par, using rounds that feed league handicap stats."
+        case .handicapIndex:
+            return "Member's current league handicap index from series settings, including dynamic calculation or commissioner override."
+        case .roundsPlayed:
+            return nil
+        }
+    }
+
+    var accessibilityLabel: String {
+        "Sort by \(label)"
+    }
+}
+
 struct SeriesLeaderboardView: View {
     @ObservedObject var viewModel: SeriesViewModel
     let palette: DesignPalette
@@ -23,6 +48,7 @@ struct SeriesLeaderboardView: View {
 
     @State private var standingsSegment: LeaderboardStandingsSegment = .individual
     @State private var individualLeaderboardMode: SeriesIndividualLeaderboardMode = .stats
+    @State private var individualStatsSort: SeriesIndividualStatsSort = .averageDifferential
     @State private var selectedTeamStanding: SeriesStanding?
 
     var body: some View {
@@ -159,13 +185,13 @@ struct SeriesLeaderboardView: View {
         }
 
         if viewModel.hasIndividualPlacementConfigured {
-            individualLeaderboardModeChip
+            individualLeaderboardControls
 
             switch individualLeaderboardMode {
             case .placement:
                 standingsTableContent(sectionTitle: nil, standings: viewModel.individualStandings, isTeam: false)
             case .stats:
-                individualStatsTableContent(rows: viewModel.individualStatsRows)
+                individualStatsTableContent(rows: sortedStatsRows)
             }
         } else {
             standingsTableContent(sectionTitle: nil, standings: viewModel.individualStandings, isTeam: false)
@@ -233,38 +259,74 @@ struct SeriesLeaderboardView: View {
         .disabled(isRefreshing)
     }
 
-    private var individualLeaderboardModeChip: some View {
+    private var individualLeaderboardControls: some View {
         HStack {
+            individualLeaderboardModeChip
+
             Spacer(minLength: 0)
 
-            Menu {
-                ForEach(SeriesIndividualLeaderboardMode.allCases, id: \.self) { mode in
-                    Button {
-                        Haptics.fire(.light)
-                        individualLeaderboardMode = mode
-                    } label: {
-                        Label(
-                            mode.rawValue,
-                            systemImage: individualLeaderboardMode == mode ? "checkmark" : "circle"
-                        )
+            if individualLeaderboardMode == .stats {
+                individualStatsSortChip
+            }
+        }
+    }
+
+    private var individualLeaderboardModeChip: some View {
+        Menu {
+            ForEach(SeriesIndividualLeaderboardMode.allCases, id: \.self) { mode in
+                Button {
+                    Haptics.fire(.light)
+                    individualLeaderboardMode = mode
+                } label: {
+                    Label(
+                        mode.rawValue,
+                        systemImage: individualLeaderboardMode == mode ? "checkmark" : "circle"
+                    )
+                }
+            }
+        } label: {
+            chipLabel(individualLeaderboardMode.rawValue)
+        }
+        .buttonStyle(.plain)
+        .accessibilityLabel("Individual leaderboard mode")
+        .accessibilityValue(individualLeaderboardMode.rawValue)
+    }
+
+    private var individualStatsSortChip: some View {
+        Menu {
+            ForEach(SeriesIndividualStatsSort.allCases, id: \.self) { sort in
+                Button {
+                    Haptics.fire(.light)
+                    individualStatsSort = sort
+                } label: {
+                    Label(
+                        sort.label,
+                        systemImage: individualStatsSort == sort ? "checkmark" : "circle"
+                    )
+                    if let menuSubtitle = sort.menuSubtitle {
+                        Text(menuSubtitle)
                     }
                 }
-            } label: {
-                HStack(spacing: 6) {
-                    Text(individualLeaderboardMode.rawValue)
-                    Image(systemName: "chevron.down")
-                        .font(.system(size: 10, weight: .semibold))
-                }
-                .fontStyle(kFontName, size: 12, weight: .semibold)
-                .foregroundStyle(palette.foregroundColor)
-                .padding(.horizontal, 12)
-                .padding(.vertical, 7)
-                .glassCardEffect(cornerRadius: 12, tint: palette.whiteGlassButtonColor, shadowOpacity: 0)
             }
-            .buttonStyle(.plain)
-            .accessibilityLabel("Individual leaderboard mode")
-            .accessibilityValue(individualLeaderboardMode.rawValue)
+        } label: {
+            chipLabel("Sort by \(individualStatsSort.label)")
         }
+        .buttonStyle(.plain)
+        .accessibilityLabel("Individual stats sort")
+        .accessibilityValue(individualStatsSort.accessibilityLabel)
+    }
+
+    private func chipLabel(_ text: String) -> some View {
+        HStack(spacing: 6) {
+            Text(text)
+            Image(systemName: "chevron.down")
+                .font(.system(size: 10, weight: .semibold))
+        }
+        .fontStyle(kFontName, size: 12, weight: .semibold)
+        .foregroundStyle(palette.foregroundColor)
+        .padding(.horizontal, 12)
+        .padding(.vertical, 7)
+        .glassCardEffect(cornerRadius: 12, tint: palette.whiteGlassButtonColor, shadowOpacity: 0)
     }
 
     @ViewBuilder
@@ -352,6 +414,51 @@ struct SeriesLeaderboardView: View {
         }
         .fontStyle(kFontName, size: 12, weight: .semibold)
         .foregroundStyle(Color.neutral)
+    }
+
+    private var sortedStatsRows: [SeriesIndividualStatsRow] {
+        viewModel.individualStatsRows.sorted { lhs, rhs in
+            switch individualStatsSort {
+            case .averageDifferential:
+                if let result = compareFiniteAscending(lhs.averageDifferential, rhs.averageDifferential) {
+                    return result
+                }
+            case .handicapIndex:
+                if let result = compareFiniteAscending(lhs.currentHandicap, rhs.currentHandicap) {
+                    return result
+                }
+            case .roundsPlayed:
+                if lhs.roundsPlayed != rhs.roundsPlayed {
+                    return lhs.roundsPlayed > rhs.roundsPlayed
+                }
+            }
+
+            return nameSort(lhs, rhs)
+        }
+    }
+
+    private func compareFiniteAscending(_ lhs: Double?, _ rhs: Double?) -> Bool? {
+        let left = finiteValue(lhs)
+        let right = finiteValue(rhs)
+        switch (left, right) {
+        case let (l?, r?) where l != r:
+            return l < r
+        case (.some, nil):
+            return true
+        case (nil, .some):
+            return false
+        default:
+            return nil
+        }
+    }
+
+    private func finiteValue(_ value: Double?) -> Double? {
+        guard let value, value.isFinite else { return nil }
+        return value
+    }
+
+    private func nameSort(_ lhs: SeriesIndividualStatsRow, _ rhs: SeriesIndividualStatsRow) -> Bool {
+        lhs.name.localizedCaseInsensitiveCompare(rhs.name) == .orderedAscending
     }
 
     @ViewBuilder

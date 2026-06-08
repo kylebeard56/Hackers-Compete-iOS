@@ -289,6 +289,8 @@ struct RoundConfiguration: Hashable, Codable {
     var mirrorTeeGroupsAsTeams: Bool?
     /// When true, live scoring can ask players/commissioners to confirm round attendance.
     var attendanceConfirmationEnabled: Bool?
+    /// When false, round-local substitutes can play and accrue stats but do not count toward scoring/placements.
+    var substitutesScore: Bool
 
     var isSecretScoring: Bool { secretScoring == true }
     var areScoresRevealed: Bool { scoresRevealed == true }
@@ -323,7 +325,8 @@ struct RoundConfiguration: Hashable, Codable {
         leagueHandicapMaximum: Int? = nil,
         teamColorsEnabled: Bool = true,
         mirrorTeeGroupsAsTeams: Bool? = nil,
-        attendanceConfirmationEnabled: Bool? = nil
+        attendanceConfirmationEnabled: Bool? = nil,
+        substitutesScore: Bool = false
     ) {
         self.primaryFormat = primaryFormat
         self.formatSummary = formatSummary
@@ -353,6 +356,7 @@ struct RoundConfiguration: Hashable, Codable {
         self.teamColorsEnabled = teamColorsEnabled
         self.mirrorTeeGroupsAsTeams = mirrorTeeGroupsAsTeams
         self.attendanceConfirmationEnabled = attendanceConfirmationEnabled
+        self.substitutesScore = substitutesScore
     }
 
     /// Resolved scope: config override or template default.
@@ -391,6 +395,7 @@ struct RoundConfiguration: Hashable, Codable {
         case teamColorsEnabled = "team_colors_enabled"
         case mirrorTeeGroupsAsTeams = "mirror_tee_groups_as_teams"
         case attendanceConfirmationEnabled = "attendance_confirmation_enabled"
+        case substitutesScore = "substitutes_score"
     }
 
     var useHandicaps: Bool {
@@ -478,6 +483,7 @@ struct RoundConfiguration: Hashable, Codable {
         teamColorsEnabled = try c.decodeIfPresent(Bool.self, forKey: .teamColorsEnabled) ?? true
         mirrorTeeGroupsAsTeams = try c.decodeIfPresent(Bool.self, forKey: .mirrorTeeGroupsAsTeams)
         attendanceConfirmationEnabled = try c.decodeIfPresent(Bool.self, forKey: .attendanceConfirmationEnabled)
+        substitutesScore = try c.decodeIfPresent(Bool.self, forKey: .substitutesScore) ?? false
         matchupResolutionStyle = try c.decodeIfPresent(RoundMatchupResolutionStyle.self, forKey: .matchupResolutionStyle) ?? .roundAggregate
 
         if let decodedTeamScoring = try c.decodeIfPresent(RoundTeamScoringConfiguration.self, forKey: .teamScoring) {
@@ -527,5 +533,6 @@ struct RoundConfiguration: Hashable, Codable {
         try c.encode(teamColorsEnabled, forKey: .teamColorsEnabled)
         try c.encodeIfPresent(mirrorTeeGroupsAsTeams, forKey: .mirrorTeeGroupsAsTeams)
         try c.encodeIfPresent(attendanceConfirmationEnabled, forKey: .attendanceConfirmationEnabled)
+        try c.encode(substitutesScore, forKey: .substitutesScore)
     }
 }

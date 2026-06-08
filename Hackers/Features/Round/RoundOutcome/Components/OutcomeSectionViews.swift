@@ -463,6 +463,14 @@ struct OutcomeMatchupTileView: View {
         Dictionary(uniqueKeysWithValues: snapshot.scoringGroups.map { ($0.id, $0) })
     }
 
+    private var matchupParticipants: [RoundParticipant] {
+        presentation.sides.flatMap(\.participants)
+    }
+
+    private var showsSubstituteScoringFootnote: Bool {
+        !snapshot.configuration.substitutesScore && matchupParticipants.contains(where: \.isSubstitute)
+    }
+
     var body: some View {
         VStack(spacing: 14) {
             HStack(alignment: .top, spacing: 12) {
@@ -495,6 +503,8 @@ struct OutcomeMatchupTileView: View {
             }
 
             outcomeMembersTable
+
+            substituteScoringFootnote
         }
         .padding(16)
         .frame(maxWidth: .infinity, alignment: .leading)
@@ -508,7 +518,8 @@ struct OutcomeMatchupTileView: View {
         let isWinner = status.winningScoringUnitID == side?.id
         let accent = side?.accentColor ?? accentColor(for: scoringUnitID)
         let totalText = side?.scoreLabel ?? formattedMatchupTotal(nil)
-        let sideTitle = side.map(\.title) ?? viewModel.outcomeMatchupSideName(scoringUnitID: scoringUnitID, matchup: section.matchup)
+        let rawSideTitle = side.map(\.title) ?? viewModel.outcomeMatchupSideName(scoringUnitID: scoringUnitID, matchup: section.matchup)
+        let sideTitle = markedSideTitle(rawSideTitle, scoringUnitID: scoringUnitID)
         let sideSubtitle = side.flatMap(\.subtitle) ?? subtitle(for: scoringUnitID)
 
         HStack(spacing: 12) {
@@ -642,7 +653,7 @@ struct OutcomeMatchupTileView: View {
         switch matchupMode {
         case .team:
             let members = viewModel.matchupSideParticipants(scoringUnitID: scoringUnitID, matchup: section.matchup)
-                .map { viewModel.formatDisplayName(for: $0) }
+                .map { markedDisplayName(for: $0) }
                 .filter(\.isPopulated)
             return members.isPopulated ? members.joined(separator: ", ") : nil
         case .individual:
@@ -655,6 +666,27 @@ struct OutcomeMatchupTileView: View {
     private func formattedMatchupTotal(_ total: Double?) -> String {
         guard let total else { return "—" }
         return viewModel.formattedMatchupTotal(total, isPointsFormat: isPointsFormat)
+    }
+
+    @ViewBuilder
+    private var substituteScoringFootnote: some View {
+        if showsSubstituteScoringFootnote {
+            Text("* Substitute players do not count towards scoring")
+                .fontStyle(kFontName, size: 11, weight: .medium)
+                .foregroundStyle(Color.neutral)
+                .frame(maxWidth: .infinity, alignment: .leading)
+        }
+    }
+
+    private func markedDisplayName(for participant: RoundParticipant) -> String {
+        let name = viewModel.formatDisplayName(for: participant)
+        return participant.isSubstitute ? "\(name)*" : name
+    }
+
+    private func markedSideTitle(_ title: String, scoringUnitID: String) -> String {
+        guard matchupMode == .individual,
+              participantMap[scoringUnitID]?.isSubstitute == true else { return title }
+        return "\(title)*"
     }
 }
 
@@ -721,16 +753,24 @@ private struct OutcomeMatchupPlayerRowView: View {
         Button(action: onTap) {
             HStack(spacing: 12) {
                 HStack(spacing: 8) {
-                    Text(participant.name.fullName)
-                        .fontStyle(kFontName, size: 14, weight: .medium)
-                        .foregroundStyle(isActive ? palette.foregroundColor : Color.neutral2)
-                        .lineLimit(1)
-                        .minimumScaleFactor(0.82)
-                        .frame(maxWidth: .infinity, alignment: .leading)
+                    HStack(spacing: 1) {
+                        Text(participant.name.fullName)
+                            .fontStyle(kFontName, size: 14, weight: .medium)
+                            .foregroundStyle(isActive ? palette.foregroundColor : Color.neutral2)
+                            .lineLimit(1)
+                            .minimumScaleFactor(0.82)
+                        if participant.isSubstitute {
+                            Text("*")
+                                .fontStyle(kFontName, size: 14, weight: .medium)
+                                .foregroundStyle(isActive ? palette.foregroundColor : Color.neutral2)
+                        }
+                    }
+                    .frame(maxWidth: .infinity, alignment: .leading)
 
                     if isActive {
                         Circle()
-                            .fill(teamColor ?? Color.accentGreen)
+                            .fill(participant.isSubstitute ? Color.clear : (teamColor ?? Color.accentGreen))
+                            .overlay(Circle().stroke(teamColor ?? Color.accentGreen, lineWidth: participant.isSubstitute ? 1.5 : 0))
                             .frame(width: 8, height: 8)
                     }
                 }

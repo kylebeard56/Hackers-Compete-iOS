@@ -29,6 +29,28 @@ struct MatchupCardView: View {
 
     private var palette: DesignPalette { PaletteTheme.primary.palette(for: colorScheme) }
 
+    private var matchupParticipants: [RoundParticipant] {
+        switch slotMode {
+        case .team:
+            let teamIDs = Set(matchup.teamIDs)
+            return snapshot.participants.filter { participant in
+                guard let teamID = participant.teamID else { return false }
+                return teamIDs.contains(teamID)
+            }
+        case .individual:
+            let ids = Set(matchup.participantIDs ?? [])
+            return snapshot.participants.filter { ids.contains($0.id) }
+        case .partnership, .teeGroup, .scoreOwner:
+            let ownerIDs = Set(matchup.scoreOwnerIDs ?? [])
+            let participantIDs = Set(snapshot.scoringGroups.filter { ownerIDs.contains($0.id) }.flatMap(\.memberIDs))
+            return snapshot.participants.filter { participantIDs.contains($0.id) }
+        }
+    }
+
+    private var showsSubstituteScoringFootnote: Bool {
+        !snapshot.configuration.substitutesScore && matchupParticipants.contains(where: \.isSubstitute)
+    }
+
     private func slotID(_ index: Int) -> String? {
         switch slotMode {
         case .team:
@@ -54,6 +76,13 @@ struct MatchupCardView: View {
                 slotView(slotID: slotID(0), slotIndex: 0)
                 vsDivider
                 slotView(slotID: slotID(1), slotIndex: 1)
+            }
+
+            if showsSubstituteScoringFootnote {
+                Text("* Substitute players do not count towards scoring")
+                    .fontStyle(kFontName, size: 11, weight: .medium)
+                    .foregroundStyle(Color.neutral)
+                    .frame(maxWidth: .infinity, alignment: .leading)
             }
         }
         .padding(16)
@@ -154,7 +183,7 @@ struct MatchupCardView: View {
                     Haptics.fire(.light)
                     onAssignParticipant(slotIndex, participant.id)
                 } label: {
-                    Text(participant.name.fullName)
+                    Text(markedFullName(for: participant))
                 }
             }
 
@@ -179,9 +208,9 @@ struct MatchupCardView: View {
             }
         } label: {
             slotLabelContent(
-                title: participant?.name.fullName ?? "Tap to assign",
+                title: participant.map(markedFullName(for:)) ?? "Tap to assign",
                 subtitle: isEmpty ? "(Empty)" : nil,
-                participantNames: participant.map { [$0.name] },
+                participantNamesWithMarkers: participant.map { [($0.name, $0.isSubstitute)] },
                 swatchColor: nil,
                 isEmpty: isEmpty
             )
@@ -239,6 +268,7 @@ struct MatchupCardView: View {
                 title: scoreOwner.map(scoreOwnerTitle(for:)) ?? "Tap to assign",
                 subtitle: subtitle,
                 participantNames: participantNames,
+                participantNamesWithMarkers: scoreOwner.flatMap(scoreOwnerParticipantNamesWithMarkers(for:)),
                 swatchColor: scoreOwner.flatMap(scoreOwnerColor(for:)),
                 isEmpty: isEmpty
             )
@@ -251,6 +281,7 @@ struct MatchupCardView: View {
         title: String,
         subtitle: String?,
         participantNames: [Name]? = nil,
+        participantNamesWithMarkers: [(Name, Bool)]? = nil,
         swatchColor: Color?,
         isEmpty: Bool
     ) -> some View {
@@ -263,7 +294,27 @@ struct MatchupCardView: View {
                         .padding(.top, 6)
                 }
 
-                if let participantNames, participantNames.isPopulated {
+                if let participantNamesWithMarkers, participantNamesWithMarkers.isPopulated {
+                    VStack(alignment: .leading, spacing: 2) {
+                        ForEach(Array(participantNamesWithMarkers.enumerated()), id: \.offset) { _, item in
+                            HStack(alignment: .firstTextBaseline, spacing: 1) {
+                                LiveRoundAdaptiveNameText(
+                                    name: item.0,
+                                    format: .firstNameLastInitial,
+                                    fontSize: 15,
+                                    weight: .semibold,
+                                    color: palette.foregroundColor
+                                )
+                                if item.1 {
+                                    Text("*")
+                                        .fontStyle(kFontName, size: 15, weight: .semibold)
+                                        .foregroundStyle(palette.foregroundColor)
+                                }
+                            }
+                        }
+                    }
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                } else if let participantNames, participantNames.isPopulated {
                     VStack(alignment: .leading, spacing: 2) {
                         ForEach(Array(participantNames.enumerated()), id: \.offset) { _, name in
                             LiveRoundAdaptiveNameText(
@@ -310,9 +361,10 @@ struct MatchupCardView: View {
         let names = participants
             .map { participant in
                 let given = participant.name.givenName.trimmingCharacters(in: .whitespacesAndNewlines)
-                if given.isPopulated { return given }
+                if given.isPopulated { return participant.isSubstitute ? "\(given)*" : given }
                 let family = participant.name.familyName.trimmingCharacters(in: .whitespacesAndNewlines)
-                return family.isPopulated ? family : participant.name.fullName
+                let fallback = family.isPopulated ? family : participant.name.fullName
+                return participant.isSubstitute ? "\(fallback)*" : fallback
             }
             .filter(\.isPopulated)
 
@@ -352,10 +404,22 @@ struct MatchupCardView: View {
         return names.isPopulated ? names : nil
     }
 
+    private func scoreOwnerParticipantNamesWithMarkers(for owner: RoundScoringGroup) -> [(Name, Bool)]? {
+        let names = owner.memberIDs.compactMap { id -> (Name, Bool)? in
+            guard let participant = snapshot.participants.first(where: { $0.id == id }) else { return nil }
+            return (participant.name, participant.isSubstitute)
+        }
+        return names.isPopulated ? names : nil
+    }
+
     private func scoreOwnerColor(for owner: RoundScoringGroup) -> Color? {
         owner.teamID.flatMap { teamID in
             snapshot.teams.first(where: { $0.id == teamID })?.displaySwatchColor
         }
+    }
+
+    private func markedFullName(for participant: RoundParticipant) -> String {
+        participant.isSubstitute ? "\(participant.name.fullName)*" : participant.name.fullName
     }
 }
 

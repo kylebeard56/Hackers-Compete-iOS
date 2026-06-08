@@ -85,6 +85,11 @@ struct SeriesRoundCreationService: Loggable {
                 groupPlans: resolvedPlan.teeGroupPlans,
                 groupIDsByPlanID: groupIDsByPlanID
             )
+            let plannedSeatsByMemberID = Dictionary(
+                uniqueKeysWithValues: resolvedPlan.plannedStructure.teeGroups
+                    .flatMap(\.seats)
+                    .map { ($0.memberID, $0) }
+            )
 
             if series.handicapConfig.isEnabled {
                 let missingHandicapMemberIDs = SeriesRoundCreationMapping.membersMissingEffectiveHandicap(
@@ -123,7 +128,8 @@ struct SeriesRoundCreationService: Loggable {
                 handicapEntryFormat: seriesRound.roundConfig.handicapEntryFormat,
                 handicapStrokeBasis: seriesRound.roundConfig.handicapStrokeBasis,
                 hostPlayerID: player.id,
-                presenceStatusByMemberID: presenceStatusByMemberID
+                presenceStatusByMemberID: presenceStatusByMemberID,
+                plannedSeatsByMemberID: plannedSeatsByMemberID
             )
 
             let createdParticipants = try await participantsPayload.batchPostChunked().get()

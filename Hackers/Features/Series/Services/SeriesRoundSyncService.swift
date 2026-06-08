@@ -28,13 +28,11 @@ struct SeriesRoundSyncService: Loggable {
         if let err = SeriesRoundSyncPlanning.validateOptions(options, roundStatus: roundStatus) {
             return .failure(err)
         }
-        if options.syncOrganization, roundStatus == .live || roundStatus == .paused {
-            return .failure(.organizationNotAllowedLive)
-        }
         guard snapshot.participants.isPopulated else { return .failure(.noParticipants) }
         guard let courseSegment = snapshot.courseSegment else { return .failure(.missingCourseSegment) }
 
-        let participatingMembers = SeriesRoundSyncPlanning.participatingMembers(
+        let participatingMembers = SeriesRoundSyncPlanning.participatingMembersForSync(
+            seriesRound: seriesRound,
             snapshot: snapshot,
             membersByID: membersByID
         )
@@ -56,17 +54,18 @@ struct SeriesRoundSyncService: Loggable {
             pods: pods,
             courseSegment: courseSegment
         )
+        let plannedSeatsByMemberID = Dictionary(
+            uniqueKeysWithValues: resolvedPlan.plannedStructure.teeGroups.flatMap(\.seats).map { ($0.memberID, $0) }
+        )
         let seriesTeamsForRound = usesSeriesTeams ? resolvedPlan.seriesTeamsForRound : []
         let seriesTeamIDsForRound = Set(seriesTeamsForRound.map(\.id))
-        let relevantTeamLinks = teamLinks.filter { seriesTeamIDsForRound.contains($0.key) }
-        if options.syncOrganization,
-           let preflightError = SeriesRoundSyncPlanning.organizationTeamMappingPreflightError(
+        let relevantTeamLinks = usesSeriesTeams
+            ? SeriesRoundSyncPlanning.teamLinksForSync(
                 seriesTeamsForRound: seriesTeamsForRound,
-                teamLinks: teamLinks,
-                snapshot: snapshot
-           ) {
-            return .failure(preflightError)
-        }
+                existingLinks: teamLinks.filter { seriesTeamIDsForRound.contains($0.key) },
+                roundID: snapshot.round.id
+            )
+            : [:]
         let partnershipPlans = SeriesRoundCreationMapping.resolvedPartnershipPlans(
             seriesRound: seriesRound,
             teams: teams,
@@ -169,6 +168,7 @@ struct SeriesRoundSyncService: Loggable {
                 let updatedTeeGroups = try SeriesRoundSyncPlanning.teeGroupsWithLeagueSchedule(
                     snapshot: snapshot,
                     groupPlans: teeSchedulePlans,
+                    plannedTeeGroups: resolvedPlan.plannedStructure.teeGroups,
                     seriesRound: seriesRound
                 )
                 for group in updatedTeeGroups {
@@ -179,17 +179,56 @@ struct SeriesRoundSyncService: Loggable {
                 }
 
                 workingParticipants = SeriesRoundSyncPlanning.participantsWithOrganizationSync(
-                    participants: workingParticipants,
+                    participants: workingParticipants.filter { participant in
+                        guard let memberID = participant.seriesMemberID else { return false }
+                        return participatingMembers.contains { $0.id == memberID }
+                    },
                     participatingMembers: participatingMembers,
                     teamLinks: relevantTeamLinks,
                     memberAssignments: memberAssignments,
+                    plannedSeatsByMemberID: plannedSeatsByMemberID,
                     usesSeriesTeams: usesSeriesTeams
                 )
+                let existingMemberIDs = Set(workingParticipants.compactMap(\.seriesMemberID))
+                let missingMembers = participatingMembers.filter { !existingMemberIDs.contains($0.id) }
+                if missingMembers.isPopulated {
+                    let newParticipants = SeriesRoundCreationMapping.buildParticipantPayloads(
+                        members: missingMembers,
+                        roundID: snapshot.round.id,
+                        teamMappings: relevantTeamLinks,
+                        memberAssignments: memberAssignments,
+                        handicaps: handicaps,
+                        maximumHandicap: series.handicapConfig.isEnabled ? series.handicapConfig.config.maximumHandicap : nil,
+                        courseSegment: courseSegment,
+                        handicapEntryFormat: workingRound.configuration.handicapEntryFormat,
+                        handicapStrokeBasis: workingRound.configuration.handicapStrokeBasis,
+                        hostPlayerID: hostPlayerID,
+                        plannedSeatsByMemberID: plannedSeatsByMemberID
+                    )
+                    workingParticipants.append(contentsOf: newParticipants)
+                }
+                let targetMemberIDs = Set(participatingMembers.map(\.id))
+                let participantsToDelete = snapshot.participants.filter { participant in
+                    guard let memberID = participant.seriesMemberID else { return true }
+                    return !targetMemberIDs.contains(memberID)
+                }
+                for participant in participantsToDelete {
+                    if case .failure(let error) = await participant.delete() {
+                        addBreadcrumb(level: .error, message: "series.round_sync participant prune failed", error: error)
+                        return .failure(.writeFailed(error.localizedDescription))
+                    }
+                }
 
                 let populatedTeeGroupIDs = Set(workingParticipants.compactMap(\.groupID).filter(\.isPopulated))
                 let retainedTeeGroups = updatedTeeGroups.filter { populatedTeeGroupIDs.contains($0.id) }
                 workingTeeGroups = retainedTeeGroups
-                for group in updatedTeeGroups where !populatedTeeGroupIDs.contains(group.id) {
+                let desiredTeeGroupIDs = Set(updatedTeeGroups.map(\.id))
+                let teeGroupsToDelete = snapshot.teeGroups.filter { group in
+                    !desiredTeeGroupIDs.contains(group.id) || !populatedTeeGroupIDs.contains(group.id)
+                } + updatedTeeGroups.filter { !populatedTeeGroupIDs.contains($0.id) }
+                var deletedTeeGroupIDs = Set<String>()
+                for group in teeGroupsToDelete where !deletedTeeGroupIDs.contains(group.id) {
+                    deletedTeeGroupIDs.insert(group.id)
                     if case .failure(let error) = await group.delete() {
                         addBreadcrumb(level: .error, message: "series.round_sync tee group prune failed", error: error)
                         return .failure(.writeFailed(error.localizedDescription))
@@ -209,6 +248,42 @@ struct SeriesRoundSyncService: Loggable {
                 addBreadcrumb(level: .error, message: "series.round_sync organization failed", error: error)
                 return .failure(.writeFailed(error.localizedDescription))
             }
+        }
+
+        if options.syncOrganization {
+            guard let existingSegment = snapshot.roundSegment else {
+                return .failure(.missingCourseSegment)
+            }
+            let scoringGroupSeriesRound = options.syncFormat
+                ? seriesRound
+                : SeriesRoundSyncPlanning.scoringSeriesRoundForExistingRound(
+                    seriesRound,
+                    roundConfiguration: workingRound.configuration,
+                    existingSegment: existingSegment
+                )
+            let patch = SeriesRoundSyncPlanning.teeGroupScoringGroupPatch(
+                roundID: snapshot.round.id,
+                seriesRound: scoringGroupSeriesRound,
+                participants: workingParticipants,
+                partnershipPlans: partnershipPlans,
+                teeGroups: workingTeeGroups.sorted { $0.index < $1.index },
+                existingScoringGroups: workingScoringGroups
+            )
+
+            for group in patch.scoringGroupsToDelete {
+                if case .failure(let error) = await group.delete() {
+                    addBreadcrumb(level: .error, message: "series.round_sync tee scoring group delete failed", error: error)
+                    return .failure(.writeFailed(error.localizedDescription))
+                }
+            }
+
+            if patch.scoringGroupsToPut.isPopulated {
+                if case .failure(let error) = await Self.batchPutSubcollection(patch.scoringGroupsToPut) {
+                    addBreadcrumb(level: .error, message: "series.round_sync tee scoring groups batch failed", error: error)
+                    return .failure(.writeFailed(error.localizedDescription))
+                }
+            }
+            workingScoringGroups = patch.mergedScoringGroups
         }
 
         if options.syncPairs {
@@ -294,6 +369,7 @@ struct SeriesRoundSyncService: Loggable {
                 handicapEntryFormat: workingRound.configuration.handicapEntryFormat,
                 handicapStrokeBasis: workingRound.configuration.handicapStrokeBasis,
                 hostPlayerID: hostPlayerID,
+                plannedSeatsByMemberID: plannedSeatsByMemberID,
                 preserveManualHandicapEdits: options.preserveManualHandicapEdits
             )
         }
@@ -335,6 +411,21 @@ struct SeriesRoundSyncService: Loggable {
             if case .failure(let error) = await Self.batchPutSubcollection(workingParticipants) {
                 addBreadcrumb(level: .error, message: "series.round_sync participants batch failed", error: error)
                 return .failure(.writeFailed(error.localizedDescription))
+            }
+        }
+
+        if options.syncPlayerData || options.syncOrganization {
+            let nextPlayerIDs = workingParticipants.compactMap(\.playerID)
+            if workingRound.players != nextPlayerIDs {
+                workingRound.players = nextPlayerIDs
+                workingRound.lastUpdatedAt = .init()
+                switch await workingRound.put() {
+                case .success(let updated):
+                    workingRound = updated
+                case .failure(let error):
+                    addBreadcrumb(level: .error, message: "series.round_sync round players put failed", error: error)
+                    return .failure(.writeFailed(error.localizedDescription))
+                }
             }
         }
 

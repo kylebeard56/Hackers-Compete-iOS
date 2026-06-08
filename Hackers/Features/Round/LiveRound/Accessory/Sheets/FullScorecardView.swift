@@ -900,8 +900,8 @@ private extension FullScorecardView {
             participant = row.participant
             scoringUnitID = row.scoringUnitID
             title = row.isSharedScoreUnit
-                ? row.participants.map(\.name.fullName).filter(\.isPopulated).joined(separator: " + ")
-                : row.participant.name.fullName
+                ? row.participants.map { $0.isSubstitute ? "\($0.name.fullName)*" : $0.name.fullName }.filter(\.isPopulated).joined(separator: " + ")
+                : (row.participant.isSubstitute ? "\(row.participant.name.fullName)*" : row.participant.name.fullName)
             self.holeNumber = holeNumber
         }
         
@@ -1395,7 +1395,8 @@ private extension FullScorecardView {
     }
     
     func shortName(for participant: RoundParticipant) -> String {
-        viewModel.formatDisplayName(for: participant)
+        let name = viewModel.formatDisplayName(for: participant)
+        return participant.isSubstitute ? "\(name)*" : name
     }
     
     private var tintedHeader: Color {

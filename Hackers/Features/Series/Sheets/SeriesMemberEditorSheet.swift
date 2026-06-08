@@ -615,6 +615,7 @@ struct SeriesMemberEditorSheet: View {
         case .commissioner: return "Commissioner"
         case .captain: return "Captain"
         case .member: return "Member"
+        case .substitute: return "Substitute"
         case .spectator: return "Spectator"
         }
     }

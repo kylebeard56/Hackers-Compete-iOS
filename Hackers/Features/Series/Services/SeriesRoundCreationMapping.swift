@@ -129,7 +129,8 @@ enum SeriesRoundCreationMapping {
             handicapEntryFormat: handicapEntryFormat,
             handicapNormalizationMode: seriesRound.roundConfig.handicapNormalizationMode,
             leagueHandicapMaximum: series.handicapConfig.isEnabled ? series.handicapConfig.config.maximumHandicap : nil,
-            attendanceConfirmationEnabled: series.settings.isAttendanceEnabled
+            attendanceConfirmationEnabled: series.settings.isAttendanceEnabled,
+            substitutesScore: series.settings.substitutesScore
         )
     }
 
@@ -202,6 +203,7 @@ enum SeriesRoundCreationMapping {
         teams: [SeriesTeam],
         members: [SeriesMember]
     ) -> [SeriesRoundMatchupPlan] {
+        let schedulableMembers = members.filter { $0.role != .substitute && $0.role != .spectator }
         if seriesRound.matchupPlans.isPopulated {
             return seriesRound.matchupPlans.sorted { $0.index < $1.index }
         }
@@ -227,7 +229,7 @@ enum SeriesRoundCreationMapping {
             }
             return plans
         case .individualVsIndividual:
-            let orderedMembers = members.sorted {
+            let orderedMembers = schedulableMembers.sorted {
                 $0.name.fullName.localizedCaseInsensitiveCompare($1.name.fullName) == .orderedAscending
             }
             var plans: [SeriesRoundMatchupPlan] = []
@@ -258,20 +260,21 @@ enum SeriesRoundCreationMapping {
         matchupPlans: [SeriesRoundMatchupPlan],
         seriesRound: SeriesRound
     ) -> [TeeGroupPlan] {
+        let schedulableMembers = members.filter { $0.role != .substitute && $0.role != .spectator }
         if seriesRound.roundConfig.teeGroupMode == .podAligned || seriesRound.roundConfig.podGroupingStrategy.usesPodAlignment {
             let podPlans = buildPodAlignedGroupPlans(
-                members: members,
+                members: schedulableMembers,
                 pods: pods,
                 matchupPlans: matchupPlans
             )
             if podPlans.isPopulated {
                 let assignedMemberIDs = Set(podPlans.flatMap(\.memberIDs))
-                let leftovers = members.filter { !assignedMemberIDs.contains($0.id) }
+                let leftovers = schedulableMembers.filter { !assignedMemberIDs.contains($0.id) }
                 return podPlans + sequentialGroupPlans(for: leftovers, teams: teams)
             }
         }
 
-        return sequentialGroupPlans(for: members, teams: teams)
+        return sequentialGroupPlans(for: schedulableMembers, teams: teams)
     }
 
     private static func buildPodAlignedGroupPlans(
@@ -607,7 +610,8 @@ enum SeriesRoundCreationMapping {
         handicapEntryFormat: HandicapEntryFormat = .strokes,
         handicapStrokeBasis: SeriesHandicapStrokeBasis? = nil,
         hostPlayerID: String?,
-        presenceStatusByMemberID: [String: RoundParticipantPresenceStatus] = [:]
+        presenceStatusByMemberID: [String: RoundParticipantPresenceStatus] = [:],
+        plannedSeatsByMemberID: [String: SeriesRoundPlannedSeat] = [:]
     ) -> [RoundParticipant] {
         let resolvedHandicapEntryFormat: HandicapEntryFormat = handicapEntryFormat == .courseHandicap
             && !HandicapCalculator.hasCourseHandicapData(courseSegment: courseSegment)
@@ -617,7 +621,11 @@ enum SeriesRoundCreationMapping {
             let assignment = memberAssignments[member.id]
             let effectiveIndex = handicaps[member.id]?.effectiveIndex
             let effectiveHandicap = handicaps[member.id]?.effectiveStrokes(maximumHandicap: maximumHandicap) ?? 0
-            let teamMapping = member.teamID.flatMap { teamMappings[$0] }
+            let plannedSeat = plannedSeatsByMemberID[member.id]
+            let representedTeamID = plannedSeat?.representedTeamID?.isPopulated == true
+                ? plannedSeat?.representedTeamID
+                : member.teamID
+            let teamMapping = representedTeamID.flatMap { teamMappings[$0] }
             let teeBoxID = resolvedTeeBoxID(for: member, courseSegment: courseSegment)
             let template = RoundParticipant(
                 teeBoxID: teeBoxID,
@@ -653,6 +661,9 @@ enum SeriesRoundCreationMapping {
                 teeOrder: assignment?.teeOrder,
                 isHost: hostPlayerID != nil && member.playerID == hostPlayerID,
                 presenceStatus: presenceStatusByMemberID[member.id] ?? .active,
+                isSubstitute: plannedSeat?.isSubstitute == true || member.role == .substitute,
+                substituteForSeriesMemberID: plannedSeat?.substituteForSeriesMemberID,
+                substituteForName: plannedSeat?.substituteForName,
                 createdAt: .init(),
                 lastUpdatedAt: .init(),
                 parentID: roundID
@@ -1150,7 +1161,11 @@ struct SeriesRoundResolvedPlan: Equatable {
             SeriesRoundPlanningService.teeGroupPlans(from: plannedStructure.teeGroups),
             partnershipPlans: partnershipPlans
         )
-        let participatingTeamIDs = Set(members.compactMap(\.teamID).filter(\.isPopulated))
+        let representedTeamIDs = plannedStructure.teeGroups
+            .flatMap(\.seats)
+            .compactMap(\.representedTeamID)
+            .filter(\.isPopulated)
+        let participatingTeamIDs = Set(members.compactMap(\.teamID).filter(\.isPopulated) + representedTeamIDs)
         seriesTeamsForRound = seriesRound.roundConfig.teamAssignmentMode == .seriesTeams
             ? teams.filter { participatingTeamIDs.contains($0.id) }
             : []
@@ -1177,10 +1192,12 @@ enum SeriesRoundPlanningService {
         courseSelection: SeriesCourseSelection?
     ) -> SeriesRoundPlannedStructure {
         let activeMembers = members.filter(\.isActive)
+        let eligibleMembers = activeMembers.filter { $0.role != .spectator }
+        let schedulableMembers = eligibleMembers.filter { $0.role != .substitute }
         let autoMatchupPlans = SeriesRoundCreationMapping.resolvedMatchupPlans(
             seriesRound: seriesRound,
             teams: teams,
-            members: activeMembers
+            members: schedulableMembers
         )
 
         let effectiveMatchupPlans: [SeriesRoundMatchupPlan]
@@ -1202,7 +1219,7 @@ enum SeriesRoundPlanningService {
 
         let autoTeeGroups = autoPlannedTeeGroups(
             seriesRound: seriesRound,
-            members: activeMembers,
+            members: schedulableMembers,
             teams: teams,
             pods: pods,
             matchupPlans: effectiveMatchupPlans,
@@ -1212,7 +1229,7 @@ enum SeriesRoundPlanningService {
         let plannedTeeGroups = normalizePlannedTeeGroups(
             seriesRound.plannedTeeGroups,
             fallback: autoTeeGroups,
-            allMembers: activeMembers,
+            allMembers: eligibleMembers,
             holeRange: courseSelection?.holeSegment.holeRange ?? .init(startHole: 1, endHole: 18)
         )
 
@@ -1327,7 +1344,11 @@ enum SeriesRoundPlanningService {
                             id: seat.id,
                             memberID: seat.memberID,
                             teeOrder: max(1, seat.teeOrder),
-                            source: seat.source
+                            source: seat.source,
+                            isSubstitute: seat.isSubstitute,
+                            substituteForSeriesMemberID: seat.substituteForSeriesMemberID,
+                            substituteForName: seat.substituteForName,
+                            representedTeamID: seat.representedTeamID
                         )
                     }
                 updated.seats = seats.enumerated().map { offset, seat in

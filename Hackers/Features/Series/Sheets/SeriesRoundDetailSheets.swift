@@ -349,6 +349,13 @@ private struct SeriesAwardMatchupOutcomeCard: View {
             if outcome.players.isPopulated {
                 playersTable
             }
+
+            if outcome.showsSubstituteScoringFootnote {
+                Text("* Substitute players do not count towards scoring")
+                    .fontStyle(kFontName, size: 11, weight: .medium)
+                    .foregroundStyle(Color.neutral)
+                    .frame(maxWidth: .infinity, alignment: .leading)
+            }
         }
         .padding(14)
         .frame(maxWidth: .infinity, alignment: .leading)
@@ -443,15 +450,23 @@ private struct SeriesAwardMatchupOutcomeCard: View {
     private func playerRow(_ player: SeriesMatchupOutcome.Player) -> some View {
         HStack(spacing: 8) {
             HStack(spacing: 8) {
-                Text(player.name)
-                    .fontStyle(kFontName, size: 13, weight: .medium)
-                    .foregroundStyle(player.scoreCounts ? palette.foregroundColor : Color.neutral2)
-                    .lineLimit(1)
-                    .frame(maxWidth: .infinity, alignment: .leading)
+                HStack(spacing: 1) {
+                    Text(player.name)
+                        .fontStyle(kFontName, size: 13, weight: .medium)
+                        .foregroundStyle(player.scoreCounts ? palette.foregroundColor : Color.neutral2)
+                        .lineLimit(1)
+                    if player.isSubstitute {
+                        Text("*")
+                            .fontStyle(kFontName, size: 13, weight: .medium)
+                            .foregroundStyle(player.scoreCounts ? palette.foregroundColor : Color.neutral2)
+                    }
+                }
+                .frame(maxWidth: .infinity, alignment: .leading)
 
-                if player.scoreCounts {
+                if player.scoreCounts || player.isSubstitute {
                     Circle()
-                        .fill(player.accentColor ?? Color.accentGreen)
+                        .fill(player.isSubstitute ? Color.clear : (player.accentColor ?? Color.accentGreen))
+                        .overlay(Circle().stroke(player.accentColor ?? Color.accentGreen, lineWidth: player.isSubstitute ? 1.5 : 0))
                         .frame(width: 8, height: 8)
                 }
             }
@@ -699,7 +714,7 @@ struct SeriesRoundTeeSheetPreviewSheet: View {
                 } else {
                     VStack(spacing: 8) {
                         ForEach(group.seats.sorted { $0.teeOrder < $1.teeOrder }) { seat in
-                            playerRow(memberID: seat.memberID, teeOrder: seat.teeOrder)
+                            playerRow(memberID: seat.memberID, teeOrder: seat.teeOrder, seat: seat)
                         }
                     }
                 }
@@ -707,7 +722,7 @@ struct SeriesRoundTeeSheetPreviewSheet: View {
         }
     }
 
-    private func playerRow(memberID: String, teeOrder: Int? = nil) -> some View {
+    private func playerRow(memberID: String, teeOrder: Int? = nil, seat: SeriesRoundPlannedSeat? = nil) -> some View {
         HStack(alignment: .top, spacing: 10) {
             if let teeOrder {
                 teeOrderBadge(teeOrder)
@@ -715,14 +730,14 @@ struct SeriesRoundTeeSheetPreviewSheet: View {
 
             VStack(alignment: .leading, spacing: 3) {
                 HStack(spacing: 7) {
-                    playerTeamDot(memberID: memberID)
+                    playerTeamDot(memberID: memberID, seat: seat)
 
                     Text(playerName(for: memberID))
                         .fontStyle(kFontName, size: 13, weight: .semibold)
                         .foregroundStyle(palette.foregroundColor)
                 }
 
-                let metadata = playerMetadata(for: memberID)
+                let metadata = playerMetadata(for: memberID, seat: seat)
                 if metadata.isPopulated {
                     Text(metadata)
                         .fontStyle(kFontName, size: 11, weight: .regular)
@@ -739,13 +754,14 @@ struct SeriesRoundTeeSheetPreviewSheet: View {
     }
 
     @ViewBuilder
-    private func playerTeamDot(memberID: String) -> some View {
-        if let teamID = membersByID[memberID]?.teamID,
+    private func playerTeamDot(memberID: String, seat: SeriesRoundPlannedSeat? = nil) -> some View {
+        let isSubstitute = seat.map(isSubstituteSeat) ?? (membersByID[memberID]?.role == .substitute)
+        if let teamID = effectiveTeamID(memberID: memberID, seat: seat),
            let team = teamsByID[teamID] {
             Circle()
-                .fill(team.displaySwatchColor ?? Color.neutral4)
+                .fill(isSubstitute ? Color.clear : (team.displaySwatchColor ?? Color.neutral4))
                 .frame(width: 10, height: 10)
-                .overlay(Circle().stroke(Color.neutral4.opacity(0.35), lineWidth: 1))
+                .overlay(Circle().stroke(team.displaySwatchColor ?? Color.neutral4, lineWidth: isSubstitute ? 1.5 : 1))
                 .accessibilityHidden(true)
         } else if viewModel.hasTeams {
             Circle()
@@ -781,9 +797,12 @@ struct SeriesRoundTeeSheetPreviewSheet: View {
         return name
     }
 
-    private func playerMetadata(for memberID: String) -> String {
+    private func playerMetadata(for memberID: String, seat: SeriesRoundPlannedSeat? = nil) -> String {
         var components: [String] = []
-        if let teamID = membersByID[memberID]?.teamID,
+        if let subtitle = substituteSubtitle(for: seat) {
+            components.append(subtitle)
+        }
+        if let teamID = effectiveTeamID(memberID: memberID, seat: seat),
            let teamName = teamsByID[teamID]?.name,
            teamName.isPopulated {
             components.append(teamName)
@@ -793,6 +812,25 @@ struct SeriesRoundTeeSheetPreviewSheet: View {
             components.append("HCP \(handicap)")
         }
         return components.joined(separator: " \(kDot) ")
+    }
+
+    private func effectiveTeamID(memberID: String, seat: SeriesRoundPlannedSeat? = nil) -> String? {
+        if let representedTeamID = seat?.representedTeamID, representedTeamID.isPopulated {
+            return representedTeamID
+        }
+        return membersByID[memberID]?.teamID
+    }
+
+    private func isSubstituteSeat(_ seat: SeriesRoundPlannedSeat) -> Bool {
+        seat.isSubstitute || membersByID[seat.memberID]?.role == .substitute
+    }
+
+    private func substituteSubtitle(for seat: SeriesRoundPlannedSeat?) -> String? {
+        guard let seat,
+              isSubstituteSeat(seat),
+              let name = seat.substituteForName,
+              name.isPopulated else { return nil }
+        return "Playing for \(name)"
     }
 
     private func handicapText(for memberID: String) -> String? {

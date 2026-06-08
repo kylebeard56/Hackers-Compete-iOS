@@ -77,16 +77,24 @@ struct PlayerVisibilitySelectorView: View {
                     } label: {
                         HStack(spacing: 10) {
                             Circle()
-                                .fill(teamColor ?? Color.neutral6)
+                                .fill(row.participant.isSubstitute ? Color.clear : (teamColor ?? Color.neutral6))
+                                .overlay(Circle().stroke(teamColor ?? Color.neutral4, lineWidth: row.participant.isSubstitute ? 1.5 : 0))
                                 .frame(width: 8, height: 8)
                             
-                            LiveRoundAdaptiveNameText(
-                                name: row.participant.name,
-                                format: viewModel.nameDisplayFormat,
-                                fontSize: 15,
-                                weight: .medium,
-                                color: palette.foregroundColor
-                            )
+                            HStack(spacing: 1) {
+                                LiveRoundAdaptiveNameText(
+                                    name: row.participant.name,
+                                    format: viewModel.nameDisplayFormat,
+                                    fontSize: 15,
+                                    weight: .medium,
+                                    color: palette.foregroundColor
+                                )
+                                if row.participant.isSubstitute {
+                                    Text("*")
+                                        .fontStyle(kFontName, size: 15, weight: .medium)
+                                        .foregroundStyle(palette.foregroundColor)
+                                }
+                            }
                             
                             Spacer(minLength: 0)
                             

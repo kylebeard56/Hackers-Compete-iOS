@@ -146,6 +146,27 @@ enum SeriesRoundSyncPlanning {
         return result
     }
 
+    static func teamLinksForSync(
+        seriesTeamsForRound: [SeriesTeam],
+        existingLinks: [String: SeriesRoundCreationMapping.SeriesToRoundTeamLink],
+        roundID: String
+    ) -> [String: SeriesRoundCreationMapping.SeriesToRoundTeamLink] {
+        Dictionary(uniqueKeysWithValues: seriesTeamsForRound.map { team in
+            let link = existingLinks[team.id] ?? .init(
+                seriesTeamID: team.id,
+                roundTeamID: roundTeamID(roundID: roundID, seriesTeamID: team.id)
+            )
+            return (team.id, link)
+        })
+    }
+
+    static func roundTeamID(roundID: String, seriesTeamID: String) -> String {
+        let safeTeamID = seriesTeamID
+            .replacingOccurrences(of: "/", with: "_")
+            .replacingOccurrences(of: " ", with: "_")
+        return "\(roundID)_series_team_\(safeTeamID)"
+    }
+
     /// Members aligned to `snapshot.participants` order (series players on the round).
     static func participatingMembers(
         snapshot: RoundSnapshot,
@@ -166,13 +187,34 @@ enum SeriesRoundSyncPlanning {
         case .complete, .archived:
             return .optionsDisallowedForRoundStatus
         case .live, .paused:
-            if options.syncFormat || options.syncOrganization {
-                return .optionsDisallowedForRoundStatus
-            }
             return nil
         case .lobby:
             return nil
         }
+    }
+
+    static func participatingMembersForSync(
+        seriesRound: SeriesRound,
+        snapshot: RoundSnapshot,
+        membersByID: [String: SeriesMember]
+    ) -> [SeriesMember] {
+        let plannedMemberIDs = seriesRound.plannedTeeGroups
+            .sorted { $0.index < $1.index }
+            .flatMap { group in
+                group.seats
+                    .sorted { lhs, rhs in
+                        if lhs.teeOrder != rhs.teeOrder { return lhs.teeOrder < rhs.teeOrder }
+                        return lhs.memberID < rhs.memberID
+                    }
+                    .map(\.memberID)
+            }
+            .filter(\.isPopulated)
+
+        if plannedMemberIDs.isPopulated {
+            return plannedMemberIDs.compactMap { membersByID[$0] }
+        }
+
+        return participatingMembers(snapshot: snapshot, membersByID: membersByID)
     }
 
     static func partnershipScoringGroupPatch(
@@ -187,22 +229,69 @@ enum SeriesRoundSyncPlanning {
         scoringGroupsToPut: [RoundScoringGroup],
         scoringGroupsToDelete: [RoundScoringGroup]
     ) {
-        let builtPartnershipGroups = SeriesRoundCreationMapping.buildRoundScoringGroups(
+        scoringGroupPatch(
+            roundID: roundID,
+            seriesRound: seriesRound,
+            participants: participants,
+            partnershipPlans: partnershipPlans,
+            teeGroups: teeGroups,
+            existingScoringGroups: existingScoringGroups,
+            kinds: [.partnership]
+        )
+    }
+
+    static func teeGroupScoringGroupPatch(
+        roundID: String,
+        seriesRound: SeriesRound,
+        participants: [RoundParticipant],
+        partnershipPlans: [SeriesRoundPartnershipPlan],
+        teeGroups: [TeeTimeGroup],
+        existingScoringGroups: [RoundScoringGroup]
+    ) -> (
+        mergedScoringGroups: [RoundScoringGroup],
+        scoringGroupsToPut: [RoundScoringGroup],
+        scoringGroupsToDelete: [RoundScoringGroup]
+    ) {
+        scoringGroupPatch(
+            roundID: roundID,
+            seriesRound: seriesRound,
+            participants: participants,
+            partnershipPlans: partnershipPlans,
+            teeGroups: teeGroups,
+            existingScoringGroups: existingScoringGroups,
+            kinds: [.teeGroup]
+        )
+    }
+
+    private static func scoringGroupPatch(
+        roundID: String,
+        seriesRound: SeriesRound,
+        participants: [RoundParticipant],
+        partnershipPlans: [SeriesRoundPartnershipPlan],
+        teeGroups: [TeeTimeGroup],
+        existingScoringGroups: [RoundScoringGroup],
+        kinds: Set<RoundScoringGroupKind>
+    ) -> (
+        mergedScoringGroups: [RoundScoringGroup],
+        scoringGroupsToPut: [RoundScoringGroup],
+        scoringGroupsToDelete: [RoundScoringGroup]
+    ) {
+        let builtGroups = SeriesRoundCreationMapping.buildRoundScoringGroups(
             roundID: roundID,
             seriesRound: seriesRound,
             participants: participants,
             partnershipPlans: partnershipPlans,
             teeGroups: teeGroups
         )
-        .filter { $0.kind == .partnership }
+        .filter { kinds.contains($0.kind) }
 
-        let existingPartnershipGroups = existingScoringGroups.filter { $0.kind == .partnership }
-        let existingPartnershipByID = Dictionary(uniqueKeysWithValues: existingPartnershipGroups.map { ($0.id, $0) })
-        let nextByID = Dictionary(uniqueKeysWithValues: builtPartnershipGroups.map { ($0.id, $0) })
-        let scoringGroupsToDelete = existingPartnershipGroups.filter { nextByID[$0.id] == nil }
-        let scoringGroupsToPut = builtPartnershipGroups.map { group -> RoundScoringGroup in
+        let existingGroupsForKinds = existingScoringGroups.filter { kinds.contains($0.kind) }
+        let existingByID = Dictionary(uniqueKeysWithValues: existingGroupsForKinds.map { ($0.id, $0) })
+        let nextByID = Dictionary(uniqueKeysWithValues: builtGroups.map { ($0.id, $0) })
+        let scoringGroupsToDelete = existingGroupsForKinds.filter { nextByID[$0.id] == nil }
+        let scoringGroupsToPut = builtGroups.map { group -> RoundScoringGroup in
             var next = group
-            if let old = existingPartnershipByID[group.id] {
+            if let old = existingByID[group.id] {
                 next.createdAt = old.createdAt
             }
             next.parentID = roundID
@@ -211,7 +300,7 @@ enum SeriesRoundSyncPlanning {
         }
 
         return (
-            mergedScoringGroups: existingScoringGroups.filter { $0.kind != .partnership } + scoringGroupsToPut,
+            mergedScoringGroups: existingScoringGroups.filter { !kinds.contains($0.kind) } + scoringGroupsToPut,
             scoringGroupsToPut: scoringGroupsToPut,
             scoringGroupsToDelete: scoringGroupsToDelete
         )
@@ -242,15 +331,13 @@ enum SeriesRoundSyncPlanning {
             ? groupPlans
             : [SeriesRoundCreationMapping.TeeGroupPlan(id: "group_0", memberIDs: [])]
 
-        guard effectivePlans.count == sortedTeeGroups.count else {
-            throw SeriesRoundSyncError.organizationTeeGroupCountMismatch(
-                expected: effectivePlans.count,
-                actual: sortedTeeGroups.count
-            )
-        }
-
         let groupIDsByPlanID = Dictionary(
-            uniqueKeysWithValues: zip(effectivePlans.map { $0.id }, sortedTeeGroups.map { $0.id })
+            uniqueKeysWithValues: effectivePlans.enumerated().map { index, plan in
+                let groupID = index < sortedTeeGroups.count
+                    ? sortedTeeGroups[index].id
+                    : roundTeeGroupID(roundID: snapshot.round.id, planID: plan.id, index: index)
+                return (plan.id, groupID)
+            }
         )
         let assignments = SeriesRoundCreationMapping.buildMemberAssignments(
             groupPlans: effectivePlans,
@@ -263,18 +350,14 @@ enum SeriesRoundSyncPlanning {
     static func teeGroupsWithLeagueSchedule(
         snapshot: RoundSnapshot,
         groupPlans: [SeriesRoundCreationMapping.TeeGroupPlan],
+        plannedTeeGroups: [SeriesRoundPlannedTeeGroup] = [],
+        groupIDsByPlanID: [String: String] = [:],
         seriesRound: SeriesRound
     ) throws -> [TeeTimeGroup] {
         let sorted = snapshot.teeGroups.sorted { $0.index < $1.index }
         let effectivePlans: [SeriesRoundCreationMapping.TeeGroupPlan] = groupPlans.isPopulated
             ? groupPlans
             : [SeriesRoundCreationMapping.TeeGroupPlan(id: "group_0", memberIDs: [])]
-        guard effectivePlans.count == sorted.count else {
-            throw SeriesRoundSyncError.organizationTeeGroupCountMismatch(
-                expected: effectivePlans.count,
-                actual: sorted.count
-            )
-        }
 
         guard let courseSegment = snapshot.courseSegment else {
             throw SeriesRoundSyncError.missingCourseSegment
@@ -283,28 +366,71 @@ enum SeriesRoundSyncPlanning {
         let scheduledTeeTime: Date? = seriesRound.scheduledAt.map {
             Date(timeIntervalSince1970: $0.unix)
         }
-        let templateGroups = SeriesRoundCreationMapping.buildTeeGroupsArray(
-            roundID: snapshot.round.id,
-            groupPlans: effectivePlans,
-            holeRange: courseSegment.holeRange,
-            useSequentialStarts: seriesRound.roundConfig.usesSequentialTeeStarts,
-            scheduledTeeTime: scheduledTeeTime
-        )
-        let scheduledGroups = SeriesRoundCreationMapping.teeGroupsWithSchedule(
-            templateGroups,
-            holeRange: courseSegment.holeRange,
-            useShotgunStart: seriesRound.roundConfig.usesSequentialTeeStarts,
-            scheduledTeeTime: scheduledTeeTime,
-            fallbackTeeTime: sorted.compactMap(\.teeTime).first
-        )
+        let plannedGroupsByID = Dictionary(uniqueKeysWithValues: plannedTeeGroups.map { ($0.id, $0) })
+        let plannedScheduleGroups = effectivePlans.compactMap { plannedGroupsByID[$0.id] }
+        let scheduledGroups: [TeeTimeGroup]
+        if plannedScheduleGroups.count == effectivePlans.count {
+            let scheduledPlannedGroups = SeriesRoundCreationMapping.plannedTeeGroupsWithSchedule(
+                plannedScheduleGroups,
+                holeRange: courseSegment.holeRange,
+                useShotgunStart: seriesRound.roundConfig.usesSequentialTeeStarts,
+                scheduledTeeTime: scheduledTeeTime,
+                fallbackTeeTime: sorted.compactMap(\.teeTime).first,
+                preserveStartingHoles: true
+            )
+            scheduledGroups = scheduledPlannedGroups.map { group in
+                TeeTimeGroup(
+                    id: group.id,
+                    index: group.index,
+                    teeTime: group.teeTime,
+                    startingHole: group.startingHole,
+                    createdAt: .init(),
+                    parentID: snapshot.round.id
+                )
+            }
+        } else {
+            let templateGroups = SeriesRoundCreationMapping.buildTeeGroupsArray(
+                roundID: snapshot.round.id,
+                groupPlans: effectivePlans,
+                holeRange: courseSegment.holeRange,
+                useSequentialStarts: seriesRound.roundConfig.usesSequentialTeeStarts,
+                scheduledTeeTime: scheduledTeeTime
+            )
+            scheduledGroups = SeriesRoundCreationMapping.teeGroupsWithSchedule(
+                templateGroups,
+                holeRange: courseSegment.holeRange,
+                useShotgunStart: seriesRound.roundConfig.usesSequentialTeeStarts,
+                scheduledTeeTime: scheduledTeeTime,
+                fallbackTeeTime: sorted.compactMap(\.teeTime).first
+            )
+        }
 
-        return zip(sorted, scheduledGroups).map { existing, template in
-            var next = existing
+        return zip(effectivePlans.enumerated(), scheduledGroups).map { indexedPlan, template in
+            let index = indexedPlan.offset
+            let plan = indexedPlan.element
+            var next = index < sorted.count
+                ? sorted[index]
+                : TeeTimeGroup(
+                    id: groupIDsByPlanID[plan.id] ?? roundTeeGroupID(roundID: snapshot.round.id, planID: plan.id, index: index),
+                    index: index,
+                    createdAt: .init(),
+                    parentID: snapshot.round.id
+                )
+            next.index = index
             next.teeTime = template.teeTime
             next.startingHole = template.startingHole
+            next.parentID = snapshot.round.id
             next.lastUpdatedAt = .init()
             return next
         }
+    }
+
+    static func roundTeeGroupID(roundID: String, planID: String, index: Int) -> String {
+        let safePlanID = planID
+            .replacingOccurrences(of: "/", with: "_")
+            .replacingOccurrences(of: " ", with: "_")
+        let suffix = safePlanID.isPopulated ? safePlanID : "group_\(index)"
+        return "\(roundID)_series_tee_group_\(suffix)"
     }
 
     static func roundTeamsPatch(
@@ -323,12 +449,21 @@ enum SeriesRoundSyncPlanning {
 
         var patched: [RoundTeam] = []
         for seriesTeam in sortedSeries {
-            guard let link = relevantTeamLinks[seriesTeam.id],
-                  var roundTeam = snapshot.teams.first(where: { $0.id == link.roundTeamID }) else {
+            guard let link = relevantTeamLinks[seriesTeam.id] else {
                 throw SeriesRoundSyncError.organizationSeriesTeamMappingMismatch
             }
+            var roundTeam = snapshot.teams.first(where: { $0.id == link.roundTeamID }) ?? RoundTeam(
+                id: link.roundTeamID,
+                name: seriesTeam.name,
+                color: seriesTeam.roundColorToken,
+                index: seriesTeam.index,
+                createdAt: .init(),
+                parentID: snapshot.round.id
+            )
             roundTeam.name = seriesTeam.name
             roundTeam.color = seriesTeam.roundColorToken
+            roundTeam.index = seriesTeam.index
+            roundTeam.parentID = snapshot.round.id
             roundTeam.lastUpdatedAt = .init()
             patched.append(roundTeam)
         }
@@ -386,6 +521,7 @@ enum SeriesRoundSyncPlanning {
         handicapEntryFormat: HandicapEntryFormat = .strokes,
         handicapStrokeBasis: SeriesHandicapStrokeBasis? = nil,
         hostPlayerID: String?,
+        plannedSeatsByMemberID: [String: SeriesRoundPlannedSeat] = [:],
         preserveManualHandicapEdits: Bool
     ) -> [RoundParticipant] {
         let templates = SeriesRoundCreationMapping.buildParticipantPayloads(
@@ -398,7 +534,8 @@ enum SeriesRoundSyncPlanning {
             courseSegment: courseSegment,
             handicapEntryFormat: handicapEntryFormat,
             handicapStrokeBasis: handicapStrokeBasis,
-            hostPlayerID: hostPlayerID
+            hostPlayerID: hostPlayerID,
+            plannedSeatsByMemberID: plannedSeatsByMemberID
         )
         let templateByMemberID = Dictionary(uniqueKeysWithValues: zip(participatingMembers.map(\.id), templates))
 
@@ -412,8 +549,8 @@ enum SeriesRoundSyncPlanning {
             next.createdAt = existing.createdAt
             next.parentID = existing.parentID
             next.isHost = existing.isHost
-            next.userID = existing.userID
-            next.playerID = existing.playerID
+            next.userID = template.userID
+            next.playerID = template.playerID
             next.seriesMemberID = existing.seriesMemberID
             next.groupID = existing.groupID
             next.teamID = existing.teamID
@@ -438,19 +575,29 @@ enum SeriesRoundSyncPlanning {
         participatingMembers: [SeriesMember],
         teamLinks: [String: SeriesRoundCreationMapping.SeriesToRoundTeamLink],
         memberAssignments: [String: SeriesRoundCreationMapping.MemberAssignment],
+        plannedSeatsByMemberID: [String: SeriesRoundPlannedSeat] = [:],
         usesSeriesTeams: Bool
     ) -> [RoundParticipant] {
         participants.map { existing in
             guard let memberID = existing.seriesMemberID else { return existing }
             var next = existing
+            let member = participatingMembers.first(where: { $0.id == memberID })
+            let plannedSeat = plannedSeatsByMemberID[memberID]
             if let assignment = memberAssignments[memberID] {
                 next.groupID = assignment.groupID
                 next.teeOrder = assignment.teeOrder
             }
             if usesSeriesTeams {
-                let teamMapping = participatingMembers.first(where: { $0.id == memberID })?.teamID.flatMap { teamLinks[$0] }
+                let representedTeamID = plannedSeat?.representedTeamID
+                let seriesTeamID = representedTeamID?.isPopulated == true
+                    ? representedTeamID
+                    : member?.teamID
+                let teamMapping = seriesTeamID.flatMap { teamLinks[$0] }
                 next.teamID = teamMapping?.roundTeamID
             }
+            next.isSubstitute = plannedSeat?.isSubstitute == true || member?.role == .substitute
+            next.substituteForSeriesMemberID = plannedSeat?.substituteForSeriesMemberID
+            next.substituteForName = plannedSeat?.substituteForName
             next.lastUpdatedAt = .init()
             return next
         }
@@ -525,9 +672,11 @@ enum SeriesRoundSyncPlanning {
             var group = index < existingGroups.count ? existingGroups[index] : template
             group.index = index
             group.teeTime = template.teeTime
-            group.startingHole = existingGroup
-                .flatMap { courseSegment.holeRange.holeNumbers.contains($0.startingHole) ? $0.startingHole : nil }
-                ?? template.startingHole
+            group.startingHole = seriesRound.plannedTeeGroups.isPopulated
+                ? template.startingHole
+                : (existingGroup
+                    .flatMap { courseSegment.holeRange.holeNumbers.contains($0.startingHole) ? $0.startingHole : nil }
+                    ?? template.startingHole)
             group.parentID = snapshot.round.id
             group.lastUpdatedAt = .init()
             return group
@@ -539,6 +688,9 @@ enum SeriesRoundSyncPlanning {
         let memberAssignments = SeriesRoundCreationMapping.buildMemberAssignments(
             groupPlans: resolvedPlan.teeGroupPlans,
             groupIDsByPlanID: groupIDsByPlanID
+        )
+        let plannedSeatsByMemberID = Dictionary(
+            uniqueKeysWithValues: resolvedPlan.plannedStructure.teeGroups.flatMap(\.seats).map { ($0.memberID, $0) }
         )
 
         let templates = SeriesRoundCreationMapping.buildParticipantPayloads(
@@ -552,7 +704,8 @@ enum SeriesRoundSyncPlanning {
             handicapEntryFormat: seriesRound.roundConfig.handicapEntryFormat,
             handicapStrokeBasis: seriesRound.roundConfig.handicapStrokeBasis,
             hostPlayerID: hostPlayerID,
-            presenceStatusByMemberID: presenceStatusByMemberID
+            presenceStatusByMemberID: presenceStatusByMemberID,
+            plannedSeatsByMemberID: plannedSeatsByMemberID
         )
         let existingParticipantByMemberID = Dictionary(
             uniqueKeysWithValues: snapshot.participants.compactMap { participant -> (String, RoundParticipant)? in
@@ -790,6 +943,7 @@ enum SeriesRoundSyncPlanning {
         config.matchTiePolicy = roundConfiguration.matchTiePolicy
         config.selectionDomain = roundConfiguration.selectionDomain
         config.sequentialTeeStartsEnabled = roundConfiguration.sequentialTeeStartsEnabled
+        config.maxScoreOverPar = roundConfiguration.primaryFormat.configuration.maxScoreOverPar
         config.sharedScoreHandicapConfig = roundConfiguration.sharedScoreHandicapConfig
         if !(sourceExpectsMatchups && !linkedRoundIsMatchup) {
             config.matchupMode = seriesMatchupMode(

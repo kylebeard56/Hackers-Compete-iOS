@@ -497,6 +497,29 @@ struct SeriesLeagueSettingsView: View {
                 }
 
                 builderField(
+                    title: "Default max score",
+                    subtitle: "Highest score allowed per hole for new league rounds."
+                ) {
+                    Menu {
+                        ForEach(MaxScoreOverPar.selectableCases(hasCoursePars: true), id: \.self) { option in
+                            Button {
+                                draftSettings.defaultRoundConfig.maxScoreOverPar = option
+                            } label: {
+                                HStack {
+                                    Text(option.displayName)
+                                    if option == resolvedDefaultMaxScoreOverPar {
+                                        Image(systemName: "checkmark")
+                                    }
+                                }
+                            }
+                        }
+                    } label: {
+                        settingsMenuChip(resolvedDefaultMaxScoreOverPar.displayName)
+                    }
+                    .buttonStyle(.plain)
+                }
+
+                builderField(
                     title: "Competition",
                     subtitle: draftSettings.useTeams
                         ? "Field compares everyone together. Matchup compares scheduled head-to-head pairings."
@@ -720,6 +743,19 @@ struct SeriesLeagueSettingsView: View {
             SeriesSheetCard(palette: palette) {
                 Toggle(isOn: $draftSettings.useIndividualStandings) {
                     settingsToggleLabel(title: "Show individual standings", subtitle: "Publish an individual leaderboard too.")
+                }
+                .tint(.accentGreen)
+                .frame(maxWidth: .infinity, alignment: .leading)
+            }
+
+            SeriesSheetCard(palette: palette) {
+                Toggle(isOn: $draftSettings.substitutesScore) {
+                    settingsToggleLabel(
+                        title: "Substitutes count for scoring",
+                        subtitle: draftSettings.substitutesScore
+                            ? "Substitute scores count toward placements, awards, and team results."
+                            : "Substitutes can enter scores and build handicaps, but do not affect placements or standings."
+                    )
                 }
                 .tint(.accentGreen)
                 .frame(maxWidth: .infinity, alignment: .leading)
@@ -1186,6 +1222,10 @@ struct SeriesLeagueSettingsView: View {
 
     private var templateName: String {
         FormatTemplateRegistry.template(for: draftSettings.defaultRoundConfig.formatTemplateID).name
+    }
+
+    private var resolvedDefaultMaxScoreOverPar: MaxScoreOverPar {
+        draftSettings.defaultRoundConfig.maxScoreOverPar ?? .quad
     }
 
     private var availableTemplates: [GameTemplate] {

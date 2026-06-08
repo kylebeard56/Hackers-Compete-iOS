@@ -1518,6 +1518,7 @@ private struct SeriesLeagueRulesSignaturePayload: Codable, Hashable {
     var matchupResolutionStyle: RoundMatchupResolutionStyle
     var sequentialTeeStartsEnabled: Bool
     var sharedScoreHandicapConfig: HandicapConfiguration?
+    var maxScoreOverPar: MaxScoreOverPar
     var defaultTeamScoringProfileID: String?
     var defaultIndividualScoringProfileID: String?
     var handicapConfig: SeriesHandicapConfig
@@ -1528,6 +1529,7 @@ private struct SeriesLeagueRulesSignaturePayload: Codable, Hashable {
     var useTeams: Bool
     var useIndividualStandings: Bool
     var useTeamStandings: Bool
+    var substitutesScore: Bool
 
     init(settings: SeriesSettings) {
         formatTemplateID = settings.defaultRoundConfig.formatTemplateID
@@ -1536,6 +1538,7 @@ private struct SeriesLeagueRulesSignaturePayload: Codable, Hashable {
         matchupResolutionStyle = settings.defaultRoundConfig.matchupResolutionStyle
         sequentialTeeStartsEnabled = settings.defaultRoundConfig.sequentialTeeStartsEnabled ?? false
         sharedScoreHandicapConfig = settings.defaultRoundConfig.sharedScoreHandicapConfig
+        maxScoreOverPar = settings.defaultRoundConfig.maxScoreOverPar ?? .quad
         defaultTeamScoringProfileID = settings.defaultTeamScoringProfileID
         defaultIndividualScoringProfileID = settings.defaultIndividualScoringProfileID
         handicapConfig = settings.handicapConfig
@@ -1546,6 +1549,7 @@ private struct SeriesLeagueRulesSignaturePayload: Codable, Hashable {
         useTeams = settings.useTeams
         useIndividualStandings = settings.useIndividualStandings
         useTeamStandings = settings.useTeamStandings
+        substitutesScore = settings.substitutesScore
     }
 }
 
@@ -1860,13 +1864,7 @@ final class SeriesViewModel: ObservableObject, Loggable {
     }
 
     func shouldUseLinkedRoundConfiguration(for seriesRound: SeriesRound, linkedRound: Round) -> Bool {
-        guard seriesRound.roundConfig.allowLobbyBackPropagation else { return false }
-        switch linkedRound.status {
-        case .lobby, .live, .paused, .complete:
-            return true
-        case .archived:
-            return false
-        }
+        false
     }
 
     private func shouldPreserveSeriesMatchupConfig(for seriesRound: SeriesRound, linkedRound: Round) -> Bool {
@@ -2792,7 +2790,7 @@ final class SeriesViewModel: ObservableObject, Loggable {
             return Array(SeriesMemberRole.allCases)
         }
         if isCaptain {
-            return [.captain, .member, .spectator]
+            return [.captain, .member, .substitute, .spectator]
         }
         return []
     }
@@ -2821,7 +2819,7 @@ final class SeriesViewModel: ObservableObject, Loggable {
 
         if isCommissioner { return true }
         if isCaptain {
-            return [.captain, .member, .spectator].contains(role)
+            return [.captain, .member, .substitute, .spectator].contains(role)
         }
         return false
     }
@@ -2829,6 +2827,13 @@ final class SeriesViewModel: ObservableObject, Loggable {
     func updateMemberRole(_ member: SeriesMember, role: SeriesMemberRole) async {
         guard canUpdateMemberRole(member, to: role) else { return }
         guard let index = members.firstIndex(where: { $0.id == member.id }) else { return }
+        if role == .substitute {
+            let podsContainingMember = pods.filter { $0.isActive && $0.memberIDs.contains(member.id) }
+            for pod in podsContainingMember {
+                await deletePod(pod)
+            }
+            members[index].teamID = nil
+        }
         members[index].role = role
         members[index].lastUpdatedAt = .init()
         _ = await FirebaseService.shared.updateSeriesMember(members[index])
@@ -2837,6 +2842,7 @@ final class SeriesViewModel: ObservableObject, Loggable {
 
     func updateMemberTeam(_ member: SeriesMember, teamID: String?) async {
         guard let index = members.firstIndex(where: { $0.id == member.id }) else { return }
+        guard members[index].role != .substitute || teamID == nil else { return }
         let previousTeamID = members[index].teamID
         if previousTeamID != teamID {
             let podsContainingMember = pods.filter { $0.isActive && $0.memberIDs.contains(member.id) }
@@ -4102,7 +4108,10 @@ final class SeriesViewModel: ObservableObject, Loggable {
             eligibleMembers: eligibleMembers,
             attendance: attendanceByRound[seriesRound.id] ?? []
         )
-        let participants = attendancePlan.members
+        let seatedMemberIDs = Set(rounds[roundIndex].plannedTeeGroups.flatMap(\.memberIDs))
+        let participants = attendancePlan.members.filter { member in
+            member.role != .substitute || seatedMemberIDs.contains(member.id)
+        }
         let presenceStatusByMemberID = attendancePlan.presenceStatusByMemberID
 
         if let courseSegment {
@@ -4827,7 +4836,8 @@ final class SeriesViewModel: ObservableObject, Loggable {
             scoreInputMode: snapshot.configuration.scoreInputMode,
             template: snapshot.resolvedActiveTemplate,
             scoreLookupSegmentIDs: snapshot.segmentScoreLookupSegmentIDs,
-            handicapStrokeBasis: snapshot.handicapStrokeBasis
+            handicapStrokeBasis: snapshot.handicapStrokeBasis,
+            substitutesScore: snapshot.configuration.substitutesScore
         )
         let competitors = individualPlacementCompetitors(
             result: result,
@@ -5690,6 +5700,7 @@ final class SeriesViewModel: ObservableObject, Loggable {
         updated.matchTiePolicy = linkedRound.configuration.matchTiePolicy
         updated.selectionDomain = linkedRound.configuration.selectionDomain
         updated.sequentialTeeStartsEnabled = linkedRound.configuration.sequentialTeeStartsEnabled ?? fallback.sequentialTeeStartsEnabled ?? false
+        updated.maxScoreOverPar = linkedRound.configuration.primaryFormat.configuration.maxScoreOverPar
         updated.handicapEntryFormat = linkedRound.configuration.handicapEntryFormat
         updated.handicapNormalizationMode = linkedRound.configuration.handicapNormalizationMode
         updated.handicapStrokeBasis = linkedRound.configuration.handicapStrokeBasis
@@ -5926,7 +5937,7 @@ final class SeriesViewModel: ObservableObject, Loggable {
             let sides = presentation.sides.map { side in
                 return SeriesMatchupOutcome.Side(
                     id: side.id,
-                    title: side.title,
+                    title: markedMatchupSideTitle(side.title, sideID: side.id, mode: presentation.mode, snapshot: snapshot),
                     subtitle: side.subtitle,
                     score: side.scoreLabel,
                     accentColor: side.accentColor
@@ -5958,6 +5969,7 @@ final class SeriesViewModel: ObservableObject, Loggable {
                         gross: participantScoreLabel(participantID: item.participant.id, snapshot: snapshot, segment: segment, basis: .gross),
                         net: snapshot.configuration.useHandicaps ? participantScoreLabel(participantID: item.participant.id, snapshot: snapshot, segment: segment, basis: .net) : nil,
                         scoreCounts: item.side.isParticipantActive(item.participant),
+                        isSubstitute: item.participant.isSubstitute,
                         accentColor: item.participant.teamID.flatMap { teamID in snapshot.teams.first(where: { $0.id == teamID })?.displaySwatchColor }
                             ?? item.side.accentColor
                     )
@@ -5976,7 +5988,8 @@ final class SeriesViewModel: ObservableObject, Loggable {
                 isTie: presentation.isTie,
                 showsResultChip: showsResultChip,
                 resultChipLabel: presentation.isAutoWin ? "Auto-win" : nil,
-                usesNetScores: snapshot.configuration.useHandicaps
+                usesNetScores: snapshot.configuration.useHandicaps,
+                showsSubstituteScoringFootnote: !snapshot.configuration.substitutesScore && players.contains(where: \.isSubstitute)
             )
         }
         return orderedMatchupOutcomes(outcomes, promotingParticipantID: promotingParticipantID)
@@ -5993,7 +6006,7 @@ final class SeriesViewModel: ObservableObject, Loggable {
             let sides = matchup.pairingIDs().map { sideID in
                 SeriesMatchupOutcome.Side(
                     id: sideID,
-                    title: matchupSideName(sideID: sideID, mode: mode, snapshot: snapshot),
+                    title: markedMatchupSideTitle(matchupSideName(sideID: sideID, mode: mode, snapshot: snapshot), sideID: sideID, mode: mode, snapshot: snapshot),
                     subtitle: matchupSideSubtitle(sideID: sideID, mode: mode, snapshot: snapshot),
                     score: "—",
                     accentColor: matchupSideAccentColor(sideID: sideID, mode: mode, snapshot: snapshot)
@@ -6012,6 +6025,7 @@ final class SeriesViewModel: ObservableObject, Loggable {
                         gross: "—",
                         net: snapshot.configuration.useHandicaps ? "—" : nil,
                         scoreCounts: false,
+                        isSubstitute: participant.isSubstitute,
                         accentColor: participant.teamID.flatMap { teamID in snapshot.teams.first(where: { $0.id == teamID })?.displaySwatchColor }
                             ?? side.accentColor
                     )
@@ -6030,9 +6044,16 @@ final class SeriesViewModel: ObservableObject, Loggable {
                 isTie: false,
                 showsResultChip: false,
                 resultChipLabel: nil,
-                usesNetScores: snapshot.configuration.useHandicaps
+                usesNetScores: snapshot.configuration.useHandicaps,
+                showsSubstituteScoringFootnote: !snapshot.configuration.substitutesScore && players.contains(where: \.isSubstitute)
             )
         }
+    }
+
+    private func markedMatchupSideTitle(_ title: String, sideID: String, mode: MatchupMode, snapshot: RoundSnapshot) -> String {
+        guard mode == .individual,
+              snapshot.participants.first(where: { $0.id == sideID })?.isSubstitute == true else { return title }
+        return "\(title)*"
     }
 
     private func orderedMatchupOutcomes(

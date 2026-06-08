@@ -33,6 +33,9 @@ struct RoundParticipant: FirebaseSubcollectable, Playable {
     var teeOrder: Int?
     var isHost: Bool
     var presenceStatus: RoundParticipantPresenceStatus?
+    var isSubstitute: Bool
+    var substituteForSeriesMemberID: String?
+    var substituteForName: String?
     
     var createdAt: Time
     var lastUpdatedAt: Time
@@ -58,6 +61,9 @@ struct RoundParticipant: FirebaseSubcollectable, Playable {
         teeOrder: Int? = nil,
         isHost: Bool = false,
         presenceStatus: RoundParticipantPresenceStatus? = nil,
+        isSubstitute: Bool = false,
+        substituteForSeriesMemberID: String? = nil,
+        substituteForName: String? = nil,
         createdAt: Time = .init(),
         lastUpdatedAt: Time = .init(),
         parentID: String = ""
@@ -77,6 +83,9 @@ struct RoundParticipant: FirebaseSubcollectable, Playable {
         self.teeOrder = teeOrder
         self.isHost = isHost
         self.presenceStatus = presenceStatus
+        self.isSubstitute = isSubstitute
+        self.substituteForSeriesMemberID = substituteForSeriesMemberID
+        self.substituteForName = substituteForName
         self.createdAt = createdAt
         self.lastUpdatedAt = lastUpdatedAt
         self.parentID = parentID
@@ -90,6 +99,9 @@ struct RoundParticipant: FirebaseSubcollectable, Playable {
         teeOrder: Int? = nil,
         isHost: Bool = false,
         presenceStatus: RoundParticipantPresenceStatus? = nil,
+        isSubstitute: Bool = false,
+        substituteForSeriesMemberID: String? = nil,
+        substituteForName: String? = nil,
         createdAt: Time = .init(),
         lastUpdatedAt: Time = .init(),
         parentID: String = ""
@@ -112,6 +124,9 @@ struct RoundParticipant: FirebaseSubcollectable, Playable {
         self.teeOrder = teeOrder
         self.isHost = isHost
         self.presenceStatus = presenceStatus
+        self.isSubstitute = isSubstitute
+        self.substituteForSeriesMemberID = substituteForSeriesMemberID
+        self.substituteForName = substituteForName
         self.createdAt = createdAt
         self.lastUpdatedAt = lastUpdatedAt
         self.parentID = parentID
@@ -135,6 +150,9 @@ struct RoundParticipant: FirebaseSubcollectable, Playable {
         case teeOrder = "tee_order"
         case isHost = "is_host"
         case presenceStatus = "presence_status"
+        case isSubstitute = "is_substitute"
+        case substituteForSeriesMemberID = "substitute_for_series_member_id"
+        case substituteForName = "substitute_for_name"
         
         case createdAt = "created_at"
         case lastUpdatedAt = "last_updated_at"
@@ -162,6 +180,9 @@ struct RoundParticipant: FirebaseSubcollectable, Playable {
         teeOrder = try c.decodeIfPresent(Int.self, forKey: .teeOrder)
         isHost = try c.decodeIfPresent(Bool.self, forKey: .isHost) ?? false
         presenceStatus = try c.decodeIfPresent(RoundParticipantPresenceStatus.self, forKey: .presenceStatus)
+        isSubstitute = try c.decodeIfPresent(Bool.self, forKey: .isSubstitute) ?? false
+        substituteForSeriesMemberID = try c.decodeIfPresent(String.self, forKey: .substituteForSeriesMemberID)
+        substituteForName = try c.decodeIfPresent(String.self, forKey: .substituteForName)
 
         createdAt = try c.decodeIfPresent(Time.self, forKey: .createdAt) ?? .init()
         lastUpdatedAt = try c.decodeIfPresent(Time.self, forKey: .lastUpdatedAt) ?? .init()

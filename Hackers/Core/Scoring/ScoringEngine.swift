@@ -156,6 +156,13 @@ struct VegasPairDetail: Hashable, Identifiable {
 /// and returns a fully computed ScoringResult.
 struct ScoringEngine {
 
+    static func scoringEligibleParticipants(
+        _ participants: [RoundParticipant],
+        substitutesScore: Bool
+    ) -> [RoundParticipant] {
+        substitutesScore ? participants : participants.filter { !$0.isSubstitute }
+    }
+
     // MARK: - Snapshot Routing
 
     static func computeSnapshotResult(
@@ -168,9 +175,13 @@ struct ScoringEngine {
         let template = snapshot.resolvedActiveTemplate
         let lookupSegmentIDs = scoreLookupSegmentIDs ?? snapshot.segmentScoreLookupSegmentIDs
         let handicapNormalizationMode = basis == .net ? snapshot.configuration.handicapNormalizationMode : .off
+        let eligibleParticipants = scoringEligibleParticipants(
+            snapshot.participants,
+            substitutesScore: snapshot.configuration.substitutesScore
+        )
         let scoringParticipants = handicapNormalizationMode == .field
-            ? HandicapCalculator.normalizedParticipantsForField(snapshot.participants)
-            : snapshot.participants
+            ? HandicapCalculator.normalizedParticipantsForField(eligibleParticipants)
+            : eligibleParticipants
 
         if snapshot.isVegasFormat {
             return computeVegas(
@@ -195,7 +206,7 @@ struct ScoringEngine {
             return computeWithTeamScoring(
                 scores: snapshot.scoring,
                 participants: scoringParticipants,
-                unnormalizedParticipants: snapshot.participants,
+                unnormalizedParticipants: eligibleParticipants,
                 teams: snapshot.teams,
                 segment: segment,
                 holes: holes,
@@ -209,7 +220,8 @@ struct ScoringEngine {
                 scoreLookupSegmentIDs: lookupSegmentIDs.isEmpty ? nil : lookupSegmentIDs,
                 resolvedCompetitionScope: snapshot.configuration.resolvedCompetitionScope,
                 handicapNormalizationMode: handicapNormalizationMode,
-                handicapStrokeBasis: snapshot.handicapStrokeBasis
+                handicapStrokeBasis: snapshot.handicapStrokeBasis,
+                substitutesScore: true
             )
         }
 
@@ -224,14 +236,15 @@ struct ScoringEngine {
                 scoreInputMode: snapshot.configuration.scoreInputMode,
                 template: template,
                 scoreLookupSegmentIDs: lookupSegmentIDs.isEmpty ? nil : lookupSegmentIDs,
-                handicapStrokeBasis: snapshot.handicapStrokeBasis
+                handicapStrokeBasis: snapshot.handicapStrokeBasis,
+                substitutesScore: true
             )
         }
 
         return computeWithPipeline(
             scores: snapshot.scoring,
             participants: scoringParticipants,
-            unnormalizedParticipants: snapshot.participants,
+            unnormalizedParticipants: eligibleParticipants,
             teams: snapshot.teams,
             segment: segment,
             holes: holes,
@@ -247,7 +260,8 @@ struct ScoringEngine {
             perHoleWinPoints: snapshot.configuration.resolvedHoleWinPoints,
             sharedScoreHandicapConfig: snapshot.configuration.sharedScoreHandicapConfig,
             handicapNormalizationMode: handicapNormalizationMode,
-            handicapStrokeBasis: snapshot.handicapStrokeBasis
+            handicapStrokeBasis: snapshot.handicapStrokeBasis,
+            substitutesScore: true
         )
     }
 
@@ -292,17 +306,19 @@ struct ScoringEngine {
         scoreInputMode: RoundScoreInputMode = .strokes,
         template: GameTemplate,
         scoreLookupSegmentIDs: [String]? = nil,
-        handicapStrokeBasis: SeriesHandicapStrokeBasis = .eighteenHole
+        handicapStrokeBasis: SeriesHandicapStrokeBasis = .eighteenHole,
+        substitutesScore: Bool = true
     ) -> ScoringResult {
         let holeNumbers = segment.holeRange.holeNumbers
         let holeMap = Dictionary(uniqueKeysWithValues: holes.map { ($0.number, $0) })
+        let scoringParticipants = scoringEligibleParticipants(participants, substitutesScore: substitutesScore)
 
         var rows: [ScoringRow] = []
 
         let scoreIndex = buildScoreIndex(scores: scores)
         let lookupSegmentIDs = scoreLookupSegmentIDs ?? resolvedScoreLookupSegmentIDs(primarySegment: segment, scores: scores)
 
-        for participant in participants {
+        for participant in scoringParticipants {
             var holeValues: [Int: ScoringRow.HoleValue] = [:]
             var total: Double = 0
             var holesPlayed = 0
@@ -398,15 +414,20 @@ struct ScoringEngine {
         perHoleWinPoints: Double = 1.0,
         sharedScoreHandicapConfig: HandicapConfiguration? = nil,
         handicapNormalizationMode: HandicapNormalizationMode = .off,
-        handicapStrokeBasis: SeriesHandicapStrokeBasis = .eighteenHole
+        handicapStrokeBasis: SeriesHandicapStrokeBasis = .eighteenHole,
+        substitutesScore: Bool = true
     ) -> ScoringResult {
         let holeNumbers = segment.holeRange.holeNumbers
         let holeMap = Dictionary(uniqueKeysWithValues: holes.map { ($0.number, $0) })
         let usesSharedScoreSource = template.scoreSource == .shared
         let scoreIndex = buildScoreIndex(scores: scores, includeParticipantAliases: !usesSharedScoreSource)
         let lookupSegmentIDs = scoreLookupSegmentIDs ?? resolvedScoreLookupSegmentIDs(primarySegment: segment, scores: scores)
+        let scoringParticipants = scoringEligibleParticipants(participants, substitutesScore: substitutesScore)
+        let scoringUnnormalizedParticipants = unnormalizedParticipants.map {
+            scoringEligibleParticipants($0, substitutesScore: substitutesScore)
+        }
         let rawBaseScoringUnits = resolvedScoringUnits(
-            participants: participants,
+            participants: scoringParticipants,
             teams: teams,
             scoringGroups: scoringGroups,
             segment: segment,
@@ -433,7 +454,7 @@ struct ScoringEngine {
             teams: teams
         )
         let selectionGroups = resolvedSelectionGroups(
-            participants: participants,
+            participants: scoringParticipants,
             scoringGroups: scoringGroups,
             selectionDomain: effectiveSelectionDomain,
             template: template
@@ -441,7 +462,7 @@ struct ScoringEngine {
 
         let rawValues = buildRawValues(
             scoringUnits: scoringUnits,
-            participants: participants,
+            participants: scoringParticipants,
             scoringGroups: scoringGroups,
             holeNumbers: holeNumbers,
             holeMap: holeMap,
@@ -466,7 +487,7 @@ struct ScoringEngine {
             pipeline: template.pipeline,
             holeNumbers: holeNumbers,
             subject: template.subject,
-            participants: participants,
+            participants: scoringParticipants,
             teams: teams,
             selectionGroups: selectionGroups
         )
@@ -483,12 +504,12 @@ struct ScoringEngine {
                 let usesMatchupNormalization = handicapNormalizationMode == .matchup
                 let matchupParticipants = usesMatchupNormalization
                     ? HandicapCalculator.normalizedParticipants(
-                        unnormalizedParticipants ?? participants,
+                        scoringUnnormalizedParticipants ?? scoringParticipants,
                         for: matchup,
                         teams: teams,
                         scoringGroups: scoringGroups
                     )
-                    : participants
+                    : scoringParticipants
                 let matchupScoringUnits: [ScoringUnit]
                 let matchupBaseValues: [String: [Int: PipelineHoleValue]]
                 let matchupPreCompareValues: [String: [Int: PipelineHoleValue]]
@@ -620,14 +641,14 @@ struct ScoringEngine {
                 values: preCompareValues,
                 pipeline: template.pipeline,
                 holeNumbers: holeNumbers,
-                participants: participants,
+                participants: scoringParticipants,
                 teams: teams,
                 perHoleWinPoints: perHoleWinPoints
             )
             allRows = buildScoringRows(
                 from: finalValues,
                 holeNumbers: holeNumbers,
-                participants: participants,
+                participants: scoringParticipants,
                 teams: teams,
                 scoringGroups: scoringGroups,
                 scoringUnits: scoringUnits
@@ -636,7 +657,7 @@ struct ScoringEngine {
 
         let holeStates = computeHoleStates(
             holeNumbers: holeNumbers,
-            participantIDs: usesSharedScoreSource ? scoringUnits.map(\.id) : participants.map(\.id),
+            participantIDs: usesSharedScoreSource ? scoringUnits.map(\.id) : scoringParticipants.map(\.id),
             scoreIndex: scoreIndex,
             lookupSegmentIDs: lookupSegmentIDs
         )
@@ -835,15 +856,20 @@ struct ScoringEngine {
         scoreLookupSegmentIDs: [String]? = nil,
         resolvedCompetitionScope: CompetitionScope? = nil,
         handicapNormalizationMode: HandicapNormalizationMode = .off,
-        handicapStrokeBasis: SeriesHandicapStrokeBasis = .eighteenHole
+        handicapStrokeBasis: SeriesHandicapStrokeBasis = .eighteenHole,
+        substitutesScore: Bool = true
     ) -> ScoringResult {
         let holeNumbers = segment.holeRange.holeNumbers
         let holeMap = Dictionary(uniqueKeysWithValues: holes.map { ($0.number, $0) })
         let scoreIndex = buildScoreIndex(scores: scores)
         let lookupSegmentIDs = scoreLookupSegmentIDs ?? resolvedScoreLookupSegmentIDs(primarySegment: segment, scores: scores)
+        let scoringParticipants = scoringEligibleParticipants(participants, substitutesScore: substitutesScore)
+        let scoringUnnormalizedParticipants = unnormalizedParticipants.map {
+            scoringEligibleParticipants($0, substitutesScore: substitutesScore)
+        }
 
         let rawValues = buildRawValues(
-            participants: participants,
+            participants: scoringParticipants,
             holeNumbers: holeNumbers,
             holeMap: holeMap,
             scoreIndex: scoreIndex,
@@ -861,7 +887,7 @@ struct ScoringEngine {
 
         let teamRows = buildTeamScoringRows(
             values: baseValues,
-            participants: participants,
+            participants: scoringParticipants,
             teams: teams,
             holeNumbers: holeNumbers,
             leaderboardSort: template.leaderboardSort,
@@ -879,7 +905,7 @@ struct ScoringEngine {
                 let matchupRows: [ScoringRow]
                 if handicapNormalizationMode == .matchup {
                     let matchupParticipants = HandicapCalculator.normalizedParticipants(
-                        unnormalizedParticipants ?? participants,
+                        scoringUnnormalizedParticipants ?? scoringParticipants,
                         for: matchup,
                         teams: teams,
                         scoringGroups: []
@@ -917,7 +943,7 @@ struct ScoringEngine {
                 let minimumStatus = minimumCountStatus(
                     matchup: matchup,
                     values: baseValues,
-                    participants: unnormalizedParticipants ?? participants,
+                    participants: scoringUnnormalizedParticipants ?? scoringParticipants,
                     teams: teams,
                     scoringGroups: [],
                     scoringUnits: [],

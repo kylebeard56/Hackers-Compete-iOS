@@ -3,6 +3,7 @@
 //  Hackers
 //
 
+import Flow
 import SwiftUI
 
 struct EditSeriesRoundSheet: View {
@@ -86,6 +87,7 @@ struct EditSeriesRoundSheet: View {
     @State private var holeWinPoints: Double = 1
     @State private var matchWinnerBonusPoints: Double = 0
     @State private var sharedScoreAllowanceText = ""
+    @State private var maxScoreOverPar: MaxScoreOverPar = .quad
     @State private var teamScoring = RoundTeamScoringConfiguration(mode: .bestN, count: 2, scope: .perRound)
     @State private var selectionDomain: ScoringSelectionDomain?
     @State private var sequentialTeeStartsEnabled = false
@@ -236,6 +238,7 @@ struct EditSeriesRoundSheet: View {
             sharedScoreAllowanceText = allowanceText(
                 from: seriesRound.roundConfig.sharedScoreHandicapConfig ?? FormatTemplateRegistry.template(for: selectedTemplateID).requirements.defaultHandicapConfig
             )
+            maxScoreOverPar = seriesRound.roundConfig.maxScoreOverPar ?? .quad
             teamScoring = seriesRound.roundConfig.teamScoring
             selectionDomain = seriesRound.roundConfig.selectionDomain
             sequentialTeeStartsEnabled = seriesRound.roundConfig.sequentialTeeStartsEnabled ?? false
@@ -542,71 +545,95 @@ struct EditSeriesRoundSheet: View {
                 }
             }
 
+            builderField(
+                title: "Max score",
+                subtitle: "Highest score allowed per hole."
+            ) {
+                Menu {
+                    ForEach(MaxScoreOverPar.selectableCases(hasCoursePars: true), id: \.self) { option in
+                        Button {
+                            maxScoreOverPar = option
+                        } label: {
+                            HStack {
+                                Text(option.displayName)
+                                if option == maxScoreOverPar {
+                                    Image(systemName: "checkmark")
+                                }
+                            }
+                        }
+                    }
+                } label: {
+                    menuChipLabel(maxScoreOverPar.displayName)
+                }
+                .buttonStyle(.plain)
+            }
+
             if viewModel.usesTeams {
                 builderField(
                     title: "Count scores",
                     subtitle: "Choose which scores count and how they're computed for leaderboard."
                 ) {
-                    VStack(alignment: .trailing, spacing: 8) {
+                    HFlow(
+                        horizontalAlignment: .leading,
+                        verticalAlignment: .center,
+                        horizontalSpacing: 8,
+                        verticalSpacing: 8
+                    ) {
                         if teamScoring.mode == .bestN || teamScoring.mode == .worstN {
-                            HStack(spacing: 8) {
-                                Menu {
-                                    countScoresMenuButtons
-                                } label: {
-                                    menuChipLabel(teamScoringModeLabel)
-                                }
-                                .buttonStyle(.plain)
-
-                                Text("per")
-                                    .fontStyle(kFontName, size: 15, weight: .regular)
-                                    .foregroundStyle(Color.secondary)
-
-                                Menu {
-                                    ForEach(AggregationScope.allCases, id: \.self) { scope in
-                                        Button {
-                                            teamScoring.scope = scope
-                                        } label: {
-                                            HStack {
-                                                Text(scope == .perRound ? "Round" : "Hole")
-                                                if teamScoring.scope == scope { Image(systemName: "checkmark") }
-                                            }
-                                        }
-                                    }
-                                } label: {
-                                    menuChipLabel(teamScoringScopeLabel)
-                                }
-                                .buttonStyle(.plain)
+                            Menu {
+                                countScoresMenuButtons
+                            } label: {
+                                menuChipLabel(teamScoringModeLabel)
                             }
+                            .buttonStyle(.plain)
 
-                            HStack(spacing: 8) {
-                                Text("from")
-                                    .fontStyle(kFontName, size: 15, weight: .regular)
-                                    .foregroundStyle(Color.secondary)
+                            Text("per")
+                                .fontStyle(kFontName, size: 15, weight: .regular)
+                                .foregroundStyle(Color.secondary)
 
-                                Menu {
+                            Menu {
+                                ForEach(AggregationScope.allCases, id: \.self) { scope in
                                     Button {
-                                        selectionDomain = nil
+                                        teamScoring.scope = scope
                                     } label: {
                                         HStack {
-                                            Text("Auto")
-                                            if selectionDomain == nil { Image(systemName: "checkmark") }
+                                            Text(scope == .perRound ? "Round" : "Hole")
+                                            if teamScoring.scope == scope { Image(systemName: "checkmark") }
                                         }
                                     }
-                                    ForEach(ScoringSelectionDomain.allCases, id: \.self) { domain in
-                                        Button {
-                                            selectionDomain = domain
-                                        } label: {
-                                            HStack {
-                                                Text(selectionDomainTitle(for: domain))
-                                                if selectionDomain == domain { Image(systemName: "checkmark") }
-                                            }
-                                        }
-                                    }
-                                } label: {
-                                    menuChipLabel(selectionDomainLabel)
                                 }
-                                .buttonStyle(.plain)
+                            } label: {
+                                menuChipLabel(teamScoringScopeLabel)
                             }
+                            .buttonStyle(.plain)
+
+                            Text("from")
+                                .fontStyle(kFontName, size: 15, weight: .regular)
+                                .foregroundStyle(Color.secondary)
+
+                            Menu {
+                                Button {
+                                    selectionDomain = nil
+                                } label: {
+                                    HStack {
+                                        Text("Auto")
+                                        if selectionDomain == nil { Image(systemName: "checkmark") }
+                                    }
+                                }
+                                ForEach(ScoringSelectionDomain.allCases, id: \.self) { domain in
+                                    Button {
+                                        selectionDomain = domain
+                                    } label: {
+                                        HStack {
+                                            Text(selectionDomainTitle(for: domain))
+                                            if selectionDomain == domain { Image(systemName: "checkmark") }
+                                        }
+                                    }
+                                }
+                            } label: {
+                                menuChipLabel(selectionDomainLabel)
+                            }
+                            .buttonStyle(.plain)
                         } else {
                             Menu {
                                 countScoresMenuButtons
@@ -616,7 +643,7 @@ struct EditSeriesRoundSheet: View {
                             .buttonStyle(.plain)
                         }
                     }
-                    .frame(maxWidth: .infinity, alignment: .trailing)
+                    .alignLeading()
                 }
             }
 
@@ -972,6 +999,7 @@ struct EditSeriesRoundSheet: View {
             teeGroupMode: podGroupingStrategy.usesPodAlignment ? .podAligned : .auto,
             notes: notes.isEmpty ? nil : notes,
             sharedScoreHandicapConfig: sharedScoreAllowanceConfig,
+            maxScoreOverPar: maxScoreOverPar,
             handicapStrokeBasis: handicapStrokeBasis,
             handicapEntryFormat: resolvedHandicapEntryFormat,
             handicapNormalizationMode: resolvedHandicapNormalizationMode(for: competitionScope),
@@ -1024,6 +1052,7 @@ struct EditSeriesRoundSheet: View {
             teeGroupMode: podGroupingStrategy.usesPodAlignment ? .podAligned : .auto,
             notes: notes.isEmpty ? nil : notes,
             sharedScoreHandicapConfig: sharedScoreAllowanceConfig,
+            maxScoreOverPar: maxScoreOverPar,
             handicapStrokeBasis: handicapStrokeBasis,
             handicapEntryFormat: resolvedHandicapEntryFormat,
             handicapNormalizationMode: resolvedHandicapNormalizationMode(for: competitionScope),
@@ -1355,6 +1384,7 @@ struct EditSeriesRoundSheet: View {
             teeGroupMode: podGroupingStrategy.usesPodAlignment ? .podAligned : .auto,
             notes: notes.isEmpty ? nil : notes,
             sharedScoreHandicapConfig: sharedScoreAllowanceConfig,
+            maxScoreOverPar: maxScoreOverPar,
             handicapStrokeBasis: handicapStrokeBasis,
             handicapEntryFormat: resolvedHandicapEntryFormat,
             handicapNormalizationMode: resolvedHandicapNormalizationMode(for: competitionScope),
@@ -2624,6 +2654,7 @@ struct EditSeriesRoundSheet: View {
         if selectedTemplateID != d.formatTemplateID { return .confirmed }
         if competitionScope != d.resolvedCompetitionScope { return .confirmed }
         if resolvedMatchupMode(for: competitionScope) != d.matchupMode { return .confirmed }
+        if maxScoreOverPar != (d.maxScoreOverPar ?? .quad) { return .confirmed }
         if teamScoring != d.teamScoring { return .confirmed }
         if sequentialTeeStartsEnabled != (d.sequentialTeeStartsEnabled ?? false) { return .confirmed }
         if podGroupingStrategy != d.podGroupingStrategy { return .confirmed }
