@@ -24,12 +24,12 @@ private enum SeriesIndividualStatsSort: String, CaseIterable {
         rawValue
     }
 
-    var menuSubtitle: String? {
+    func menuSubtitle(config: HandicapComputationConfigDTO) -> String? {
         switch self {
         case .averageDifferential:
-            return "Compares completed round scores to rating/slope when available, otherwise par, using rounds that feed league handicap stats."
+            return "Average gross score vs course rating/slope or par"
         case .handicapIndex:
-            return "Member's current league handicap index from series settings, including dynamic calculation or commissioner override."
+            return Self.handicapIndexSubtitle(config: config)
         case .roundsPlayed:
             return nil
         }
@@ -37,6 +37,23 @@ private enum SeriesIndividualStatsSort: String, CaseIterable {
 
     var accessibilityLabel: String {
         "Sort by \(label)"
+    }
+
+    private static func handicapIndexSubtitle(config dto: HandicapComputationConfigDTO) -> String {
+        let config = dto.toConfig()
+        let poolCount = max(1, config.rollingPoolSize ?? 20)
+        let usedCount = max(1, config.gamesUsed(forPoolCount: poolCount))
+
+        if let rollingPoolSize = config.rollingPoolSize, rollingPoolSize > 0 {
+            return "Current league handicap index using \(usedCount) of last \(rollingPoolSize) scores"
+        }
+
+        switch config.scorePoolPolicy {
+        case .bestOfUsedCount:
+            return "Current league handicap index using up to \(usedCount) lowest scores"
+        case .latestOfUsedCount:
+            return "Current league handicap index using up to \(usedCount) latest scores"
+        }
     }
 }
 
@@ -303,7 +320,7 @@ struct SeriesLeaderboardView: View {
                         sort.label,
                         systemImage: individualStatsSort == sort ? "checkmark" : "circle"
                     )
-                    if let menuSubtitle = sort.menuSubtitle {
+                    if let menuSubtitle = sort.menuSubtitle(config: viewModel.series.handicapConfig.config) {
                         Text(menuSubtitle)
                     }
                 }

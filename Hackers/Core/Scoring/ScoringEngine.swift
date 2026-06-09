@@ -158,9 +158,13 @@ struct ScoringEngine {
 
     static func scoringEligibleParticipants(
         _ participants: [RoundParticipant],
-        substitutesScore: Bool
+        substitutesScore: Bool,
+        attendanceConfirmationEnabled: Bool = false
     ) -> [RoundParticipant] {
-        substitutesScore ? participants : participants.filter { !$0.isSubstitute }
+        participants.filter { participant in
+            (substitutesScore || !participant.isSubstitute)
+                && (!attendanceConfirmationEnabled || participant.isPresenceActive)
+        }
     }
 
     // MARK: - Snapshot Routing
@@ -177,7 +181,8 @@ struct ScoringEngine {
         let handicapNormalizationMode = basis == .net ? snapshot.configuration.handicapNormalizationMode : .off
         let eligibleParticipants = scoringEligibleParticipants(
             snapshot.participants,
-            substitutesScore: snapshot.configuration.substitutesScore
+            substitutesScore: snapshot.configuration.substitutesScore,
+            attendanceConfirmationEnabled: snapshot.configuration.attendanceConfirmationEnabled == true
         )
         let scoringParticipants = handicapNormalizationMode == .field
             ? HandicapCalculator.normalizedParticipantsForField(eligibleParticipants)
@@ -221,7 +226,8 @@ struct ScoringEngine {
                 resolvedCompetitionScope: snapshot.configuration.resolvedCompetitionScope,
                 handicapNormalizationMode: handicapNormalizationMode,
                 handicapStrokeBasis: snapshot.handicapStrokeBasis,
-                substitutesScore: true
+                substitutesScore: true,
+                attendanceConfirmationEnabled: snapshot.configuration.attendanceConfirmationEnabled == true
             )
         }
 
@@ -237,7 +243,8 @@ struct ScoringEngine {
                 template: template,
                 scoreLookupSegmentIDs: lookupSegmentIDs.isEmpty ? nil : lookupSegmentIDs,
                 handicapStrokeBasis: snapshot.handicapStrokeBasis,
-                substitutesScore: true
+                substitutesScore: true,
+                attendanceConfirmationEnabled: snapshot.configuration.attendanceConfirmationEnabled == true
             )
         }
 
@@ -261,7 +268,8 @@ struct ScoringEngine {
             sharedScoreHandicapConfig: snapshot.configuration.sharedScoreHandicapConfig,
             handicapNormalizationMode: handicapNormalizationMode,
             handicapStrokeBasis: snapshot.handicapStrokeBasis,
-            substitutesScore: true
+            substitutesScore: true,
+            attendanceConfirmationEnabled: snapshot.configuration.attendanceConfirmationEnabled == true
         )
     }
 
@@ -307,11 +315,16 @@ struct ScoringEngine {
         template: GameTemplate,
         scoreLookupSegmentIDs: [String]? = nil,
         handicapStrokeBasis: SeriesHandicapStrokeBasis = .eighteenHole,
-        substitutesScore: Bool = true
+        substitutesScore: Bool = true,
+        attendanceConfirmationEnabled: Bool = false
     ) -> ScoringResult {
         let holeNumbers = segment.holeRange.holeNumbers
         let holeMap = Dictionary(uniqueKeysWithValues: holes.map { ($0.number, $0) })
-        let scoringParticipants = scoringEligibleParticipants(participants, substitutesScore: substitutesScore)
+        let scoringParticipants = scoringEligibleParticipants(
+            participants,
+            substitutesScore: substitutesScore,
+            attendanceConfirmationEnabled: attendanceConfirmationEnabled
+        )
 
         var rows: [ScoringRow] = []
 
@@ -415,16 +428,25 @@ struct ScoringEngine {
         sharedScoreHandicapConfig: HandicapConfiguration? = nil,
         handicapNormalizationMode: HandicapNormalizationMode = .off,
         handicapStrokeBasis: SeriesHandicapStrokeBasis = .eighteenHole,
-        substitutesScore: Bool = true
+        substitutesScore: Bool = true,
+        attendanceConfirmationEnabled: Bool = false
     ) -> ScoringResult {
         let holeNumbers = segment.holeRange.holeNumbers
         let holeMap = Dictionary(uniqueKeysWithValues: holes.map { ($0.number, $0) })
         let usesSharedScoreSource = template.scoreSource == .shared
         let scoreIndex = buildScoreIndex(scores: scores, includeParticipantAliases: !usesSharedScoreSource)
         let lookupSegmentIDs = scoreLookupSegmentIDs ?? resolvedScoreLookupSegmentIDs(primarySegment: segment, scores: scores)
-        let scoringParticipants = scoringEligibleParticipants(participants, substitutesScore: substitutesScore)
+        let scoringParticipants = scoringEligibleParticipants(
+            participants,
+            substitutesScore: substitutesScore,
+            attendanceConfirmationEnabled: attendanceConfirmationEnabled
+        )
         let scoringUnnormalizedParticipants = unnormalizedParticipants.map {
-            scoringEligibleParticipants($0, substitutesScore: substitutesScore)
+            scoringEligibleParticipants(
+                $0,
+                substitutesScore: substitutesScore,
+                attendanceConfirmationEnabled: attendanceConfirmationEnabled
+            )
         }
         let rawBaseScoringUnits = resolvedScoringUnits(
             participants: scoringParticipants,
@@ -857,15 +879,24 @@ struct ScoringEngine {
         resolvedCompetitionScope: CompetitionScope? = nil,
         handicapNormalizationMode: HandicapNormalizationMode = .off,
         handicapStrokeBasis: SeriesHandicapStrokeBasis = .eighteenHole,
-        substitutesScore: Bool = true
+        substitutesScore: Bool = true,
+        attendanceConfirmationEnabled: Bool = false
     ) -> ScoringResult {
         let holeNumbers = segment.holeRange.holeNumbers
         let holeMap = Dictionary(uniqueKeysWithValues: holes.map { ($0.number, $0) })
         let scoreIndex = buildScoreIndex(scores: scores)
         let lookupSegmentIDs = scoreLookupSegmentIDs ?? resolvedScoreLookupSegmentIDs(primarySegment: segment, scores: scores)
-        let scoringParticipants = scoringEligibleParticipants(participants, substitutesScore: substitutesScore)
+        let scoringParticipants = scoringEligibleParticipants(
+            participants,
+            substitutesScore: substitutesScore,
+            attendanceConfirmationEnabled: attendanceConfirmationEnabled
+        )
         let scoringUnnormalizedParticipants = unnormalizedParticipants.map {
-            scoringEligibleParticipants($0, substitutesScore: substitutesScore)
+            scoringEligibleParticipants(
+                $0,
+                substitutesScore: substitutesScore,
+                attendanceConfirmationEnabled: attendanceConfirmationEnabled
+            )
         }
 
         let rawValues = buildRawValues(
@@ -2039,15 +2070,17 @@ struct ScoringEngine {
             return .teeGroup
         }
 
-        if template.scoreSource == .shared {
-            switch scoreOwnerScope {
-            case .partnership:
+        switch scoreOwnerScope {
+        case .partnership:
+            if scoringGroups.contains(where: { $0.kind == .partnership && $0.memberIDs.isPopulated }) {
                 return .partnership
-            case .teeGroup:
-                return .teeGroup
-            case .individual:
-                break
             }
+        case .teeGroup:
+            if scoringGroups.contains(where: { $0.kind == .teeGroup && $0.memberIDs.isPopulated }) {
+                return .teeGroup
+            }
+        case .individual:
+            break
         }
 
         if teamScoring.mode != .all || template.requirements.requiresTeams || teams.isPopulated {

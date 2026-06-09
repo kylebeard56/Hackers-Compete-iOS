@@ -100,11 +100,11 @@ extension TeeTimeGroup {
 }
 
 extension Array where Element == TeeTimeGroup {
-    /// Game Lobby list/grid order: starting hole, then persisted index.
+    /// Game Lobby list/grid order: persisted tee-group order from the round/series plan.
     func sortedForGameLobbyDisplay() -> [TeeTimeGroup] {
         sorted { lhs, rhs in
-            if lhs.startingHole != rhs.startingHole { return lhs.startingHole < rhs.startingHole }
-            return lhs.index < rhs.index
+            if lhs.index != rhs.index { return lhs.index < rhs.index }
+            return lhs.id < rhs.id
         }
     }
 }

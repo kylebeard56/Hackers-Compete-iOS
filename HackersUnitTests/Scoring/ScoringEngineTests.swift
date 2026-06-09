@@ -971,7 +971,7 @@ final class ScoringEngineTests: XCTestCase {
         XCTAssertEqual(matchupResult.isPointsFormat, false)
         let rowMap = Dictionary(uniqueKeysWithValues: matchupResult.rows.map { ($0.scoringUnitID, $0) })
         XCTAssertEqual(rowMap["red"]?.total, 1)
-        XCTAssertEqual(rowMap["blue"]?.total, 0)
+        XCTAssertEqual(rowMap["blue"]?.total, 1)
     }
 
     func testSharedScoreOwnerMatchupResolvesOpaqueScoringUnitRowsToPairSides() {

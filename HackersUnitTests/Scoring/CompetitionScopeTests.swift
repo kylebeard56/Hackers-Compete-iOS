@@ -14,14 +14,16 @@ final class CompetitionScopeTests: XCTestCase {
 
     private func makeParticipant(
         id: String, name: String, handicap: Int = 0,
-        teamID: String? = nil, groupID: String? = nil
+        teamID: String? = nil, groupID: String? = nil,
+        presenceStatus: RoundParticipantPresenceStatus? = nil
     ) -> RoundParticipant {
         RoundParticipant(
             id: id,
             name: Name(name, "Test"),
             adjustedHandicap: handicap,
             teamID: teamID,
-            groupID: groupID
+            groupID: groupID,
+            presenceStatus: presenceStatus
         )
     }
 
@@ -560,6 +562,82 @@ final class CompetitionScopeTests: XCTestCase {
         XCTAssertEqual(team10.countingParticipantIDs, ["p3", "p4"])
         XCTAssertEqual(SeriesViewModel.matchupScoreDisplayLabel(for: team1, highestWins: false), "+6")
         XCTAssertEqual(SeriesViewModel.matchupScoreDisplayLabel(for: team10, highestWins: false), "+9")
+    }
+
+    func testTeamMatchupBestNPerRoundIgnoresNoShowsWhenAttendanceIsEnabled() throws {
+        let holes = makeHoles(count: 2)
+        let participants = [
+            makeParticipant(id: "t4a", name: "Dan", handicap: 1, teamID: "team4"),
+            makeParticipant(id: "t4b", name: "Andrew", handicap: 1, teamID: "team4"),
+            makeParticipant(id: "t6a", name: "Ryan", handicap: 3, teamID: "team6"),
+            makeParticipant(id: "t6b", name: "Gregory", handicap: 1, teamID: "team6"),
+            makeParticipant(id: "t6_no_show_1", name: "Jason", handicap: 8, teamID: "team6", presenceStatus: .noShow),
+            makeParticipant(id: "t6_no_show_2", name: "Tyler", handicap: 8, teamID: "team6", presenceStatus: .noShow),
+        ]
+        let teams = [
+            RoundTeam(id: "team4", name: "Team 4", color: "purple", index: 3, createdAt: .init()),
+            RoundTeam(id: "team6", name: "Team 6", color: "blue", index: 5, createdAt: .init()),
+        ]
+        let segment = makeSegment(
+            holeRange: HoleRange(startHole: 1, endHole: 2),
+            matchups: [TeamMatchup(id: "m1", teamIDs: ["team4", "team6"])],
+            competitionScope: .matchup
+        )
+        var configuration = RoundConfiguration(
+            primaryFormat: GameFormat(
+                type: .strokePlay,
+                configuration: GameConfiguration(
+                    method: .individual,
+                    aggregation: nil,
+                    basis: .net,
+                    handicap: .individualStrokePlay,
+                    requiresTeams: true,
+                    teeGroupOnly: false
+                )
+            ),
+            formatSummary: RoundFormatSummary(from: FormatTemplateRegistry.strokePlay),
+            competitionScope: .matchup,
+            teamScoring: RoundTeamScoringConfiguration(mode: .bestN, count: 2, scope: .perRound),
+            matchupResolutionStyle: .roundAggregate
+        )
+        configuration.attendanceConfirmationEnabled = true
+
+        let scores = [
+            makeScore(pid: "t4a", hole: 1, strokes: holes[0].par + 2),
+            makeScore(pid: "t4a", hole: 2, strokes: holes[1].par + 1),
+            makeScore(pid: "t4b", hole: 1, strokes: holes[0].par + 2),
+            makeScore(pid: "t4b", hole: 2, strokes: holes[1].par + 1),
+            makeScore(pid: "t6a", hole: 1, strokes: holes[0].par + 4),
+            makeScore(pid: "t6a", hole: 2, strokes: holes[1].par + 2),
+            makeScore(pid: "t6b", hole: 1, strokes: holes[0].par + 2),
+            makeScore(pid: "t6b", hole: 2, strokes: holes[1].par + 1),
+        ]
+        let snapshot = RoundSnapshot(
+            round: Round(id: "round1", shareCode: "MATCH", createdBy: "host", configuration: configuration),
+            participants: participants,
+            teams: teams,
+            segments: [segment],
+            scoring: scores
+        )
+
+        let result = ScoringEngine.computeSnapshotResult(
+            snapshot: snapshot,
+            segment: segment,
+            holes: holes,
+            basis: .net
+        )
+        let matchupResult = try XCTUnwrap(result.matchupResults.first)
+        let rowMap = Dictionary(uniqueKeysWithValues: matchupResult.rows.map { ($0.scoringUnitID, $0) })
+        let team4 = try XCTUnwrap(rowMap["team4"])
+        let team6 = try XCTUnwrap(rowMap["team6"])
+
+        XCTAssertEqual(team4.total, 6, accuracy: 0.01)
+        XCTAssertEqual(team6.total, 9, accuracy: 0.01)
+        XCTAssertEqual(team4.countingParticipantIDs, ["t4a", "t4b"])
+        XCTAssertEqual(Set(team6.countingParticipantIDs), Set(["t6a", "t6b"]))
+        XCTAssertFalse(team6.participantIDs.contains("t6_no_show_1"))
+        XCTAssertFalse(team6.participantIDs.contains("t6_no_show_2"))
+        XCTAssertEqual(matchupResult.minimumCountStatus?.sideStatus(for: "team6")?.availableParticipantCount, nil)
     }
 
     func testSeriesScoringResultUsesTeamAggregatesForTeamMatchupsWhenScoringGroupsExist() throws {
@@ -1171,18 +1249,18 @@ final class CompetitionScopeTests: XCTestCase {
         //
         // Alice (0 hcp): gets 0 strokes everywhere → net = par, score to par = 0
         // Bob (18 hcp): gets 1 stroke per hole → net = par-1, score to par = -1
-        // Charlie (9 hcp): gets stroke on holes with hcp <=9 → holes 1(hcp7),2(hcp3),4(hcp1) → -1; hole 3(hcp15) → 0
+        // Charlie (9 hcp): receives 2 prorated strokes across this 4-hole match → holes 2(hcp3),4(hcp1) → -1; holes 1/3 → 0
         // Dave (9 hcp): same as Charlie
         //
         // Team 1 best ball (net): Bob always -1 → [-1,-1,-1,-1]
-        // Team 2 best ball (net): Charlie/Dave = [-1,-1,0,-1]
+        // Team 2 best ball (net): Charlie/Dave = [0,-1,0,-1]
         //
         // Compare:
-        //   Hole 1: t1=-1, t2=-1 → tie → 0.5 each
+        //   Hole 1: t1=-1, t2=0 → t1 wins
         //   Hole 2: t1=-1, t2=-1 → tie → 0.5 each
         //   Hole 3: t1=-1, t2=0 → t1 wins → t1=1, t2=0
         //   Hole 4: t1=-1, t2=-1 → tie → 0.5 each
-        //   Total: t1=2.5, t2=1.5
+        //   Total: t1=3, t2=1
         var scores: [ScoreEntry] = []
         for h in 1...4 {
             let par = holes[h - 1].par
@@ -1201,10 +1279,10 @@ final class CompetitionScopeTests: XCTestCase {
         let m1 = result.matchupResults[0]
         let rowMap = Dictionary(uniqueKeysWithValues: m1.rows.map { ($0.scoringUnitID, $0) })
 
-        XCTAssertEqual(rowMap["t1"]?.total ?? 0, 2.5, accuracy: 0.01,
-                       "Team 1 (scratch+18hcp) should win 2.5 pts with net advantage on hole 3")
-        XCTAssertEqual(rowMap["t2"]?.total ?? 0, 1.5, accuracy: 0.01,
-                       "Team 2 (two 9hcp) should have 1.5 pts")
+        XCTAssertEqual(rowMap["t1"]?.total ?? 0, 3, accuracy: 0.01,
+                       "Team 1 (scratch+18hcp) should win 3 pts with prorated 4-hole handicap allocation")
+        XCTAssertEqual(rowMap["t2"]?.total ?? 0, 1, accuracy: 0.01,
+                       "Team 2 (two 9hcp) should have 1 pt")
     }
 
     // MARK: - Field Scope: No Matchup Results

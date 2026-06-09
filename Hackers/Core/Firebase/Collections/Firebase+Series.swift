@@ -397,6 +397,19 @@ extension FirebaseService {
         }
     }
 
+    func fetchHandicapScores(seriesID: String, sourceRoundID: String) async -> [SeriesHandicapScore] {
+        addBreadcrumb(message: "\(#function), seriesID: \(seriesID), sourceRoundID: \(sourceRoundID)")
+        do {
+            let query = SeriesHandicapScore.query(parentID: seriesID)
+                .whereField("source_round_id", isEqualTo: sourceRoundID)
+            return try await fetchDocuments(query: query).get()
+                .filter { $0.source == .round }
+        } catch {
+            addBreadcrumb(level: .error, message: "Cannot fetch handicap scores for source round", error: error)
+            return []
+        }
+    }
+
     func deleteHandicapScore(_ score: SeriesHandicapScore) async -> Result<Bool, Error> {
         addBreadcrumb(message: "\(#function), scoreID: \(score.id)")
         return await score.delete()

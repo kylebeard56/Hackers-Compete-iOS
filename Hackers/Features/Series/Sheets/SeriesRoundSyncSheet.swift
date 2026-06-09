@@ -39,8 +39,8 @@ struct SeriesRoundSyncSheet: View {
         linkedStatus == .live || linkedStatus == .paused
     }
 
-    private var canToggleFormat: Bool { !isLive && !isCompleteRound }
-    private var canToggleOrganization: Bool { !isLive && !isCompleteRound }
+    private var canToggleFormat: Bool { !isCompleteRound }
+    private var canToggleOrganization: Bool { !isCompleteRound }
     private var canTogglePlayer: Bool { !isCompleteRound }
     private var canTogglePairs: Bool { !isCompleteRound }
     private var canToggleMatchups: Bool { !isCompleteRound }
@@ -163,7 +163,7 @@ struct SeriesRoundSyncSheet: View {
             syncToggleRow(
                 title: "Format & scoring",
                 description: "Update template, competition scope, team scoring, and matchup scoring settings.",
-                disabledDescription: liveDisabledText("Format sync"),
+                disabledDescription: lockedSyncText,
                 isOn: effectiveBinding(storage: $syncFormat, isEnabled: canToggleFormat),
                 isEnabled: canToggleFormat
             )
@@ -171,7 +171,7 @@ struct SeriesRoundSyncSheet: View {
             syncToggleRow(
                 title: "Teams & tee sheet",
                 description: "Update round teams, tee groups, tee times, and player team or tee order assignments.",
-                disabledDescription: liveDisabledText("Teams and tee sheet sync"),
+                disabledDescription: lockedSyncText,
                 isOn: effectiveBinding(storage: $syncOrganization, isEnabled: canToggleOrganization),
                 isEnabled: canToggleOrganization
             )
@@ -238,11 +238,8 @@ struct SeriesRoundSyncSheet: View {
         )
     }
 
-    private func liveDisabledText(_ label: String) -> String? {
-        guard isLive else {
-            return isCompleteRound ? "Completed and archived rounds cannot be synced." : nil
-        }
-        return "\(label) is disabled while the round is live to protect existing setup."
+    private var lockedSyncText: String? {
+        isCompleteRound ? "Completed and archived rounds cannot be synced." : nil
     }
 
     private func sectionHeaderRow(_ title: String) -> some View {

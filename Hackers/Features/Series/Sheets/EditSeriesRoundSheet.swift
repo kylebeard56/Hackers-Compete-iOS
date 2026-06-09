@@ -1480,11 +1480,11 @@ struct EditSeriesRoundSheet: View {
             courseSelection: planningCourseSelection
         )
         plannedMatchups = structure.matchups
-        if forceRegenerate || !plannedTeeGroups.contains(where: \.hasManualOverrides) {
+        if forceRegenerate || plannedTeeGroups.isEmpty {
             plannedTeeGroups = structure.teeGroups
         } else {
             plannedTeeGroups = SeriesRoundCreationMapping.plannedTeeGroupsWithSchedule(
-                plannedTeeGroups,
+                structure.teeGroups,
                 holeRange: planningHoleRange,
                 useShotgunStart: sequentialTeeStartsEnabled,
                 scheduledTeeTime: planningDraftRound.scheduledAt.map { Date(timeIntervalSince1970: $0.unix) },

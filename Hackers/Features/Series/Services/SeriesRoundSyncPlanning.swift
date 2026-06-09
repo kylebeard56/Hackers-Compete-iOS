@@ -613,7 +613,9 @@ enum SeriesRoundSyncPlanning {
         seriesMappings: [SeriesRoundMapping],
         snapshot: RoundSnapshot,
         hostPlayerID: String?,
-        presenceStatusByMemberID: [String: RoundParticipantPresenceStatus]
+        presenceStatusByMemberID: [String: RoundParticipantPresenceStatus],
+        updateFormat: Bool = false,
+        pruneNonSeriesParticipants: Bool = false
     ) throws -> LobbyAttendancePlan {
         guard snapshot.round.status == .lobby else {
             throw SeriesRoundSyncError.optionsDisallowedForRoundStatus
@@ -714,7 +716,9 @@ enum SeriesRoundSyncPlanning {
             }
         )
         let participatingMemberIDs = Set(participatingMembers.map(\.id))
-        let nonSeriesParticipants = snapshot.participants.filter { $0.seriesMemberID == nil }
+        let nonSeriesParticipants = pruneNonSeriesParticipants
+            ? []
+            : snapshot.participants.filter { $0.seriesMemberID == nil }
         let participantsToPut = zip(participatingMembers, templates).map { member, template -> RoundParticipant in
             guard let existing = existingParticipantByMemberID[member.id] else { return template }
             var next = template
@@ -728,7 +732,7 @@ enum SeriesRoundSyncPlanning {
             return next
         }
         let participantsToDelete = snapshot.participants.filter { participant in
-            guard let memberID = participant.seriesMemberID else { return false }
+            guard let memberID = participant.seriesMemberID else { return pruneNonSeriesParticipants }
             return !participatingMemberIDs.contains(memberID)
         }
         let workingParticipants = nonSeriesParticipants + participantsToPut
@@ -764,11 +768,15 @@ enum SeriesRoundSyncPlanning {
 
         var round = snapshot.round
         round.players = workingParticipants.compactMap(\.playerID)
-        round.configuration.handicapsEnabled = resolvedPlan.roundConfiguration.useHandicaps
-        round.configuration.handicapStrokeBasis = seriesRound.roundConfig.handicapStrokeBasis
-        round.configuration.leagueHandicapMaximum = series.handicapConfig.isEnabled
-            ? series.handicapConfig.config.maximumHandicap
-            : nil
+        if updateFormat {
+            round.configuration = resolvedPlan.roundConfiguration
+        } else {
+            round.configuration.handicapsEnabled = resolvedPlan.roundConfiguration.useHandicaps
+            round.configuration.handicapStrokeBasis = seriesRound.roundConfig.handicapStrokeBasis
+            round.configuration.leagueHandicapMaximum = series.handicapConfig.isEnabled
+                ? series.handicapConfig.config.maximumHandicap
+                : nil
+        }
         round.lastUpdatedAt = .init()
 
         let mappingsToPut = buildSeriesRoundMappings(

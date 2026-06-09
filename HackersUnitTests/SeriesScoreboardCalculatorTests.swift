@@ -485,7 +485,7 @@ final class SeriesScoreboardCalculatorTests: XCTestCase {
             courseSelection: nil
         )
 
-        XCTAssertEqual(summary.example, "Andrew + Chris shoot 71. Henry + Justin shoot 69. Blue wins 40.")
+        XCTAssertEqual(summary.example, "If Andrew + Chris beat Henry + Justin, Red earn 40 team points and Blue earn 0.")
     }
 
     func testIndividualStatsRowsSortByAverageDifferentialAndFallbackToGrossToPar() {

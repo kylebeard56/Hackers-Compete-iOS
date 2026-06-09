@@ -90,6 +90,7 @@ struct RoundOutcomeView: View {
         .task {
             if let id = appSession.activeRoundID {
                 await roundSession.activate(roundID: id, profile: .roundOutcome)
+                await roundSession.refreshOneShotSnapshot(for: id)
             }
             viewModel.bind(appSession: appSession, roundSession: roundSession)
         }

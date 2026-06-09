@@ -116,6 +116,17 @@ final class SeriesRoundHandicapAccrualTests: XCTestCase {
         XCTAssertFalse(FormatTemplateRegistry.captainsChoice.supportsLeagueHandicapAccrual)
     }
 
+    func testRoundHandicapScoreIDIsStablePerRoundAndMember() {
+        let first = SeriesViewModel.roundHandicapScoreID(roundID: "round/1", memberID: "member 1")
+        let second = SeriesViewModel.roundHandicapScoreID(roundID: "round/1", memberID: "member 1")
+        let differentMember = SeriesViewModel.roundHandicapScoreID(roundID: "round/1", memberID: "member 2")
+
+        XCTAssertEqual(first, second)
+        XCTAssertNotEqual(first, differentMember)
+        XCTAssertFalse(first.contains("/"))
+        XCTAssertFalse(first.contains(" "))
+    }
+
     @MainActor
     func testHandicapParticipationMembersUsesLinkedRoundPlayersWhenAvailable() {
         let viewModel = SeriesViewModel()

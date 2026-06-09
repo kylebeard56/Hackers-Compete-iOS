@@ -73,6 +73,47 @@ struct SeriesRoundSyncService: Loggable {
             members: participatingMembers
         )
 
+        if roundStatus == .lobby, options.syncOrganization {
+            let presenceStatusByMemberID = Dictionary(
+                uniqueKeysWithValues: participatingMembers.map { member in
+                    let existing = snapshot.participants.first { $0.seriesMemberID == member.id }
+                    return (member.id, existing?.presenceStatus ?? .active)
+                }
+            )
+            do {
+                let plan = try SeriesRoundSyncPlanning.buildLobbyAttendancePlan(
+                    series: series,
+                    seriesRound: seriesRound,
+                    participatingMembers: participatingMembers,
+                    teams: teams,
+                    pods: pods,
+                    handicaps: handicaps,
+                    seriesMappings: seriesMappings,
+                    snapshot: snapshot,
+                    hostPlayerID: hostPlayerID,
+                    presenceStatusByMemberID: presenceStatusByMemberID,
+                    updateFormat: options.syncFormat,
+                    pruneNonSeriesParticipants: true
+                )
+                if case .failure(let error) = await applyLobbyReconciliationPlan(plan) {
+                    return .failure(error)
+                }
+                addSyncAppliedEvent(
+                    series: series,
+                    seriesRound: seriesRound,
+                    roundID: snapshot.round.id,
+                    roundStatus: roundStatus,
+                    options: options
+                )
+                return .success(())
+            } catch let err as SeriesRoundSyncError {
+                return .failure(err)
+            } catch {
+                addBreadcrumb(level: .error, message: "series.round_sync lobby reconciliation failed", error: error)
+                return .failure(.writeFailed(error.localizedDescription))
+            }
+        }
+
         let memberAssignments: [String: SeriesRoundCreationMapping.MemberAssignment]
         let teeSchedulePlans: [SeriesRoundCreationMapping.TeeGroupPlan]
         if options.syncOrganization {
@@ -429,12 +470,99 @@ struct SeriesRoundSyncService: Loggable {
             }
         }
 
+        addSyncAppliedEvent(
+            series: series,
+            seriesRound: seriesRound,
+            roundID: snapshot.round.id,
+            roundStatus: roundStatus,
+            options: options
+        )
+        return .success(())
+    }
+
+    private func applyLobbyReconciliationPlan(
+        _ plan: SeriesRoundSyncPlanning.LobbyAttendancePlan
+    ) async -> Result<Void, SeriesRoundSyncError> {
+        switch await plan.round.put() {
+        case .success:
+            break
+        case .failure(let error):
+            addBreadcrumb(level: .error, message: "series.round_sync lobby round put failed", error: error)
+            return .failure(.writeFailed(error.localizedDescription))
+        }
+
+        for item in plan.teeGroupsToDelete {
+            if case .failure(let error) = await item.delete() {
+                addBreadcrumb(level: .error, message: "series.round_sync lobby tee group delete failed", error: error)
+                return .failure(.writeFailed(error.localizedDescription))
+            }
+        }
+        for item in plan.teamsToDelete {
+            if case .failure(let error) = await item.delete() {
+                addBreadcrumb(level: .error, message: "series.round_sync lobby team delete failed", error: error)
+                return .failure(.writeFailed(error.localizedDescription))
+            }
+        }
+        for item in plan.scoringGroupsToDelete {
+            if case .failure(let error) = await item.delete() {
+                addBreadcrumb(level: .error, message: "series.round_sync lobby scoring group delete failed", error: error)
+                return .failure(.writeFailed(error.localizedDescription))
+            }
+        }
+        for item in plan.participantsToDelete {
+            if case .failure(let error) = await item.delete() {
+                addBreadcrumb(level: .error, message: "series.round_sync lobby participant delete failed", error: error)
+                return .failure(.writeFailed(error.localizedDescription))
+            }
+        }
+        for item in plan.mappingsToDelete {
+            if case .failure(let error) = await item.delete() {
+                addBreadcrumb(level: .error, message: "series.round_sync lobby mapping delete failed", error: error)
+                return .failure(.writeFailed(error.localizedDescription))
+            }
+        }
+
+        if case .failure(let error) = await Self.batchPutSubcollection(plan.teeGroupsToPut) {
+            addBreadcrumb(level: .error, message: "series.round_sync lobby tee groups batch failed", error: error)
+            return .failure(.writeFailed(error.localizedDescription))
+        }
+        if case .failure(let error) = await Self.batchPutSubcollection(plan.teamsToPut) {
+            addBreadcrumb(level: .error, message: "series.round_sync lobby teams batch failed", error: error)
+            return .failure(.writeFailed(error.localizedDescription))
+        }
+        if case .failure(let error) = await Self.batchPutSubcollection(plan.participantsToPut) {
+            addBreadcrumb(level: .error, message: "series.round_sync lobby participants batch failed", error: error)
+            return .failure(.writeFailed(error.localizedDescription))
+        }
+        if case .failure(let error) = await Self.batchPutSubcollection(plan.scoringGroupsToPut) {
+            addBreadcrumb(level: .error, message: "series.round_sync lobby scoring groups batch failed", error: error)
+            return .failure(.writeFailed(error.localizedDescription))
+        }
+        if case .failure(let error) = await Self.batchPutSubcollection(plan.mappingsToPut) {
+            addBreadcrumb(level: .error, message: "series.round_sync lobby mappings batch failed", error: error)
+            return .failure(.writeFailed(error.localizedDescription))
+        }
+
+        if case .failure(let error) = await plan.segment.put() {
+            addBreadcrumb(level: .error, message: "series.round_sync lobby segment put failed", error: error)
+            return .failure(.writeFailed(error.localizedDescription))
+        }
+        return .success(())
+    }
+
+    private func addSyncAppliedEvent(
+        series: Series,
+        seriesRound: SeriesRound,
+        roundID: String,
+        roundStatus: RoundStatus,
+        options: SeriesRoundSyncOptions
+    ) {
         addEvent(
             "series.round_sync_applied",
             eventProps: [
                 "series_id": series.id,
                 "series_round_id": seriesRound.id,
-                "round_id": snapshot.round.id,
+                "round_id": roundID,
                 "sync_player": options.syncPlayerData,
                 "sync_format": options.syncFormat,
                 "sync_organization": options.syncOrganization,
@@ -444,7 +572,6 @@ struct SeriesRoundSyncService: Loggable {
                 "round_status": roundStatus.rawValue
             ]
         )
-        return .success(())
     }
 
     private static func inferredAssignments(

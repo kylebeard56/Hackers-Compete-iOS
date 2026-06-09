@@ -125,7 +125,8 @@ final class SeriesRoundCreationMappingTests: XCTestCase {
         handicapsEnabled: Bool = false,
         maximumHandicap: Int? = nil,
         useTeams: Bool = true,
-        attendanceEnabled: Bool = true
+        attendanceEnabled: Bool = true,
+        defaultMaxScoreOverPar: MaxScoreOverPar? = nil
     ) -> Series {
         var settings = SeriesSettings()
         var handicapConfig = HandicapComputationConfig.league2025
@@ -138,6 +139,7 @@ final class SeriesRoundCreationMappingTests: XCTestCase {
         )
         settings.useTeams = useTeams
         settings.isAttendanceEnabled = attendanceEnabled
+        settings.defaultRoundConfig.maxScoreOverPar = defaultMaxScoreOverPar
         return Series(id: "series1", settings: settings)
     }
 
@@ -202,6 +204,23 @@ final class SeriesRoundCreationMappingTests: XCTestCase {
         XCTAssertEqual(draft.configuration.courses.count, 1)
         XCTAssertEqual(draft.configuration.courses.first?.holeRange, segment.holeRange)
         XCTAssertEqual(draft.configuration.primaryFormat.configuration.maxScoreOverPar, .twoTimesPar)
+    }
+
+    func testRoundDraft_usesLeagueDefaultMaxScoreForLegacySeriesRoundConfig() {
+        var config = SeriesRoundConfiguration()
+        config.maxScoreOverPar = .quad
+        let sr = fieldSeriesRound(config: config)
+        let draft = SeriesRoundCreationMapping.roundDraft(
+            id: "round1",
+            shareCode: "ABC12",
+            createdBy: "user1",
+            series: makeSeries(defaultMaxScoreOverPar: .twoTimesParPlusOne),
+            members: [],
+            seriesRound: sr,
+            courseSegment: makeCourseSegment()
+        )
+
+        XCTAssertEqual(draft.configuration.primaryFormat.configuration.maxScoreOverPar, .twoTimesParPlusOne)
     }
 
     func testRoundConfigurationCopiesSharedScoreHandicapConfig() {

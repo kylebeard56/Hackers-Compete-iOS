@@ -150,6 +150,12 @@ final class RoundSession: ObservableObject, Loggable {
         await activate(roundID: roundID, profile: .lobby)
     }
 
+    func refreshOneShotSnapshot(for requestedRoundID: String? = nil) async {
+        let targetRoundID = requestedRoundID ?? roundID
+        guard let targetRoundID, targetRoundID.isPopulated else { return }
+        await loadSingleSnapshotIfNeeded(for: targetRoundID, forceRefresh: true)
+    }
+
     func activate(roundID requestedRoundID: String, profile: RoundSubscriptionProfile) async {
         addBreadcrumb(message: "Activate round session: round=\(requestedRoundID), profile=\(profile.rawValue)")
 

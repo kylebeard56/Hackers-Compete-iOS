@@ -548,6 +548,105 @@ final class SeriesRoundSyncServiceTests: XCTestCase {
     }
 
     @MainActor
+    func testShouldSyncLinkedLobbyAfterSeriesRoundUpdate_detectsPlannedTeeStartChange() {
+        let viewModel = SeriesViewModel()
+        let previousGroup = SeriesRoundPlannedTeeGroup(id: "group1", index: 0, startingHole: 1)
+        let updatedGroup = SeriesRoundPlannedTeeGroup(id: "group1", index: 0, startingHole: 4)
+        let previous = SeriesRound(
+            id: "series_round1",
+            roundID: "round1",
+            plannedTeeGroups: [previousGroup],
+            notes: "same",
+            parentID: "series1"
+        )
+        let updated = SeriesRound(
+            id: "series_round1",
+            roundID: "round1",
+            plannedTeeGroups: [updatedGroup],
+            notes: "same",
+            parentID: "series1"
+        )
+
+        XCTAssertTrue(viewModel.shouldSyncLinkedLobbyAfterSeriesRoundUpdate(previous: previous, updated: updated))
+    }
+
+    @MainActor
+    func testShouldSyncLinkedLobbyAfterSeriesRoundUpdate_ignoresNotesOnlyChangeAndUnlinkedRound() {
+        let viewModel = SeriesViewModel()
+        let linkedPrevious = SeriesRound(id: "series_round1", roundID: "round1", notes: "old", parentID: "series1")
+        let linkedUpdated = SeriesRound(id: "series_round1", roundID: "round1", notes: "new", parentID: "series1")
+        let unlinkedPrevious = SeriesRound(id: "series_round2", notes: "old", parentID: "series1")
+        var unlinkedUpdated = unlinkedPrevious
+        unlinkedUpdated.plannedTeeGroups = [SeriesRoundPlannedTeeGroup(id: "group1", index: 0, startingHole: 4)]
+
+        XCTAssertFalse(viewModel.shouldSyncLinkedLobbyAfterSeriesRoundUpdate(previous: linkedPrevious, updated: linkedUpdated))
+        XCTAssertFalse(viewModel.shouldSyncLinkedLobbyAfterSeriesRoundUpdate(previous: unlinkedPrevious, updated: unlinkedUpdated))
+    }
+
+    @MainActor
+    func testCachedSourceSeriesRoundForSyncUsesFreshViewModelRoundInsteadOfCapturedSheetValue() {
+        let viewModel = SeriesViewModel()
+        let staleConfig = SeriesRoundConfiguration(maxScoreOverPar: .quad)
+        let freshConfig = SeriesRoundConfiguration(maxScoreOverPar: .twoTimesParPlusOne)
+        let stale = SeriesRound(
+            id: "series_round1",
+            roundID: "round1",
+            roundConfig: staleConfig,
+            plannedTeeGroups: [SeriesRoundPlannedTeeGroup(id: "group1", index: 0, startingHole: 1)],
+            parentID: "series1"
+        )
+        let fresh = SeriesRound(
+            id: "series_round1",
+            roundID: "round1",
+            roundConfig: freshConfig,
+            plannedTeeGroups: [SeriesRoundPlannedTeeGroup(id: "group1", index: 0, startingHole: 4)],
+            parentID: "series1"
+        )
+        viewModel.rounds = [fresh]
+
+        let source = viewModel.cachedSourceSeriesRoundForSync(stale)
+
+        XCTAssertEqual(source.roundConfig.maxScoreOverPar, .twoTimesParPlusOne)
+        XCTAssertEqual(source.plannedTeeGroups.first?.startingHole, 4)
+    }
+
+    @MainActor
+    func testSeriesRoundForSyncApplyingLeagueDefaultsOverridesStoredLegacyMaxScore() {
+        let viewModel = SeriesViewModel()
+        var settings = SeriesSettings()
+        settings.defaultRoundConfig.maxScoreOverPar = .twoTimesParPlusOne
+        viewModel.series = Series(id: "series1", settings: settings)
+        let seriesRound = SeriesRound(
+            id: "series_round1",
+            roundID: "round1",
+            roundConfig: SeriesRoundConfiguration(maxScoreOverPar: .quad),
+            plannedTeeGroups: [SeriesRoundPlannedTeeGroup(id: "group1", index: 0, startingHole: 4)],
+            parentID: "series1"
+        )
+
+        let source = viewModel.seriesRoundForSyncApplyingLeagueDefaults(seriesRound)
+
+        XCTAssertEqual(source.roundConfig.maxScoreOverPar, .twoTimesParPlusOne)
+        XCTAssertEqual(source.plannedTeeGroups.first?.startingHole, 4)
+    }
+
+    @MainActor
+    func testSeriesRoundForSyncApplyingLeagueDefaultsPreservesRoundMaxScoreWhenLeagueDefaultMissing() {
+        let viewModel = SeriesViewModel()
+        viewModel.series = Series(id: "series1")
+        let seriesRound = SeriesRound(
+            id: "series_round1",
+            roundID: "round1",
+            roundConfig: SeriesRoundConfiguration(maxScoreOverPar: .double),
+            parentID: "series1"
+        )
+
+        let source = viewModel.seriesRoundForSyncApplyingLeagueDefaults(seriesRound)
+
+        XCTAssertEqual(source.roundConfig.maxScoreOverPar, .double)
+    }
+
+    @MainActor
     func testEffectiveRoundConfig_doesNotDowngradeSeriesMatchupRoundWhenLinkedRoundIsFieldButPlansExist() {
         let viewModel = SeriesViewModel()
         let linkedRound = Round(
@@ -1299,6 +1398,364 @@ final class SeriesRoundSyncServiceTests: XCTestCase {
 
         XCTAssertEqual(plan.teeGroupsToPut.first?.id, "g1")
         XCTAssertEqual(plan.teeGroupsToPut.first?.startingHole, 4)
+    }
+
+    func testLobbyAttendancePlan_fullSyncReconcilesStaleLobbyFromSeriesSource() throws {
+        var settings = SeriesSettings()
+        settings.useTeams = false
+        let series = Series(id: "series1", settings: settings)
+        let members = [
+            testMember(id: "m1", playerID: "p1"),
+            testMember(id: "m2", playerID: "p2"),
+            testMember(id: "m3", playerID: "p3"),
+            testMember(id: "m4", playerID: "p4"),
+        ]
+        let segment = testCourseSegment()
+        var sourceConfig = SeriesRoundConfiguration(maxScoreOverPar: .twoTimesParPlusOne)
+        sourceConfig.sequentialTeeStartsEnabled = true
+        let plannedGroups = [
+            SeriesRoundPlannedTeeGroup(
+                id: "planned_1",
+                index: 0,
+                teeTime: "2026-05-01T16:30:00Z",
+                startingHole: 4,
+                seats: [
+                    SeriesRoundPlannedSeat(id: "m1", memberID: "m1", teeOrder: 1),
+                    SeriesRoundPlannedSeat(id: "m2", memberID: "m2", teeOrder: 2),
+                ],
+                source: .manualOverride
+            ),
+            SeriesRoundPlannedTeeGroup(
+                id: "planned_2",
+                index: 1,
+                teeTime: "2026-05-01T16:30:00Z",
+                startingHole: 3,
+                seats: [
+                    SeriesRoundPlannedSeat(id: "m3", memberID: "m3", teeOrder: 1),
+                    SeriesRoundPlannedSeat(id: "m4", memberID: "m4", teeOrder: 2),
+                ],
+                source: .manualOverride
+            ),
+        ]
+        let seriesRound = SeriesRound(
+            id: "sr1",
+            roundID: "round1",
+            roundConfig: sourceConfig,
+            plannedTeeGroups: plannedGroups,
+            parentID: "series1"
+        )
+        var staleFormat = GameFormat.strokePlay
+        staleFormat.configuration.maxScoreOverPar = .quad
+        let snapshot = RoundSnapshot(
+            round: Round(
+                id: "round1",
+                status: .lobby,
+                players: ["p1", "p2", "p3", "p4", "walk_on"],
+                configuration: RoundConfiguration(
+                    primaryFormat: staleFormat,
+                    courses: [segment]
+                )
+            ),
+            participants: [
+                RoundParticipant(id: "part1", playerID: "p1", name: members[0].name, seriesMemberID: "m1", groupID: "g1", teeOrder: 1, createdAt: t0, parentID: "round1"),
+                RoundParticipant(id: "part2", playerID: "p2", name: members[1].name, seriesMemberID: "m2", groupID: "g1", teeOrder: 2, createdAt: t0, parentID: "round1"),
+                RoundParticipant(id: "part3", playerID: "p3", name: members[2].name, seriesMemberID: "m3", groupID: "g2", teeOrder: 1, createdAt: t0, parentID: "round1"),
+                RoundParticipant(id: "part4", playerID: "p4", name: members[3].name, seriesMemberID: "m4", groupID: "g2", teeOrder: 2, createdAt: t0, parentID: "round1"),
+                RoundParticipant(id: "walk_on", playerID: "walk_on", name: Name("Walk", "On"), groupID: "g1", teeOrder: 3, createdAt: t0, parentID: "round1"),
+            ],
+            teeGroups: [
+                TeeTimeGroup(id: "g1", index: 0, teeTime: "2026-05-01T16:30:00Z", startingHole: 1, createdAt: t0, parentID: "round1"),
+                TeeTimeGroup(id: "g2", index: 1, teeTime: "2026-05-01T16:30:00Z", startingHole: 2, createdAt: t0, parentID: "round1"),
+                TeeTimeGroup(id: "stale_g3", index: 2, teeTime: "2026-05-01T16:30:00Z", startingHole: 9, createdAt: t0, parentID: "round1"),
+            ],
+            segments: [
+                RoundSegment(id: "seg1", roundID: "round1", gameFormat: staleFormat, parentID: "round1")
+            ]
+        )
+
+        let plan = try SeriesRoundSyncPlanning.buildLobbyAttendancePlan(
+            series: series,
+            seriesRound: seriesRound,
+            participatingMembers: members,
+            teams: [],
+            pods: [],
+            handicaps: [:],
+            seriesMappings: [],
+            snapshot: snapshot,
+            hostPlayerID: nil,
+            presenceStatusByMemberID: Dictionary(uniqueKeysWithValues: members.map { ($0.id, .active) }),
+            updateFormat: true,
+            pruneNonSeriesParticipants: true
+        )
+
+        XCTAssertEqual(plan.round.configuration.primaryFormat.configuration.maxScoreOverPar, .twoTimesParPlusOne)
+        XCTAssertEqual(plan.segment.gameFormat.configuration.maxScoreOverPar, .twoTimesParPlusOne)
+        XCTAssertEqual(plan.teeGroupsToPut.map(\.id), ["g1", "g2"])
+        XCTAssertEqual(plan.teeGroupsToPut.map(\.startingHole), [4, 3])
+        XCTAssertEqual(Set(plan.participantsToDelete.map(\.id)), ["walk_on"])
+        XCTAssertEqual(plan.teeGroupsToDelete.map(\.id), ["stale_g3"])
+        XCTAssertEqual(plan.round.players, ["p1", "p2", "p3", "p4"])
+
+        let participantsByMemberID = Dictionary(uniqueKeysWithValues: plan.participantsToPut.compactMap { participant -> (String, RoundParticipant)? in
+            guard let memberID = participant.seriesMemberID else { return nil }
+            return (memberID, participant)
+        })
+        XCTAssertEqual(participantsByMemberID["m1"]?.groupID, "g1")
+        XCTAssertEqual(participantsByMemberID["m2"]?.groupID, "g1")
+        XCTAssertEqual(participantsByMemberID["m3"]?.groupID, "g2")
+        XCTAssertEqual(participantsByMemberID["m4"]?.groupID, "g2")
+        XCTAssertEqual(participantsByMemberID["m1"]?.teeOrder, 1)
+        XCTAssertEqual(participantsByMemberID["m4"]?.teeOrder, 2)
+    }
+
+    func testLobbyAttendancePlan_fullSyncRebuildsTeamsGroupsMatchupsAttendanceAndPrunesStaleArtifacts() throws {
+        var settings = SeriesSettings()
+        settings.useTeams = true
+        settings.isAttendanceEnabled = true
+        let series = Series(id: "series1", settings: settings)
+        let members = [
+            testMember(id: "m1", playerID: "p1", teamID: "series_red"),
+            testMember(id: "m2", playerID: "p2", teamID: "series_red"),
+            testMember(id: "m3", playerID: "p3", teamID: "series_green"),
+            testMember(id: "m4", playerID: "p4", teamID: "series_green"),
+        ]
+        let teams = [
+            SeriesTeam(id: "series_red", name: "Scarlet", color: "red", index: 0, createdAt: t0, parentID: "series1"),
+            SeriesTeam(id: "series_green", name: "Green", color: "green", index: 1, createdAt: t0, parentID: "series1"),
+        ]
+        let segment = testCourseSegment()
+        var sourceConfig = SeriesRoundConfiguration(maxScoreOverPar: .twoTimesParPlusOne)
+        sourceConfig.competitionScope = .matchup
+        sourceConfig.matchupMode = .teamVsTeam
+        sourceConfig.teamAssignmentMode = .seriesTeams
+        sourceConfig.selectionDomain = .team
+        sourceConfig.sequentialTeeStartsEnabled = true
+        let plannedGroups = [
+            SeriesRoundPlannedTeeGroup(
+                id: "planned_1",
+                index: 0,
+                teeTime: "2026-05-01T16:30:00Z",
+                startingHole: 8,
+                seats: [
+                    SeriesRoundPlannedSeat(id: "m3", memberID: "m3", teeOrder: 1),
+                    SeriesRoundPlannedSeat(id: "m1", memberID: "m1", teeOrder: 2),
+                ],
+                source: .manualOverride
+            ),
+            SeriesRoundPlannedTeeGroup(
+                id: "planned_2",
+                index: 1,
+                teeTime: "2026-05-01T16:38:00Z",
+                startingHole: 12,
+                seats: [
+                    SeriesRoundPlannedSeat(id: "m2", memberID: "m2", teeOrder: 1),
+                    SeriesRoundPlannedSeat(id: "m4", memberID: "m4", teeOrder: 2),
+                ],
+                source: .manualOverride
+            ),
+        ]
+        let seriesRound = SeriesRound(
+            id: "sr1",
+            roundID: "round1",
+            roundConfig: sourceConfig,
+            matchupPlans: [SeriesRoundMatchupPlan(id: "match_red_green", teamAID: "series_red", teamBID: "series_green")],
+            plannedTeeGroups: plannedGroups,
+            parentID: "series1"
+        )
+        var staleFormat = GameFormat.strokePlay
+        staleFormat.configuration.maxScoreOverPar = .quad
+        let mappings = [
+            SeriesRoundCreationMapping.seriesRoundTeamMapping(
+                seriesRoundID: "sr1",
+                seriesID: "series1",
+                link: .init(seriesTeamID: "series_red", roundTeamID: "round_red")
+            ),
+            SeriesRoundCreationMapping.seriesRoundTeamMapping(
+                seriesRoundID: "sr1",
+                seriesID: "series1",
+                link: .init(seriesTeamID: "series_blue", roundTeamID: "round_blue")
+            ),
+        ]
+        let snapshot = RoundSnapshot(
+            round: Round(
+                id: "round1",
+                status: .lobby,
+                players: ["p1", "p2", "p3", "p4", "walk_on"],
+                configuration: RoundConfiguration(primaryFormat: staleFormat, courses: [segment])
+            ),
+            participants: [
+                RoundParticipant(id: "part1", playerID: "p1", name: members[0].name, seriesMemberID: "m1", teamID: "round_red", groupID: "g1", teeOrder: 1, createdAt: t0, parentID: "round1"),
+                RoundParticipant(id: "part2", playerID: "p2", name: members[1].name, seriesMemberID: "m2", teamID: "round_red", groupID: "g1", teeOrder: 2, createdAt: t0, parentID: "round1"),
+                RoundParticipant(id: "part3", playerID: "p3", name: members[2].name, seriesMemberID: "m3", teamID: "round_blue", groupID: "g2", teeOrder: 1, createdAt: t0, parentID: "round1"),
+                RoundParticipant(id: "part4", playerID: "p4", name: members[3].name, seriesMemberID: "m4", teamID: "round_blue", groupID: "g2", teeOrder: 2, createdAt: t0, parentID: "round1"),
+                RoundParticipant(id: "walk_on", playerID: "walk_on", name: Name("Walk", "On"), teamID: "round_blue", groupID: "stale_g3", teeOrder: 1, createdAt: t0, parentID: "round1"),
+            ],
+            teams: [
+                RoundTeam(id: "round_red", name: "Old Red", color: "red", index: 0, createdAt: t0, parentID: "round1"),
+                RoundTeam(id: "round_blue", name: "Blue", color: "blue", index: 1, createdAt: t0, parentID: "round1"),
+            ],
+            teeGroups: [
+                TeeTimeGroup(id: "g1", index: 0, teeTime: "2026-05-01T15:00:00Z", startingHole: 1, createdAt: t0, parentID: "round1"),
+                TeeTimeGroup(id: "g2", index: 1, teeTime: "2026-05-01T15:08:00Z", startingHole: 2, createdAt: t0, parentID: "round1"),
+                TeeTimeGroup(id: "stale_g3", index: 2, teeTime: "2026-05-01T15:16:00Z", startingHole: 9, createdAt: t0, parentID: "round1"),
+            ],
+            scoringGroups: [
+                RoundScoringGroup(id: "stale_pair", teamID: "round_blue", teeGroupID: "stale_g3", kind: .partnership, memberIDs: ["walk_on"], createdAt: t0, parentID: "round1"),
+            ],
+            segments: [
+                RoundSegment(
+                    id: "seg1",
+                    roundID: "round1",
+                    gameFormat: staleFormat,
+                    matchups: [TeamMatchup(id: "old_match", teamIDs: ["round_red", "round_blue"], mode: .team)],
+                    parentID: "round1"
+                ),
+            ]
+        )
+
+        let plan = try SeriesRoundSyncPlanning.buildLobbyAttendancePlan(
+            series: series,
+            seriesRound: seriesRound,
+            participatingMembers: members,
+            teams: teams,
+            pods: [],
+            handicaps: [:],
+            seriesMappings: mappings,
+            snapshot: snapshot,
+            hostPlayerID: nil,
+            presenceStatusByMemberID: [
+                "m1": .active,
+                "m2": .unconfirmed,
+                "m3": .active,
+                "m4": .active,
+            ],
+            updateFormat: true,
+            pruneNonSeriesParticipants: true
+        )
+
+        let greenTeam = try XCTUnwrap(plan.teamsToPut.first { $0.name == "Green" })
+        XCTAssertEqual(plan.round.configuration.primaryFormat.configuration.maxScoreOverPar, .twoTimesParPlusOne)
+        XCTAssertEqual(plan.segment.gameFormat.configuration.maxScoreOverPar, .twoTimesParPlusOne)
+        XCTAssertEqual(plan.teamsToPut.map(\.name), ["Scarlet", "Green"])
+        XCTAssertEqual(plan.teamsToPut.first { $0.id == "round_red" }?.name, "Scarlet")
+        XCTAssertEqual(plan.teamsToDelete.map(\.id), ["round_blue"])
+        XCTAssertEqual(plan.teeGroupsToPut.map(\.id), ["g1", "g2"])
+        XCTAssertEqual(plan.teeGroupsToPut.map(\.startingHole), [8, 12])
+        XCTAssertEqual(plan.teeGroupsToDelete.map(\.id), ["stale_g3"])
+        XCTAssertEqual(plan.participantsToDelete.map(\.id), ["walk_on"])
+        XCTAssertEqual(plan.scoringGroupsToDelete.map(\.id), ["stale_pair"])
+        XCTAssertTrue(plan.mappingsToDelete.contains { $0.competitorID == "series_blue" })
+        XCTAssertEqual(plan.round.players, ["p1", "p2", "p3", "p4"])
+
+        let participantsByMemberID = Dictionary(uniqueKeysWithValues: plan.participantsToPut.compactMap { participant -> (String, RoundParticipant)? in
+            guard let memberID = participant.seriesMemberID else { return nil }
+            return (memberID, participant)
+        })
+        XCTAssertEqual(participantsByMemberID["m1"]?.id, "part1")
+        XCTAssertEqual(participantsByMemberID["m1"]?.groupID, "g1")
+        XCTAssertEqual(participantsByMemberID["m1"]?.teeOrder, 2)
+        XCTAssertEqual(participantsByMemberID["m2"]?.groupID, "g2")
+        XCTAssertEqual(participantsByMemberID["m2"]?.teeOrder, 1)
+        XCTAssertEqual(participantsByMemberID["m2"]?.presenceStatus, .unconfirmed)
+        XCTAssertEqual(participantsByMemberID["m3"]?.teamID, greenTeam.id)
+        XCTAssertEqual(participantsByMemberID["m4"]?.teamID, greenTeam.id)
+
+        let matchup = try XCTUnwrap(plan.segment.matchups?.first)
+        XCTAssertEqual(plan.segment.matchups?.count, 1)
+        XCTAssertEqual(matchup.id, "match_red_green")
+        XCTAssertEqual(matchup.teamIDs, ["round_red", greenTeam.id])
+    }
+
+    func testLobbyAttendancePlan_addsTeeGroupsWhenSeriesSourceGrows() throws {
+        let series = Series(id: "series1")
+        let members = [
+            testMember(id: "m1", playerID: "p1"),
+            testMember(id: "m2", playerID: "p2"),
+            testMember(id: "m3", playerID: "p3"),
+            testMember(id: "m4", playerID: "p4"),
+            testMember(id: "m5", playerID: "p5"),
+            testMember(id: "m6", playerID: "p6"),
+        ]
+        let plannedGroups = [
+            SeriesRoundPlannedTeeGroup(id: "planned_1", index: 0, startingHole: 1, seats: [
+                SeriesRoundPlannedSeat(id: "m1", memberID: "m1", teeOrder: 1),
+                SeriesRoundPlannedSeat(id: "m2", memberID: "m2", teeOrder: 2),
+            ]),
+            SeriesRoundPlannedTeeGroup(id: "planned_2", index: 1, startingHole: 4, seats: [
+                SeriesRoundPlannedSeat(id: "m3", memberID: "m3", teeOrder: 1),
+                SeriesRoundPlannedSeat(id: "m4", memberID: "m4", teeOrder: 2),
+            ]),
+            SeriesRoundPlannedTeeGroup(id: "planned_3", index: 2, startingHole: 7, seats: [
+                SeriesRoundPlannedSeat(id: "m5", memberID: "m5", teeOrder: 1),
+                SeriesRoundPlannedSeat(id: "m6", memberID: "m6", teeOrder: 2),
+            ]),
+        ]
+        let snapshot = RoundSnapshot(
+            round: Round(id: "round1", status: .lobby, configuration: RoundConfiguration(courses: [testCourseSegment()])),
+            participants: [
+                RoundParticipant(id: "part1", playerID: "p1", seriesMemberID: "m1", groupID: "g1", createdAt: t0, parentID: "round1"),
+                RoundParticipant(id: "part2", playerID: "p2", seriesMemberID: "m2", groupID: "g1", createdAt: t0, parentID: "round1"),
+                RoundParticipant(id: "part3", playerID: "p3", seriesMemberID: "m3", groupID: "g2", createdAt: t0, parentID: "round1"),
+                RoundParticipant(id: "part4", playerID: "p4", seriesMemberID: "m4", groupID: "g2", createdAt: t0, parentID: "round1"),
+            ],
+            teeGroups: [
+                TeeTimeGroup(id: "g1", index: 0, startingHole: 1, createdAt: t0, parentID: "round1"),
+                TeeTimeGroup(id: "g2", index: 1, startingHole: 2, createdAt: t0, parentID: "round1"),
+            ],
+            segments: [RoundSegment(id: "seg1", parentID: "round1")]
+        )
+
+        let plan = try SeriesRoundSyncPlanning.buildLobbyAttendancePlan(
+            series: series,
+            seriesRound: SeriesRound(id: "sr1", plannedTeeGroups: plannedGroups, parentID: "series1"),
+            participatingMembers: members,
+            teams: [],
+            pods: [],
+            handicaps: [:],
+            seriesMappings: [],
+            snapshot: snapshot,
+            hostPlayerID: nil,
+            presenceStatusByMemberID: [:]
+        )
+
+        XCTAssertEqual(plan.teeGroupsToPut.count, 3)
+        XCTAssertEqual(plan.teeGroupsToPut.prefix(2).map(\.id), ["g1", "g2"])
+        XCTAssertEqual(plan.teeGroupsToPut.map(\.startingHole), [1, 4, 7])
+        XCTAssertTrue(plan.teeGroupsToDelete.isEmpty)
+        XCTAssertEqual(plan.participantsToPut.count, 6)
+        XCTAssertEqual(plan.participantsToPut.first { $0.seriesMemberID == "m5" }?.groupID, plan.teeGroupsToPut[2].id)
+    }
+
+    func testBuildUpdatedSegment_clearsExistingMatchupsWhenSourceChangesToField() {
+        let context = teamVsTeamMatchupContext()
+        var fieldConfig = SeriesRoundConfiguration()
+        fieldConfig.competitionScope = .field
+        fieldConfig.matchupMode = .field
+        fieldConfig.teamAssignmentMode = .seriesTeams
+        let fieldSeriesRound = SeriesRound(id: "sr_field", roundConfig: fieldConfig, parentID: "series1")
+        let existingSegment = RoundSegment(
+            id: "seg1",
+            matchups: [TeamMatchup(id: "stale_match", teamIDs: ["round_red", "round_blue"], mode: .team)]
+        )
+
+        let updated = SeriesRoundSyncPlanning.buildUpdatedSegment(
+            series: context.series,
+            seriesRound: fieldSeriesRound,
+            courseSegment: testCourseSegment(),
+            participants: context.participants,
+            scoringGroups: [],
+            existingSegment: existingSegment,
+            teams: context.teams,
+            pods: [],
+            participatingMembers: context.members,
+            teamLinks: context.teamLinks,
+            updateFormat: true,
+            updateScoringUnits: true,
+            updateMatchups: true
+        )
+
+        XCTAssertNil(updated.matchups)
+        XCTAssertEqual(updated.competitionScope, .field)
     }
 
     func testCSVExporter_addsSelectableSectionsAndFixedColumnsInSortedOrder() {

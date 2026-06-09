@@ -1424,14 +1424,15 @@ struct NewSeriesRoundSheet: View {
             courseSelection: planningCourseSelection
         )
         plannedMatchups = structure.matchups
-        if forceRegenerate || !plannedTeeGroups.contains(where: \.hasManualOverrides) {
+        if forceRegenerate || plannedTeeGroups.isEmpty {
             plannedTeeGroups = structure.teeGroups
         } else {
             plannedTeeGroups = SeriesRoundCreationMapping.plannedTeeGroupsWithSchedule(
-                plannedTeeGroups,
+                structure.teeGroups,
                 holeRange: planningHoleRange,
                 useShotgunStart: sequentialTeeStartsEnabled,
-                scheduledTeeTime: planningDraftRound.scheduledAt.map { Date(timeIntervalSince1970: $0.unix) }
+                scheduledTeeTime: planningDraftRound.scheduledAt.map { Date(timeIntervalSince1970: $0.unix) },
+                preserveStartingHoles: true
             )
         }
     }
@@ -2684,7 +2685,7 @@ struct SeriesRoundTeeSheetPlanningCard: View {
     }
 
     private var unassignedMembers: [SeriesMember] {
-        eligibleMembers
+        return eligibleMembers
             .filter { !assignedMemberIDs.contains($0.id) }
             .sorted { $0.name.fullName.localizedCaseInsensitiveCompare($1.name.fullName) == .orderedAscending }
     }
@@ -3214,21 +3215,34 @@ struct SeriesRoundTeeSheetPlanningCard: View {
                 }
             }
             Section("Substitute") {
-                Button("Playing as regular") {
-                    clearSubstituteAssignment(for: seat, in: group.id)
-                }
-                .disabled(!isSubstituteSeat(seat) && seat.substituteForSeriesMemberID == nil)
+                if isSubstituteSeat(seat) {
+                    Button("Playing as regular") {
+                        clearSubstituteAssignment(for: seat, in: group.id)
+                    }
+                    .disabled(seat.substituteForSeriesMemberID == nil && seat.representedTeamID == nil)
 
-                Menu("Playing for...") {
-                    ForEach(substituteTargets(for: seat), id: \.id) { target in
-                        Button {
-                            setSubstituteAssignment(for: seat, in: group.id, target: target)
-                        } label: {
-                            playerMenuLabel(for: target.id)
+                    Menu("Playing for...") {
+                        ForEach(substituteTargets(for: seat), id: \.id) { target in
+                            Button {
+                                setSubstituteAssignment(for: seat, in: group.id, target: target)
+                            } label: {
+                                playerMenuLabel(for: target.id)
+                            }
                         }
                     }
+                    .disabled(substituteTargets(for: seat).isEmpty)
+                } else {
+                    Menu("Substitute in...") {
+                        ForEach(availableSubstitutes(for: seat), id: \.id) { substitute in
+                            Button {
+                                substituteIn(substitute, for: seat, in: group.id)
+                            } label: {
+                                playerMenuLabel(for: substitute.id)
+                            }
+                        }
+                    }
+                    .disabled(availableSubstitutes(for: seat).isEmpty)
                 }
-                .disabled(substituteTargets(for: seat).isEmpty)
             }
         } label: {
             ZStack {
@@ -3518,18 +3532,58 @@ struct SeriesRoundTeeSheetPlanningCard: View {
         }
     }
 
+    private func availableSubstitutes(for seat: SeriesRoundPlannedSeat) -> [SeriesMember] {
+        let seatedMemberIDs = assignedMemberIDs.subtracting([seat.memberID])
+        return eligibleMembers
+            .filter { member in
+                member.id != seat.memberID
+                    && member.role == .substitute
+                    && member.isActive
+                    && !seatedMemberIDs.contains(member.id)
+            }
+            .sorted { $0.name.fullName.localizedCaseInsensitiveCompare($1.name.fullName) == .orderedAscending }
+    }
+
     private func substituteTargets(for seat: SeriesRoundPlannedSeat) -> [SeriesMember] {
-        eligibleMembers
+        let seatedMemberIDs = assignedMemberIDs.subtracting([seat.memberID])
+        return eligibleMembers
             .filter { member in
                 member.id != seat.memberID
                     && member.role != .substitute
                     && member.role != .spectator
                     && member.isActive
+                    && !seatedMemberIDs.contains(member.id)
             }
             .sorted { $0.name.fullName.localizedCaseInsensitiveCompare($1.name.fullName) == .orderedAscending }
     }
 
+    private func substituteIn(_ substitute: SeriesMember, for seat: SeriesRoundPlannedSeat, in groupID: String) {
+        guard substitute.role == .substitute,
+              !assignedMemberIDs.contains(substitute.id),
+              let replacedMember = membersByID[seat.memberID] else { return }
+
+        updateGroup(groupID) { group in
+            guard let index = group.seats.firstIndex(where: { $0.id == seat.id }) else { return }
+            group.source = .manualOverride
+            group.seats[index].id = substitute.id
+            group.seats[index].memberID = substitute.id
+            group.seats[index].source = .manualOverride
+            group.seats[index].isSubstitute = true
+            group.seats[index].substituteForSeriesMemberID = replacedMember.id
+            group.seats[index].substituteForName = replacedMember.name.trimmedFullName
+            group.seats[index].representedTeamID = replacedMember.teamID
+        }
+
+        partnershipPlans.removeAll {
+            $0.memberIDs.contains(seat.memberID) || $0.memberIDs.contains(substitute.id)
+        }
+    }
+
     private func setSubstituteAssignment(for seat: SeriesRoundPlannedSeat, in groupID: String, target: SeriesMember) {
+        guard target.role != .substitute,
+              target.role != .spectator,
+              target.isActive,
+              !assignedMemberIDs.subtracting([seat.memberID]).contains(target.id) else { return }
         updateGroup(groupID) { group in
             guard let index = group.seats.firstIndex(where: { $0.id == seat.id }) else { return }
             group.source = .manualOverride

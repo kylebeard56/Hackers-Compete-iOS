@@ -3,6 +3,8 @@
 //  Hackers
 //
 
+import Firebase
+import FirebaseFirestoreCombineSwift
 import SwiftUI
 
 struct SeriesScoreCorrectionChange: Identifiable, Hashable {
@@ -1592,6 +1594,14 @@ final class SeriesViewModel: ObservableObject, Loggable {
     var currentUserID: String?
     var currentPlayerID: String?
     private var isHydratingHandicapScoreMetadata = false
+    private var realtimeSourceSeriesID: String?
+    private var seriesSourceListener: ListenerRegistration?
+    private var seriesRoundsSourceListener: ListenerRegistration?
+
+    deinit {
+        seriesSourceListener?.remove()
+        seriesRoundsSourceListener?.remove()
+    }
 
     var isCommissioner: Bool {
         guard let userID = currentUserID else { return false }
@@ -2303,6 +2313,9 @@ final class SeriesViewModel: ObservableObject, Loggable {
     // MARK: - Loading
 
     func load(seriesID: String) async {
+        if realtimeSourceSeriesID != seriesID {
+            stopRealtimeSourceListeners()
+        }
         isLoading = true
         isEnriching = false
         defer {
@@ -2348,6 +2361,7 @@ final class SeriesViewModel: ObservableObject, Loggable {
         standings = await standingsTask
         handicapScores = await scoresTask
         handicapOverrides = await overridesTask
+        startRealtimeSourceListeners(for: seriesID)
 
         isLoading = false
         isEnriching = true
@@ -2359,6 +2373,97 @@ final class SeriesViewModel: ObservableObject, Loggable {
         await hydrateRoundHandicapScoreMetadataIfNeeded()
         await backfillOfflineMemberUserIDs()
         await createBuiltInScoringProfilesIfNeeded()
+    }
+
+    private func startRealtimeSourceListeners(for seriesID: String) {
+        guard realtimeSourceSeriesID != seriesID
+                || seriesSourceListener == nil
+                || seriesRoundsSourceListener == nil else {
+            return
+        }
+        stopRealtimeSourceListeners()
+        realtimeSourceSeriesID = seriesID
+
+        seriesSourceListener = Firestore.firestore()
+            .collection(Collections.series.name)
+            .document(seriesID)
+            .addSnapshotListener(includeMetadataChanges: true) { [weak self] snapshot, error in
+                if let error {
+                    Task { @MainActor [weak self] in
+                        self?.addBreadcrumb(level: .error, message: "Series source listener failed", error: error)
+                    }
+                    return
+                }
+                guard let snapshot, snapshot.exists, !snapshot.metadata.hasPendingWrites else { return }
+                do {
+                    let updated = try snapshot.data(as: Series.self)
+                    Task { @MainActor [weak self] in
+                        guard let self, self.realtimeSourceSeriesID == seriesID else { return }
+                        let previousSettings = self.series.settings
+                        self.series = updated
+                        if previousSettings != updated.settings {
+                            self.recomputeAllHandicaps()
+                            await self.loadAttendanceForRSVPEligibleRounds()
+                        }
+                    }
+                } catch {
+                    Task { @MainActor [weak self] in
+                        self?.addBreadcrumb(level: .error, message: "Series source listener decode failed", error: error)
+                    }
+                }
+            }
+
+        seriesRoundsSourceListener = Firestore.firestore()
+            .collection(Collections.series.name)
+            .document(seriesID)
+            .collection(SeriesSubcollection.rounds.rawValue)
+            .order(by: "index")
+            .addSnapshotListener(includeMetadataChanges: true) { [weak self] snapshot, error in
+                if let error {
+                    Task { @MainActor [weak self] in
+                        self?.addBreadcrumb(level: .error, message: "Series rounds source listener failed", error: error)
+                    }
+                    return
+                }
+                guard let snapshot, !snapshot.metadata.hasPendingWrites else { return }
+                do {
+                    let updated = try snapshot.documents
+                        .map { try $0.data(as: SeriesRound.self) }
+                        .sorted {
+                            if $0.index != $1.index { return $0.index < $1.index }
+                            return $0.id < $1.id
+                        }
+                    Task { @MainActor [weak self] in
+                        guard let self, self.realtimeSourceSeriesID == seriesID else { return }
+                        await self.applyRealtimeSeriesRounds(updated)
+                    }
+                } catch {
+                    Task { @MainActor [weak self] in
+                        self?.addBreadcrumb(level: .error, message: "Series rounds source listener decode failed", error: error)
+                    }
+                }
+            }
+    }
+
+    private func stopRealtimeSourceListeners() {
+        seriesSourceListener?.remove()
+        seriesRoundsSourceListener?.remove()
+        seriesSourceListener = nil
+        seriesRoundsSourceListener = nil
+        realtimeSourceSeriesID = nil
+    }
+
+    private func applyRealtimeSeriesRounds(_ updated: [SeriesRound]) async {
+        let previousLinkedRoundIDs = Set(rounds.compactMap(\.roundID).filter(\.isPopulated))
+        rounds = updated
+        recomputeAllHandicaps()
+
+        let nextLinkedRoundIDs = Set(updated.compactMap(\.roundID).filter(\.isPopulated))
+        if previousLinkedRoundIDs != nextLinkedRoundIDs {
+            await loadLinkedRounds()
+        }
+        await syncLinkedRoundState()
+        await loadAttendanceForRSVPEligibleRounds()
     }
 
     private func backfillOfflineMemberUserIDs() async {
@@ -3266,10 +3371,40 @@ final class SeriesViewModel: ObservableObject, Loggable {
                 recomputeAllHandicaps()
             }
         }
+        if shouldSyncLinkedLobbyAfterSeriesRoundUpdate(previous: previousRound, updated: updatedRound),
+           let roundID = updatedRound.roundID,
+           linkedRounds[roundID]?.status == .lobby {
+            let options = SeriesRoundSyncOptions(
+                syncPlayerData: true,
+                syncFormat: true,
+                syncOrganization: true,
+                syncPairs: true,
+                syncMatchups: true,
+                syncHandicapSettings: true,
+                preserveManualHandicapEdits: false
+            )
+            let result = await syncLinkedRoundFromSeries(seriesRound: updatedRound, options: options)
+            if case .failure(let error) = result {
+                addBreadcrumb(level: .error, message: "Failed to sync linked lobby after series round update", error: error)
+            }
+        }
         addEvent(
             "series.round_updated",
             eventProps: seriesTelemetryProps(["series_round_id": round.id])
         )
+    }
+
+    func shouldSyncLinkedLobbyAfterSeriesRoundUpdate(previous: SeriesRound, updated: SeriesRound) -> Bool {
+        guard updated.roundID != nil else { return false }
+        return previous.scheduledAt != updated.scheduledAt
+            || previous.courseOverride != updated.courseOverride
+            || previous.roundConfig != updated.roundConfig
+            || previous.teamScoringProfileID != updated.teamScoringProfileID
+            || previous.individualScoringProfileID != updated.individualScoringProfileID
+            || previous.matchupPlans != updated.matchupPlans
+            || previous.plannedMatchups != updated.plannedMatchups
+            || previous.plannedTeeGroups != updated.plannedTeeGroups
+            || previous.partnershipPlans != updated.partnershipPlans
     }
 
     func duplicateRound(_ source: SeriesRound) async -> SeriesRound? {
@@ -3939,7 +4074,11 @@ final class SeriesViewModel: ObservableObject, Loggable {
             return
         }
         if source == .round, let rid = sourceRoundID, rid.isPopulated {
-            if handicapScores.contains(where: { $0.memberID == memberID && $0.source == .round && $0.sourceRoundID == rid }) {
+            let remoteRoundScores = await FirebaseService.shared.fetchHandicapScores(
+                seriesID: seriesID,
+                sourceRoundID: rid
+            )
+            if (handicapScores + remoteRoundScores).contains(where: { $0.memberID == memberID && $0.source == .round && $0.sourceRoundID == rid }) {
                 addBreadcrumb(level: .warning, message: "Skipping duplicate round handicap score for member \(memberID) round \(rid)")
                 return
             }
@@ -3966,8 +4105,14 @@ final class SeriesViewModel: ObservableObject, Loggable {
             return shouldAccrueLeagueHandicap(for: sr, snapshot: nil) && !excluded
         }()
 
+        let entryID: String = {
+            guard source == .round, let rid = sourceRoundID, rid.isPopulated else {
+                return HackersID.string()
+            }
+            return Self.roundHandicapScoreID(roundID: rid, memberID: memberID)
+        }()
         let entry = SeriesHandicapScore(
-            id: HackersID.string(),
+            id: entryID,
             memberID: memberID,
             score: score,
             par: par,
@@ -4122,6 +4267,7 @@ final class SeriesViewModel: ObservableObject, Loggable {
                 holeSegment: courseSegment.holeSegment
             )
         }
+        rounds[roundIndex] = seriesRoundForSyncApplyingLeagueDefaults(rounds[roundIndex])
 
         guard let roundID = await SeriesRoundCreationService().createRoundFromSeries(
             series: series,
@@ -4152,7 +4298,8 @@ final class SeriesViewModel: ObservableObject, Loggable {
         seriesRound: SeriesRound,
         options: SeriesRoundSyncOptions
     ) async -> Result<Void, SeriesRoundSyncError> {
-        guard let roundID = seriesRound.roundID else { return .failure(.roundNotLinked) }
+        let sourceRound = sourceSeriesRoundForSync(seriesRound)
+        guard let roundID = sourceRound.roundID else { return .failure(.roundNotLinked) }
         guard let linked = linkedRounds[roundID] else { return .failure(.roundNotLinked) }
         guard let snapshot = await loadRoundSnapshot(roundID: roundID) else {
             return .failure(.writeFailed("Could not load live round data."))
@@ -4161,13 +4308,13 @@ final class SeriesViewModel: ObservableObject, Loggable {
         let membersByID = Dictionary(uniqueKeysWithValues: members.map { ($0.id, $0) })
         let mappings = await FirebaseService.shared.fetchSeriesRoundMappings(
             seriesID: seriesID,
-            seriesRoundID: seriesRound.id
+            seriesRoundID: sourceRound.id
         )
         let hostPlayerID = await AppData.shared.getPrimaryPlayer()?.id
 
         let result = await SeriesRoundSyncService().syncRoundFromSeries(
             series: series,
-            seriesRound: seriesRound,
+            seriesRound: sourceRound,
             membersByID: membersByID,
             teams: teams,
             pods: pods,
@@ -4183,6 +4330,22 @@ final class SeriesViewModel: ObservableObject, Loggable {
             await refreshLinkedRoundState()
         }
         return result
+    }
+
+    func sourceSeriesRoundForSync(_ seriesRound: SeriesRound) -> SeriesRound {
+        seriesRoundForSyncApplyingLeagueDefaults(cachedSourceSeriesRoundForSync(seriesRound))
+    }
+
+    func cachedSourceSeriesRoundForSync(_ seriesRound: SeriesRound) -> SeriesRound {
+        rounds.first { $0.id == seriesRound.id } ?? seriesRound
+    }
+
+    func seriesRoundForSyncApplyingLeagueDefaults(_ seriesRound: SeriesRound) -> SeriesRound {
+        var sourceRound = seriesRound
+        if let defaultMaxScoreOverPar = series.settings.defaultRoundConfig.maxScoreOverPar {
+            sourceRound.roundConfig.maxScoreOverPar = defaultMaxScoreOverPar
+        }
+        return sourceRound
     }
 
     func refreshLinkedRoundState() async {
@@ -5005,6 +5168,9 @@ final class SeriesViewModel: ObservableObject, Loggable {
         let scoreEntriesByParticipant = Dictionary(grouping: snapshot.scoring, by: \.scoringUnitID)
         var inserted = false
         let deleted = replacingExisting ? await deleteRoundHandicapScores(sourceRoundID: roundID) : false
+        let existingRoundScores = replacingExisting
+            ? []
+            : await FirebaseService.shared.fetchHandicapScores(seriesID: seriesID, sourceRoundID: roundID)
 
         var pendingHandicapScores: [SeriesHandicapScore] = []
 
@@ -5012,7 +5178,7 @@ final class SeriesViewModel: ObservableObject, Loggable {
             guard let memberID = participant.seriesMemberID ?? members.first(where: { $0.playerID == participant.playerID })?.id else { continue }
             let excluded = excludedMemberIDs.contains(memberID)
             let countsTowardIndex = accruesForRound && !excluded
-            let alreadyIngested = handicapScores.contains {
+            let alreadyIngested = (handicapScores + existingRoundScores).contains {
                 $0.memberID == memberID && $0.source == .round && $0.sourceRoundID == roundID
             }
             guard replacingExisting || !alreadyIngested else { continue }
@@ -5042,7 +5208,7 @@ final class SeriesViewModel: ObservableObject, Loggable {
             let sortOrder = nextHandicapSortOrder(for: memberID)
             let now = Time(for: Date())
             let score = SeriesHandicapScore(
-                id: HackersID.string(),
+                id: Self.roundHandicapScoreID(roundID: roundID, memberID: memberID),
                 memberID: memberID,
                 score: total,
                 par: par,
@@ -5191,9 +5357,15 @@ final class SeriesViewModel: ObservableObject, Loggable {
     }
 
     private func deleteRoundHandicapScores(sourceRoundID: String) async -> Bool {
-        let existingRoundScores = handicapScores.filter {
-            $0.source == .round && $0.sourceRoundID == sourceRoundID
+        let remoteScores = await FirebaseService.shared.fetchHandicapScores(
+            seriesID: seriesID,
+            sourceRoundID: sourceRoundID
+        )
+        var existingRoundScoresByID: [String: SeriesHandicapScore] = [:]
+        for score in handicapScores + remoteScores where score.source == .round && score.sourceRoundID == sourceRoundID {
+            existingRoundScoresByID[score.id] = score
         }
+        let existingRoundScores = Array(existingRoundScoresByID.values)
 
         var deleted = false
         for existing in existingRoundScores {
@@ -5206,6 +5378,15 @@ final class SeriesViewModel: ObservableObject, Loggable {
             }
         }
         return deleted
+    }
+
+    nonisolated static func roundHandicapScoreID(roundID: String, memberID: String) -> String {
+        func safeDocumentIDComponent(_ value: String) -> String {
+            value
+                .replacingOccurrences(of: "/", with: "_")
+                .replacingOccurrences(of: " ", with: "_")
+        }
+        return "round_\(safeDocumentIDComponent(roundID))_member_\(safeDocumentIDComponent(memberID))"
     }
 
     // MARK: - Announcements

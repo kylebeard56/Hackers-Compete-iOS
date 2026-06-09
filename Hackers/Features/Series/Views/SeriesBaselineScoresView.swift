@@ -538,6 +538,10 @@ struct SeriesMemberHandicapBreakdownView: View {
     @State private var correctionRound: SeriesRound?
     @State private var pendingDeleteScore: SeriesHandicapScore?
     @State private var isDeletingScoreID: String?
+    @State private var isBulkEditingScores = false
+    @State private var selectedScoreIDs: Set<String> = []
+    @State private var showBulkDeleteAlert = false
+    @State private var isBulkDeletingScores = false
     @State private var showMissingRoundAlert = false
     @State private var missingRoundAlertMessage = ""
 
@@ -568,6 +572,10 @@ struct SeriesMemberHandicapBreakdownView: View {
         viewModel.series.handicapConfig.config.toConfig()
     }
 
+    private var selectedScores: [SeriesHandicapScore] {
+        memberScores.filter { selectedScoreIDs.contains($0.id) }
+    }
+
     var body: some View {
         StickyScrollView(
             header: {
@@ -591,31 +599,57 @@ struct SeriesMemberHandicapBreakdownView: View {
                 VStack(spacing: 0) {
                     Line()
                     HStack(spacing: 12) {
-                        if viewModel.isCommissioner {
+                        if isBulkEditingScores {
                             PrimaryButton(
                                 appearance: .fill,
-                                title: "Add score",
+                                title: "Cancel",
                                 labelColor: palette.foregroundColor,
                                 buttonColor: Color.neutral6,
                                 theme: palette.theme,
                                 fillWidth: false,
                                 isDisabled: .constant(false),
                                 isLoading: .constant(false),
-                                onTap: { showAddScoreSheet = true }
+                                onTap: { exitBulkEditMode() }
+                            )
+
+                            PrimaryButton(
+                                appearance: .fill,
+                                title: selectedScoreIDs.isEmpty ? "Delete" : "Delete \(selectedScoreIDs.count)",
+                                labelColor: palette.backgroundColor,
+                                buttonColor: .red,
+                                theme: palette.theme,
+                                fillWidth: true,
+                                isDisabled: .constant(selectedScoreIDs.isEmpty),
+                                isLoading: .constant(isBulkDeletingScores),
+                                onTap: { showBulkDeleteAlert = true }
+                            )
+                        } else {
+                            if viewModel.isCommissioner {
+                                PrimaryButton(
+                                    appearance: .fill,
+                                    title: "Add score",
+                                    labelColor: palette.foregroundColor,
+                                    buttonColor: Color.neutral6,
+                                    theme: palette.theme,
+                                    fillWidth: false,
+                                    isDisabled: .constant(false),
+                                    isLoading: .constant(false),
+                                    onTap: { showAddScoreSheet = true }
+                                )
+                            }
+
+                            PrimaryButton(
+                                appearance: .fill,
+                                title: "Done",
+                                labelColor: palette.backgroundColor,
+                                buttonColor: palette.foregroundColor,
+                                theme: palette.theme,
+                                fillWidth: true,
+                                isDisabled: .constant(false),
+                                isLoading: .constant(false),
+                                onTap: { dismiss() }
                             )
                         }
-
-                        PrimaryButton(
-                            appearance: .fill,
-                            title: "Done",
-                            labelColor: palette.backgroundColor,
-                            buttonColor: palette.foregroundColor,
-                            theme: palette.theme,
-                            fillWidth: true,
-                            isDisabled: .constant(false),
-                            isLoading: .constant(false),
-                            onTap: { dismiss() }
-                        )
                     }
                     .padding(.horizontal, 16)
                     .padding(.vertical, 12)
@@ -669,6 +703,23 @@ struct SeriesMemberHandicapBreakdownView: View {
             }
         } message: {
             Text("This removes the score from \(member.name.fullName)'s handicap history and recalculates their index.")
+        }
+        .alert(
+            "Delete \(selectedScoreIDs.count) score\(selectedScoreIDs.count == 1 ? "" : "s")?",
+            isPresented: $showBulkDeleteAlert
+        ) {
+            Button("Delete", role: .destructive) {
+                Task { await deleteSelectedScores() }
+            }
+            Button("Cancel", role: .cancel) {}
+        } message: {
+            Text("This removes the selected scores from \(member.name.fullName)'s handicap history and recalculates their index.")
+        }
+        .onChange(of: memberScores.map(\.id)) { _, ids in
+            selectedScoreIDs = selectedScoreIDs.intersection(Set(ids))
+            if memberScores.isEmpty {
+                exitBulkEditMode()
+            }
         }
     }
 
@@ -743,10 +794,30 @@ struct SeriesMemberHandicapBreakdownView: View {
     private var scoresListSection: some View {
         SeriesSheetCard(palette: palette) {
             VStack(alignment: .leading, spacing: 6) {
-                Text("Score History".uppercased())
-                    .fontStyle(kFontName, size: 14, weight: .semibold)
-                    .foregroundStyle(palette.foregroundColor)
-                    .frame(maxWidth: .infinity, alignment: .leading)
+                HStack(alignment: .firstTextBaseline, spacing: 8) {
+                    Text("Score History".uppercased())
+                        .fontStyle(kFontName, size: 14, weight: .semibold)
+                        .foregroundStyle(palette.foregroundColor)
+
+                    Spacer(minLength: 0)
+
+                    if viewModel.isCommissioner && !memberScores.isEmpty {
+                        Button {
+                            if isBulkEditingScores {
+                                exitBulkEditMode()
+                            } else {
+                                isBulkEditingScores = true
+                            }
+                        } label: {
+                            Text(isBulkEditingScores ? "Done" : "Edit")
+                                .fontStyle(kFontName, size: 12, weight: .semibold)
+                                .foregroundStyle(palette.foregroundColor)
+                        }
+                        .buttonStyle(.plain)
+                        .disabled(isBulkDeletingScores)
+                    }
+                }
+                .frame(maxWidth: .infinity, alignment: .leading)
 
                 Text("Newest first.")
                     .fontStyle(kFontName, size: 11, weight: .regular)
@@ -823,7 +894,10 @@ struct SeriesMemberHandicapBreakdownView: View {
                                 .foregroundStyle(Color.neutral.opacity(0.7))
                         }
                     }
-                    if showsRowMenu(for: score) {
+                    if isBulkEditingScores {
+                        selectionButton(for: score)
+                            .padding(.top, 8)
+                    } else if showsRowMenu(for: score) {
                         Menu {
                             if viewModel.isCommissioner && viewModel.series.handicapConfig.isEnabled {
                                 if score.countsTowardHandicapIndex {
@@ -872,10 +946,44 @@ struct SeriesMemberHandicapBreakdownView: View {
         }
         .contentShape(Rectangle())
         .onTapGesture {
+            if isBulkEditingScores {
+                toggleSelection(for: score)
+                return
+            }
             guard isEditableBaselineScore(score) else { return }
             editingScore = score
         }
-        .accessibilityAddTraits(isEditableBaselineScore(score) ? .isButton : [])
+        .accessibilityAddTraits((isBulkEditingScores || isEditableBaselineScore(score)) ? .isButton : [])
+    }
+
+    private func selectionButton(for score: SeriesHandicapScore) -> some View {
+        Button {
+            toggleSelection(for: score)
+        } label: {
+            Image(systemName: selectedScoreIDs.contains(score.id) ? "checkmark.circle.fill" : "circle")
+                .font(.system(size: 22, weight: .semibold))
+                .foregroundStyle(selectedScoreIDs.contains(score.id) ? Color.red : Color.neutral.opacity(0.75))
+                .frame(width: 36, height: 36)
+                .contentShape(Rectangle())
+        }
+        .buttonStyle(.plain)
+        .disabled(isBulkDeletingScores)
+        .accessibilityLabel(selectedScoreIDs.contains(score.id) ? "Deselect score" : "Select score")
+    }
+
+    private func toggleSelection(for score: SeriesHandicapScore) {
+        guard isBulkEditingScores, !isBulkDeletingScores else { return }
+        if selectedScoreIDs.contains(score.id) {
+            selectedScoreIDs.remove(score.id)
+        } else {
+            selectedScoreIDs.insert(score.id)
+        }
+    }
+
+    private func exitBulkEditMode() {
+        isBulkEditingScores = false
+        selectedScoreIDs.removeAll()
+        showBulkDeleteAlert = false
     }
 
     private func isEditableBaselineScore(_ score: SeriesHandicapScore) -> Bool {
@@ -895,6 +1003,20 @@ struct SeriesMemberHandicapBreakdownView: View {
         _ = await viewModel.deleteHandicapScoreEntry(score)
         isDeletingScoreID = nil
         pendingDeleteScore = nil
+    }
+
+    private func deleteSelectedScores() async {
+        let scores = selectedScores
+        guard !scores.isEmpty else {
+            exitBulkEditMode()
+            return
+        }
+        isBulkDeletingScores = true
+        for score in scores {
+            _ = await viewModel.deleteHandicapScoreEntry(score)
+        }
+        isBulkDeletingScores = false
+        exitBulkEditMode()
     }
 
     @ViewBuilder
