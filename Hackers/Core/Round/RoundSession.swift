@@ -383,6 +383,26 @@ final class RoundSession: ObservableObject, Loggable {
                 self?.handleForegroundEntry()
             }
             .store(in: &subscriptions)
+
+        HackersNotification.roundSetupDidChange.publisher()
+            .receive(on: RunLoop.main)
+            .sink { [weak self] notification in
+                self?.handleRoundSetupDidChange(notification)
+            }
+            .store(in: &subscriptions)
+    }
+
+    private func handleRoundSetupDidChange(_ notification: Notification) {
+        guard let changedRoundID = notification.object as? String,
+              changedRoundID.isPopulated,
+              changedRoundID == roundID else {
+            return
+        }
+
+        addBreadcrumb(message: "Force refresh round snapshot after setup change: \(changedRoundID)")
+        Task { [weak self] in
+            await self?.refreshOneShotSnapshot(for: changedRoundID)
+        }
     }
 
     private func handleBackgroundEntry() {

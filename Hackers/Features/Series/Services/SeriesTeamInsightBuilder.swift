@@ -266,6 +266,12 @@ enum SeriesTeamInsightBuilder {
         status: SeriesRoundStatus
     ) -> (label: String, kind: SeriesTeamScheduleOutcomeKind) {
         if let teamAward, let opponentAward {
+            if isTie(teamAward, opponentAward) { return ("Tie", .tie) }
+            if let teamPlacement = teamAward.placement,
+               let opponentPlacement = opponentAward.placement,
+               teamPlacement != opponentPlacement {
+                return teamPlacement < opponentPlacement ? ("Win", .win) : ("Loss", .loss)
+            }
             if teamAward.totalPoints > opponentAward.totalPoints { return ("Win", .win) }
             if teamAward.totalPoints < opponentAward.totalPoints { return ("Loss", .loss) }
             return ("Tie", .tie)
@@ -276,6 +282,17 @@ enum SeriesTeamInsightBuilder {
         }
         if status == .complete { return ("Complete", .pending) }
         return (status.rawValue.capitalized, .pending)
+    }
+
+    private static func isTie(_ teamAward: SeriesPointAward, _ opponentAward: SeriesPointAward) -> Bool {
+        if (teamAward.tieGroupSize ?? 1) > 1 || (opponentAward.tieGroupSize ?? 1) > 1 {
+            return true
+        }
+        guard let teamPlacement = teamAward.placement,
+              let opponentPlacement = opponentAward.placement else {
+            return false
+        }
+        return teamPlacement == opponentPlacement
     }
 
     private static func grossScoresByMemberID(

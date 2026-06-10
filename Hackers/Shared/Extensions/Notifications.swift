@@ -62,6 +62,7 @@ extension HackersNotification {
     static let sessionUpdated = HackersNotification("active session updated")
     
     // MARK: - Round
+    static let roundSetupDidChange = HackersNotification("round setup did change")
     static let displayPlayerScorecard = HackersNotification("display player scorecard")
     static let sideGameResultsTapped = HackersNotification("side game results tapped")
     static let showNewHoleAnimation = HackersNotification("show new hole animation")

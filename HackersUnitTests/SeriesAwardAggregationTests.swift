@@ -477,6 +477,69 @@ final class SeriesAwardAggregationTests: XCTestCase {
         XCTAssertEqual(resolved.rows.map(\.scoringUnitID), ["round_team3", "round_team7"])
     }
 
+    func testMatchupAwardTieDetectionUsesRoundAwardsTolerance() {
+        let snapshot = RoundSnapshot(
+            round: Round(id: "round1", status: .complete),
+            teams: [
+                RoundTeam(id: "round_team4", name: "Team 4", color: "yellow", index: 0, createdAt: .init(), parentID: "round1"),
+                RoundTeam(id: "round_team6", name: "Team 6", color: "green", index: 1, createdAt: .init(), parentID: "round1"),
+            ],
+            segments: [RoundSegment(id: "seg1", parentID: "round1")]
+        )
+        let rows = [
+            makeTeamRow(teamID: "round_team6", participantIDs: [], total: 6.00005),
+            makeTeamRow(teamID: "round_team4", participantIDs: [], total: 6.0),
+        ]
+        let resolved = SeriesViewModel.resolvedMatchupAwardRows(
+            rows,
+            matchup: TeamMatchup(id: "match4", teamIDs: ["round_team4", "round_team6"], mode: .team),
+            status: nil,
+            highestWins: false,
+            snapshot: snapshot,
+            mappings: [],
+            members: []
+        )
+        let profile = SeriesScoringProfile(
+            id: "team_wlt",
+            outcomeSource: .roundMatchResult,
+            competitorType: .team,
+            kind: .winTieLoss,
+            resultPoints: .init(winPoints: 1, tiePoints: 0.5, lossPoints: 0)
+        )
+
+        XCTAssertEqual(resolved.rows.map(\.scoringUnitID), ["round_team4", "round_team6"])
+        XCTAssertTrue(SeriesViewModel.isMatchupAwardTie(resolved.rows, isMinimumCountTie: resolved.isMinimumCountTie))
+        XCTAssertEqual(SeriesViewModel.resolvePoints(placement: 1, tieGroupSize: 2, profile: profile), 0.5)
+    }
+
+    func testMatchupAwardTieDetectionDoesNotTieOutsideTolerance() {
+        let rows = [
+            makeTeamRow(teamID: "round_team4", participantIDs: [], total: 6.0),
+            makeTeamRow(teamID: "round_team6", participantIDs: [], total: 6.2),
+        ]
+        let snapshot = RoundSnapshot(
+            round: Round(id: "round1", status: .complete),
+            teams: [
+                RoundTeam(id: "round_team4", name: "Team 4", color: "yellow", index: 0, createdAt: .init(), parentID: "round1"),
+                RoundTeam(id: "round_team6", name: "Team 6", color: "green", index: 1, createdAt: .init(), parentID: "round1"),
+            ],
+            segments: [RoundSegment(id: "seg1", parentID: "round1")]
+        )
+
+        let resolved = SeriesViewModel.resolvedMatchupAwardRows(
+            rows,
+            matchup: TeamMatchup(id: "match4", teamIDs: ["round_team4", "round_team6"], mode: .team),
+            status: nil,
+            highestWins: false,
+            snapshot: snapshot,
+            mappings: [],
+            members: []
+        )
+
+        XCTAssertEqual(resolved.rows.map(\.scoringUnitID), ["round_team4", "round_team6"])
+        XCTAssertFalse(SeriesViewModel.isMatchupAwardTie(resolved.rows, isMinimumCountTie: resolved.isMinimumCountTie))
+    }
+
     func testMatchupAwardRowsTreatBothSidesUnderMinimumAsTie() {
         let participants = [
             makeParticipant(id: "p1", memberID: "m1", teamID: "team1", name: "One"),

@@ -4714,7 +4714,7 @@ final class LiveRoundViewModel: ObservableObject, Loggable {
             let sortedRows = resolvedRows.rows
             let isMinimumCountTie = resolvedRows.isMinimumCountTie
             guard let first = sortedRows.first else { continue }
-            let isTie = isMinimumCountTie || (sortedRows.count > 1 && sortedRows.allSatisfy { abs($0.total - first.total) < 0.000_001 })
+            let isTie = SeriesViewModel.isMatchupAwardTie(sortedRows, isMinimumCountTie: isMinimumCountTie)
             let tieGroupSize = isTie ? sortedRows.count : 1
 
             for row in sortedRows {

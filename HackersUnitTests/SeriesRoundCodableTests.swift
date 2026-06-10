@@ -71,10 +71,60 @@ final class SeriesRoundCodableTests: XCTestCase {
             automaticAwardsEngineVersion: SeriesViewModel.currentAutomaticAwardsEngineVersion,
             parentID: "series1"
         )
+        let staleRound = SeriesRound(
+            id: "round3",
+            title: "Week 3",
+            index: 2,
+            status: .complete,
+            awardsStatus: .finalized,
+            automaticAwardsEngineVersion: SeriesViewModel.currentAutomaticAwardsEngineVersion - 1,
+            parentID: "series1"
+        )
 
         XCTAssertEqual(legacyRound.automaticAwardsEngineVersion, 0)
         XCTAssertTrue(SeriesViewModel.automaticAwardsNeedEngineRefresh(for: legacyRound))
+        XCTAssertTrue(SeriesViewModel.automaticAwardsNeedEngineRefresh(for: staleRound))
         XCTAssertFalse(SeriesViewModel.automaticAwardsNeedEngineRefresh(for: currentRound))
+    }
+
+    @MainActor
+    func testAutomaticAwardsRefreshPromptOnlyShowsForStaleEngineVersion() {
+        let viewModel = SeriesViewModel()
+        viewModel.currentUserID = "commissioner"
+        viewModel.series = Series(
+            id: "series1",
+            name: "Thursday League",
+            commissionerUserID: "commissioner",
+            settings: SeriesSettings(useTeamStandings: true)
+        )
+        viewModel.scoringProfiles = [
+            SeriesScoringProfile(
+                id: "team_wlt",
+                outcomeSource: .roundMatchResult,
+                competitorType: .team,
+                kind: .winTieLoss,
+                resultPoints: .init(winPoints: 1, tiePoints: 0.5, lossPoints: 0),
+                parentID: "series1"
+            ),
+        ]
+        viewModel.rounds = [
+            SeriesRound(
+                id: "week3",
+                title: "Week 3",
+                index: 2,
+                status: .complete,
+                teamScoringProfileID: "team_wlt",
+                awardsStatus: .finalized,
+                automaticAwardsEngineVersion: SeriesViewModel.currentAutomaticAwardsEngineVersion - 1,
+                parentID: "series1"
+            ),
+        ]
+
+        XCTAssertTrue(viewModel.canRebuildAutomaticAwards)
+
+        viewModel.rounds[0].automaticAwardsEngineVersion = SeriesViewModel.currentAutomaticAwardsEngineVersion
+
+        XCTAssertFalse(viewModel.canRebuildAutomaticAwards)
     }
 
     func testLegacySeriesHandicapBasisDefaultsFromDefaultPar() throws {
@@ -91,6 +141,62 @@ final class SeriesRoundCodableTests: XCTestCase {
 
         XCTAssertEqual(nineHole.strokeBasis, .nineHole)
         XCTAssertEqual(eighteenHole.strokeBasis, .eighteenHole)
+    }
+
+    @MainActor
+    func testLinkedRoundLiveStatusUpdatesSeriesNavigationTarget() {
+        let viewModel = SeriesViewModel()
+        let seriesRound = SeriesRound(
+            id: "week1",
+            title: "Week 1",
+            index: 0,
+            status: .lobby,
+            roundID: "round1",
+            parentID: "series1"
+        )
+        viewModel.rounds = [seriesRound]
+        viewModel.linkedRounds = [
+            "round1": Round(id: "round1", status: .live, players: ["player1"])
+        ]
+
+        XCTAssertEqual(viewModel.effectiveStatus(for: seriesRound), .live)
+        XCTAssertEqual(viewModel.linkedRoundNavigationTarget(for: seriesRound), .liveRound)
+        XCTAssertEqual(viewModel.openLinkedRoundButtonTitle(for: seriesRound), "Continue playing")
+    }
+
+    func testStaleLinkedRoundStatusDoesNotBackPropagateWithoutFreshness() {
+        let staleUpdate = SeriesViewModel.resolvedLinkedRoundStatusUpdate(
+            previousStatus: .live,
+            linkedRoundStatus: .lobby,
+            roundID: "round1",
+            freshRoundIDs: []
+        )
+        let freshUpdate = SeriesViewModel.resolvedLinkedRoundStatusUpdate(
+            previousStatus: .lobby,
+            linkedRoundStatus: .live,
+            roundID: "round1",
+            freshRoundIDs: ["round1"]
+        )
+
+        XCTAssertNil(staleUpdate)
+        XCTAssertEqual(freshUpdate, .live)
+    }
+
+    @MainActor
+    func testSeriesRoundWithoutLinkIgnoresCachedLinkedRoundStatus() {
+        let viewModel = SeriesViewModel()
+        let unlinkedRound = SeriesRound(
+            id: "week1",
+            title: "Week 1",
+            index: 0,
+            status: .planned,
+            parentID: "series1"
+        )
+        viewModel.linkedRounds = [
+            "round1": Round(id: "round1", status: .live)
+        ]
+
+        XCTAssertEqual(viewModel.effectiveStatus(for: unlinkedRound), .planned)
     }
 
     func testLegacyRoundHandicapBasisDefaultsFromHoleCount() throws {

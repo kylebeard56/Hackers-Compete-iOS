@@ -8,6 +8,18 @@
 import Foundation
 import SwiftUI
 
+enum MatchupScoreComparison {
+    static let tieTolerance = 0.0001
+
+    static func totalsMatch(_ lhs: Double, _ rhs: Double) -> Bool {
+        abs(lhs - rhs) < tieTolerance
+    }
+
+    static func totalsDiffer(_ lhs: Double, _ rhs: Double) -> Bool {
+        !totalsMatch(lhs, rhs)
+    }
+}
+
 // MARK: - Leaderboard Row
 
 struct LeaderboardRow: Identifiable {
@@ -203,7 +215,7 @@ struct MatchupResultPresentationBuilder {
         let sortedSides = completeSides.sorted {
             let lhs = $0.total ?? 0
             let rhs = $1.total ?? 0
-            if abs(lhs - rhs) > 0.0001 {
+            if MatchupScoreComparison.totalsDiffer(lhs, rhs) {
                 return isPointsFormat ? lhs > rhs : lhs < rhs
             }
             return $0.id < $1.id
@@ -213,7 +225,7 @@ struct MatchupResultPresentationBuilder {
         let autoWinnerSideID = minimumCountStatus?.autoWinnerSideID
         let isMinimumCountTie = minimumCountStatus?.bothSidesUnderMinimum == true
         let isScoreTie = hasTwoCompleteSides && completeSides.allSatisfy {
-            abs(($0.total ?? 0) - (completeSides[0].total ?? 0)) < 0.0001
+            MatchupScoreComparison.totalsMatch($0.total ?? 0, completeSides[0].total ?? 0)
         }
         let isTie = isMinimumCountTie || (autoWinnerSideID == nil && isScoreTie)
         let winningSide = autoWinnerSideID.flatMap { winnerID in

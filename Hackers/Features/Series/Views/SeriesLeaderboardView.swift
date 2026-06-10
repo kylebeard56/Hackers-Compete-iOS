@@ -224,6 +224,10 @@ struct SeriesLeaderboardView: View {
                 .alignCenter()
         }
 
+        if isTeam, shouldShowRefreshAwardsButton(isTeam: true) {
+            refreshAwardsButton(isTeam: true)
+        }
+
         if standings.isEmpty {
             EmptyStateView(
                 imageName: EmptyStatePreset.seriesStandings.imageName,
@@ -238,8 +242,8 @@ struct SeriesLeaderboardView: View {
             }
         }
 
-        if shouldShowRefreshAwardsButton(isTeam: isTeam) {
-            refreshAwardsButton(isTeam: isTeam)
+        if !isTeam, shouldShowRefreshAwardsButton(isTeam: false) {
+            refreshAwardsButton(isTeam: false)
         }
     }
 
@@ -262,15 +266,34 @@ struct SeriesLeaderboardView: View {
                 }
             }
         } label: {
-            Label(
-                isRefreshing ? "Refreshing..." : "Refresh",
-                systemImage: "arrow.triangle.2.circlepath"
-            )
-            .fontStyle(kFontName, size: 13, weight: .semibold)
-            .foregroundStyle(Color.accentGreen)
-            .padding(.horizontal, 14)
-            .padding(.vertical, 9)
-            .glassCardEffect(cornerRadius: 12, tint: Color.accentGreen.opacity(0.14), shadowOpacity: 0)
+            if isTeam {
+                HStack(spacing: 10) {
+                    Image(systemName: "arrow.triangle.2.circlepath")
+                        .font(.system(size: 14, weight: .semibold))
+
+                    Text(isRefreshing ? "Refreshing standings..." : "A scoring update is available. Refresh standings.")
+                        .fontStyle(kFontName, size: 13, weight: .semibold)
+                        .multilineTextAlignment(.leading)
+                        .fixedSize(horizontal: false, vertical: true)
+                        .alignLeading()
+                }
+                .foregroundStyle(Color.accentGreen)
+                .padding(.horizontal, 14)
+                .padding(.vertical, 11)
+                .frame(maxWidth: .infinity, alignment: .leading)
+                .background(Color.accentGreen.opacity(0.12))
+                .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
+            } else {
+                Label(
+                    isRefreshing ? "Refreshing..." : "Refresh",
+                    systemImage: "arrow.triangle.2.circlepath"
+                )
+                .fontStyle(kFontName, size: 13, weight: .semibold)
+                .foregroundStyle(Color.accentGreen)
+                .padding(.horizontal, 14)
+                .padding(.vertical, 9)
+                .glassCardEffect(cornerRadius: 12, tint: Color.accentGreen.opacity(0.14), shadowOpacity: 0)
+            }
         }
         .buttonStyle(.plain)
         .disabled(isRefreshing)

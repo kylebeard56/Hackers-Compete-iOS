@@ -122,6 +122,42 @@ final class SeriesScoreboardCalculatorTests: XCTestCase {
         XCTAssertEqual(insight.record, SeriesTeamRecord(wins: 1, losses: 0, ties: 0))
     }
 
+    func testTeamInsightTreatsTieMetadataAsTieBeforeAwardPoints() {
+        let teams = [
+            SeriesTeam(id: "team4", name: "Team 4", color: "yellow", index: 3),
+            SeriesTeam(id: "team6", name: "Team 6", color: "green", index: 5),
+        ]
+        let round = SeriesRound(
+            id: "week3",
+            title: "Week 3",
+            index: 2,
+            status: .complete,
+            roundConfig: SeriesRoundConfiguration(competitionScope: .matchup, matchupMode: .teamVsTeam),
+            matchupPlans: [
+                SeriesRoundMatchupPlan(id: "match4", teamAID: "team4", teamBID: "team6", index: 0),
+            ]
+        )
+        let awards = [
+            teamAward(roundID: "week3", teamID: "team4", name: "Team 4", points: 0, placement: 1, tieGroupSize: 2),
+            teamAward(roundID: "week3", teamID: "team6", name: "Team 6", points: 1, placement: 1, tieGroupSize: 2),
+        ]
+
+        let insight = SeriesTeamInsightBuilder.build(
+            team: teams[0],
+            standing: nil,
+            teams: teams,
+            members: [],
+            rounds: [round],
+            pointAwards: awards,
+            snapshotsBySeriesRoundID: [:]
+        )
+
+        XCTAssertEqual(insight.scheduleRows.first?.opponentName, "Team 6")
+        XCTAssertEqual(insight.scheduleRows.first?.outcomeLabel, "Tie")
+        XCTAssertEqual(insight.scheduleRows.first?.outcomeKind, .tie)
+        XCTAssertEqual(insight.record, SeriesTeamRecord(wins: 0, losses: 0, ties: 1))
+    }
+
     func testTeamInsightUsesPointsFirstForAveragesAndTopContributor() {
         let team = SeriesTeam(id: "red", name: "Red", color: "red", index: 0)
         let members = [
@@ -547,7 +583,8 @@ final class SeriesScoreboardCalculatorTests: XCTestCase {
         name: String,
         points: Double,
         placement: Int,
-        roundOwnerID: String? = nil
+        roundOwnerID: String? = nil,
+        tieGroupSize: Int? = nil
     ) -> SeriesPointAward {
         SeriesPointAward(
             id: "\(roundID)_team_\(teamID)",
@@ -557,6 +594,7 @@ final class SeriesScoreboardCalculatorTests: XCTestCase {
             competitorID: teamID,
             competitorName: name,
             placement: placement,
+            tieGroupSize: tieGroupSize,
             totalPoints: points,
             roundOwnerID: roundOwnerID
         )

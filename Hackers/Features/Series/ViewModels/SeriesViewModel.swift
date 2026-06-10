@@ -1557,7 +1557,7 @@ private struct SeriesLeagueRulesSignaturePayload: Codable, Hashable {
 
 @MainActor
 final class SeriesViewModel: ObservableObject, Loggable {
-    nonisolated static let currentAutomaticAwardsEngineVersion = 2
+    nonisolated static let currentAutomaticAwardsEngineVersion = 3
 
     @Published var series: Series = .init()
     @Published var members: [SeriesMember] = []
@@ -1578,6 +1578,7 @@ final class SeriesViewModel: ObservableObject, Loggable {
     @Published var attendanceByRound: [String: [SeriesRoundAttendance]] = [:]
     @Published var linkedRounds: [String: Round] = [:]
     private var linkedRoundSnapshotCache: [String: RoundSnapshot] = [:]
+    private var linkedRoundListeners: [String: ListenerRegistration] = [:]
     @Published var isLoading = true
     @Published var isEnriching = false
     @Published var isSaving = false
@@ -1601,6 +1602,7 @@ final class SeriesViewModel: ObservableObject, Loggable {
     deinit {
         seriesSourceListener?.remove()
         seriesRoundsSourceListener?.remove()
+        linkedRoundListeners.values.forEach { $0.remove() }
     }
 
     var isCommissioner: Bool {
@@ -1731,7 +1733,7 @@ final class SeriesViewModel: ObservableObject, Loggable {
 
     var canRebuildAutomaticAwards: Bool {
         isCommissioner
-            && completedRounds.contains(where: hasAutomaticAwardProfile)
+            && completedRounds.contains(where: needsAutomaticAwardsEngineRefresh)
     }
 
     var hasTeams: Bool {
@@ -2366,8 +2368,8 @@ final class SeriesViewModel: ObservableObject, Loggable {
         isLoading = false
         isEnriching = true
 
-        await loadLinkedRounds()
-        await syncLinkedRoundState()
+        let refreshedRoundIDs = await loadLinkedRounds()
+        await syncLinkedRoundState(persistingStatusesFor: refreshedRoundIDs)
         await loadAttendanceForRSVPEligibleRounds()
         recomputeAllHandicaps()
         await hydrateRoundHandicapScoreMetadataIfNeeded()
@@ -2450,19 +2452,17 @@ final class SeriesViewModel: ObservableObject, Loggable {
         seriesRoundsSourceListener?.remove()
         seriesSourceListener = nil
         seriesRoundsSourceListener = nil
+        stopLinkedRoundListeners()
         realtimeSourceSeriesID = nil
     }
 
     private func applyRealtimeSeriesRounds(_ updated: [SeriesRound]) async {
-        let previousLinkedRoundIDs = Set(rounds.compactMap(\.roundID).filter(\.isPopulated))
         rounds = updated
         recomputeAllHandicaps()
 
         let nextLinkedRoundIDs = Set(updated.compactMap(\.roundID).filter(\.isPopulated))
-        if previousLinkedRoundIDs != nextLinkedRoundIDs {
-            await loadLinkedRounds()
-        }
-        await syncLinkedRoundState()
+        let refreshedRoundIDs = await loadLinkedRounds(for: nextLinkedRoundIDs)
+        await syncLinkedRoundState(persistingStatusesFor: refreshedRoundIDs)
         await loadAttendanceForRSVPEligibleRounds()
     }
 
@@ -2490,17 +2490,79 @@ final class SeriesViewModel: ObservableObject, Loggable {
         }
     }
 
-    private func loadLinkedRounds() async {
-        let roundIDs = Array(Set(rounds.compactMap(\.roundID).filter(\.isPopulated)))
+    @discardableResult
+    private func loadLinkedRounds() async -> Set<String> {
+        await loadLinkedRounds(for: Set(rounds.compactMap(\.roundID).filter(\.isPopulated)))
+    }
+
+    @discardableResult
+    private func loadLinkedRounds(for roundIDs: Set<String>) async -> Set<String> {
+        reconcileLinkedRoundListeners(for: roundIDs)
+
         guard roundIDs.isPopulated else {
             linkedRounds = [:]
             linkedRoundSnapshotCache = [:]
-            return
+            return []
         }
 
-        let fetched = await FirebaseService.shared.getRoundsByIDs(roundIDs)
-        linkedRounds = Dictionary(uniqueKeysWithValues: fetched.map { ($0.id, $0) })
+        let fetched = await FirebaseService.shared.getRoundsByIDs(Array(roundIDs))
+        let fetchedByID = Dictionary(uniqueKeysWithValues: fetched.map { ($0.id, $0) })
+        var nextLinkedRounds = linkedRounds.filter { roundIDs.contains($0.key) }
+        nextLinkedRounds.merge(fetchedByID) { _, fresh in fresh }
+        linkedRounds = nextLinkedRounds
         linkedRoundSnapshotCache = linkedRoundSnapshotCache.filter { roundIDs.contains($0.key) }
+        return Set(fetchedByID.keys)
+    }
+
+    private func reconcileLinkedRoundListeners(for roundIDs: Set<String>) {
+        for staleRoundID in linkedRoundListeners.keys where !roundIDs.contains(staleRoundID) {
+            linkedRoundListeners[staleRoundID]?.remove()
+            linkedRoundListeners[staleRoundID] = nil
+            linkedRounds[staleRoundID] = nil
+            linkedRoundSnapshotCache[staleRoundID] = nil
+        }
+
+        for roundID in roundIDs where linkedRoundListeners[roundID] == nil {
+            linkedRoundListeners[roundID] = Firestore.firestore()
+                .collection(Collections.rounds.name)
+                .document(roundID)
+                .addSnapshotListener(includeMetadataChanges: true) { [weak self] snapshot, error in
+                    if let error {
+                        Task { @MainActor [weak self] in
+                            self?.addBreadcrumb(level: .error, message: "Linked round listener failed", error: error)
+                        }
+                        return
+                    }
+
+                    guard let snapshot, snapshot.exists, !snapshot.metadata.hasPendingWrites else { return }
+
+                    do {
+                        let linkedRound = try snapshot.data(as: Round.self)
+                        Task { @MainActor [weak self] in
+                            guard let self,
+                                  self.linkedRoundListeners[roundID] != nil,
+                                  self.rounds.contains(where: { $0.roundID == linkedRound.id })
+                            else { return }
+                            await self.applyFreshLinkedRound(linkedRound)
+                        }
+                    } catch {
+                        Task { @MainActor [weak self] in
+                            self?.addBreadcrumb(level: .error, message: "Linked round listener decode failed", error: error)
+                        }
+                    }
+                }
+        }
+    }
+
+    private func stopLinkedRoundListeners() {
+        linkedRoundListeners.values.forEach { $0.remove() }
+        linkedRoundListeners = [:]
+        linkedRoundSnapshotCache = [:]
+    }
+
+    private func applyFreshLinkedRound(_ linkedRound: Round) async {
+        linkedRounds[linkedRound.id] = linkedRound
+        await syncLinkedRoundState(persistingStatusesFor: [linkedRound.id])
     }
 
     func shouldPreloadAttendance(for seriesRound: SeriesRound) -> Bool {
@@ -4288,8 +4350,8 @@ final class SeriesViewModel: ObservableObject, Loggable {
         rounds[roundIndex].lastUpdatedAt = .init()
         _ = await FirebaseService.shared.updateSeriesRound(rounds[roundIndex])
 
-        await loadLinkedRounds()
-        await refreshSeriesCachesIfNeeded()
+        let refreshedRoundIDs = await loadLinkedRounds()
+        await syncLinkedRoundState(persistingStatusesFor: refreshedRoundIDs)
         return roundID
     }
 
@@ -4328,6 +4390,7 @@ final class SeriesViewModel: ObservableObject, Loggable {
 
         if case .success = result {
             await refreshLinkedRoundState()
+            HackersNotification.roundSetupDidChange.send(with: roundID)
         }
         return result
     }
@@ -4349,12 +4412,13 @@ final class SeriesViewModel: ObservableObject, Loggable {
     }
 
     func refreshLinkedRoundState() async {
-        await loadLinkedRounds()
-        await syncLinkedRoundState()
+        linkedRoundSnapshotCache = [:]
+        let refreshedRoundIDs = await loadLinkedRounds()
+        await syncLinkedRoundState(persistingStatusesFor: refreshedRoundIDs)
         await loadAttendanceForRSVPEligibleRounds()
     }
 
-    private func syncLinkedRoundState() async {
+    func syncLinkedRoundState(persistingStatusesFor freshRoundIDs: Set<String>) async {
         guard linkedRounds.isPopulated else { return }
 
         var changedRounds: [SeriesRound] = []
@@ -4368,8 +4432,13 @@ final class SeriesViewModel: ObservableObject, Loggable {
             let newStatus = SeriesRoundStatus(linkedRoundStatus: linkedRound.status)
             var hasChanged = false
 
-            if previousStatus != newStatus {
-                rounds[roundIndex].status = newStatus
+            if let statusUpdate = Self.resolvedLinkedRoundStatusUpdate(
+                previousStatus: previousStatus,
+                linkedRoundStatus: linkedRound.status,
+                roundID: roundID,
+                freshRoundIDs: freshRoundIDs
+            ) {
+                rounds[roundIndex].status = statusUpdate
                 hasChanged = true
             }
             if newStatus == .lobby || newStatus == .live {
@@ -4461,6 +4530,17 @@ final class SeriesViewModel: ObservableObject, Loggable {
         await refreshSeriesCachesIfNeeded()
     }
 
+    nonisolated static func resolvedLinkedRoundStatusUpdate(
+        previousStatus: SeriesRoundStatus,
+        linkedRoundStatus: RoundStatus,
+        roundID: String,
+        freshRoundIDs: Set<String>
+    ) -> SeriesRoundStatus? {
+        guard freshRoundIDs.contains(roundID) else { return nil }
+        let newStatus = SeriesRoundStatus(linkedRoundStatus: linkedRoundStatus)
+        return previousStatus == newStatus ? nil : newStatus
+    }
+
     private func needsCompletedRoundProcessing(
         for seriesRound: SeriesRound,
         linkedRound: Round,
@@ -4500,6 +4580,11 @@ final class SeriesViewModel: ObservableObject, Loggable {
             .contains { profile in
                 profile.kind != .manual && profile.outcomeSource != .manual
             }
+    }
+
+    private func needsAutomaticAwardsEngineRefresh(for seriesRound: SeriesRound) -> Bool {
+        hasAutomaticAwardProfile(for: seriesRound)
+            && Self.automaticAwardsNeedEngineRefresh(for: seriesRound)
     }
 
     nonisolated static func automaticAwardsNeedEngineRefresh(for seriesRound: SeriesRound) -> Bool {
@@ -6866,7 +6951,7 @@ final class SeriesViewModel: ObservableObject, Loggable {
             let isMinimumCountTie = resolvedRows.isMinimumCountTie
 
             guard let first = sortedRows.first else { continue }
-            let isTie = isMinimumCountTie || (sortedRows.count > 1 && sortedRows.allSatisfy { $0.total == first.total })
+            let isTie = Self.isMatchupAwardTie(sortedRows, isMinimumCountTie: isMinimumCountTie)
             for row in sortedRows {
                 let competitorType: SeriesCompetitorType = awardTrack == .team ? .team : .member
                 let placement = isTie ? 1 : (row.scoringUnitID == first.scoringUnitID ? 1 : 2)
@@ -6913,7 +6998,7 @@ final class SeriesViewModel: ObservableObject, Loggable {
     ) -> (rows: [ScoringRow], isMinimumCountTie: Bool) {
         func sortedByScore() -> [ScoringRow] {
             rows.sorted {
-                if $0.total != $1.total {
+                if MatchupScoreComparison.totalsDiffer($0.total, $1.total) {
                     return highestWins ? $0.total > $1.total : $0.total < $1.total
                 }
                 return $0.scoringUnitID < $1.scoringUnitID
@@ -6952,6 +7037,12 @@ final class SeriesViewModel: ObservableObject, Loggable {
         }
 
         return (sortedByScore(), false)
+    }
+
+    nonisolated static func isMatchupAwardTie(_ rows: [ScoringRow], isMinimumCountTie: Bool) -> Bool {
+        guard !isMinimumCountTie else { return true }
+        guard let first = rows.first, rows.count > 1 else { return false }
+        return rows.allSatisfy { MatchupScoreComparison.totalsMatch($0.total, first.total) }
     }
 
     private nonisolated static func rowAwardSideIDs(
@@ -7232,7 +7323,7 @@ final class SeriesViewModel: ObservableObject, Loggable {
         return competitors
     }
 
-    private nonisolated static func resolvePoints(placement: Int, tieGroupSize: Int, profile: SeriesScoringProfile) -> Double? {
+    nonisolated static func resolvePoints(placement: Int, tieGroupSize: Int, profile: SeriesScoringProfile) -> Double? {
         func points(at rank: Int) -> Double {
             profile.placementRules.first(where: { rank >= $0.rankStart && rank <= $0.rankEnd })?.points ?? 0
         }
