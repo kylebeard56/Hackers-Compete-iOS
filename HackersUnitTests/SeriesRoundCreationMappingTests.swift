@@ -178,6 +178,28 @@ final class SeriesRoundCreationMappingTests: XCTestCase {
         XCTAssertEqual(roundConfig.selectionDomain, .partnership)
     }
 
+    func testRoundConfigurationDoesNotCopySeriesShotgunHelperToLiveRound() {
+        var cfg = SeriesRoundConfiguration()
+        cfg.sequentialTeeStartsEnabled = true
+        let sr = SeriesRound(
+            id: "sr_authored_starts",
+            roundConfig: cfg,
+            plannedTeeGroups: [
+                SeriesRoundPlannedTeeGroup(id: "planned_1", index: 0, startingHole: 9)
+            ],
+            parentID: "series1"
+        )
+
+        let roundConfig = SeriesRoundCreationMapping.roundConfiguration(
+            series: makeSeries(),
+            seriesRound: sr,
+            courseSegment: makeCourseSegment(),
+            competitionScope: .field
+        )
+
+        XCTAssertFalse(roundConfig.usesSequentialTeeStarts)
+    }
+
     func testRoundDraft_carriesPlayerIDsAndConfiguration() {
         var config = SeriesRoundConfiguration()
         config.maxScoreOverPar = .twoTimesPar
@@ -421,6 +443,24 @@ final class SeriesRoundCreationMappingTests: XCTestCase {
         XCTAssertEqual(shotgun.map(\.index), [0, 1])
         XCTAssertEqual(shotgun.map(\.startingHole), [7, 13])
         XCTAssertEqual(Set(shotgun.compactMap(\.teeTime)), ["2026-05-01T14:00:00Z"])
+    }
+
+    func testTeeGroupsPayloadCopiesSavedSeriesStartingHolesForRoundCreation() {
+        let planned = [
+            SeriesRoundPlannedTeeGroup(id: "g1", index: 0, teeTime: "2026-06-16T20:30:00Z", startingHole: 9),
+            SeriesRoundPlannedTeeGroup(id: "g2", index: 1, teeTime: "2026-06-16T20:30:00Z", startingHole: 8),
+            SeriesRoundPlannedTeeGroup(id: "g3", index: 2, teeTime: "2026-06-16T20:30:00Z", startingHole: 7),
+        ]
+
+        let payload = SeriesRoundPlanningService.teeGroupsPayload(
+            roundID: "round1",
+            plannedTeeGroups: planned,
+            createdAt: t0
+        )
+
+        XCTAssertEqual(payload.map(\.index), [0, 1, 2])
+        XCTAssertEqual(payload.map(\.startingHole), [9, 8, 7])
+        XCTAssertEqual(Set(payload.compactMap(\.teeTime)), ["2026-06-16T20:30:00Z"])
     }
 
     func testNormalizePlannedTeeGroups_replacesOutOfRangeStartingHole() {
@@ -667,6 +707,51 @@ final class SeriesRoundCreationMappingTests: XCTestCase {
         )
 
         XCTAssertEqual(plans.flatMap(\.memberIDs), ["m1"])
+    }
+
+    func testSubstitutePlanningPolicy_excludesSubstitutesFromStandaloneAssignments() {
+        let members = [
+            makeMember(id: "regular", name: "Regular", teamID: "t1"),
+            makeMember(id: "sub", name: "Sub", role: .substitute),
+            makeMember(id: "spectator", name: "Spectator", role: .spectator),
+        ]
+
+        let unassigned = SeriesRoundSubstitutePlanningPolicy.unassignedRegularMembers(
+            eligibleMembers: members,
+            assignedMemberIDs: ["regular"]
+        )
+
+        XCTAssertTrue(SeriesRoundSubstitutePlanningPolicy.canAssignStandalone(members[0]))
+        XCTAssertFalse(SeriesRoundSubstitutePlanningPolicy.canAssignStandalone(members[1]))
+        XCTAssertFalse(SeriesRoundSubstitutePlanningPolicy.canAssignStandalone(members[2]))
+        XCTAssertTrue(unassigned.isEmpty)
+    }
+
+    func testSubstitutePlanningPolicy_restoresOriginalSeat() {
+        let substituteSeat = SeriesRoundPlannedSeat(
+            id: "sub",
+            memberID: "sub",
+            teeOrder: 3,
+            source: .manualOverride,
+            isSubstitute: true,
+            substituteForSeriesMemberID: "regular",
+            substituteForName: "Regular Player",
+            representedTeamID: "red"
+        )
+
+        let restored = SeriesRoundSubstitutePlanningPolicy.restoredOriginalSeat(
+            from: substituteSeat,
+            originalMemberID: "regular"
+        )
+
+        XCTAssertEqual(restored.id, "regular")
+        XCTAssertEqual(restored.memberID, "regular")
+        XCTAssertEqual(restored.teeOrder, 3)
+        XCTAssertEqual(restored.source, .manualOverride)
+        XCTAssertFalse(restored.isSubstitute)
+        XCTAssertNil(restored.substituteForSeriesMemberID)
+        XCTAssertNil(restored.substituteForName)
+        XCTAssertNil(restored.representedTeamID)
     }
 
     func testBuildTeeGroupPlans_alignPairsKeepsSameIndexPodsTogether() {

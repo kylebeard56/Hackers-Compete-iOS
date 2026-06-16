@@ -36,6 +36,15 @@ extension RoundRegistrationType {
 }
 
 extension RoundSession {
+    private func shouldApplyListenerSnapshot(_ metadata: SnapshotMetadata, listenerType: RoundRegistrationType) -> Bool {
+        guard metadata.hasPendingWrites == false else { return false }
+        guard metadata.isFromCache == false else {
+            addBreadcrumb(message: "Skip cached \(listenerType.name) listener snapshot")
+            return false
+        }
+        return true
+    }
+
     func startListeners(for profile: RoundSubscriptionProfile) async {
         for type in RoundRegistrationType.allCases where profile.listenerTypes.contains(type) {
             await startListening(to: type)
@@ -133,7 +142,7 @@ extension RoundSession {
                     return
                 }
                 
-                guard snapshot.metadata.hasPendingWrites == false else { return }
+                guard self?.shouldApplyListenerSnapshot(snapshot.metadata, listenerType: .round) == true else { return }
                 
                 do {
                     let round = try snapshot.data(as: Round.self)
@@ -177,7 +186,7 @@ extension RoundSession {
                     return
                 }
                 
-                guard snapshot.metadata.hasPendingWrites == false else { return }
+                guard self?.shouldApplyListenerSnapshot(snapshot.metadata, listenerType: .participant) == true else { return }
                 guard self?.suppressParticipantListener != true else { return }
                 
                 do {
@@ -226,7 +235,7 @@ extension RoundSession {
                     return
                 }
                 
-                guard snapshot.metadata.hasPendingWrites == false else { return }
+                guard self?.shouldApplyListenerSnapshot(snapshot.metadata, listenerType: .segment) == true else { return }
                 
                 do {
                     let segments = try snapshot.documents.compactMap({ try $0.data(as: RoundSegment.self) })
@@ -270,7 +279,7 @@ extension RoundSession {
                     return
                 }
                 
-                guard snapshot.metadata.hasPendingWrites == false else { return }
+                guard self?.shouldApplyListenerSnapshot(snapshot.metadata, listenerType: .scoring) == true else { return }
                 
                 do {
                     let scoring = try snapshot.documents.compactMap({ try $0.data(as: ScoreEntry.self) })
@@ -314,7 +323,7 @@ extension RoundSession {
                     return
                 }
 
-                guard snapshot.metadata.hasPendingWrites == false else { return }
+                guard self?.shouldApplyListenerSnapshot(snapshot.metadata, listenerType: .scoringGroup) == true else { return }
 
                 do {
                     let groups = try snapshot.documents.compactMap({ try $0.data(as: RoundScoringGroup.self) })
@@ -358,7 +367,7 @@ extension RoundSession {
                     return
                 }
                 
-                guard snapshot.metadata.hasPendingWrites == false else { return }
+                guard self?.shouldApplyListenerSnapshot(snapshot.metadata, listenerType: .team) == true else { return }
                 
                 do {
                     let teams = try snapshot.documents.compactMap({ try $0.data(as: RoundTeam.self) })
@@ -402,7 +411,7 @@ extension RoundSession {
                     return
                 }
                 
-                guard snapshot.metadata.hasPendingWrites == false else { return }
+                guard self?.shouldApplyListenerSnapshot(snapshot.metadata, listenerType: .teeGroup) == true else { return }
                 
                 do {
                     let groups = try snapshot.documents.compactMap({ try $0.data(as: TeeTimeGroup.self) })

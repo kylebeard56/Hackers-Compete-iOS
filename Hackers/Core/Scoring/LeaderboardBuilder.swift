@@ -88,12 +88,14 @@ struct MatchupResultPresentation: Identifiable {
         let countingParticipantIDs: Set<String>
         let countingScope: AggregationScope?
         let teamScoringMode: RoundTeamScoringMode
+        let substitutesScore: Bool
 
         var countsByRoundTotal: Bool {
             teamScoringMode != .all && countingScope == .perRound
         }
 
         func isParticipantActive(_ participant: RoundParticipant) -> Bool {
+            if !substitutesScore && participant.isSubstitute { return false }
             guard countsByRoundTotal else { return true }
             return countingParticipantIDs.contains(participant.id)
         }
@@ -172,16 +174,21 @@ struct MatchupResultPresentationBuilder {
 
         let sides = pairingIDs.map { sideID in
             let participants = sideParticipants(sideID: sideID, mode: mode, snapshot: snapshot)
-            let row = authoritativeAggregateRow(
-                snapshot: snapshot,
-                result: result,
-                matchupRows: matchupRows,
-                sideID: sideID,
-                mode: mode,
-                participants: participants,
-                prefersMatchupRows: isPointsFormat,
-                basis: resolvedBasis
-            )
+            let scoringParticipants = snapshot.configuration.substitutesScore
+                ? participants
+                : participants.filter { !$0.isSubstitute }
+            let row = scoringParticipants.isEmpty && participants.isPopulated
+                ? nil
+                : authoritativeAggregateRow(
+                    snapshot: snapshot,
+                    result: result,
+                    matchupRows: matchupRows,
+                    sideID: sideID,
+                    mode: mode,
+                    participants: scoringParticipants,
+                    prefersMatchupRows: isPointsFormat,
+                    basis: resolvedBasis
+                )
             let total = row?.total
             let countingParticipantIDs: [String]
             if let row {
@@ -191,6 +198,11 @@ struct MatchupResultPresentationBuilder {
             } else {
                 countingParticipantIDs = []
             }
+            let presentationCountingParticipantIDs = snapshot.configuration.substitutesScore
+                ? countingParticipantIDs
+                : countingParticipantIDs.filter { participantID in
+                    participants.first(where: { $0.id == participantID })?.isSubstitute != true
+                }
 
             return MatchupResultPresentation.Side(
                 id: sideID,
@@ -205,9 +217,10 @@ struct MatchupResultPresentationBuilder {
                     isPointsFormat: isPointsFormat
                 ),
                 participants: participants,
-                countingParticipantIDs: Set(countingParticipantIDs),
+                countingParticipantIDs: Set(presentationCountingParticipantIDs),
                 countingScope: countingScope,
-                teamScoringMode: teamScoring.mode
+                teamScoringMode: teamScoring.mode,
+                substitutesScore: snapshot.configuration.substitutesScore
             )
         }
 

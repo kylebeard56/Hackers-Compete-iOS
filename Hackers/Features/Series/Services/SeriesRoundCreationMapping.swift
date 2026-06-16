@@ -125,7 +125,7 @@ enum SeriesRoundCreationMapping {
             matchWinnerBonusPoints: seriesRound.roundConfig.matchWinnerBonusPoints,
             matchTiePolicy: seriesRound.roundConfig.matchTiePolicy,
             selectionDomain: resolvedSelectionDomain(for: seriesRound),
-            sequentialTeeStartsEnabled: seriesRound.roundConfig.sequentialTeeStartsEnabled ?? false,
+            sequentialTeeStartsEnabled: false,
             handicapStrokeBasis: seriesRound.roundConfig.handicapStrokeBasis,
             handicapsEnabled: primaryFormat.configuration.basis == .net,
             sharedScoreHandicapConfig: seriesRound.roundConfig.sharedScoreHandicapConfig,

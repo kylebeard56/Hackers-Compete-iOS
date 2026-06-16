@@ -22,8 +22,11 @@
 #   APP_STORE_CONNECT_KEY_ID        App Store Connect API key id
 #   APP_STORE_CONNECT_ISSUER_ID     App Store Connect API issuer id
 #   EXTERNAL_GROUP                  External group name (alternative to --group)
+#   EXTERNAL_TESTER_GROUP           External group name (local Apple keys alias)
 #   CHANGELOG                       What to Test text (alternative to --changelog)
 #   EXPORT_PROVISIONING_PROFILE_NAME App Store profile name (if export fails)
+#   APPLE_KEYS_DIR                  Local Apple keys directory (default: ~/Developer/Keys/Apple)
+#   APPLE_KEYS_ENV_FILE             Local Apple env file (default: $APPLE_KEYS_DIR/apple.txt)
 #
 set -euo pipefail
 
@@ -34,6 +37,8 @@ API_KEY_PATH=""
 CHANGELOG=""
 PROFILE=""
 KEY_FILE="$PROJECT_ROOT/credentials/KEY_ISSUER_IDS.txt"
+APPLE_KEYS_DIR="${APPLE_KEYS_DIR:-$HOME/Developer/Keys/Apple}"
+APPLE_KEYS_ENV_FILE="${APPLE_KEYS_ENV_FILE:-$APPLE_KEYS_DIR/apple.txt}"
 
 usage() {
   sed -n '2,20p' "$0" | sed 's/^# \?//'
@@ -68,12 +73,29 @@ while [[ $# -gt 0 ]]; do
   esac
 done
 
+# Load local-only Apple deploy values when present. Keep this outside the repo.
+if [[ -f "$APPLE_KEYS_ENV_FILE" ]]; then
+  # shellcheck disable=SC1090
+  source "$APPLE_KEYS_ENV_FILE"
+fi
+
 # Resolve API key path
 if [[ -z "$API_KEY_PATH" && -n "${APP_STORE_CONNECT_API_KEY_PATH:-}" ]]; then
   API_KEY_PATH="$APP_STORE_CONNECT_API_KEY_PATH"
 fi
 if [[ -z "$API_KEY_PATH" && -n "${APP_STORE_CONNECT_API_KEY_P8:-}" ]]; then
   API_KEY_PATH="$APP_STORE_CONNECT_API_KEY_P8"
+fi
+if [[ -z "$API_KEY_PATH" && -d "$APPLE_KEYS_DIR" ]]; then
+  shopt -s nullglob
+  p8_files=("$APPLE_KEYS_DIR"/AuthKey_*.p8)
+  if [[ ${#p8_files[@]} -eq 0 ]]; then
+    p8_files=("$APPLE_KEYS_DIR"/*.p8)
+  fi
+  shopt -u nullglob
+  if [[ ${#p8_files[@]} -eq 1 ]]; then
+    API_KEY_PATH="${p8_files[0]}"
+  fi
 fi
 
 cd "$PROJECT_ROOT"
@@ -82,6 +104,12 @@ cd "$PROJECT_ROOT"
 if ! bundle exec fastlane --version &>/dev/null; then
   echo "Error: fastlane is not available in Bundler. Run: bundle install"
   exit 1
+fi
+
+if [[ "$GROUP" == "Beta Testers" && -n "${EXTERNAL_GROUP:-}" ]]; then
+  GROUP="$EXTERNAL_GROUP"
+elif [[ "$GROUP" == "Beta Testers" && -n "${EXTERNAL_TESTER_GROUP:-}" ]]; then
+  GROUP="$EXTERNAL_TESTER_GROUP"
 fi
 
 export EXTERNAL_GROUP="$GROUP"
@@ -106,6 +134,8 @@ if [[ -n "${APP_STORE_CONNECT_KEY_ID:-}" ]]; then
   export APP_STORE_CONNECT_KEY_ID
 elif [[ -n "${KEY_ID:-}" ]]; then
   export APP_STORE_CONNECT_KEY_ID="$KEY_ID"
+elif [[ "$API_KEY_PATH" =~ AuthKey_([A-Za-z0-9]+)\.p8$ ]]; then
+  export APP_STORE_CONNECT_KEY_ID="${BASH_REMATCH[1]}"
 fi
 
 if [[ -n "${APP_STORE_CONNECT_ISSUER_ID:-}" ]]; then

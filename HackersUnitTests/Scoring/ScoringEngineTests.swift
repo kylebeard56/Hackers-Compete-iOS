@@ -65,6 +65,114 @@ final class ScoringEngineTests: XCTestCase {
         )
     }
 
+    private func makeSubstituteTeamAggregateSnapshot(
+        competitionScope: CompetitionScope,
+        substitutesScore: Bool
+    ) -> (snapshot: RoundSnapshot, segment: RoundSegment, holes: [Hole]) {
+        let holes = [Hole(number: 1, par: 4, yardage: 400, handicap: 1)]
+        let teams = [
+            RoundTeam(id: "red", name: "Red", color: "red", index: 0, createdAt: .init()),
+            RoundTeam(id: "blue", name: "Blue", color: "blue", index: 1, createdAt: .init()),
+        ]
+        let participants = [
+            makeParticipant(id: "r1", name: "Red Regular", teamID: "red"),
+            makeParticipant(id: "r_sub", name: "Red Sub", teamID: "red", isSubstitute: true),
+            makeParticipant(id: "b1", name: "Blue One", teamID: "blue"),
+            makeParticipant(id: "b2", name: "Blue Two", teamID: "blue"),
+        ]
+        let segment = RoundSegment(
+            id: "seg1",
+            roundID: "round1",
+            holeRange: HoleRange(startHole: 1, endHole: 1),
+            matchups: competitionScope == .matchup ? [TeamMatchup(id: "match1", teamIDs: ["red", "blue"], mode: .team)] : nil,
+            competitionScope: competitionScope
+        )
+        let configuration = RoundConfiguration(
+            primaryFormat: .strokePlay,
+            formatSummary: RoundFormatSummary(from: FormatTemplateRegistry.strokePlay),
+            competitionScope: competitionScope,
+            teamScoring: RoundTeamScoringConfiguration(mode: .bestN, count: 2, scope: .perRound),
+            matchupResolutionStyle: .roundAggregate,
+            scoreOwnerScope: .individual,
+            substitutesScore: substitutesScore
+        )
+        let snapshot = RoundSnapshot(
+            round: Round(id: "round1", shareCode: "SUBS", createdBy: "host", configuration: configuration),
+            participants: participants,
+            teams: teams,
+            segments: [segment],
+            scoring: [
+                makeScoreEntry(participantID: "r1", holeNumber: 1, strokes: 8),
+                makeScoreEntry(participantID: "r_sub", holeNumber: 1, strokes: 1),
+                makeScoreEntry(participantID: "b1", holeNumber: 1, strokes: 5),
+                makeScoreEntry(participantID: "b2", holeNumber: 1, strokes: 5),
+            ]
+        )
+        return (snapshot, segment, holes)
+    }
+
+    private func makeTeamScoringMatrixFixture(
+        competitionScope: CompetitionScope = .field
+    ) -> (
+        holes: [Hole],
+        participants: [RoundParticipant],
+        teams: [RoundTeam],
+        segment: RoundSegment,
+        scores: [ScoreEntry]
+    ) {
+        let holes = [
+            Hole(number: 1, par: 4, yardage: 400, handicap: 1),
+            Hole(number: 2, par: 4, yardage: 410, handicap: 2),
+        ]
+        let participants = [
+            makeParticipant(id: "r1", name: "Red One", teamID: "red"),
+            makeParticipant(id: "r2", name: "Red Two", teamID: "red"),
+            makeParticipant(id: "r3", name: "Red Three", teamID: "red"),
+            makeParticipant(id: "b1", name: "Blue One", teamID: "blue"),
+            makeParticipant(id: "b2", name: "Blue Two", teamID: "blue"),
+            makeParticipant(id: "b3", name: "Blue Three", teamID: "blue"),
+            makeParticipant(id: "g1", name: "Green One", teamID: "green"),
+            makeParticipant(id: "g2", name: "Green Two", teamID: "green"),
+            makeParticipant(id: "g3", name: "Green Three", teamID: "green"),
+        ]
+        let teams = [
+            RoundTeam(id: "red", name: "Red", color: "red", index: 0, createdAt: .init()),
+            RoundTeam(id: "blue", name: "Blue", color: "blue", index: 1, createdAt: .init()),
+            RoundTeam(id: "green", name: "Green", color: "green", index: 2, createdAt: .init()),
+        ]
+        let segment = RoundSegment(
+            id: "seg1",
+            roundID: "round1",
+            holeRange: HoleRange(startHole: 1, endHole: 2),
+            matchups: competitionScope == .matchup
+                ? [TeamMatchup(id: "red_blue", teamIDs: ["red", "blue"], mode: .team)]
+                : nil,
+            competitionScope: competitionScope
+        )
+        let scores = [
+            makeScoreEntry(participantID: "r1", holeNumber: 1, strokes: 3),
+            makeScoreEntry(participantID: "r1", holeNumber: 2, strokes: 7),
+            makeScoreEntry(participantID: "r2", holeNumber: 1, strokes: 4),
+            makeScoreEntry(participantID: "r2", holeNumber: 2, strokes: 4),
+            makeScoreEntry(participantID: "r3", holeNumber: 1, strokes: 6),
+            makeScoreEntry(participantID: "r3", holeNumber: 2, strokes: 3),
+            makeScoreEntry(participantID: "b1", holeNumber: 1, strokes: 5),
+            makeScoreEntry(participantID: "b1", holeNumber: 2, strokes: 5),
+            makeScoreEntry(participantID: "b2", holeNumber: 1, strokes: 6),
+            makeScoreEntry(participantID: "b2", holeNumber: 2, strokes: 6),
+            makeScoreEntry(participantID: "b3", holeNumber: 1, strokes: 4),
+            makeScoreEntry(participantID: "b3", holeNumber: 2, strokes: 7),
+            makeScoreEntry(participantID: "g1", holeNumber: 1, strokes: 4),
+            makeScoreEntry(participantID: "g1", holeNumber: 2, strokes: 4),
+            makeScoreEntry(participantID: "g2", holeNumber: 1, strokes: 5),
+            makeScoreEntry(participantID: "g2", holeNumber: 2, strokes: 5),
+            makeScoreEntry(participantID: "g3", holeNumber: 1, strokes: 6),
+            makeScoreEntry(participantID: "g3", holeNumber: 2, strokes: 6),
+        ]
+
+        return (holes, participants, teams, segment, scores)
+    }
+
     private func makeRelativeScoreEntry(
         participantID: String,
         holeNumber: Int,
@@ -1850,6 +1958,367 @@ final class ScoringEngineTests: XCTestCase {
         )
 
         XCTAssertEqual(result.rows.map(\.scoringUnitID), ["member"])
+    }
+
+    func testComputeSnapshotResultIndividualFieldHonorsSubstitutesScore() {
+        let holes = [Hole(number: 1, par: 4, yardage: 400, handicap: 1)]
+        let segment = RoundSegment(id: "seg1", roundID: "round1", holeRange: HoleRange(startHole: 1, endHole: 1), competitionScope: .field)
+        let participants = [
+            makeParticipant(id: "member", name: "Member"),
+            makeParticipant(id: "sub", name: "Sub", isSubstitute: true),
+        ]
+        let scores = [
+            makeScoreEntry(participantID: "member", holeNumber: 1, strokes: 6),
+            makeScoreEntry(participantID: "sub", holeNumber: 1, strokes: 1),
+        ]
+
+        func result(substitutesScore: Bool) -> ScoringResult {
+            let configuration = RoundConfiguration(
+                primaryFormat: .strokePlay,
+                formatSummary: RoundFormatSummary(from: FormatTemplateRegistry.strokePlay),
+                competitionScope: .field,
+                substitutesScore: substitutesScore
+            )
+            let snapshot = RoundSnapshot(
+                round: Round(id: "round1", shareCode: "SUBS", createdBy: "host", configuration: configuration),
+                participants: participants,
+                segments: [segment],
+                scoring: scores
+            )
+            return ScoringEngine.computeSnapshotResult(snapshot: snapshot, segment: segment, holes: holes, basis: .gross)
+        }
+
+        let disabled = result(substitutesScore: false)
+        XCTAssertEqual(disabled.rows.map(\.scoringUnitID), ["member"])
+        XCTAssertEqual(disabled.rows.first?.total, 2)
+
+        let enabled = result(substitutesScore: true)
+        XCTAssertEqual(enabled.rows.map(\.scoringUnitID), ["member", "sub"])
+        XCTAssertEqual(enabled.rows.first(where: { $0.scoringUnitID == "sub" })?.total, -3)
+    }
+
+    func testIndividualMatchupPresentationKeepsDisabledSubstituteVisibleButNonScoring() throws {
+        let holes = [Hole(number: 1, par: 4, yardage: 400, handicap: 1)]
+        let matchup = TeamMatchup(
+            id: "match1",
+            teamIDs: [],
+            participantIDs: ["member", "sub"],
+            mode: .individual
+        )
+        let segment = RoundSegment(
+            id: "seg1",
+            roundID: "round1",
+            holeRange: HoleRange(startHole: 1, endHole: 1),
+            templateID: FormatTemplateRegistry.strokePlayMatchupIndividual.id,
+            matchups: [matchup],
+            competitionScope: .matchup
+        )
+        let participants = [
+            makeParticipant(id: "member", name: "Member"),
+            makeParticipant(id: "sub", name: "Sub", isSubstitute: true),
+        ]
+        let scores = [
+            makeScoreEntry(participantID: "member", holeNumber: 1, strokes: 6),
+            makeScoreEntry(participantID: "sub", holeNumber: 1, strokes: 1),
+        ]
+        let configuration = RoundConfiguration(
+            primaryFormat: .strokePlay,
+            formatSummary: RoundFormatSummary(from: FormatTemplateRegistry.strokePlayMatchupIndividual),
+            competitionScope: .matchup,
+            substitutesScore: false
+        )
+        let snapshot = RoundSnapshot(
+            round: Round(id: "round1", shareCode: "SUBS", createdBy: "host", configuration: configuration),
+            participants: participants,
+            segments: [segment],
+            scoring: scores
+        )
+
+        let result = ScoringEngine.computeSnapshotResult(snapshot: snapshot, segment: segment, holes: holes, basis: .gross)
+        let matchupResult = try XCTUnwrap(result.matchupResults.first)
+        let presentation = MatchupResultPresentationBuilder.build(
+            snapshot: snapshot,
+            result: result,
+            matchupResult: matchupResult
+        )
+
+        let regularSide = try XCTUnwrap(presentation.side(id: "member"))
+        XCTAssertEqual(regularSide.total, 2)
+        XCTAssertEqual(regularSide.countingParticipantIDs, Set(["member"]))
+        XCTAssertTrue(regularSide.isParticipantActive(participants[0]))
+
+        let substituteSide = try XCTUnwrap(presentation.side(id: "sub"))
+        XCTAssertNil(substituteSide.total)
+        XCTAssertEqual(substituteSide.participants.map(\.id), ["sub"])
+        XCTAssertTrue(substituteSide.countingParticipantIDs.isEmpty)
+        XCTAssertFalse(substituteSide.isParticipantActive(participants[1]))
+    }
+
+    func testComputeSnapshotResultTeamFieldHonorsSubstitutesScore() {
+        let disabledFixture = makeSubstituteTeamAggregateSnapshot(competitionScope: .field, substitutesScore: false)
+        let disabled = ScoringEngine.computeSnapshotResult(
+            snapshot: disabledFixture.snapshot,
+            segment: disabledFixture.segment,
+            holes: disabledFixture.holes,
+            basis: .gross
+        )
+        let disabledRows = Dictionary(uniqueKeysWithValues: disabled.rows.map { ($0.scoringUnitID, $0) })
+
+        XCTAssertEqual(disabledRows["red"]?.total, 4)
+        XCTAssertEqual(disabledRows["blue"]?.total, 2)
+        XCTAssertEqual(Set(disabledRows["red"]?.countingParticipantIDs ?? []), Set(["r1"]))
+        XCTAssertFalse(disabledRows["red"]?.countingParticipantIDs.contains("r_sub") ?? true)
+
+        let enabledFixture = makeSubstituteTeamAggregateSnapshot(competitionScope: .field, substitutesScore: true)
+        let enabled = ScoringEngine.computeSnapshotResult(
+            snapshot: enabledFixture.snapshot,
+            segment: enabledFixture.segment,
+            holes: enabledFixture.holes,
+            basis: .gross
+        )
+        let enabledRows = Dictionary(uniqueKeysWithValues: enabled.rows.map { ($0.scoringUnitID, $0) })
+
+        XCTAssertEqual(enabledRows["red"]?.total, 1)
+        XCTAssertEqual(enabledRows["blue"]?.total, 2)
+        XCTAssertEqual(Set(enabledRows["red"]?.countingParticipantIDs ?? []), Set(["r1", "r_sub"]))
+    }
+
+    func testComputeSnapshotResultTeamMatchupHonorsSubstitutesScore() throws {
+        let disabledFixture = makeSubstituteTeamAggregateSnapshot(competitionScope: .matchup, substitutesScore: false)
+        let disabled = ScoringEngine.computeSnapshotResult(
+            snapshot: disabledFixture.snapshot,
+            segment: disabledFixture.segment,
+            holes: disabledFixture.holes,
+            basis: .gross
+        )
+        let disabledMatchup = try XCTUnwrap(disabled.matchupResults.first)
+        let disabledRows = Dictionary(uniqueKeysWithValues: disabledMatchup.rows.map { ($0.scoringUnitID, $0) })
+        let disabledPresentation = MatchupResultPresentationBuilder.build(
+            snapshot: disabledFixture.snapshot,
+            result: disabled,
+            matchupResult: disabledMatchup
+        )
+
+        XCTAssertEqual(disabledRows["red"]?.total, 4)
+        XCTAssertEqual(disabledRows["blue"]?.total, 2)
+        XCTAssertEqual(Set(disabledRows["red"]?.countingParticipantIDs ?? []), Set(["r1"]))
+        XCTAssertFalse(disabledRows["red"]?.countingParticipantIDs.contains("r_sub") ?? true)
+        XCTAssertEqual(disabledPresentation.winningSideID, "blue")
+
+        let enabledFixture = makeSubstituteTeamAggregateSnapshot(competitionScope: .matchup, substitutesScore: true)
+        let enabled = ScoringEngine.computeSnapshotResult(
+            snapshot: enabledFixture.snapshot,
+            segment: enabledFixture.segment,
+            holes: enabledFixture.holes,
+            basis: .gross
+        )
+        let enabledMatchup = try XCTUnwrap(enabled.matchupResults.first)
+        let enabledRows = Dictionary(uniqueKeysWithValues: enabledMatchup.rows.map { ($0.scoringUnitID, $0) })
+        let enabledPresentation = MatchupResultPresentationBuilder.build(
+            snapshot: enabledFixture.snapshot,
+            result: enabled,
+            matchupResult: enabledMatchup
+        )
+
+        XCTAssertEqual(enabledRows["red"]?.total, 1)
+        XCTAssertEqual(enabledRows["blue"]?.total, 2)
+        XCTAssertEqual(Set(enabledRows["red"]?.countingParticipantIDs ?? []), Set(["r1", "r_sub"]))
+        XCTAssertEqual(enabledPresentation.winningSideID, "red")
+    }
+
+    func testTeamScoringFieldMatrixHonorsAllBestWorstAndAggregationScope() {
+        let fixture = makeTeamScoringMatrixFixture(competitionScope: .field)
+
+        func rows(for teamScoring: RoundTeamScoringConfiguration) -> [String: ScoringRow] {
+            let result = ScoringEngine.computeWithTeamScoring(
+                scores: fixture.scores,
+                participants: fixture.participants,
+                teams: fixture.teams,
+                segment: fixture.segment,
+                holes: fixture.holes,
+                basis: .gross,
+                template: FormatTemplateRegistry.strokePlayGross,
+                teamScoring: teamScoring,
+                matchupResolutionStyle: .roundAggregate,
+                resolvedCompetitionScope: .field
+            )
+            return Dictionary(uniqueKeysWithValues: result.rows.map { ($0.scoringUnitID, $0) })
+        }
+
+        let allPerHole = rows(for: .init(mode: .all, count: 3, scope: .perHole))
+        XCTAssertEqual(allPerHole["red"]?.total, 3)
+        XCTAssertEqual(allPerHole["blue"]?.total, 9)
+        XCTAssertEqual(allPerHole["green"]?.total, 6)
+        XCTAssertEqual(Set(allPerHole["red"]?.countingParticipantIDs ?? []), Set(["r1", "r2", "r3"]))
+
+        let bestTwoPerHole = rows(for: .init(mode: .bestN, count: 2, scope: .perHole))
+        XCTAssertEqual(bestTwoPerHole["red"]?.total, -2)
+        XCTAssertEqual(bestTwoPerHole["blue"]?.total, 4)
+        XCTAssertEqual(bestTwoPerHole["green"]?.total, 2)
+        XCTAssertEqual(Set(bestTwoPerHole["red"]?.countingParticipantIDs ?? []), Set(["r1", "r2", "r3"]))
+        XCTAssertEqual(bestTwoPerHole["red"]?.holeValues[1]?.points, -1)
+        XCTAssertEqual(bestTwoPerHole["red"]?.holeValues[2]?.points, -1)
+
+        let bestTwoPerRound = rows(for: .init(mode: .bestN, count: 2, scope: .perRound))
+        XCTAssertEqual(bestTwoPerRound["red"]?.total, 1)
+        XCTAssertEqual(bestTwoPerRound["blue"]?.total, 5)
+        XCTAssertEqual(bestTwoPerRound["green"]?.total, 2)
+        XCTAssertEqual(Set(bestTwoPerRound["red"]?.countingParticipantIDs ?? []), Set(["r2", "r3"]))
+        XCTAssertEqual(bestTwoPerRound["red"]?.holeValues[1]?.points, 2)
+        XCTAssertEqual(bestTwoPerRound["red"]?.holeValues[2]?.points, -1)
+
+        let worstTwoPerHole = rows(for: .init(mode: .worstN, count: 2, scope: .perHole))
+        XCTAssertEqual(worstTwoPerHole["red"]?.total, 5)
+        XCTAssertEqual(worstTwoPerHole["blue"]?.total, 8)
+        XCTAssertEqual(worstTwoPerHole["green"]?.total, 6)
+        XCTAssertEqual(Set(worstTwoPerHole["red"]?.countingParticipantIDs ?? []), Set(["r1", "r2", "r3"]))
+
+        let worstTwoPerRound = rows(for: .init(mode: .worstN, count: 2, scope: .perRound))
+        XCTAssertEqual(worstTwoPerRound["red"]?.total, 3)
+        XCTAssertEqual(worstTwoPerRound["blue"]?.total, 7)
+        XCTAssertEqual(worstTwoPerRound["green"]?.total, 6)
+        XCTAssertEqual(Set(worstTwoPerRound["red"]?.countingParticipantIDs ?? []), Set(["r1", "r3"]))
+    }
+
+    func testTeamScoringMatchupMatrixHonorsAggregateAndHoleByHolePointStyles() throws {
+        let fixture = makeTeamScoringMatrixFixture(competitionScope: .matchup)
+
+        func matchupRows(
+            teamScoring: RoundTeamScoringConfiguration,
+            matchupScoringStyle: RoundMatchupScoringStyle = .aggregateRoundTotal
+        ) throws -> [String: ScoringRow] {
+            let result = ScoringEngine.computeWithTeamScoring(
+                scores: fixture.scores,
+                participants: fixture.participants,
+                teams: fixture.teams,
+                segment: fixture.segment,
+                holes: fixture.holes,
+                basis: .gross,
+                template: FormatTemplateRegistry.strokePlayGross,
+                teamScoring: teamScoring,
+                matchupResolutionStyle: .roundAggregate,
+                matchupScoringStyle: matchupScoringStyle,
+                perHoleWinPoints: 2,
+                resolvedCompetitionScope: .matchup
+            )
+            return Dictionary(uniqueKeysWithValues: try XCTUnwrap(result.matchupResults.first).rows.map { ($0.scoringUnitID, $0) })
+        }
+
+        let bestAggregate = try matchupRows(teamScoring: .init(mode: .bestN, count: 2, scope: .perHole))
+        XCTAssertEqual(bestAggregate["red"]?.total, -2)
+        XCTAssertEqual(bestAggregate["blue"]?.total, 4)
+        XCTAssertEqual(Set(bestAggregate["red"]?.countingParticipantIDs ?? []), Set(["r1", "r2", "r3"]))
+
+        let bestHolePoints = try matchupRows(
+            teamScoring: .init(mode: .bestN, count: 2, scope: .perHole),
+            matchupScoringStyle: .holeByHolePoints
+        )
+        XCTAssertEqual(bestHolePoints["red"]?.total, 4)
+        XCTAssertEqual(bestHolePoints["blue"]?.total, 0)
+        XCTAssertEqual(bestHolePoints["red"]?.holeValues[1]?.points, 2)
+        XCTAssertEqual(bestHolePoints["red"]?.holeValues[2]?.points, 2)
+
+        let worstAggregate = try matchupRows(teamScoring: .init(mode: .worstN, count: 2, scope: .perRound))
+        XCTAssertEqual(worstAggregate["red"]?.total, 3)
+        XCTAssertEqual(worstAggregate["blue"]?.total, 7)
+        XCTAssertEqual(Set(worstAggregate["red"]?.countingParticipantIDs ?? []), Set(["r1", "r3"]))
+
+        let worstHolePoints = try matchupRows(
+            teamScoring: .init(mode: .worstN, count: 2, scope: .perHole),
+            matchupScoringStyle: .holeByHolePoints
+        )
+        XCTAssertEqual(worstHolePoints["red"]?.total, 4)
+        XCTAssertEqual(worstHolePoints["blue"]?.total, 0)
+    }
+
+    func testTeamScoringNetBasisCanSelectDifferentCountingPlayerThanGross() {
+        let holes = [Hole(number: 1, par: 4, yardage: 400, handicap: 1)]
+        let participants = [
+            makeParticipant(id: "high_hcp", name: "High Handicap", handicap: 36, teamID: "red"),
+            makeParticipant(id: "scratch", name: "Scratch", handicap: 0, teamID: "red"),
+        ]
+        let teams = [RoundTeam(id: "red", name: "Red", color: "red", index: 0, createdAt: .init())]
+        let segment = RoundSegment(id: "seg1", roundID: "round1", holeRange: HoleRange(startHole: 1, endHole: 1), competitionScope: .field)
+        let scores = [
+            makeScoreEntry(participantID: "high_hcp", holeNumber: 1, strokes: 6),
+            makeScoreEntry(participantID: "scratch", holeNumber: 1, strokes: 5),
+        ]
+
+        func row(basis: ScoreBasis) -> ScoringRow? {
+            ScoringEngine.computeWithTeamScoring(
+                scores: scores,
+                participants: participants,
+                teams: teams,
+                segment: segment,
+                holes: holes,
+                basis: basis,
+                template: FormatTemplateRegistry.strokePlayGross,
+                teamScoring: .init(mode: .bestN, count: 1, scope: .perHole),
+                matchupResolutionStyle: .roundAggregate,
+                resolvedCompetitionScope: .field
+            ).rows.first
+        }
+
+        let gross = row(basis: .gross)
+        XCTAssertEqual(gross?.total, 1)
+        XCTAssertEqual(gross?.countingParticipantIDs, ["scratch"])
+
+        let net = row(basis: .net)
+        XCTAssertEqual(net?.total, 0)
+        XCTAssertEqual(net?.countingParticipantIDs, ["high_hcp"])
+    }
+
+    func testStablefordTeamScoringUsesHighestPointsForBestAndLowestPointsForWorst() {
+        let holes = [
+            Hole(number: 1, par: 4, yardage: 400, handicap: 1),
+            Hole(number: 2, par: 4, yardage: 410, handicap: 2),
+        ]
+        let participants = [
+            makeParticipant(id: "p1", name: "Birdie Then Double", teamID: "red"),
+            makeParticipant(id: "p2", name: "Pars", teamID: "red"),
+            makeParticipant(id: "p3", name: "Bogeys", teamID: "red"),
+        ]
+        let teams = [RoundTeam(id: "red", name: "Red", color: "red", index: 0, createdAt: .init())]
+        let segment = RoundSegment(id: "seg1", roundID: "round1", holeRange: HoleRange(startHole: 1, endHole: 2), competitionScope: .field)
+        let scores = [
+            makeScoreEntry(participantID: "p1", holeNumber: 1, strokes: 3),
+            makeScoreEntry(participantID: "p1", holeNumber: 2, strokes: 6),
+            makeScoreEntry(participantID: "p2", holeNumber: 1, strokes: 4),
+            makeScoreEntry(participantID: "p2", holeNumber: 2, strokes: 4),
+            makeScoreEntry(participantID: "p3", holeNumber: 1, strokes: 5),
+            makeScoreEntry(participantID: "p3", holeNumber: 2, strokes: 5),
+        ]
+
+        func row(for teamScoring: RoundTeamScoringConfiguration) -> ScoringRow? {
+            ScoringEngine.computeWithTeamScoring(
+                scores: scores,
+                participants: participants,
+                teams: teams,
+                segment: segment,
+                holes: holes,
+                basis: .gross,
+                template: FormatTemplateRegistry.stableford,
+                teamScoring: teamScoring,
+                matchupResolutionStyle: .roundAggregate,
+                resolvedCompetitionScope: .field
+            ).rows.first
+        }
+
+        let bestPerHole = row(for: .init(mode: .bestN, count: 1, scope: .perHole))
+        XCTAssertEqual(bestPerHole?.total, 5)
+        XCTAssertEqual(Set(bestPerHole?.countingParticipantIDs ?? []), Set(["p1", "p2"]))
+
+        let bestPerRound = row(for: .init(mode: .bestN, count: 1, scope: .perRound))
+        XCTAssertEqual(bestPerRound?.total, 4)
+        XCTAssertEqual(bestPerRound?.countingParticipantIDs, ["p2"])
+
+        let worstPerHole = row(for: .init(mode: .worstN, count: 1, scope: .perHole))
+        XCTAssertEqual(worstPerHole?.total, 1)
+        XCTAssertEqual(Set(worstPerHole?.countingParticipantIDs ?? []), Set(["p1", "p3"]))
+
+        let worstPerRound = row(for: .init(mode: .worstN, count: 1, scope: .perRound))
+        XCTAssertEqual(worstPerRound?.total, 2)
+        XCTAssertEqual(worstPerRound?.countingParticipantIDs, ["p3"])
     }
 
     func testTeamScoringMatchupBestTwoPerRoundBothShortTreatsAsTie() {

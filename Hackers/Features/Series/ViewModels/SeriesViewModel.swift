@@ -3435,7 +3435,7 @@ final class SeriesViewModel: ObservableObject, Loggable {
         }
         if shouldSyncLinkedLobbyAfterSeriesRoundUpdate(previous: previousRound, updated: updatedRound),
            let roundID = updatedRound.roundID,
-           linkedRounds[roundID]?.status == .lobby {
+           await linkedRoundIsLobbyForSync(roundID: roundID) {
             let options = SeriesRoundSyncOptions(
                 syncPlayerData: true,
                 syncFormat: true,
@@ -3454,6 +3454,21 @@ final class SeriesViewModel: ObservableObject, Loggable {
             "series.round_updated",
             eventProps: seriesTelemetryProps(["series_round_id": round.id])
         )
+    }
+
+    private func linkedRoundIsLobbyForSync(roundID: String) async -> Bool {
+        if let linkedRound = linkedRounds[roundID] {
+            return linkedRound.status == .lobby
+        }
+
+        switch await FirebaseService.shared.getRoundDocument(byID: roundID) {
+        case .success(let linkedRound):
+            linkedRounds[roundID] = linkedRound
+            return linkedRound.status == .lobby
+        case .failure(let error):
+            addBreadcrumb(level: .error, message: "Could not load linked round before lobby sync", error: error)
+            return false
+        }
     }
 
     func shouldSyncLinkedLobbyAfterSeriesRoundUpdate(previous: SeriesRound, updated: SeriesRound) -> Bool {
@@ -4351,6 +4366,22 @@ final class SeriesViewModel: ObservableObject, Loggable {
         _ = await FirebaseService.shared.updateSeriesRound(rounds[roundIndex])
 
         let refreshedRoundIDs = await loadLinkedRounds()
+        let postCreateSyncOptions = SeriesRoundSyncOptions(
+            syncPlayerData: true,
+            syncFormat: true,
+            syncOrganization: true,
+            syncPairs: true,
+            syncMatchups: true,
+            syncHandicapSettings: true,
+            preserveManualHandicapEdits: false
+        )
+        let postCreateSyncResult = await syncLinkedRoundFromSeries(
+            seriesRound: rounds[roundIndex],
+            options: postCreateSyncOptions
+        )
+        if case .failure(let error) = postCreateSyncResult {
+            addBreadcrumb(level: .error, message: "Failed to reconcile linked lobby after series round creation", error: error)
+        }
         await syncLinkedRoundState(persistingStatusesFor: refreshedRoundIDs)
         return roundID
     }
@@ -4362,7 +4393,18 @@ final class SeriesViewModel: ObservableObject, Loggable {
     ) async -> Result<Void, SeriesRoundSyncError> {
         let sourceRound = sourceSeriesRoundForSync(seriesRound)
         guard let roundID = sourceRound.roundID else { return .failure(.roundNotLinked) }
-        guard let linked = linkedRounds[roundID] else { return .failure(.roundNotLinked) }
+        let linked: Round
+        if let cached = linkedRounds[roundID] {
+            linked = cached
+        } else {
+            switch await FirebaseService.shared.getRoundDocument(byID: roundID) {
+            case .success(let fetched):
+                linkedRounds[roundID] = fetched
+                linked = fetched
+            case .failure:
+                return .failure(.roundNotLinked)
+            }
+        }
         guard let snapshot = await loadRoundSnapshot(roundID: roundID) else {
             return .failure(.writeFailed("Could not load live round data."))
         }

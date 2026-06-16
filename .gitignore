@@ -64,6 +64,10 @@ build/
 *.ipa
 *.xcarchive
 
+# Local deployment credentials
+credentials/
+*.p8
+
 # Bundler
 .bundle/
 vendor/bundle

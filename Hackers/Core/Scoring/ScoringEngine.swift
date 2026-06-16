@@ -226,7 +226,7 @@ struct ScoringEngine {
                 resolvedCompetitionScope: snapshot.configuration.resolvedCompetitionScope,
                 handicapNormalizationMode: handicapNormalizationMode,
                 handicapStrokeBasis: snapshot.handicapStrokeBasis,
-                substitutesScore: true,
+                substitutesScore: snapshot.configuration.substitutesScore,
                 attendanceConfirmationEnabled: snapshot.configuration.attendanceConfirmationEnabled == true
             )
         }
@@ -243,7 +243,7 @@ struct ScoringEngine {
                 template: template,
                 scoreLookupSegmentIDs: lookupSegmentIDs.isEmpty ? nil : lookupSegmentIDs,
                 handicapStrokeBasis: snapshot.handicapStrokeBasis,
-                substitutesScore: true,
+                substitutesScore: snapshot.configuration.substitutesScore,
                 attendanceConfirmationEnabled: snapshot.configuration.attendanceConfirmationEnabled == true
             )
         }
@@ -268,7 +268,7 @@ struct ScoringEngine {
             sharedScoreHandicapConfig: snapshot.configuration.sharedScoreHandicapConfig,
             handicapNormalizationMode: handicapNormalizationMode,
             handicapStrokeBasis: snapshot.handicapStrokeBasis,
-            substitutesScore: true,
+            substitutesScore: snapshot.configuration.substitutesScore,
             attendanceConfirmationEnabled: snapshot.configuration.attendanceConfirmationEnabled == true
         )
     }

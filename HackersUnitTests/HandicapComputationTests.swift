@@ -193,6 +193,122 @@ struct HandicapComputationTests {
         #expect(full.finalHandicap == 14)
     }
 
+    @Test("Latest policy without rolling window uses commissioner order, not lowest scores")
+    func latestPolicyWithoutRollingUsesCommissionerOrder() throws {
+        var cfg = HandicapComputationConfig.league2025
+        cfg.gamesUsedRules = [.init(playedRange: 1...100, used: 2)]
+        cfg.scorePoolPolicy = .latestOfUsedCount
+        cfg.rollingPoolSize = nil
+        cfg.minimumScoresForIndex = 1
+        cfg.earlyAdjustmentRules = []
+
+        let t = Time(iso: "2024-01-01T00:00:00Z", unix: 1)
+        let samples = [
+            HandicapScoreSample(id: "first_low", gross: 38, recordedAt: t, sortOrder: 0),
+            HandicapScoreSample(id: "second_low", gross: 39, recordedAt: t, sortOrder: 1),
+            HandicapScoreSample(id: "third_high", gross: 60, recordedAt: t, sortOrder: 2),
+            HandicapScoreSample(id: "fourth_high", gross: 61, recordedAt: t, sortOrder: 3),
+        ]
+
+        let result = try #require(computeHandicapIndex(samples: samples, config: cfg))
+        #expect(result.poolSampleIDs == Set(["first_low", "second_low", "third_high", "fourth_high"]))
+        #expect(result.selectedSampleIDs == Set(["third_high", "fourth_high"]))
+        #expect(result.selectedBestScores.sorted() == [60, 61])
+    }
+
+    @Test("Latest policy with rolling window uses most recent scores from that window")
+    func latestPolicyWithRollingWindowUsesMostRecentScores() throws {
+        var cfg = HandicapComputationConfig.league2025
+        cfg.gamesUsedRules = [.init(playedRange: 1...100, used: 2)]
+        cfg.scorePoolPolicy = .latestOfUsedCount
+        cfg.rollingPoolSize = 3
+        cfg.minimumScoresForIndex = 1
+        cfg.earlyAdjustmentRules = []
+
+        let samples = [
+            HandicapScoreSample(id: "old_low", gross: 35, recordedAt: Time(iso: "2024-01-01T00:00:00Z", unix: 1), sortOrder: 0),
+            HandicapScoreSample(id: "window_old", gross: 50, recordedAt: Time(iso: "2024-02-01T00:00:00Z", unix: 2), sortOrder: 1),
+            HandicapScoreSample(id: "window_mid", gross: 60, recordedAt: Time(iso: "2024-03-01T00:00:00Z", unix: 3), sortOrder: 2),
+            HandicapScoreSample(id: "window_new", gross: 70, recordedAt: Time(iso: "2024-04-01T00:00:00Z", unix: 4), sortOrder: 3),
+        ]
+
+        let result = try #require(computeHandicapIndex(samples: samples, config: cfg))
+        #expect(result.poolSampleIDs == Set(["window_old", "window_mid", "window_new"]))
+        #expect(result.selectedSampleIDs == Set(["window_mid", "window_new"]))
+        #expect(result.selectedBestScores.sorted() == [60, 70])
+    }
+
+    @Test("Best policy breaks equal-score ties by stable id")
+    func bestPolicyTieBreaksByStableID() throws {
+        var cfg = HandicapComputationConfig.league2025
+        cfg.gamesUsedRules = [.init(playedRange: 1...100, used: 2)]
+        cfg.scorePoolPolicy = .bestOfUsedCount
+        cfg.minimumScoresForIndex = 1
+        cfg.earlyAdjustmentRules = []
+
+        let t = Time(iso: "2024-01-01T00:00:00Z", unix: 1)
+        let samples = [
+            HandicapScoreSample(id: "z_tied", gross: 40, recordedAt: t, sortOrder: 0),
+            HandicapScoreSample(id: "a_tied", gross: 40, recordedAt: t, sortOrder: 1),
+            HandicapScoreSample(id: "middle", gross: 41, recordedAt: t, sortOrder: 2),
+        ]
+
+        let result = try #require(computeHandicapIndex(samples: samples, config: cfg))
+        #expect(result.selectedSampleIDs == Set(["a_tied", "z_tied"]))
+        #expect(result.selectedBestScores == [40, 40])
+    }
+
+    @Test("Rolling pool games-used count is based on eligible pool size")
+    func rollingPoolSizeDrivesGamesUsedCount() throws {
+        var cfg = HandicapComputationConfig.league2025
+        cfg.gamesUsedRules = [
+            .init(playedRange: 1...3, used: 1),
+            .init(playedRange: 4...100, used: 3),
+        ]
+        cfg.rollingPoolSize = 3
+        cfg.scorePoolPolicy = .bestOfUsedCount
+        cfg.minimumScoresForIndex = 1
+        cfg.earlyAdjustmentRules = []
+
+        let samples = (1...6).map { index in
+            HandicapScoreSample(
+                id: "s\(index)",
+                gross: Double(40 + index),
+                recordedAt: Time(iso: "2024-01-0\(index)T00:00:00Z", unix: Double(index)),
+                sortOrder: index
+            )
+        }
+
+        let result = try #require(computeHandicapIndex(samples: samples, config: cfg))
+        #expect(result.poolSampleIDs == Set(["s4", "s5", "s6"]))
+        #expect(result.gamesPlayed == 3)
+        #expect(result.gamesUsed == 1)
+        #expect(result.selectedSampleIDs == Set(["s4"]))
+    }
+
+    @Test("Invalid gross scores are ignored before pool and provisional decisions")
+    func invalidGrossScoresAreIgnoredBeforePoolSelection() throws {
+        var cfg = HandicapComputationConfig.league2025
+        cfg.gamesUsedRules = [.init(playedRange: 1...100, used: 2)]
+        cfg.minimumScoresForIndex = 2
+        cfg.rollingPoolSize = nil
+        cfg.earlyAdjustmentRules = []
+
+        let t = Time(iso: "2024-01-01T00:00:00Z", unix: 1)
+        let samples = [
+            HandicapScoreSample(id: "nan", gross: .nan, recordedAt: t, sortOrder: 0),
+            HandicapScoreSample(id: "infinite", gross: .infinity, recordedAt: t, sortOrder: 1),
+            HandicapScoreSample(id: "valid_high", gross: 45, recordedAt: t, sortOrder: 2),
+            HandicapScoreSample(id: "valid_low", gross: 40, recordedAt: t, sortOrder: 3),
+        ]
+
+        let result = try #require(computeHandicapIndex(samples: samples, config: cfg))
+        #expect(result.poolSampleIDs == Set(["valid_high", "valid_low"]))
+        #expect(result.selectedSampleIDs == Set(["valid_high", "valid_low"]))
+        #expect(result.gamesPlayed == 2)
+        #expect(result.isProvisional)
+    }
+
     @Test("User-facing summary: default league config")
     func userFacingSummaryLeague2025() {
         let text = HandicapComputationConfig.league2025.userFacingSummaryCaption()

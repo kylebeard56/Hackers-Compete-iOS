@@ -772,10 +772,12 @@ enum SeriesRoundSyncPlanning {
             round.configuration = resolvedPlan.roundConfiguration
         } else {
             round.configuration.handicapsEnabled = resolvedPlan.roundConfiguration.useHandicaps
+            round.configuration.sequentialTeeStartsEnabled = false
             round.configuration.handicapStrokeBasis = seriesRound.roundConfig.handicapStrokeBasis
             round.configuration.leagueHandicapMaximum = series.handicapConfig.isEnabled
                 ? series.handicapConfig.config.maximumHandicap
                 : nil
+            round.configuration.substitutesScore = series.settings.substitutesScore
         }
         round.lastUpdatedAt = .init()
 

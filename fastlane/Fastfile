@@ -8,7 +8,7 @@ platform :ios do
     api_key_path = ENV["APP_STORE_CONNECT_API_KEY_PATH"] || ENV["APP_STORE_CONNECT_API_KEY_P8"]
 
     export_opts = {
-      method: "app-store-connect",
+      method: "app-store",
       teamID: "28EF5GR4R6",
       signingStyle: "automatic"
     }
@@ -22,7 +22,7 @@ platform :ios do
 
     gym(
       scheme: "Production",
-      export_method: "app-store-connect",
+      export_method: "app-store",
       export_options: export_opts,
       xcargs: "-allowProvisioningUpdates",
       export_xcargs: "-allowProvisioningUpdates",

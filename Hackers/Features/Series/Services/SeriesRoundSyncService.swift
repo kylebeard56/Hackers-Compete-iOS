@@ -142,6 +142,7 @@ struct SeriesRoundSyncService: Loggable {
         var workingScoringGroups = snapshot.scoringGroups
         var workingTeeGroups = snapshot.teeGroups
         var workingRound = snapshot.round
+        let desiredSubstitutesScore = series.settings.substitutesScore
 
         if options.syncFormat {
             workingRound.configuration = resolvedPlan.roundConfiguration
@@ -167,6 +168,7 @@ struct SeriesRoundSyncService: Loggable {
             workingRound.configuration.leagueHandicapMaximum = series.handicapConfig.isEnabled
                 ? series.handicapConfig.config.maximumHandicap
                 : nil
+            workingRound.configuration.substitutesScore = desiredSubstitutesScore
             workingRound.lastUpdatedAt = .init()
             switch await workingRound.put() {
             case .success(let updated):
@@ -180,8 +182,14 @@ struct SeriesRoundSyncService: Loggable {
         if !options.syncFormat,
            !options.syncHandicapSettings,
            (options.syncPlayerData || options.syncOrganization),
-           workingRound.configuration.handicapStrokeBasis != seriesRound.roundConfig.handicapStrokeBasis {
-            workingRound.configuration.handicapStrokeBasis = seriesRound.roundConfig.handicapStrokeBasis
+           (workingRound.configuration.handicapStrokeBasis != seriesRound.roundConfig.handicapStrokeBasis
+            || workingRound.configuration.substitutesScore != desiredSubstitutesScore) {
+            if workingRound.configuration.handicapStrokeBasis != seriesRound.roundConfig.handicapStrokeBasis {
+                workingRound.configuration.handicapStrokeBasis = seriesRound.roundConfig.handicapStrokeBasis
+            }
+            if workingRound.configuration.substitutesScore != desiredSubstitutesScore {
+                workingRound.configuration.substitutesScore = desiredSubstitutesScore
+            }
             workingRound.lastUpdatedAt = .init()
             switch await workingRound.put() {
             case .success(let updated):

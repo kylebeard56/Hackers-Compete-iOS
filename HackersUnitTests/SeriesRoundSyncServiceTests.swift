@@ -1249,6 +1249,78 @@ final class SeriesRoundSyncServiceTests: XCTestCase {
         XCTAssertEqual(out.first?.teamID, "team_round_new")
     }
 
+    func testParticipantsWithOrganizationSync_repairsSubstituteMetadataAndRoundTeam() {
+        let substituteParticipant = RoundParticipant(
+            id: "part_sub",
+            userID: "u_sub",
+            playerID: "p_sub",
+            name: Name("Sub", "Player"),
+            teeBoxID: "tee_old",
+            originalHandicap: 12,
+            adjustedHandicap: 12,
+            seriesMemberID: "sub",
+            teamID: nil,
+            groupID: "g_old",
+            teeOrder: 1,
+            isSubstitute: false,
+            createdAt: t0,
+            lastUpdatedAt: t0,
+            parentID: "round1"
+        )
+        let originalMember = SeriesMember(
+            id: "regular",
+            userID: "u_regular",
+            playerID: "p_regular",
+            name: Name("Regular", "Player"),
+            teamID: "team_series",
+            createdAt: t0,
+            lastUpdatedAt: t0,
+            parentID: "series1"
+        )
+        let substituteMember = SeriesMember(
+            id: "sub",
+            userID: "u_sub",
+            playerID: "p_sub",
+            name: Name("Sub", "Player"),
+            role: .substitute,
+            teamID: nil,
+            createdAt: t0,
+            lastUpdatedAt: t0,
+            parentID: "series1"
+        )
+        let plannedSeat = SeriesRoundPlannedSeat(
+            id: "sub",
+            memberID: "sub",
+            teeOrder: 2,
+            isSubstitute: true,
+            substituteForSeriesMemberID: "regular",
+            substituteForName: "Regular Player",
+            representedTeamID: "team_series"
+        )
+
+        let out = SeriesRoundSyncPlanning.participantsWithOrganizationSync(
+            participants: [substituteParticipant],
+            participatingMembers: [originalMember, substituteMember],
+            teamLinks: [
+                "team_series": .init(seriesTeamID: "team_series", roundTeamID: "team_round"),
+            ],
+            memberAssignments: [
+                "sub": .init(groupID: "g_new", teeOrder: 2),
+            ],
+            plannedSeatsByMemberID: ["sub": plannedSeat],
+            usesSeriesTeams: true
+        )
+
+        let repaired = out.first
+        XCTAssertNil(substituteMember.teamID)
+        XCTAssertEqual(repaired?.groupID, "g_new")
+        XCTAssertEqual(repaired?.teeOrder, 2)
+        XCTAssertEqual(repaired?.teamID, "team_round")
+        XCTAssertTrue(repaired?.isSubstitute == true)
+        XCTAssertEqual(repaired?.substituteForSeriesMemberID, "regular")
+        XCTAssertEqual(repaired?.substituteForName, "Regular Player")
+    }
+
     func testParticipantsWithPlayerDataSync_updatesLinkedPlayerIdentityFromSeriesMember() {
         let existing = RoundParticipant(
             id: "part1",
@@ -1295,6 +1367,7 @@ final class SeriesRoundSyncServiceTests: XCTestCase {
     func testLobbyAttendancePlan_removesDeclinedMemberAndBlocksScoredLobby() throws {
         var settings = SeriesSettings()
         settings.useTeams = false
+        settings.substitutesScore = false
         let series = Series(id: "series1", settings: settings)
         let member1 = testMember(id: "m1", playerID: "p1")
         let member2 = testMember(id: "m2", playerID: "p2")
@@ -1304,7 +1377,8 @@ final class SeriesRoundSyncServiceTests: XCTestCase {
                 id: "round1",
                 status: .lobby,
                 configuration: RoundConfiguration(
-                    courses: [segment]
+                    courses: [segment],
+                    substitutesScore: true
                 )
             ),
             participants: [
@@ -1332,6 +1406,7 @@ final class SeriesRoundSyncServiceTests: XCTestCase {
         XCTAssertEqual(plan.participantsToPut.map(\.seriesMemberID), ["m1"])
         XCTAssertEqual(plan.teeGroupsToPut.first?.startingHole, 7)
         XCTAssertEqual(plan.round.players, ["p1"])
+        XCTAssertFalse(plan.round.configuration.substitutesScore)
 
         var scored = snapshot
         scored.scoring = [
@@ -1489,6 +1564,7 @@ final class SeriesRoundSyncServiceTests: XCTestCase {
         )
 
         XCTAssertEqual(plan.round.configuration.primaryFormat.configuration.maxScoreOverPar, .twoTimesParPlusOne)
+        XCTAssertFalse(plan.round.configuration.usesSequentialTeeStarts)
         XCTAssertEqual(plan.segment.gameFormat.configuration.maxScoreOverPar, .twoTimesParPlusOne)
         XCTAssertEqual(plan.teeGroupsToPut.map(\.id), ["g1", "g2"])
         XCTAssertEqual(plan.teeGroupsToPut.map(\.startingHole), [4, 3])

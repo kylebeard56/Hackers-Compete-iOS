@@ -351,7 +351,7 @@ private struct SeriesAwardMatchupOutcomeCard: View {
             }
 
             if outcome.showsSubstituteScoringFootnote {
-                Text("* Substitute players do not count towards scoring")
+                Text("* Substitute players don't count towards competitive scoring")
                     .fontStyle(kFontName, size: 11, weight: .medium)
                     .foregroundStyle(Color.neutral)
                     .frame(maxWidth: .infinity, alignment: .leading)

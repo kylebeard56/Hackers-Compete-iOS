@@ -128,22 +128,56 @@ final class RoundSession: ObservableObject, Loggable {
         }
     }
     
-    func fetchSingleInstance(for roundID: String) async throws -> RoundSnapshot {
+    func fetchSingleInstance(for roundID: String, preferServer: Bool = false) async throws -> RoundSnapshot {
         addBreadcrumb()
-        
+
         do {
-            return .init(
-                round:          try await FirebaseService.shared.getRoundDocument(byID: roundID).get(),
-                participants:   try await FirebaseService.shared.getParticipants(for: roundID).get(),
-                teams:          try await FirebaseService.shared.getTeams(for: roundID).get(),
-                teeGroups:      try await FirebaseService.shared.getTeeGroups(for: roundID).get(),
-                scoringGroups:  try await FirebaseService.shared.getScoringGroups(for: roundID).get(),
-                segments:       try await FirebaseService.shared.getSegments(for: roundID).get(),
-                scoring:        try await FirebaseService.shared.getScores(for: roundID).get()
-            )
+            return try await fetchSingleInstance(for: roundID, source: preferServer ? .server : .default)
         } catch {
-            throw error
+            guard preferServer else { throw error }
+            addBreadcrumb(level: .error, message: "Server round snapshot failed; falling back to default source", error: error)
+            return try await fetchSingleInstance(for: roundID, source: .default)
         }
+    }
+
+    private func fetchSingleInstance(for roundID: String, source: FirestoreSource) async throws -> RoundSnapshot {
+        let roundRef = reference.document(roundID)
+
+        async let roundDocument = roundRef.getDocument(source: source)
+        async let participantDocuments = RoundParticipant.query(parentID: roundID).getDocuments(source: source)
+        async let teamDocuments = RoundTeam.query(parentID: roundID).getDocuments(source: source)
+        async let teeGroupDocuments = TeeTimeGroup.query(parentID: roundID).getDocuments(source: source)
+        async let scoringGroupDocuments = RoundScoringGroup.query(parentID: roundID).getDocuments(source: source)
+        async let segmentDocuments = RoundSegment.query(parentID: roundID).getDocuments(source: source)
+        async let scoreDocuments = ScoreEntry.query(parentID: roundID).getDocuments(source: source)
+
+        let (
+            roundSnapshot,
+            participantSnapshot,
+            teamSnapshot,
+            teeGroupSnapshot,
+            scoringGroupSnapshot,
+            segmentSnapshot,
+            scoreSnapshot
+        ) = try await (
+            roundDocument,
+            participantDocuments,
+            teamDocuments,
+            teeGroupDocuments,
+            scoringGroupDocuments,
+            segmentDocuments,
+            scoreDocuments
+        )
+
+        return try .init(
+            round: roundSnapshot.data(as: Round.self),
+            participants: participantSnapshot.documents.map { try $0.data(as: RoundParticipant.self) },
+            teams: teamSnapshot.documents.map { try $0.data(as: RoundTeam.self) },
+            teeGroups: teeGroupSnapshot.documents.map { try $0.data(as: TeeTimeGroup.self) },
+            scoringGroups: scoringGroupSnapshot.documents.map { try $0.data(as: RoundScoringGroup.self) },
+            segments: segmentSnapshot.documents.map { try $0.data(as: RoundSegment.self) },
+            scoring: scoreSnapshot.documents.map { try $0.data(as: ScoreEntry.self) }
+        )
     }
     
     func start(for roundID: String) async {
@@ -167,16 +201,18 @@ final class RoundSession: ObservableObject, Loggable {
         let targetListenerTypes = profile.listenerTypes
         recordSessionActivity(at: now)
 
+        let canReuseWarmSession = sameRound && !shouldRebuild && !profile.usesLiveListeners
+
         emitRoundSessionActivated(
             roundID: requestedRoundID,
             profile: profile,
             rebuildReason: rebuildReason,
-            sameRoundReuse: sameRound && !shouldRebuild,
+            sameRoundReuse: canReuseWarmSession,
             existingListenerTypes: existingListenerTypes,
             targetListenerTypes: targetListenerTypes
         )
 
-        if sameRound, !shouldRebuild {
+        if canReuseWarmSession {
             if currentProfile != profile {
                 await transitionProfile(to: profile)
             } else {
@@ -212,6 +248,7 @@ final class RoundSession: ObservableObject, Loggable {
         TelemetryService.shared.setContext(roundID: requestedRoundID)
 
         if profile.usesLiveListeners {
+            await loadSingleSnapshotIfNeeded(for: requestedRoundID, forceRefresh: true)
             beginInitialLoadTracking(for: profile, startedAt: now, source: "live_listeners")
             await startListeners(for: profile)
         } else {
@@ -361,7 +398,7 @@ final class RoundSession: ObservableObject, Loggable {
         beginInitialLoadTracking(for: currentProfile, source: "one_shot")
 
         do {
-            snapshot = try await fetchSingleInstance(for: roundID)
+            snapshot = try await fetchSingleInstance(for: roundID, preferServer: forceRefresh)
             lastSnapshotReceivedAt = Date()
             emitInitialSnapshotLoaded(loadSource: "one_shot")
         } catch {

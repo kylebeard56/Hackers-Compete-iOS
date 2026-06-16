@@ -310,6 +310,7 @@ extension RoundSession {
     func toggleSequentialTeeStarts(_ value: Bool) async {
         addBreadcrumb()
         let previousValue = snapshot.configuration.usesSequentialTeeStarts
+        guard previousValue != value else { return }
 
         do {
             if snapshot.round.configuration.sequentialTeeStartsEnabled != value {
@@ -321,7 +322,6 @@ extension RoundSession {
                 try await resequenceTeeGroupsForSequentialStarts()
             }
 
-            guard previousValue != value else { return }
             emitRoundSetupEvent(
                 "round_setup.sequential_tee_starts_toggled",
                 extra: [
