@@ -52,6 +52,14 @@ final class SeriesRoundSyncServiceTests: XCTestCase {
         XCTAssertNotNil(SeriesRoundSyncPlanning.validateOptions(options, roundStatus: .complete))
     }
 
+    func testRoundStatusPreservationPreventsLobbyDowngrade() {
+        XCTAssertTrue(SeriesRoundSyncService.shouldPreserveCurrentRoundStatus(candidate: .lobby, current: .live))
+        XCTAssertTrue(SeriesRoundSyncService.shouldPreserveCurrentRoundStatus(candidate: .lobby, current: .paused))
+        XCTAssertTrue(SeriesRoundSyncService.shouldPreserveCurrentRoundStatus(candidate: .lobby, current: .complete))
+        XCTAssertFalse(SeriesRoundSyncService.shouldPreserveCurrentRoundStatus(candidate: .live, current: .lobby))
+        XCTAssertFalse(SeriesRoundSyncService.shouldPreserveCurrentRoundStatus(candidate: .lobby, current: .lobby))
+    }
+
     func testPartnershipScoringGroupPatchRebuildsPairsOnly() {
         var cfg = SeriesRoundConfiguration()
         cfg.scoreOwnerScope = .partnership
@@ -1124,6 +1132,38 @@ final class SeriesRoundSyncServiceTests: XCTestCase {
             plannedTeeGroups: [
                 SeriesRoundPlannedTeeGroup(id: "planned_1", index: 0, teeTime: "2026-05-01T14:00:00Z", startingHole: 4),
                 SeriesRoundPlannedTeeGroup(id: "planned_2", index: 1, teeTime: "2026-05-01T14:00:00Z", startingHole: 8),
+            ],
+            seriesRound: seriesRound
+        )
+
+        XCTAssertEqual(updated.map(\.id), ["g1", "g2"])
+        XCTAssertEqual(updated.map(\.startingHole), [4, 8])
+        XCTAssertEqual(Set(updated.compactMap(\.teeTime)), ["2026-05-01T14:00:00Z"])
+    }
+
+    func testTeeGroupsWithLeagueSchedule_preservesExistingLiveStartingHoles() throws {
+        var cfg = SeriesRoundConfiguration()
+        cfg.sequentialTeeStartsEnabled = true
+        let seriesRound = SeriesRound(id: "sr1", roundConfig: cfg, parentID: "series1")
+        var snapshot = RoundSnapshot(
+            round: Round(id: "round1", status: .live),
+            teeGroups: [
+                TeeTimeGroup(id: "g1", index: 0, teeTime: "2026-05-01T14:00:00Z", startingHole: 4, createdAt: t0, parentID: "round1"),
+                TeeTimeGroup(id: "g2", index: 1, teeTime: "2026-05-01T14:08:00Z", startingHole: 8, createdAt: t0, parentID: "round1"),
+            ],
+            segments: [
+                RoundSegment(id: "seg1", parentID: "round1")
+            ]
+        )
+        snapshot.round.configuration.courses = [
+            testCourseSegment()
+        ]
+
+        let updated = try SeriesRoundSyncPlanning.teeGroupsWithLeagueSchedule(
+            snapshot: snapshot,
+            groupPlans: [
+                .init(id: "planned_1", memberIDs: ["m1"]),
+                .init(id: "planned_2", memberIDs: ["m2"]),
             ],
             seriesRound: seriesRound
         )

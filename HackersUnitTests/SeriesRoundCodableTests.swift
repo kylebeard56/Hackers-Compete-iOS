@@ -183,6 +183,34 @@ final class SeriesRoundCodableTests: XCTestCase {
     }
 
     @MainActor
+    func testLinkedRoundLobbyStatusDoesNotDowngradeLiveSeriesRound() {
+        let viewModel = SeriesViewModel()
+        let seriesRound = SeriesRound(
+            id: "week1",
+            title: "Week 1",
+            index: 0,
+            status: .live,
+            roundID: "round1",
+            parentID: "series1"
+        )
+        viewModel.rounds = [seriesRound]
+        viewModel.linkedRounds = [
+            "round1": Round(id: "round1", status: .lobby, players: ["player1"])
+        ]
+
+        let freshDowngrade = SeriesViewModel.resolvedLinkedRoundStatusUpdate(
+            previousStatus: .live,
+            linkedRoundStatus: .lobby,
+            roundID: "round1",
+            freshRoundIDs: ["round1"]
+        )
+
+        XCTAssertNil(freshDowngrade)
+        XCTAssertEqual(viewModel.effectiveStatus(for: seriesRound), .live)
+        XCTAssertEqual(viewModel.linkedRoundNavigationTarget(for: seriesRound), .liveRound)
+    }
+
+    @MainActor
     func testSeriesRoundWithoutLinkIgnoresCachedLinkedRoundStatus() {
         let viewModel = SeriesViewModel()
         let unlinkedRound = SeriesRound(

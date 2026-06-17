@@ -408,6 +408,7 @@ enum SeriesRoundSyncPlanning {
         return zip(effectivePlans.enumerated(), scheduledGroups).map { indexedPlan, template in
             let index = indexedPlan.offset
             let plan = indexedPlan.element
+            let existing = index < sorted.count ? sorted[index] : nil
             var next = index < sorted.count
                 ? sorted[index]
                 : TeeTimeGroup(
@@ -418,7 +419,9 @@ enum SeriesRoundSyncPlanning {
                 )
             next.index = index
             next.teeTime = template.teeTime
-            next.startingHole = template.startingHole
+            if snapshot.round.status == .lobby || existing == nil || plannedScheduleGroups.count == effectivePlans.count {
+                next.startingHole = template.startingHole
+            }
             next.parentID = snapshot.round.id
             next.lastUpdatedAt = .init()
             return next

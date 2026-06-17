@@ -542,6 +542,7 @@ struct SeriesMemberHandicapBreakdownView: View {
     @State private var selectedScoreIDs: Set<String> = []
     @State private var showBulkDeleteAlert = false
     @State private var isBulkDeletingScores = false
+    @State private var roundUsageByScoreID: [String: SeriesHandicapRoundUsage] = [:]
     @State private var showMissingRoundAlert = false
     @State private var missingRoundAlertMessage = ""
 
@@ -574,6 +575,54 @@ struct SeriesMemberHandicapBreakdownView: View {
 
     private var selectedScores: [SeriesHandicapScore] {
         memberScores.filter { selectedScoreIDs.contains($0.id) }
+    }
+
+    private var defaultCourse: SeriesCourseSelection? {
+        viewModel.series.defaultCourse
+    }
+
+    private var defaultCourseTee: Tee? {
+        guard let course = defaultCourse, course.isConfigured else { return nil }
+        let tees = viewModel.teeChoices(for: course)
+        let memberTeeID = member.defaultTeeBoxID?.trimmingCharacters(in: .whitespacesAndNewlines)
+        let courseTeeID = course.defaultTeeBoxID.trimmingCharacters(in: .whitespacesAndNewlines)
+        let preferredTeeID = memberTeeID?.isPopulated == true ? memberTeeID : (courseTeeID.isPopulated ? courseTeeID : nil)
+
+        if let preferredTeeID,
+           let tee = tees.first(where: { $0.id == preferredTeeID }) {
+            return tee
+        }
+        return tees.first
+    }
+
+    private var currentCourseHandicap: Int? {
+        guard let index = viewModel.effectiveHandicap(for: member.id),
+              let tee = defaultCourseTee,
+              let segment = defaultCourse?.holeSegment,
+              let handicap = HandicapCalculator.courseHandicap(
+                index: index,
+                tee: tee,
+                segment: segment,
+                handicapStrokeBasis: viewModel.series.handicapConfig.strokeBasis
+              ) else {
+            return nil
+        }
+        return min(handicap, handicapConfig.maximumHandicap)
+    }
+
+    private var defaultCourseContextText: String? {
+        guard let course = defaultCourse, course.isConfigured else { return nil }
+        var parts: [String] = []
+        if let tee = defaultCourseTee {
+            parts.append(tee.name)
+        } else if course.defaultTeeBoxID.isPopulated {
+            parts.append("Default tee")
+        }
+        parts.append(course.holeSegment.title)
+        if course.cachedName.isPopulated {
+            parts.append(course.cachedName)
+        }
+        return parts.joined(separator: " \(kDot) ")
     }
 
     var body: some View {
@@ -717,25 +766,30 @@ struct SeriesMemberHandicapBreakdownView: View {
         }
         .onChange(of: memberScores.map(\.id)) { _, ids in
             selectedScoreIDs = selectedScoreIDs.intersection(Set(ids))
+            roundUsageByScoreID = roundUsageByScoreID.filter { ids.contains($0.key) }
             if memberScores.isEmpty {
                 exitBulkEditMode()
             }
+        }
+        .task(id: defaultCourse?.courseID) {
+            await viewModel.ensureTeeChoicesLoaded(for: defaultCourse)
         }
     }
 
     private var currentHandicapCard: some View {
         let hc = viewModel.memberHandicaps[member.id]
+        let effective = viewModel.effectiveHandicap(for: member.id)
 
         return SeriesSheetCard(palette: palette) {
-            HStack {
+            HStack(alignment: .top, spacing: 12) {
                 VStack(alignment: .leading, spacing: 4) {
-                    Text("Effective Index")
+                    Text("Handicap Index")
                         .fontStyle(kFontName, size: 12, weight: .regular)
                         .foregroundStyle(Color.neutral)
-                    if let effective = viewModel.effectiveHandicap(for: member.id) {
+                    if let effective {
                         Text(String(format: "%.1f", effective))
                             .fontStyle(kFontName, size: 28, weight: .bold)
-                            .foregroundStyle(Color.accentGreen)
+                            .foregroundStyle(palette.foregroundColor)
                     } else {
                         Text("--")
                             .fontStyle(kFontName, size: 28, weight: .bold)
@@ -745,50 +799,112 @@ struct SeriesMemberHandicapBreakdownView: View {
 
                 Spacer(minLength: 0)
 
-                VStack(alignment: .trailing, spacing: 4) {
-                    if let computed = hc?.computedIndex {
-                        Text("Computed: \(String(format: "%.1f", computed))")
-                            .fontStyle(kFontName, size: 12, weight: .regular)
-                            .foregroundStyle(Color.neutral)
-                    }
+                courseHandicapSummaryChip(value: currentCourseHandicap)
+            }
 
-                    if let hc, hc.isOverridden, let override = hc.overrideIndex {
-                        Text("Override: \(String(format: "%.1f", override))")
-                            .fontStyle(kFontName, size: 12, weight: .semibold)
-                            .foregroundStyle(Color.orange)
-                    }
+            if let context = defaultCourseContextText {
+                Text(context)
+                    .fontStyle(kFontName, size: 11, weight: .regular)
+                    .foregroundStyle(Color.neutral)
+                    .lineLimit(2)
+                    .frame(maxWidth: .infinity, alignment: .leading)
+            }
+
+            ViewThatFits(in: .horizontal) {
+                metricPillRow(hc: hc)
+                VStack(alignment: .leading, spacing: 8) {
+                    metricPillRow(hc: hc, limit: 2)
+                    metricPillRow(hc: hc, dropFirst: 2)
                 }
             }
+            .frame(maxWidth: .infinity, alignment: .leading)
+        }
+    }
 
-            Text("\(memberScores.count) score\(memberScores.count == 1 ? "" : "s") on file \(kDot) \(handicapCountingIDs.count) counting")
-                .fontStyle(kFontName, size: 12, weight: .regular)
-                .foregroundStyle(Color.neutral)
-                .frame(maxWidth: .infinity, alignment: .leading)
-
-            if handicapConfig.minimumScoresForIndex <= 1 {
-                Text("An index can appear once at least one score counts toward the pool.")
-                    .fontStyle(kFontName, size: 12, weight: .regular)
-                    .foregroundStyle(Color.neutral)
-                    .frame(maxWidth: .infinity, alignment: .leading)
-            } else {
-                Text("An index can appear once at least \(handicapConfig.minimumScoresForIndex) scores count toward the pool.")
-                    .fontStyle(kFontName, size: 12, weight: .regular)
-                    .foregroundStyle(Color.neutral)
-                    .frame(maxWidth: .infinity, alignment: .leading)
-            }
-
-            if handicapConfig.usesCourseRatingSlopeAdjustment {
-                Text("Round scores from linked courses use rating and slope so different courses compare fairly.")
-                    .fontStyle(kFontName, size: 12, weight: .regular)
-                    .foregroundStyle(Color.neutral)
-                    .frame(maxWidth: .infinity, alignment: .leading)
-            } else {
-                Text("The league uses each score’s gross total for the index.")
-                    .fontStyle(kFontName, size: 12, weight: .regular)
-                    .foregroundStyle(Color.neutral)
-                    .frame(maxWidth: .infinity, alignment: .leading)
+    @ViewBuilder
+    private func metricPillRow(hc: SeriesMemberHandicap?, limit: Int? = nil, dropFirst: Int = 0) -> some View {
+        let pills = summaryMetricPills(hc: hc).dropFirst(dropFirst)
+        let shown = limit.map { Array(pills.prefix($0)) } ?? Array(pills)
+        if shown.isPopulated {
+            HStack(spacing: 8) {
+                ForEach(shown, id: \.title) { pill in
+                    metricPill(
+                        title: pill.title,
+                        value: pill.value,
+                        foreground: pill.foreground,
+                        background: pill.background
+                    )
+                }
             }
         }
+    }
+
+    private func summaryMetricPills(hc: SeriesMemberHandicap?) -> [SummaryMetricPill] {
+        var pills: [SummaryMetricPill] = [
+            .init(title: "Scores", value: "\(memberScores.count)"),
+            .init(title: "Counting", value: "\(handicapCountingIDs.count)")
+        ]
+        if let computed = hc?.computedIndex {
+            pills.append(.init(title: "Computed", value: String(format: "%.1f", computed)))
+        }
+        if let hc, hc.isOverridden, let override = hc.overrideIndex {
+            pills.append(
+                .init(
+                    title: "Override",
+                    value: String(format: "%.1f", override),
+                    foreground: .orange,
+                    background: Color.orange.opacity(colorScheme.translucent)
+                )
+            )
+        }
+        return pills
+    }
+
+    private struct SummaryMetricPill {
+        let title: String
+        let value: String
+        var foreground: Color = .neutral
+        var background: Color?
+    }
+
+    private func courseHandicapSummaryChip(value: Int?) -> some View {
+        VStack(alignment: .trailing, spacing: 4) {
+            Text("Course HCP")
+                .fontStyle(kFontName, size: 11, weight: .semibold)
+                .foregroundStyle(Color.accentGreen)
+            Text(courseHandicapDisplayText(value))
+                .fontStyle(kFontName, size: 20, weight: .bold)
+                .foregroundStyle(palette.backgroundColor)
+                .padding(.horizontal, 14)
+                .padding(.vertical, 8)
+                .background(Color.accentGreen)
+                .clipShape(Capsule())
+        }
+        .accessibilityElement(children: .combine)
+        .accessibilityLabel("Course handicap \(value.map { "\($0)" } ?? "unavailable")")
+    }
+
+    private func courseHandicapDisplayText(_ value: Int?) -> String {
+        value.map { "\($0)" } ?? "--"
+    }
+
+    private func metricPill(
+        title: String,
+        value: String,
+        foreground: Color = .neutral,
+        background: Color? = nil
+    ) -> some View {
+        HStack(spacing: 4) {
+            Text(title)
+                .fontStyle(kFontName, size: 10, weight: .semibold)
+            Text(value)
+                .fontStyle(kFontName, size: 11, weight: .bold)
+        }
+        .foregroundStyle(foreground)
+        .padding(.horizontal, 10)
+        .padding(.vertical, 6)
+        .background(background ?? palette.cardEmbeddedRowBackground)
+        .clipShape(Capsule())
     }
 
     private var scoresListSection: some View {
@@ -819,14 +935,12 @@ struct SeriesMemberHandicapBreakdownView: View {
                 }
                 .frame(maxWidth: .infinity, alignment: .leading)
 
-                Text("Newest first.")
-                    .fontStyle(kFontName, size: 11, weight: .regular)
-                    .foregroundStyle(Color.neutral)
-
                 if handicapDotsLegend {
-                    Text("Green dot = counts toward index. Ring = in pool only. Dashed = unofficial (excluded from index).")
-                        .fontStyle(kFontName, size: 11, weight: .regular)
-                        .foregroundStyle(Color.neutral)
+                    HStack(spacing: 8) {
+                        handicapLegendToken(title: "Counts", style: .filled)
+                        handicapLegendToken(title: "Pool", style: .ring)
+                        handicapLegendToken(title: "Unofficial", style: .dashed)
+                    }
                 }
             }
             .padding(.bottom, 4)
@@ -843,6 +957,43 @@ struct SeriesMemberHandicapBreakdownView: View {
                     }
                 }
             }
+        }
+    }
+
+    private enum HandicapLegendStyle {
+        case filled
+        case ring
+        case dashed
+    }
+
+    private func handicapLegendToken(title: String, style: HandicapLegendStyle) -> some View {
+        HStack(spacing: 4) {
+            legendDot(style: style)
+            Text(title)
+                .fontStyle(kFontName, size: 10, weight: .semibold)
+        }
+        .foregroundStyle(Color.neutral)
+        .padding(.horizontal, 8)
+        .padding(.vertical, 5)
+        .background(palette.cardEmbeddedRowBackground)
+        .clipShape(Capsule())
+    }
+
+    @ViewBuilder
+    private func legendDot(style: HandicapLegendStyle) -> some View {
+        switch style {
+        case .filled:
+            Circle()
+                .fill(Color.accentGreen)
+                .frame(width: 7, height: 7)
+        case .ring:
+            Circle()
+                .stroke(Color.neutral4, lineWidth: 1.5)
+                .frame(width: 7, height: 7)
+        case .dashed:
+            Circle()
+                .stroke(Color.neutral4, style: StrokeStyle(lineWidth: 1.2, dash: [2, 2]))
+                .frame(width: 7, height: 7)
         }
     }
 
@@ -863,6 +1014,10 @@ struct SeriesMemberHandicapBreakdownView: View {
                     Text(rowTitle(score))
                         .fontStyle(kFontName, size: 12, weight: .regular)
                         .foregroundStyle(Color.neutral)
+
+                    if let usage = roundUsageByScoreID[score.id] {
+                        roundUsageChips(usage)
+                    }
 
                     if let adjustmentSubtitle = viewModel.handicapScoreAdjustmentSubtitle(for: score) {
                         Text(adjustmentSubtitle)
@@ -954,6 +1109,39 @@ struct SeriesMemberHandicapBreakdownView: View {
             editingScore = score
         }
         .accessibilityAddTraits((isBulkEditingScores || isEditableBaselineScore(score)) ? .isButton : [])
+        .task(id: score.id) {
+            await loadRoundUsage(for: score)
+        }
+    }
+
+    private func roundUsageChips(_ usage: SeriesHandicapRoundUsage) -> some View {
+        HStack(spacing: 6) {
+            rowMetricChip(title: "Course HCP", value: "\(usage.courseHandicap)", foreground: palette.backgroundColor, background: Color.accentGreen)
+            if let index = usage.handicapIndex {
+                rowMetricChip(title: "Index", value: String(format: "%.1f", index), foreground: palette.foregroundColor, background: palette.cardEmbeddedRowBackground)
+            }
+        }
+        .accessibilityElement(children: .combine)
+    }
+
+    private func rowMetricChip(title: String, value: String, foreground: Color, background: Color) -> some View {
+        HStack(spacing: 4) {
+            Text(title)
+                .fontStyle(kFontName, size: 10, weight: .semibold)
+            Text(value)
+                .fontStyle(kFontName, size: 11, weight: .bold)
+        }
+        .foregroundStyle(foreground)
+        .padding(.horizontal, 8)
+        .padding(.vertical, 5)
+        .background(background)
+        .clipShape(Capsule())
+    }
+
+    private func loadRoundUsage(for score: SeriesHandicapScore) async {
+        guard score.source == .round, roundUsageByScoreID[score.id] == nil else { return }
+        guard let usage = await viewModel.handicapRoundUsage(for: score) else { return }
+        roundUsageByScoreID[score.id] = usage
     }
 
     private func selectionButton(for score: SeriesHandicapScore) -> some View {

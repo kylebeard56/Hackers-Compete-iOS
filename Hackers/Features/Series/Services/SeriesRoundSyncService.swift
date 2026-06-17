@@ -147,7 +147,8 @@ struct SeriesRoundSyncService: Loggable {
         if options.syncFormat {
             workingRound.configuration = resolvedPlan.roundConfiguration
             workingRound.lastUpdatedAt = .init()
-            switch await workingRound.put() {
+            let roundToPut = await roundPreservingCurrentStatus(workingRound)
+            switch await roundToPut.put() {
             case .success(let updated):
                 workingRound = updated
             case .failure(let error):
@@ -170,7 +171,8 @@ struct SeriesRoundSyncService: Loggable {
                 : nil
             workingRound.configuration.substitutesScore = desiredSubstitutesScore
             workingRound.lastUpdatedAt = .init()
-            switch await workingRound.put() {
+            let roundToPut = await roundPreservingCurrentStatus(workingRound)
+            switch await roundToPut.put() {
             case .success(let updated):
                 workingRound = updated
             case .failure(let error):
@@ -191,7 +193,8 @@ struct SeriesRoundSyncService: Loggable {
                 workingRound.configuration.substitutesScore = desiredSubstitutesScore
             }
             workingRound.lastUpdatedAt = .init()
-            switch await workingRound.put() {
+            let roundToPut = await roundPreservingCurrentStatus(workingRound)
+            switch await roundToPut.put() {
             case .success(let updated):
                 workingRound = updated
             case .failure(let error):
@@ -468,7 +471,8 @@ struct SeriesRoundSyncService: Loggable {
             if workingRound.players != nextPlayerIDs {
                 workingRound.players = nextPlayerIDs
                 workingRound.lastUpdatedAt = .init()
-                switch await workingRound.put() {
+                let roundToPut = await roundPreservingCurrentStatus(workingRound)
+                switch await roundToPut.put() {
                 case .success(let updated):
                     workingRound = updated
                 case .failure(let error):
@@ -491,7 +495,8 @@ struct SeriesRoundSyncService: Loggable {
     private func applyLobbyReconciliationPlan(
         _ plan: SeriesRoundSyncPlanning.LobbyAttendancePlan
     ) async -> Result<Void, SeriesRoundSyncError> {
-        switch await plan.round.put() {
+        let roundToPut = await roundPreservingCurrentStatus(plan.round)
+        switch await roundToPut.put() {
         case .success:
             break
         case .failure(let error):
@@ -580,6 +585,26 @@ struct SeriesRoundSyncService: Loggable {
                 "round_status": roundStatus.rawValue
             ]
         )
+    }
+
+    private func roundPreservingCurrentStatus(_ round: Round) async -> Round {
+        var next = round
+        switch await FirebaseService.shared.getRoundDocument(byID: round.id) {
+        case .success(let current):
+            if Self.shouldPreserveCurrentRoundStatus(candidate: next.status, current: current.status) {
+                next.status = current.status
+            }
+        case .failure(let error):
+            addBreadcrumb(level: .error, message: "series.round_sync could not refresh round status before put", error: error)
+        }
+        return next
+    }
+
+    nonisolated static func shouldPreserveCurrentRoundStatus(
+        candidate: RoundStatus,
+        current: RoundStatus
+    ) -> Bool {
+        candidate == .lobby && (current == .live || current == .paused || current == .complete)
     }
 
     private static func inferredAssignments(

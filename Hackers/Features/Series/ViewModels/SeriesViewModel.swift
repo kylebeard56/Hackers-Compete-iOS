@@ -1555,6 +1555,12 @@ private struct SeriesLeagueRulesSignaturePayload: Codable, Hashable {
     }
 }
 
+struct SeriesHandicapRoundUsage: Hashable {
+    let courseHandicap: Int
+    let handicapIndex: Double?
+    let teeName: String?
+}
+
 @MainActor
 final class SeriesViewModel: ObservableObject, Loggable {
     nonisolated static let currentAutomaticAwardsEngineVersion = 3
@@ -1861,7 +1867,10 @@ final class SeriesViewModel: ObservableObject, Loggable {
     func effectiveStatus(for seriesRound: SeriesRound) -> SeriesRoundStatus {
         guard let roundID = seriesRound.roundID,
               let linkedRound = linkedRounds[roundID] else { return seriesRound.status }
-        return SeriesRoundStatus(linkedRoundStatus: linkedRound.status)
+        return Self.resolvedLinkedRoundStatus(
+            previousStatus: seriesRound.status,
+            linkedRoundStatus: linkedRound.status
+        )
     }
 
     func effectiveRoundConfig(for seriesRound: SeriesRound) -> SeriesRoundConfiguration {
@@ -1981,8 +1990,11 @@ final class SeriesViewModel: ObservableObject, Loggable {
               let linked = linkedRounds[roundID] else {
             return .lobby
         }
-        switch linked.status {
-        case .complete, .paused:
+        if linked.status == .paused {
+            return .roundOutcome
+        }
+        switch effectiveStatus(for: seriesRound) {
+        case .complete:
             return .roundOutcome
         case .live:
             if allScoresComplete(for: seriesRound) { return .roundOutcome }
@@ -1991,9 +2003,9 @@ final class SeriesViewModel: ObservableObject, Loggable {
                 return .roundOutcome
             }
             return .liveRound
-        case .lobby:
+        case .planned, .lobby:
             return .lobby
-        case .archived:
+        case .canceled:
             return .lobby
         }
     }
@@ -4092,6 +4104,26 @@ final class SeriesViewModel: ObservableObject, Loggable {
         return "Adjusted \(String(format: "%.1f", normalized)) from \(Int(score.score))"
     }
 
+    func handicapRoundUsage(for score: SeriesHandicapScore) async -> SeriesHandicapRoundUsage? {
+        guard score.source == .round,
+              let roundID = score.sourceRoundID,
+              roundID.isPopulated,
+              let snapshot = await cachedLinkedRoundSnapshot(roundID: roundID),
+              let participant = handicapRoundParticipant(memberID: score.memberID, snapshot: snapshot) else {
+            return nil
+        }
+
+        let tee = snapshot.courseSegment?.tee(from: participant.teeBoxID)
+            ?? snapshot.courseSegment?.tee(from: snapshot.courseSegment?.defaultTee ?? "")
+            ?? snapshot.courseSegment?.courseInfo.tees.first
+
+        return SeriesHandicapRoundUsage(
+            courseHandicap: participant.adjustedHandicap,
+            handicapIndex: participant.handicapIndex,
+            teeName: tee?.name
+        )
+    }
+
     func setHandicapOverride(memberID: String, value: Double?, isOverridden: Bool) async {
         let override = SeriesHandicapOverride(
             id: memberID,
@@ -4579,8 +4611,22 @@ final class SeriesViewModel: ObservableObject, Loggable {
         freshRoundIDs: Set<String>
     ) -> SeriesRoundStatus? {
         guard freshRoundIDs.contains(roundID) else { return nil }
-        let newStatus = SeriesRoundStatus(linkedRoundStatus: linkedRoundStatus)
+        let newStatus = resolvedLinkedRoundStatus(
+            previousStatus: previousStatus,
+            linkedRoundStatus: linkedRoundStatus
+        )
         return previousStatus == newStatus ? nil : newStatus
+    }
+
+    nonisolated static func resolvedLinkedRoundStatus(
+        previousStatus: SeriesRoundStatus,
+        linkedRoundStatus: RoundStatus
+    ) -> SeriesRoundStatus {
+        let newStatus = SeriesRoundStatus(linkedRoundStatus: linkedRoundStatus)
+        if previousStatus == .live && newStatus == .lobby {
+            return previousStatus
+        }
+        return newStatus
     }
 
     private func needsCompletedRoundProcessing(
@@ -5431,11 +5477,7 @@ final class SeriesViewModel: ObservableObject, Loggable {
     }
 
     private func handicapRoundMetadata(memberID: String, snapshot: RoundSnapshot) -> HandicapRoundMetadata? {
-        let memberPlayerID = members.first(where: { $0.id == memberID })?.playerID
-        guard let participant = snapshot.participants.first(where: {
-            ($0.seriesMemberID?.isPopulated == true && $0.seriesMemberID == memberID)
-                || (memberPlayerID?.isPopulated == true && $0.playerID == memberPlayerID)
-        }) else {
+        guard let participant = handicapRoundParticipant(memberID: memberID, snapshot: snapshot) else {
             return nil
         }
 
@@ -5451,6 +5493,14 @@ final class SeriesViewModel: ObservableObject, Loggable {
         }
 
         return (teeBoxID: resolvedTeeBoxID, courseRating: courseRating, courseSlope: courseSlope)
+    }
+
+    private func handicapRoundParticipant(memberID: String, snapshot: RoundSnapshot) -> RoundParticipant? {
+        let memberPlayerID = members.first(where: { $0.id == memberID })?.playerID
+        return snapshot.participants.first {
+            ($0.seriesMemberID?.isPopulated == true && $0.seriesMemberID == memberID)
+                || (memberPlayerID?.isPopulated == true && $0.playerID == memberPlayerID)
+        }
     }
 
     private func syncRoundHandicapScores(
