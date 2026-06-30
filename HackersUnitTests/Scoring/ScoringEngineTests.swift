@@ -498,6 +498,84 @@ final class ScoringEngineTests: XCTestCase {
         XCTAssertEqual(result.rows[0].total, 10, accuracy: 0.01)
     }
 
+    func testStableford_CustomRoundPointsApplyAfterNetAdjustment() {
+        let holes = [Hole(number: 1, par: 4, yardage: 400, handicap: 1)]
+        let participants = [
+            makeParticipant(id: "p1", name: "Net Par", handicap: 18),
+        ]
+        let segment = makeSegment(holeRange: HoleRange(startHole: 1, endHole: 1), templateID: FormatTemplateRegistry.stableford.id)
+        let customPoints = RoundStablefordPoints(
+            albatrossOrBetter: 10,
+            eagle: 8,
+            birdie: 6,
+            par: 4,
+            bogey: 1,
+            doubleBogey: 0,
+            tripleBogeyOrWorse: 0
+        )
+        let configuration = RoundConfiguration(
+            formatSummary: RoundFormatSummary(from: FormatTemplateRegistry.stableford),
+            stablefordPoints: customPoints,
+            handicapsEnabled: true
+        )
+        let snapshot = RoundSnapshot(
+            round: Round(id: "round1", shareCode: "TEST", createdBy: "host", configuration: configuration),
+            participants: participants,
+            segments: [segment],
+            scoring: [makeScoreEntry(participantID: "p1", holeNumber: 1, strokes: 5)]
+        )
+
+        let result = ScoringEngine.computeSnapshotResult(snapshot: snapshot, segment: segment, holes: holes, basis: .net)
+
+        XCTAssertEqual(result.rows.count, 1)
+        XCTAssertEqual(result.rows[0].total, 4, accuracy: 0.01)
+    }
+
+    func testStableford_CustomRoundPointsApplyBeforeTeamBestNSelection() {
+        let holes = [
+            Hole(number: 1, par: 4, yardage: 400, handicap: 1),
+            Hole(number: 2, par: 4, yardage: 410, handicap: 2),
+        ]
+        let participants = [
+            makeParticipant(id: "p1", name: "Birdie Then Double", teamID: "red"),
+            makeParticipant(id: "p2", name: "Pars", teamID: "red"),
+        ]
+        let teams = [RoundTeam(id: "red", name: "Red", color: "red", index: 0, createdAt: .init())]
+        let segment = makeSegment(holeRange: HoleRange(startHole: 1, endHole: 2), templateID: FormatTemplateRegistry.stableford.id)
+        let customPoints = RoundStablefordPoints(
+            albatrossOrBetter: 12,
+            eagle: 10,
+            birdie: 8,
+            par: 3,
+            bogey: 1,
+            doubleBogey: 2,
+            tripleBogeyOrWorse: 0
+        )
+        let configuration = RoundConfiguration(
+            formatSummary: RoundFormatSummary(from: FormatTemplateRegistry.stableford),
+            teamScoring: .init(mode: .bestN, count: 1, scope: .perHole),
+            stablefordPoints: customPoints
+        )
+        let snapshot = RoundSnapshot(
+            round: Round(id: "round1", shareCode: "TEST", createdBy: "host", configuration: configuration),
+            participants: participants,
+            teams: teams,
+            segments: [segment],
+            scoring: [
+                makeScoreEntry(participantID: "p1", holeNumber: 1, strokes: 3),
+                makeScoreEntry(participantID: "p1", holeNumber: 2, strokes: 6),
+                makeScoreEntry(participantID: "p2", holeNumber: 1, strokes: 4),
+                makeScoreEntry(participantID: "p2", holeNumber: 2, strokes: 4),
+            ]
+        )
+
+        let result = ScoringEngine.computeSnapshotResult(snapshot: snapshot, segment: segment, holes: holes, basis: .gross)
+
+        XCTAssertEqual(result.rows.count, 1)
+        XCTAssertEqual(result.rows[0].total, 11, accuracy: 0.01)
+        XCTAssertEqual(Set(result.rows[0].countingParticipantIDs), Set(["p1", "p2"]))
+    }
+
     // MARK: - Vegas
 
     func testVegas_ExactPairs_GrossAccrual() {

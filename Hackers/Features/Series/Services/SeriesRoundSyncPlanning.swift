@@ -770,9 +770,12 @@ enum SeriesRoundSyncPlanning {
         )
 
         var round = snapshot.round
+        round.name = Round.normalizedName(seriesRound.title)
         round.players = workingParticipants.compactMap(\.playerID)
+        round.teeGroupDisplayNamesByPlayerID = Round.teeGroupDisplayNamesByPlayerID(from: workingParticipants)
         if updateFormat {
             round.configuration = resolvedPlan.roundConfiguration
+                .preservingRoundLocalStablefordPoints(from: round.configuration)
         } else {
             round.configuration.handicapsEnabled = resolvedPlan.roundConfiguration.useHandicaps
             round.configuration.sequentialTeeStartsEnabled = false

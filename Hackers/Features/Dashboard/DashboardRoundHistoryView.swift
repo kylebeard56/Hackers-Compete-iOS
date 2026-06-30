@@ -129,7 +129,7 @@ struct DashboardRoundHistoryView: View {
             let month: Int
         }
         let grouped = Dictionary(grouping: filteredRounds) { round -> MonthKey in
-            let date = Date(timeIntervalSince1970: round.lastUpdatedAt.unix)
+            let date = Date(timeIntervalSince1970: round.displayDate.unix)
             let components = calendar.dateComponents([.year, .month], from: date)
             return MonthKey(year: components.year ?? 0, month: components.month ?? 0)
         }
@@ -137,14 +137,14 @@ struct DashboardRoundHistoryView: View {
         formatter.dateFormat = "MMMM yyyy"
         return grouped
             .map { key, rounds in
-                let date = Date(timeIntervalSince1970: rounds.max(by: { $0.lastUpdatedAt.unix < $1.lastUpdatedAt.unix })!.lastUpdatedAt.unix)
+                let date = Date(timeIntervalSince1970: rounds.max(by: { $0.displayDate.unix < $1.displayDate.unix })!.displayDate.unix)
                 let header = formatter.string(from: date)
-                let sorted = rounds.sorted { $0.lastUpdatedAt.unix > $1.lastUpdatedAt.unix }
+                let sorted = rounds.sorted { $0.displayDate.unix > $1.displayDate.unix }
                 return (header, sorted)
             }
             .sorted { a, b in
-                let aDate = a.1.first?.lastUpdatedAt.unix ?? 0
-                let bDate = b.1.first?.lastUpdatedAt.unix ?? 0
+                let aDate = a.1.first?.displayDate.unix ?? 0
+                let bDate = b.1.first?.displayDate.unix ?? 0
                 return aDate > bDate
             }
     }

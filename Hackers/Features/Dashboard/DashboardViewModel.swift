@@ -43,6 +43,7 @@ final class DashboardViewModel: ObservableObject, Loggable {
         guard query.isPopulated else { return rounds }
         
         return rounds.filter { round in
+            if let name = round.name, name.lowercased().contains(query) { return true }
             if let course = round.configuration.courses.first {
                 if course.courseInfo.name.lowercased().contains(query) { return true }
             }

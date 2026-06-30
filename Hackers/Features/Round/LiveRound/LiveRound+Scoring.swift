@@ -6,7 +6,6 @@
 //
 
 import SwiftUI
-import SkeletonUI
 
 // MARK: - Scoring
 
@@ -1234,6 +1233,8 @@ extension LiveRound {
 }
 
 private struct LiveRoundSkeletonModifier: ViewModifier {
+    @Environment(\.accessibilityReduceMotion) private var accessibilityReduceMotion
+
     let palette: DesignPalette
     let themeColor: Color?
     let cornerRadius: CGFloat
@@ -1241,17 +1242,54 @@ private struct LiveRoundSkeletonModifier: ViewModifier {
     func body(content: Content) -> some View {
         let color = themeColor.map { $0.opacity(0.4) } ?? palette.skeletonColor
         let background = themeColor.map { $0.opacity(0.12) } ?? palette.skeletonBackground
-        return content.skeleton(
-            with: true,
-            animation: .linear(duration: 2.0),
-            appearance: .solid(
-                color: color,
-                background: background
-            ),
-            shape: .rounded(.radius(cornerRadius)),
-            lines: 1,
-            scales: [1: 0.125] // Auto-scales to 25% width minimum if height isn't explicitly set
-        )
+
+        content
+            .hidden()
+            .overlay {
+                GeometryReader { geometry in
+                    let width = max(geometry.size.width, 1)
+                    let shimmerWidth = max(width * 0.55, 44)
+                    let shape = RoundedRectangle(cornerRadius: cornerRadius)
+
+                    if accessibilityReduceMotion {
+                        shape
+                            .fill(background)
+                            .overlay {
+                                shape
+                                    .fill(color.opacity(0.45))
+                            }
+                    } else {
+                        TimelineView(.animation(minimumInterval: 1.0 / 30.0)) { timeline in
+                            let duration: TimeInterval = 1.6
+                            let phase = timeline.date.timeIntervalSinceReferenceDate
+                                .truncatingRemainder(dividingBy: duration) / duration
+
+                            shape
+                                .fill(background)
+                                .overlay(alignment: .leading) {
+                                Rectangle()
+                                    .fill(
+                                        LinearGradient(
+                                            colors: [.clear, color, .clear],
+                                            startPoint: .leading,
+                                            endPoint: .trailing
+                                        )
+                                    )
+                                    .frame(width: shimmerWidth)
+                                    .offset(x: phase * (width + shimmerWidth) - shimmerWidth)
+                            }
+                        }
+                    }
+                }
+                .clipShape(RoundedRectangle(cornerRadius: cornerRadius))
+                .transaction { transaction in
+                    transaction.animation = nil
+                }
+            }
+            .accessibilityHidden(true)
+            .transaction { transaction in
+                transaction.animation = nil
+            }
     }
 }
 

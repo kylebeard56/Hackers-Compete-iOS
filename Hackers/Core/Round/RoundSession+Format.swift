@@ -19,6 +19,8 @@ extension RoundSession {
             let summary = RoundFormatSummary(from: template)
             let legacyFormat = legacyGameFormat(for: template)
             let isVegas = template.id == FormatTemplateRegistry.vegas.id
+            let shouldClearStablefordPoints = template.id != FormatTemplateRegistry.stableford.id
+                && snapshot.round.configuration.stablefordPoints != nil
 
             // Round root
             let desiredCompetitionScope: CompetitionScope? = isVegas
@@ -29,11 +31,15 @@ extension RoundSession {
             if snapshot.round.configuration.formatSummary != summary
                 || snapshot.round.configuration.primaryFormat != legacyFormat
                 || snapshot.round.configuration.competitionScope != desiredCompetitionScope
-                || snapshot.round.configuration.scoreOwnerScope != desiredScoreOwnerScope {
+                || snapshot.round.configuration.scoreOwnerScope != desiredScoreOwnerScope
+                || shouldClearStablefordPoints {
                 snapshot.round.configuration.formatSummary = summary
                 snapshot.round.configuration.primaryFormat = legacyFormat
                 snapshot.round.configuration.competitionScope = desiredCompetitionScope
                 snapshot.round.configuration.scoreOwnerScope = desiredScoreOwnerScope
+                if shouldClearStablefordPoints {
+                    snapshot.round.configuration.stablefordPoints = nil
+                }
                 if isVegas {
                     if snapshot.round.configuration.vegasMode == nil {
                         snapshot.round.configuration.vegasMode = .exactPair
@@ -82,6 +88,34 @@ extension RoundSession {
         } catch {
             addBreadcrumb(level: .error, message: "Failed to set format", error: error)
         }
+    }
+
+    func setStablefordPoints(_ points: RoundStablefordPoints) async {
+        addBreadcrumb()
+        let normalized = points.clamped
+        let storedValue: RoundStablefordPoints? = normalized.isClassic ? nil : normalized
+        let previousValue = snapshot.configuration.stablefordPoints
+
+        do {
+            if previousValue != storedValue {
+                snapshot.round.configuration.stablefordPoints = storedValue
+                _ = try await snapshot.round.put().get()
+            }
+
+            guard previousValue != storedValue else { return }
+            emitRoundSetupEvent(
+                "round_setup.stableford_points_changed",
+                extra: [
+                    "uses_custom_stableford_points": storedValue != nil
+                ]
+            )
+        } catch {
+            addBreadcrumb(level: .error, message: "Failed to set stableford points", error: error)
+        }
+    }
+
+    func resetStablefordPoints() async {
+        await setStablefordPoints(.classic)
     }
 
     /// Sets competition scope (field vs matchup). Persists to round config and segment.
@@ -331,11 +365,24 @@ extension RoundSession {
             let participants = memberIDs.compactMap { id in
                 snapshot.participants.first(where: { $0.id == id })
             }
-            guard participants.count == 2 else { return }
+            guard participants.count == 2 else {
+                addBreadcrumb(
+                    level: .warning,
+                    message: "Skipped partnership creation because participants were missing"
+                )
+                return
+            }
 
-            let groupIDs = Set(participants.compactMap(\.groupID).filter(\.isPopulated))
-            let teamIDs = Set(participants.compactMap(\.teamID).filter(\.isPopulated))
-            guard groupIDs.count == 1, teamIDs.count == 1 else { return }
+            guard snapshot.canCreateRoundPartnership(between: participants[0], and: participants[1]) else {
+                addBreadcrumb(
+                    level: .warning,
+                    message: "Skipped partnership creation because players are not eligible to pair"
+                )
+                return
+            }
+
+            let groupID = participants[0].groupID?.trimmingCharacters(in: .whitespacesAndNewlines)
+            let teamID = participants[0].teamID?.trimmingCharacters(in: .whitespacesAndNewlines)
 
             let remaining = snapshot.scoringGroups.filter { group in
                 group.kind != .partnership || Set(group.memberIDs).isDisjoint(with: Set(memberIDs))
@@ -343,8 +390,8 @@ extension RoundSession {
 
             let group = RoundScoringGroup(
                 id: "partnership_\(memberIDs.sorted().joined(separator: "_"))",
-                teamID: teamIDs.first,
-                teeGroupID: groupIDs.first,
+                teamID: teamID?.isPopulated == true ? teamID : nil,
+                teeGroupID: groupID,
                 kind: .partnership,
                 memberIDs: memberIDs,
                 label: label ?? partnershipLabel(for: participants),

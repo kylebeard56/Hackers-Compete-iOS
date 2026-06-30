@@ -328,8 +328,7 @@ extension GameLobby {
         return snapshot.participants
             .filter {
                 $0.id != participant.id
-                    && $0.groupID == group.id
-                    && $0.teamID == participant.teamID
+                    && snapshot.canCreateRoundPartnership(between: participant, and: $0)
                     && partnershipGroup(for: $0.id) == nil
             }
             .sorted {
@@ -2068,8 +2067,7 @@ extension GameLobby {
                 Button {
                     guard !readOnly else { return }
                     Haptics.fire(.light)
-                    teamRenameDraft = team.name
-                    teamRenameTarget = team
+                    teamEditorTarget = team
                 } label: {
                     Text(team.name)
                         .fontStyle(kFontName, size: 17, weight: .semibold)
@@ -2078,6 +2076,8 @@ extension GameLobby {
                 }
                 .buttonStyle(.plain)
                 .disabled(readOnly)
+                .accessibilityLabel("Edit \(team.name)")
+                .accessibilityHint("Change the team name and color.")
 
                 if showTeamHandicap {
                     Text("Team HCP")

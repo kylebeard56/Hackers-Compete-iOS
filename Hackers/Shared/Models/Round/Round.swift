@@ -68,13 +68,18 @@ enum RoundSubcollection: String, CaseIterable {
 }
 
 struct Round: FirebaseIdentifiable {
+    static let nameCharacterLimit = 40
+
     var id: String
+    var name: String?
     var shareCode: String
     var createdBy: String
     var status: RoundStatus
     var configuration: RoundConfiguration
     var players: [String]
     var completedPlayers: [CompletedPlayer]
+    var firstScoredAt: Time?
+    var teeGroupDisplayNamesByPlayerID: [String: [String]]
     var createdAt: Time
     var lastUpdatedAt: Time
     
@@ -83,31 +88,39 @@ struct Round: FirebaseIdentifiable {
     
     init(
         id: String = "",
+        name: String? = nil,
         shareCode: String = "",
         createdBy: String = "",
         status: RoundStatus = .lobby,
         players: [String] = [],
         completedPlayers: [CompletedPlayer] = [],
+        firstScoredAt: Time? = nil,
+        teeGroupDisplayNamesByPlayerID: [String: [String]] = [:],
         configuration: RoundConfiguration = .init(),
         createdAt: Time = .init(),
         lastUpdatedAt: Time = .init()
     ) {
         self.id = id
+        self.name = Self.normalizedName(name)
         self.shareCode = shareCode
         self.createdBy = createdBy
         self.status = status
         self.players = players
         self.completedPlayers = completedPlayers
+        self.firstScoredAt = firstScoredAt
+        self.teeGroupDisplayNamesByPlayerID = teeGroupDisplayNamesByPlayerID
         self.configuration = configuration
         self.createdAt = createdAt
         self.lastUpdatedAt = lastUpdatedAt
     }
     
     enum CodingKeys: String, CodingKey {
-        case id, status, players, configuration, schema
+        case id, name, status, players, configuration, schema
         case shareCode = "share_code"
         case createdBy = "created_by"
         case completedPlayers = "completed_players"
+        case firstScoredAt = "first_scored_at"
+        case teeGroupDisplayNamesByPlayerID = "tee_group_display_names_by_player_id"
         case createdAt = "created_at"
         case lastUpdatedAt = "last_updated_at"
     }
@@ -115,12 +128,15 @@ struct Round: FirebaseIdentifiable {
     init(from decoder: Decoder) throws {
         let c = try decoder.container(keyedBy: CodingKeys.self)
         id = try c.decode(String.self, forKey: .id)
+        name = Self.normalizedName(try c.decodeIfPresent(String.self, forKey: .name))
         shareCode = try c.decode(String.self, forKey: .shareCode)
         createdBy = try c.decode(String.self, forKey: .createdBy)
         status = try c.decode(RoundStatus.self, forKey: .status)
         configuration = try c.decode(RoundConfiguration.self, forKey: .configuration)
         players = try c.decode([String].self, forKey: .players)
         completedPlayers = try c.decodeIfPresent([CompletedPlayer].self, forKey: .completedPlayers) ?? []
+        firstScoredAt = try c.decodeIfPresent(Time.self, forKey: .firstScoredAt)
+        teeGroupDisplayNamesByPlayerID = try c.decodeIfPresent([String: [String]].self, forKey: .teeGroupDisplayNamesByPlayerID) ?? [:]
         createdAt = try c.decode(Time.self, forKey: .createdAt)
         lastUpdatedAt = try c.decode(Time.self, forKey: .lastUpdatedAt)
     }
@@ -128,14 +144,100 @@ struct Round: FirebaseIdentifiable {
     func encode(to encoder: Encoder) throws {
         var c = encoder.container(keyedBy: CodingKeys.self)
         try c.encode(id, forKey: .id)
+        try c.encodeIfPresent(name, forKey: .name)
         try c.encode(shareCode, forKey: .shareCode)
         try c.encode(createdBy, forKey: .createdBy)
         try c.encode(status, forKey: .status)
         try c.encode(configuration, forKey: .configuration)
         try c.encode(players, forKey: .players)
         try c.encode(completedPlayers, forKey: .completedPlayers)
+        try c.encodeIfPresent(firstScoredAt, forKey: .firstScoredAt)
+        try c.encode(teeGroupDisplayNamesByPlayerID, forKey: .teeGroupDisplayNamesByPlayerID)
         try c.encode(createdAt, forKey: .createdAt)
         try c.encode(lastUpdatedAt, forKey: .lastUpdatedAt)
+    }
+}
+
+extension Round {
+    static func normalizedName(_ rawValue: String?) -> String? {
+        guard let rawValue else { return nil }
+        let trimmed = rawValue.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard trimmed.isPopulated else { return nil }
+        return String(trimmed.prefix(nameCharacterLimit))
+    }
+
+    var displayDate: Time {
+        firstScoredAt ?? lastUpdatedAt
+    }
+
+    var hasCustomDisplayName: Bool {
+        name?.isPopulated == true
+    }
+
+    func displayTitle(courseName: String?) -> String {
+        if let name, name.isPopulated { return name }
+        if let courseName, courseName.isPopulated { return courseName }
+        return "Round"
+    }
+
+    func teeGroupLineCandidates(for playerID: String?) -> [String] {
+        guard let playerID,
+              let names = teeGroupDisplayNamesByPlayerID[playerID],
+              names.isPopulated else { return [] }
+
+        var candidates: [String] = []
+        candidates.append("With \(names.joined(separator: ", "))")
+
+        if names.count > 2 {
+            candidates.append("With \(names.prefix(2).joined(separator: ", ")), +\(names.count - 2)")
+        }
+        if names.count > 1 {
+            candidates.append("With \(names[0]), +\(names.count - 1)")
+        }
+
+        return Array(NSOrderedSet(array: candidates).compactMap { $0 as? String })
+    }
+
+    static func teeGroupDisplayNamesByPlayerID(from participants: [RoundParticipant]) -> [String: [String]] {
+        let grouped = Dictionary(grouping: participants) { $0.groupID ?? "" }
+        var summaries: [String: [String]] = [:]
+
+        for (groupID, groupParticipants) in grouped where groupID.isPopulated && groupParticipants.count > 1 {
+            let ordered = groupParticipants.sorted { lhs, rhs in
+                if (lhs.teeOrder ?? Int.max) != (rhs.teeOrder ?? Int.max) {
+                    return (lhs.teeOrder ?? Int.max) < (rhs.teeOrder ?? Int.max)
+                }
+                return lhs.name.fullName.localizedCaseInsensitiveCompare(rhs.name.fullName) == .orderedAscending
+            }
+
+            for participant in ordered {
+                guard let playerID = participant.playerID, playerID.isPopulated else { continue }
+                let names = ordered
+                    .filter { $0.playerID != playerID }
+                    .map { $0.name.teeGroupDisplayName }
+                    .filter(\.isPopulated)
+                if names.isPopulated {
+                    summaries[playerID] = names
+                }
+            }
+        }
+
+        return summaries
+    }
+}
+
+extension Name {
+    var teeGroupDisplayName: String {
+        let given = givenName.trimmingCharacters(in: .whitespacesAndNewlines)
+        let familyInitial = familyName.trimmingCharacters(in: .whitespacesAndNewlines).prefix(1)
+
+        if given.isPopulated, familyInitial.isEmpty {
+            return given
+        }
+        if given.isPopulated {
+            return "\(given) \(familyInitial)"
+        }
+        return displayNameWithPlaceholder
     }
 }
 
@@ -257,6 +359,7 @@ struct RoundConfiguration: Hashable, Codable {
     var courses: [CourseSegment]        // Course metadata and hole sequence for each
     var competitionScope: CompetitionScope?  // Overrides template when teams enabled (field vs matchup)
     var teamScoring: RoundTeamScoringConfiguration
+    var stablefordPoints: RoundStablefordPoints?
     var matchupResolutionStyle: RoundMatchupResolutionStyle
     var scoreOwnerScope: RoundScoreOwnerScope
     var matchupScoringStyle: RoundMatchupScoringStyle
@@ -303,6 +406,7 @@ struct RoundConfiguration: Hashable, Codable {
         courses: [CourseSegment] = [],
         competitionScope: CompetitionScope? = nil,
         teamScoring: RoundTeamScoringConfiguration = .init(),
+        stablefordPoints: RoundStablefordPoints? = nil,
         matchupResolutionStyle: RoundMatchupResolutionStyle = .roundAggregate,
         scoreOwnerScope: RoundScoreOwnerScope = .individual,
         matchupScoringStyle: RoundMatchupScoringStyle = .aggregateRoundTotal,
@@ -333,6 +437,7 @@ struct RoundConfiguration: Hashable, Codable {
         self.courses = courses
         self.competitionScope = competitionScope
         self.teamScoring = teamScoring
+        self.stablefordPoints = stablefordPoints
         self.matchupResolutionStyle = matchupResolutionStyle
         self.scoreOwnerScope = scoreOwnerScope
         self.matchupScoringStyle = matchupScoringStyle
@@ -364,12 +469,17 @@ struct RoundConfiguration: Hashable, Codable {
         competitionScope ?? activeTemplate.resolvedScope
     }
 
+    var resolvedStablefordPoints: RoundStablefordPoints {
+        stablefordPoints ?? .classic
+    }
+
     enum CodingKeys: String, CodingKey {
         case courses
         case primaryFormat = "primary_format"
         case formatSummary = "format_summary"
         case competitionScope = "competition_scope"
         case teamScoring = "team_scoring"
+        case stablefordPoints = "stableford_points"
         case matchupResolutionStyle = "matchup_resolution_style"
         case scoreOwnerScope = "score_owner_scope"
         case matchupScoringStyle = "matchup_scoring_style"
@@ -442,6 +552,31 @@ struct RoundConfiguration: Hashable, Codable {
         return FormatTemplateRegistry.strokePlayGross
     }
 
+    var isStablefordFormat: Bool {
+        activeTemplate.id == FormatTemplateRegistry.stableford.id
+    }
+
+    func preservingRoundLocalStablefordPoints(from existing: RoundConfiguration) -> RoundConfiguration {
+        var copy = self
+        copy.stablefordPoints = copy.isStablefordFormat ? existing.stablefordPoints : nil
+        return copy
+    }
+
+    func applyingStablefordPoints(to template: GameTemplate) -> GameTemplate {
+        guard template.id == FormatTemplateRegistry.stableford.id else { return template }
+
+        var modified = template
+        var pipeline = template.pipeline
+        for index in pipeline.indices {
+            if case .transform = pipeline[index] {
+                pipeline[index] = .transform(resolvedStablefordPoints.clamped.pointsMap)
+                break
+            }
+        }
+        modified.pipeline = pipeline
+        return modified
+    }
+
     var bestNSelected: Int? {
         switch teamScoring.mode {
         case .all:
@@ -461,6 +596,7 @@ struct RoundConfiguration: Hashable, Codable {
         formatSummary = try c.decodeIfPresent(RoundFormatSummary.self, forKey: .formatSummary)
         courses = try c.decodeIfPresent([CourseSegment].self, forKey: .courses) ?? []
         competitionScope = try c.decodeIfPresent(CompetitionScope.self, forKey: .competitionScope)
+        stablefordPoints = try c.decodeIfPresent(RoundStablefordPoints.self, forKey: .stablefordPoints)
         scoreOwnerScope = try c.decodeIfPresent(RoundScoreOwnerScope.self, forKey: .scoreOwnerScope) ?? .individual
         matchupScoringStyle = try c.decodeIfPresent(RoundMatchupScoringStyle.self, forKey: .matchupScoringStyle) ?? .aggregateRoundTotal
         holeWinPoints = try c.decodeIfPresent(Double.self, forKey: .holeWinPoints)
@@ -510,6 +646,7 @@ struct RoundConfiguration: Hashable, Codable {
         try c.encode(courses, forKey: .courses)
         try c.encodeIfPresent(competitionScope, forKey: .competitionScope)
         try c.encode(teamScoring, forKey: .teamScoring)
+        try c.encodeIfPresent(stablefordPoints, forKey: .stablefordPoints)
         try c.encode(matchupResolutionStyle, forKey: .matchupResolutionStyle)
         try c.encode(scoreOwnerScope, forKey: .scoreOwnerScope)
         try c.encode(matchupScoringStyle, forKey: .matchupScoringStyle)

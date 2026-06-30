@@ -64,13 +64,13 @@ final class RoundSession: ObservableObject, Loggable {
     @Published private(set) var lastForegroundAt: Date?
     @Published private(set) var lastBackgroundAt: Date?
     
-    @Published var roundListener: ListenerRegistration?
-    @Published var participantListener: ListenerRegistration?
-    @Published var segmentListener: ListenerRegistration?
-    @Published var scoringListener: ListenerRegistration?
-    @Published var teamListener: ListenerRegistration?
-    @Published var teeGroupListener: ListenerRegistration?
-    @Published var scoringGroupListener: ListenerRegistration?
+    var roundListener: ListenerRegistration?
+    var participantListener: ListenerRegistration?
+    var segmentListener: ListenerRegistration?
+    var scoringListener: ListenerRegistration?
+    var teamListener: ListenerRegistration?
+    var teeGroupListener: ListenerRegistration?
+    var scoringGroupListener: ListenerRegistration?
     
     @Published var isLoadingLobbyListeners = false
     @Published var isLoadingActiveListeners = false

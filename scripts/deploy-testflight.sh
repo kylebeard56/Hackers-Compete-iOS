@@ -24,6 +24,8 @@
 #   EXTERNAL_GROUP                  External group name (alternative to --group)
 #   EXTERNAL_TESTER_GROUP           External group name (local Apple keys alias)
 #   CHANGELOG                       What to Test text (alternative to --changelog)
+#   HACKERS_BUILD_NUMBER            Manual build number override
+#   BUILD_NUMBER_CACHE              Local date/run cache (default: fastlane/.build-number-cache.json)
 #   EXPORT_PROVISIONING_PROFILE_NAME App Store profile name (if export fails)
 #   APPLE_KEYS_DIR                  Local Apple keys directory (default: ~/Developer/Keys/Apple)
 #   APPLE_KEYS_ENV_FILE             Local Apple env file (default: $APPLE_KEYS_DIR/apple.txt)
@@ -39,6 +41,7 @@ PROFILE=""
 KEY_FILE="$PROJECT_ROOT/credentials/KEY_ISSUER_IDS.txt"
 APPLE_KEYS_DIR="${APPLE_KEYS_DIR:-$HOME/Developer/Keys/Apple}"
 APPLE_KEYS_ENV_FILE="${APPLE_KEYS_ENV_FILE:-$APPLE_KEYS_DIR/apple.txt}"
+BUILD_NUMBER_CACHE="${BUILD_NUMBER_CACHE:-$PROJECT_ROOT/fastlane/.build-number-cache.json}"
 
 usage() {
   sed -n '2,20p' "$0" | sed 's/^# \?//'
@@ -113,6 +116,7 @@ elif [[ "$GROUP" == "Beta Testers" && -n "${EXTERNAL_TESTER_GROUP:-}" ]]; then
 fi
 
 export EXTERNAL_GROUP="$GROUP"
+export BUILD_NUMBER_CACHE
 [[ -n "$CHANGELOG" ]] && export CHANGELOG
 [[ -n "$PROFILE" ]] && export EXPORT_PROVISIONING_PROFILE_NAME="$PROFILE"
 

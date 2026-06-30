@@ -170,6 +170,7 @@ extension RoundSession {
             // 6. Replace snapshot state atomically
             snapshot.participants.append(contentsOf: createdParticipants)
             snapshot.teeGroups.append(contentsOf: newGroups)
+            try await refreshTeeGroupDisplaySummaries()
 
             if createdParticipants.isPopulated {
                 var props: [String: Any] = [
@@ -271,6 +272,7 @@ extension RoundSession {
                 snapshot.round.players = rebuiltPlayerIDs
                 _ = try await snapshot.round.put().get()
             }
+            try await refreshTeeGroupDisplaySummaries()
 
             if snapshot.configuration.scoreOwnerScope != .individual {
                 try await rebuildRoundScoringConfiguration()
@@ -304,6 +306,7 @@ extension RoundSession {
             /// 2. Delete the round participant since this model only lives within the round
             _ = try await participant.delete().get()
             snapshot.participants.removeAll(where: { $0.id == participant.id })
+            try await refreshTeeGroupDisplaySummaries()
 
             if snapshot.configuration.scoreOwnerScope != .individual {
                 try await rebuildRoundScoringConfiguration()
@@ -322,6 +325,71 @@ extension RoundSession {
             throw error
         }
     }
+}
+
+extension RoundSession {
+    func setRoundName(_ rawValue: String) async {
+        addBreadcrumb(message: "Set round name for id: \(snapshot.round.id)")
+        guard snapshot.round.id.isPopulated else { return }
+
+        var round = snapshot.round
+        let normalized = Round.normalizedName(rawValue)
+        guard round.name != normalized else { return }
+
+        round.name = normalized
+        round.lastUpdatedAt = .init()
+
+        do {
+            let updated = try await round.put().get()
+            snapshot.round = updated
+        } catch {
+            addBreadcrumb(level: .error, message: "Failed to update round name", error: error)
+        }
+    }
+
+    func markFirstScoredIfNeeded(at scoredAt: Time) async {
+        addBreadcrumb(message: "Mark first scored date if needed for id: \(snapshot.round.id)")
+        guard snapshot.round.id.isPopulated else { return }
+        if snapshot.round.firstScoredAt != nil { return }
+
+        let currentRound: Round
+        switch await FirebaseService.shared.getRoundDocument(byID: snapshot.round.id) {
+        case .success(let round):
+            currentRound = round
+        case .failure(let error):
+            addBreadcrumb(level: .error, message: "Could not refresh round before first score timestamp", error: error)
+            currentRound = snapshot.round
+        }
+
+        guard currentRound.firstScoredAt == nil else {
+            snapshot.round.firstScoredAt = currentRound.firstScoredAt
+            return
+        }
+
+        var updatedRound = currentRound
+        updatedRound.firstScoredAt = scoredAt
+        updatedRound.lastUpdatedAt = .init()
+
+        switch await updatedRound.put() {
+        case .success(let updated):
+            if snapshot.round.id == updated.id {
+                snapshot.round = updated
+            }
+        case .failure(let error):
+            addBreadcrumb(level: .error, message: "Failed to write first score timestamp", error: error)
+        }
+    }
+
+    func refreshTeeGroupDisplaySummaries() async throws {
+        guard snapshot.round.id.isPopulated else { return }
+        let next = Round.teeGroupDisplayNamesByPlayerID(from: snapshot.participants)
+        guard snapshot.round.teeGroupDisplayNamesByPlayerID != next else { return }
+
+        snapshot.round.teeGroupDisplayNamesByPlayerID = next
+        snapshot.round.lastUpdatedAt = .init()
+        snapshot.round = try await snapshot.round.put().get()
+    }
+
 }
 
 extension RoundSession {

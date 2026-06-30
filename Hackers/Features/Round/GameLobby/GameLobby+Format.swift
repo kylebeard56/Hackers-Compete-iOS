@@ -51,6 +51,10 @@ extension GameLobby {
                     sharedScoreAllowanceBlock
                 }
 
+                if snapshot.configuration.isStablefordFormat {
+                    stablefordPointsBlock
+                }
+
                 if snapshot.configuration.resolvedCompetitionScope == .matchup && !isVegasFormat {
                     matchupScoringBlock
                 }
@@ -181,6 +185,23 @@ extension GameLobby {
     private var shouldShowSharedScoreAllowanceBlock: Bool {
         guard handicapsEnabled, snapshot.isSharedScoreSource else { return false }
         return snapshot.configuration.scoreOwnerScope == .partnership || snapshot.requiresTeams
+    }
+
+    private var stablefordPointsBlock: some View {
+        configBuilderRow(
+            title: "Stableford points",
+            subtitle: "Adjust point values for this round only."
+        ) {
+            Button {
+                Haptics.fire(.light)
+                stablefordPointsEditorItem = StablefordPointsEditorItem()
+            } label: {
+                formatChipLabel(stablefordPointsChipTitle)
+            }
+            .buttonStyle(.plain)
+            .accessibilityLabel("Edit Stableford points")
+            .accessibilityValue(stablefordPointsAccessibilityValue)
+        }
     }
 
     private var sharedScoreAllowanceBlock: some View {
@@ -626,6 +647,15 @@ extension GameLobby {
 
     private func scorePointLabel(_ value: Double) -> String {
         value == floor(value) ? String(Int(value)) : String(format: "%.1f", value)
+    }
+
+    private var stablefordPointsChipTitle: String {
+        RoundStablefordPointsPreset.matching(snapshot.configuration.resolvedStablefordPoints)?.name ?? "Custom"
+    }
+
+    private var stablefordPointsAccessibilityValue: String {
+        let points = snapshot.configuration.resolvedStablefordPoints
+        return "Albatross \(points.albatrossOrBetter), eagle \(points.eagle), birdie \(points.birdie), par \(points.par), bogey \(points.bogey), double bogey \(points.doubleBogey), triple bogey \(points.tripleBogeyOrWorse), quadruple or worse \(points.quadrupleBogeyOrWorse)"
     }
 
     private var teamScoringModeTitle: String {

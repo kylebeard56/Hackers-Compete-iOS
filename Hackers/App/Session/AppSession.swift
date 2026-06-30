@@ -80,6 +80,15 @@ extension AppSession {
     func reset(routeToAuth: Bool = true) {
         addBreadcrumb()
         TelemetryService.shared.resetUser()
+
+        activeRoundID = nil
+        activeSeriesID = nil
+        rounds = []
+        seriesList = []
+        seriesRoundsBySeriesID = [:]
+        preQueuedPlayerIDs = nil
+        ephemeralParticipantID = nil
+        isSpectating = false
         
         // 1. Clear user and sync state to session
         Task {

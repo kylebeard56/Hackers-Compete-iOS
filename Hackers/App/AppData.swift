@@ -11,6 +11,7 @@ final actor AppData: Loggable {
     static let shared = AppData()
     
     private(set) var user: HackersUser?
+    private var primaryPlayer: Player?
     private(set) var currentTermsVersion: String?
     private(set) var currentPolicyVersion: String?
     
@@ -47,19 +48,28 @@ extension AppData {
     func setUser(_ u: HackersUser) {
         addBreadcrumb()
         self.user = u
+        self.primaryPlayer = nil
     }
     
-    func getPrimaryPlayer() async -> Player? {
+    func getPrimaryPlayer(forceRefresh: Bool = false) async -> Player? {
+        if !forceRefresh,
+           let primaryPlayer,
+           primaryPlayer.isPrimary,
+           user?.players.contains(primaryPlayer.id) == true {
+            return primaryPlayer
+        }
         guard let user = self.user,
            let players = try? await FirebaseService.shared.getPlayersByIDs(user.players).get(),
            let player = players.first(where: \.isPrimary)
         else { return nil }
+        self.primaryPlayer = player
         return player
     }
     
     func clearUser() {
         addBreadcrumb()
         self.user = nil
+        self.primaryPlayer = nil
     }
 }
 

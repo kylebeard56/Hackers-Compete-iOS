@@ -203,7 +203,8 @@ final class SeriesRoundCreationMappingTests: XCTestCase {
     func testRoundDraft_carriesPlayerIDsAndConfiguration() {
         var config = SeriesRoundConfiguration()
         config.maxScoreOverPar = .twoTimesPar
-        let sr = fieldSeriesRound(config: config)
+        var sr = fieldSeriesRound(config: config)
+        sr.title = "Off Round"
         let segment = makeCourseSegment()
         let members = [
             makeMember(id: "m1", name: "Alice", playerID: "p1"),
@@ -220,6 +221,7 @@ final class SeriesRoundCreationMappingTests: XCTestCase {
         )
         XCTAssertEqual(draft.id, "round1")
         XCTAssertEqual(draft.shareCode, "ABC12")
+        XCTAssertEqual(draft.name, "Off Round")
         XCTAssertEqual(draft.createdBy, "user1")
         XCTAssertEqual(draft.status, .lobby)
         XCTAssertEqual(Set(draft.players), Set(["p1", "p2"]))

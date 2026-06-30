@@ -150,6 +150,9 @@ extension RoundSnapshot {
         return configuration.mirrorTeeGroupsAsTeams ?? (configuration.scoreOwnerScope == .individual)
     }
     var isVegasFormat: Bool { resolvedActiveTemplate.id == FormatTemplateRegistry.vegas.id }
+    var roundPartnershipsRequireTeamAssignment: Bool {
+        requiresTeams || teams.isPopulated || (isVegasFormat && configuration.resolvedVegasMode == .partnershipAggregate)
+    }
     var isSecretScoring: Bool { configuration.isSecretScoring }
     var areScoresRevealed: Bool { configuration.areScoresRevealed }
 
@@ -161,7 +164,7 @@ extension RoundSnapshot {
     /// Template with bestNSelected / bestWorstEnabled applied to select stages. Used for scoring.
     /// When competitionScope == .matchup, best_ball and stroke_play resolve to their matchup pipelines.
     var resolvedActiveTemplate: GameTemplate {
-        var base = activeTemplate
+        var base = configuration.applyingStablefordPoints(to: activeTemplate)
         let usesTeamScoringBuilder = configuration.primaryFormat.configuration.requiresTeams
 
         // Resolve to matchup pipeline when scope is matchup and template supports it
@@ -205,9 +208,9 @@ extension RoundSnapshot {
     func activeTemplate(forHole holeNumber: Int) -> GameTemplate {
         let seg = segment(forHole: holeNumber)
         if let tid = seg?.templateID, !tid.isEmpty {
-            return FormatTemplateRegistry.template(for: tid)
+            return configuration.applyingStablefordPoints(to: FormatTemplateRegistry.template(for: tid))
         }
-        return activeTemplate
+        return configuration.applyingStablefordPoints(to: activeTemplate)
     }
 
     /// Returns scoring units for the segment covering a given hole.
@@ -270,12 +273,34 @@ extension RoundSnapshot {
         guard let id, id.isPopulated else { return nil }
         return scoringGroups.first(where: { $0.id == id })
     }
+
+    func canCreateRoundPartnership(between first: RoundParticipant, and second: RoundParticipant) -> Bool {
+        guard first.id != second.id,
+              normalizedAssignmentID(first.groupID) == normalizedAssignmentID(second.groupID),
+              normalizedAssignmentID(first.groupID) != nil else {
+            return false
+        }
+
+        let firstTeamID = normalizedAssignmentID(first.teamID)
+        let secondTeamID = normalizedAssignmentID(second.teamID)
+        guard firstTeamID == secondTeamID else { return false }
+
+        if roundPartnershipsRequireTeamAssignment {
+            return firstTeamID != nil
+        }
+        return true
+    }
 }
 
 private extension HoleRange {
     var displayRange: String {
         "\(startHole)-\(endHole)"
     }
+}
+
+private func normalizedAssignmentID(_ value: String?) -> String? {
+    let trimmed = value?.trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
+    return trimmed.isPopulated ? trimmed : nil
 }
 
 extension RoundSnapshot {

@@ -42,7 +42,7 @@ struct DashboardView: View, Loggable {
 //        appSession.rounds.isEmpty ? MockDashboardData.rounds : appSession.rounds
     }
     private var sortedRounds: [Round] {
-        Array(displayRounds).sorted(by: { $0.lastUpdatedAt.unix > $1.lastUpdatedAt.unix })
+        Array(displayRounds).sorted(by: { $0.displayDate.unix > $1.displayDate.unix })
     }
     
     private var activeRounds: [Round] {
@@ -70,8 +70,9 @@ struct DashboardView: View, Loggable {
             TelemetryService.shared.clearContext()
         }
         .task {
-            await appSession.loadRounds()
-            await appSession.loadSeries()
+            async let roundsLoad: Void = appSession.loadRounds()
+            async let seriesLoad: Void = appSession.loadSeries()
+            _ = await (roundsLoad, seriesLoad)
             viewModel.checkForStalledCompletions(in: sortedRounds)
         }
         .task(id: viewModel.currentPlayerID) {
@@ -343,17 +344,13 @@ extension RoundStatus {
 extension Time {
     var formattedDate: String {
         let date = Date(timeIntervalSince1970: unix)
-        let formatter = DateFormatter()
-        formatter.dateStyle = .medium
-        return formatter.string(from: date)
+        return date.formatted(date: .abbreviated, time: .omitted)
     }
 
     /// Format: "Wednesday, Mar 11" (weekday, short month, day)
     var weekdayShortMonthDay: String {
         let date = Date(timeIntervalSince1970: unix)
-        let formatter = DateFormatter()
-        formatter.dateFormat = "EEEE, MMM d"
-        return formatter.string(from: date)
+        return date.formatted(.dateTime.weekday(.wide).month(.abbreviated).day())
     }
 }
 

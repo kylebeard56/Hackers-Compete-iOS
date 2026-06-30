@@ -63,6 +63,7 @@ node_modules/
 build/
 *.ipa
 *.xcarchive
+fastlane/.build-number-cache.json
 
 # Local deployment credentials
 credentials/

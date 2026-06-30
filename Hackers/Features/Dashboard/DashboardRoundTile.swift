@@ -24,24 +24,62 @@ struct DashboardRoundTile: View {
         return round.status
     }
 
+    private var courseName: String? {
+        round.configuration.courses.first?.courseInfo.name
+    }
+
+    private var holeCount: Int? {
+        round.configuration.courses.first?.holeRange.count
+    }
+
+    private var title: String {
+        round.displayTitle(courseName: courseName)
+    }
+
+    private var teeGroupLineCandidates: [String] {
+        round.teeGroupLineCandidates(for: currentPlayerID)
+    }
+
     var body: some View {
         HStack(spacing: 16) {
-            VStack(alignment: .leading, spacing: 4) {
-                if let course = round.configuration.courses.first {
-                    Text(course.courseInfo.name)
-                        .fontStyle(kFontName, size: 15, weight: .semibold)
-                        .foregroundStyle(palette.foregroundColor)
-                        .multilineTextAlignment(.leading)
-                        .lineLimit(2)
-                        .minimumScaleFactor(0.8)
-                    Text("\(course.holeRange.count) holes \(kDot) \(round.players.count) players")
+            VStack(alignment: .leading, spacing: 3) {
+                Text(title)
+                    .fontStyle(kFontName, size: 15, weight: .semibold)
+                    .foregroundStyle(palette.foregroundColor)
+                    .multilineTextAlignment(.leading)
+                    .lineLimit(2)
+                    .minimumScaleFactor(0.8)
+
+                if let holeCount {
+                    Text("\(holeCount) holes \(kDot) \(round.players.count) players")
                         .fontStyle(kFontName, size: 13, weight: .regular)
                         .foregroundStyle(Color.neutral)
+                        .lineLimit(1)
                 }
+
+                if round.hasCustomDisplayName, let courseName, courseName.isPopulated {
+                    Text(courseName)
+                        .fontStyle(kFontName, size: 13, weight: .regular)
+                        .foregroundStyle(Color.neutral)
+                        .lineLimit(1)
+                }
+
+                if teeGroupLineCandidates.isPopulated {
+                    ViewThatFits(in: .horizontal) {
+                        ForEach(Array(teeGroupLineCandidates.enumerated()), id: \.offset) { _, line in
+                            Text(line)
+                                .fontStyle(kFontName, size: 13, weight: .regular)
+                                .foregroundStyle(Color.neutral)
+                                .lineLimit(1)
+                        }
+                    }
+                }
+
                 if showDate {
-                    Text(showWeekdayFormat ? round.lastUpdatedAt.weekdayShortMonthDay : round.lastUpdatedAt.formattedDate)
+                    Text(showWeekdayFormat ? round.displayDate.weekdayShortMonthDay : round.displayDate.formattedDate)
                         .fontStyle(kFontName, size: 12, weight: .regular)
                         .foregroundStyle(Color.neutral3)
+                        .lineLimit(1)
                 }
             }
 

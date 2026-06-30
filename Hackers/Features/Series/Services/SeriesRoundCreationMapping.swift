@@ -184,6 +184,7 @@ enum SeriesRoundCreationMapping {
         let competitionScope = resolvedCompetitionScope(for: seriesRound)
         return Round(
             id: id,
+            name: seriesRound.title,
             shareCode: shareCode,
             createdBy: createdBy,
             status: .lobby,

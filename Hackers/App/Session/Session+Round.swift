@@ -16,9 +16,8 @@ extension AppSession {
         guard let player = await AppData.shared.getPrimaryPlayer() else { return }
         
         // [SOON] TODO: Convert this to ForEach for user.players
-        self.rounds = Set(
-            await FirebaseService.shared.fetchRounds(playerID: player.id).filter({ $0.status != .archived })
-        )
+        let fetchedRounds = await FirebaseService.shared.fetchRounds(playerID: player.id).filter { $0.status != .archived }
+        self.rounds = Set(await backfilledDashboardRounds(fetchedRounds))
     }
     
     /// Immediately remove locally anticipating success, reinsert on failure
@@ -60,5 +59,56 @@ extension AppSession {
         if !deleted {
             rounds.insert(round)
         }
+    }
+
+    private func backfilledDashboardRounds(_ rounds: [Round]) async -> [Round] {
+        var result: [Round] = []
+
+        for round in rounds {
+            var updated = round
+            var didChange = false
+
+            if updated.firstScoredAt == nil {
+                switch await FirebaseService.shared.getScores(for: updated.id) {
+                case .success(let scores):
+                    if let firstScoredAt = scores
+                        .filter(\.hasRecordedScore)
+                        .map(\.createdAt)
+                        .min(by: { $0.unix < $1.unix }) {
+                        updated.firstScoredAt = firstScoredAt
+                        didChange = true
+                    }
+                case .failure(let error):
+                    addBreadcrumb(level: .error, message: "Could not backfill first score timestamp", error: error)
+                }
+            }
+
+            if updated.teeGroupDisplayNamesByPlayerID.isEmpty {
+                switch await FirebaseService.shared.getParticipants(for: updated.id) {
+                case .success(let participants):
+                    let summaries = Round.teeGroupDisplayNamesByPlayerID(from: participants)
+                    if summaries.isPopulated {
+                        updated.teeGroupDisplayNamesByPlayerID = summaries
+                        didChange = true
+                    }
+                case .failure(let error):
+                    addBreadcrumb(level: .error, message: "Could not backfill tee group display names", error: error)
+                }
+            }
+
+            if didChange {
+                switch await updated.put() {
+                case .success(let persisted):
+                    result.append(persisted)
+                case .failure(let error):
+                    addBreadcrumb(level: .error, message: "Could not persist dashboard round backfill", error: error)
+                    result.append(updated)
+                }
+            } else {
+                result.append(updated)
+            }
+        }
+
+        return result
     }
 }

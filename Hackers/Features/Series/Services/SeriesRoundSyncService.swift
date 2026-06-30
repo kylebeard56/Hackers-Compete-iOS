@@ -143,9 +143,24 @@ struct SeriesRoundSyncService: Loggable {
         var workingTeeGroups = snapshot.teeGroups
         var workingRound = snapshot.round
         let desiredSubstitutesScore = series.settings.substitutesScore
+        let desiredRoundName = Round.normalizedName(seriesRound.title)
+
+        if workingRound.name != desiredRoundName {
+            workingRound.name = desiredRoundName
+            workingRound.lastUpdatedAt = .init()
+            let roundToPut = await roundPreservingCurrentStatus(workingRound)
+            switch await roundToPut.put() {
+            case .success(let updated):
+                workingRound = updated
+            case .failure(let error):
+                addBreadcrumb(level: .error, message: "series.round_sync name put failed", error: error)
+                return .failure(.writeFailed(error.localizedDescription))
+            }
+        }
 
         if options.syncFormat {
             workingRound.configuration = resolvedPlan.roundConfiguration
+                .preservingRoundLocalStablefordPoints(from: workingRound.configuration)
             workingRound.lastUpdatedAt = .init()
             let roundToPut = await roundPreservingCurrentStatus(workingRound)
             switch await roundToPut.put() {
@@ -468,8 +483,10 @@ struct SeriesRoundSyncService: Loggable {
 
         if options.syncPlayerData || options.syncOrganization {
             let nextPlayerIDs = workingParticipants.compactMap(\.playerID)
-            if workingRound.players != nextPlayerIDs {
+            let nextTeeGroupSummaries = Round.teeGroupDisplayNamesByPlayerID(from: workingParticipants)
+            if workingRound.players != nextPlayerIDs || workingRound.teeGroupDisplayNamesByPlayerID != nextTeeGroupSummaries {
                 workingRound.players = nextPlayerIDs
+                workingRound.teeGroupDisplayNamesByPlayerID = nextTeeGroupSummaries
                 workingRound.lastUpdatedAt = .init()
                 let roundToPut = await roundPreservingCurrentStatus(workingRound)
                 switch await roundToPut.put() {

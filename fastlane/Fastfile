@@ -1,3 +1,43 @@
+require "json"
+require "fileutils"
+
+def next_local_build_number(cache_path)
+  date_key = Time.now.strftime("%Y-%m-%d")
+  build_prefix = Time.now.strftime("%Y.%m%d")
+
+  FileUtils.mkdir_p(File.dirname(cache_path))
+
+  File.open(cache_path, File::RDWR | File::CREAT, 0o600) do |file|
+    file.flock(File::LOCK_EX)
+    file.rewind
+    contents = file.read
+    attempts_by_date = contents.to_s.strip.empty? ? {} : JSON.parse(contents)
+    UI.user_error!("Build number cache must be a JSON object: #{cache_path}") unless attempts_by_date.is_a?(Hash)
+
+    attempt_number = attempts_by_date.fetch(date_key, 0).to_i + 1
+    attempts_by_date[date_key] = attempt_number
+
+    file.rewind
+    file.write(JSON.pretty_generate(attempts_by_date))
+    file.truncate(file.pos)
+    file.flush
+    file.fsync
+
+    "#{build_prefix}.#{attempt_number}"
+  rescue JSON::ParserError => error
+    UI.user_error!("Build number cache is not valid JSON: #{cache_path} (#{error.message})")
+  end
+end
+
+def deployment_build_number
+  manual_build_number = ENV["HACKERS_BUILD_NUMBER"].to_s.strip
+  return manual_build_number unless manual_build_number.empty?
+
+  cache_path = ENV["BUILD_NUMBER_CACHE"].to_s.strip
+  cache_path = File.expand_path(".build-number-cache.json", __dir__) if cache_path.empty?
+  next_local_build_number(cache_path)
+end
+
 default_platform(:ios)
 
 platform :ios do
@@ -6,6 +46,10 @@ platform :ios do
     group = ENV["EXTERNAL_GROUP"] || "Beta Testers"
     changelog = ENV["CHANGELOG"]
     api_key_path = ENV["APP_STORE_CONNECT_API_KEY_PATH"] || ENV["APP_STORE_CONNECT_API_KEY_P8"]
+    build_number = deployment_build_number
+    build_xcargs = "-allowProvisioningUpdates CURRENT_PROJECT_VERSION=#{build_number}"
+
+    UI.message("Using build number #{build_number}")
 
     export_opts = {
       method: "app-store",
@@ -24,7 +68,7 @@ platform :ios do
       scheme: "Production",
       export_method: "app-store",
       export_options: export_opts,
-      xcargs: "-allowProvisioningUpdates",
+      xcargs: build_xcargs,
       export_xcargs: "-allowProvisioningUpdates",
       output_directory: "./build",
       output_name: "Hackers.ipa",

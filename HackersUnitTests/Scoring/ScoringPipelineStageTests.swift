@@ -114,6 +114,55 @@ final class ScoringPipelineStageTests: XCTestCase {
         XCTAssertEqual(PointsTransformer.computePoints(pointsMap: pointsMap, value: tripleBogeyVal), 0, "Worse than double bogey should still be 0")
     }
 
+    func testRoundStablefordPoints_CustomEightBucketMap() {
+        let points = RoundStablefordPoints(
+            albatrossOrBetter: 8,
+            eagle: 6,
+            birdie: 4,
+            par: 2,
+            bogey: 1,
+            doubleBogey: 1,
+            tripleBogeyOrWorse: -1,
+            quadrupleBogeyOrWorse: -2
+        )
+        let map = points.pointsMap
+
+        XCTAssertEqual(PointsTransformer.computePoints(pointsMap: map, value: makeValue(scoreToPar: -4, points: -4)), 8)
+        XCTAssertEqual(PointsTransformer.computePoints(pointsMap: map, value: makeValue(scoreToPar: -2, points: -2)), 6)
+        XCTAssertEqual(PointsTransformer.computePoints(pointsMap: map, value: makeValue(scoreToPar: -1, points: -1)), 4)
+        XCTAssertEqual(PointsTransformer.computePoints(pointsMap: map, value: makeValue(scoreToPar: 0, points: 0)), 2)
+        XCTAssertEqual(PointsTransformer.computePoints(pointsMap: map, value: makeValue(scoreToPar: 1, points: 1)), 1)
+        XCTAssertEqual(PointsTransformer.computePoints(pointsMap: map, value: makeValue(scoreToPar: 2, points: 2)), 1)
+        XCTAssertEqual(PointsTransformer.computePoints(pointsMap: map, value: makeValue(scoreToPar: 3, points: 3)), -1)
+        XCTAssertEqual(PointsTransformer.computePoints(pointsMap: map, value: makeValue(scoreToPar: 4, points: 4)), -2)
+        XCTAssertEqual(PointsTransformer.computePoints(pointsMap: map, value: makeValue(scoreToPar: 5, points: 5)), -2)
+    }
+
+    func testRoundStablefordPoints_ClampsSavedValues() {
+        let clamped = RoundStablefordPoints(
+            albatrossOrBetter: 30,
+            eagle: -30,
+            birdie: 4,
+            par: 2,
+            bogey: 1,
+            doubleBogey: 0,
+            tripleBogeyOrWorse: -30,
+            quadrupleBogeyOrWorse: 40
+        ).clamped
+
+        XCTAssertEqual(clamped.albatrossOrBetter, 21)
+        XCTAssertEqual(clamped.eagle, -21)
+        XCTAssertEqual(clamped.tripleBogeyOrWorse, -21)
+        XCTAssertEqual(clamped.quadrupleBogeyOrWorse, 21)
+    }
+
+    func testRoundStablefordPointsPreset_MatchesExactSchemes() {
+        XCTAssertEqual(RoundStablefordPointsPreset.matching(.classic), .classic)
+        XCTAssertEqual(RoundStablefordPointsPreset.matching(RoundStablefordPointsPreset.modified.points), .modified)
+        XCTAssertEqual(RoundStablefordPointsPreset.matching(RoundStablefordPointsPreset.fibonacci.points), .fibonacci)
+        XCTAssertNil(RoundStablefordPointsPreset.matching(RoundStablefordPoints(par: 4)))
+    }
+
     func testPointsTransformer_ParDependent() {
         let par3 = makeValue(par: 3, scoreToPar: 0)
         let par4 = makeValue(par: 4, scoreToPar: 0)

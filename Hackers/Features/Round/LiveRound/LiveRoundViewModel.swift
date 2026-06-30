@@ -4190,6 +4190,7 @@ final class LiveRoundViewModel: ObservableObject, Loggable {
         
         do {
             _ = try await entry.put().get()
+            await roundSession.markFirstScoredIfNeeded(at: entry.createdAt)
             if let previousEntry, previousEntry.id != entry.id {
                 _ = try? await previousEntry.delete().get()
             }
@@ -4303,6 +4304,7 @@ final class LiveRoundViewModel: ObservableObject, Loggable {
 
         do {
             _ = try await entry.put().get()
+            await roundSession.markFirstScoredIfNeeded(at: entry.createdAt)
             if let previousEntry, previousEntry.id != entry.id {
                 _ = try? await previousEntry.delete().get()
             }
@@ -5070,6 +5072,9 @@ final class LiveRoundViewModel: ObservableObject, Loggable {
 
         do {
             _ = try await entriesToWrite.batchPut().get()
+            if let firstScoredAt = entriesToWrite.map(\.createdAt).min(by: { $0.unix < $1.unix }) {
+                await roundSession.markFirstScoredIfNeeded(at: firstScoredAt)
+            }
             lastLocalScoreAt = Date()
             usedMaxScoreFill = true
 

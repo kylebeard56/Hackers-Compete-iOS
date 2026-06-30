@@ -23,7 +23,10 @@ enum SeriesDashboardTileChip {
 
     static func effectiveStatus(for seriesRound: SeriesRound, linkedRounds: [String: Round]) -> SeriesRoundStatus {
         guard let roundID = seriesRound.roundID, let linked = linkedRounds[roundID] else { return seriesRound.status }
-        return SeriesRoundStatus(linkedRoundStatus: linked.status)
+        return SeriesViewModel.resolvedLinkedRoundStatus(
+            previousStatus: seriesRound.status,
+            linkedRoundStatus: linked.status
+        )
     }
 
     static func chipMode(

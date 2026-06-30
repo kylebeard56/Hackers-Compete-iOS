@@ -133,6 +133,12 @@ struct SeriesRoundCreationService: Loggable {
             )
 
             let createdParticipants = try await participantsPayload.batchPostChunked().get()
+            let teeGroupSummaries = Round.teeGroupDisplayNamesByPlayerID(from: createdParticipants)
+            if teeGroupSummaries.isPopulated {
+                round.teeGroupDisplayNamesByPlayerID = teeGroupSummaries
+                round.lastUpdatedAt = .init()
+                round = try await round.put().get()
+            }
             let populatedTeeGroupIDs = Set(createdParticipants.compactMap(\.groupID).filter(\.isPopulated))
             let retainedTeeGroups = teeGroups.filter { populatedTeeGroupIDs.contains($0.id) }
             for group in teeGroups where !populatedTeeGroupIDs.contains(group.id) {

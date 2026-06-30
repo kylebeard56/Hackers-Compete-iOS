@@ -3485,7 +3485,8 @@ final class SeriesViewModel: ObservableObject, Loggable {
 
     func shouldSyncLinkedLobbyAfterSeriesRoundUpdate(previous: SeriesRound, updated: SeriesRound) -> Bool {
         guard updated.roundID != nil else { return false }
-        return previous.scheduledAt != updated.scheduledAt
+        return previous.title != updated.title
+            || previous.scheduledAt != updated.scheduledAt
             || previous.courseOverride != updated.courseOverride
             || previous.roundConfig != updated.roundConfig
             || previous.teamScoringProfileID != updated.teamScoringProfileID

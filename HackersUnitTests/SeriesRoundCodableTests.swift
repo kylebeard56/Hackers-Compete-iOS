@@ -275,6 +275,47 @@ final class SeriesRoundCodableTests: XCTestCase {
         XCTAssertNotNil(dictionary["shared_score_handicap_config"])
     }
 
+    func testRoundStablefordPointsRoundTripsAndDefaultsToClassicWhenMissing() throws {
+        let decoder = JSONDecoder()
+        let legacyConfiguration = try decoder.decode(RoundConfiguration.self, from: Data(#"{}"#.utf8))
+        XCTAssertNil(legacyConfiguration.stablefordPoints)
+        XCTAssertEqual(legacyConfiguration.resolvedStablefordPoints, .classic)
+
+        let points = RoundStablefordPoints(
+            albatrossOrBetter: 9,
+            eagle: 7,
+            birdie: 4,
+            par: 2,
+            bogey: 1,
+            doubleBogey: 1,
+            tripleBogeyOrWorse: -1,
+            quadrupleBogeyOrWorse: -2
+        )
+        let configuration = RoundConfiguration(stablefordPoints: points)
+        let data = try JSONEncoder().encode(configuration)
+        let decoded = try decoder.decode(RoundConfiguration.self, from: data)
+        let dictionary = try configuration.toDictionary()
+
+        XCTAssertEqual(decoded.stablefordPoints, points)
+        XCTAssertNotNil(dictionary["stableford_points"])
+    }
+
+    func testRoundConfigurationPreservesStablefordPointsOnlyForStablefordSync() {
+        let points = RoundStablefordPoints(albatrossOrBetter: 9, eagle: 6, birdie: 4, par: 2, bogey: 1, doubleBogey: 0, tripleBogeyOrWorse: -1, quadrupleBogeyOrWorse: -2)
+        let existing = RoundConfiguration(
+            formatSummary: RoundFormatSummary(from: FormatTemplateRegistry.stableford),
+            stablefordPoints: points
+        )
+
+        let stablefordSync = RoundConfiguration(formatSummary: RoundFormatSummary(from: FormatTemplateRegistry.stableford))
+            .preservingRoundLocalStablefordPoints(from: existing)
+        let strokePlaySync = RoundConfiguration(formatSummary: RoundFormatSummary(from: FormatTemplateRegistry.strokePlayGross))
+            .preservingRoundLocalStablefordPoints(from: existing)
+
+        XCTAssertEqual(stablefordSync.stablefordPoints, points)
+        XCTAssertNil(strokePlaySync.stablefordPoints)
+    }
+
     func testRoundLeagueHandicapMaximumRoundTripsAndDefaultsToNilWhenMissing() throws {
         let decoder = JSONDecoder()
         let legacyConfiguration = try decoder.decode(RoundConfiguration.self, from: Data(#"{}"#.utf8))

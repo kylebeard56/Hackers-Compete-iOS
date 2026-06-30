@@ -61,6 +61,152 @@ struct PointsMapEntry: Codable, Hashable {
     }
 }
 
+// MARK: - Round Stableford Points
+
+struct RoundStablefordPoints: Codable, Hashable {
+    static let minimumPointValue = -21
+    static let maximumPointValue = 21
+    static let classic = RoundStablefordPoints()
+
+    var albatrossOrBetter: Int
+    var eagle: Int
+    var birdie: Int
+    var par: Int
+    var bogey: Int
+    var doubleBogey: Int
+    var tripleBogeyOrWorse: Int
+    var quadrupleBogeyOrWorse: Int
+
+    init(
+        albatrossOrBetter: Int = 5,
+        eagle: Int = 4,
+        birdie: Int = 3,
+        par: Int = 2,
+        bogey: Int = 1,
+        doubleBogey: Int = 0,
+        tripleBogeyOrWorse: Int = 0,
+        quadrupleBogeyOrWorse: Int = 0
+    ) {
+        self.albatrossOrBetter = albatrossOrBetter
+        self.eagle = eagle
+        self.birdie = birdie
+        self.par = par
+        self.bogey = bogey
+        self.doubleBogey = doubleBogey
+        self.tripleBogeyOrWorse = tripleBogeyOrWorse
+        self.quadrupleBogeyOrWorse = quadrupleBogeyOrWorse
+    }
+
+    enum CodingKeys: String, CodingKey {
+        case albatrossOrBetter = "albatross_or_better"
+        case eagle
+        case birdie
+        case par
+        case bogey
+        case doubleBogey = "double_bogey"
+        case tripleBogeyOrWorse = "triple_bogey_or_worse"
+        case quadrupleBogeyOrWorse = "quadruple_bogey_or_worse"
+    }
+
+    init(from decoder: Decoder) throws {
+        let c = try decoder.container(keyedBy: CodingKeys.self)
+        let classic = Self.classic
+        albatrossOrBetter = try c.decodeIfPresent(Int.self, forKey: .albatrossOrBetter) ?? classic.albatrossOrBetter
+        eagle = try c.decodeIfPresent(Int.self, forKey: .eagle) ?? classic.eagle
+        birdie = try c.decodeIfPresent(Int.self, forKey: .birdie) ?? classic.birdie
+        par = try c.decodeIfPresent(Int.self, forKey: .par) ?? classic.par
+        bogey = try c.decodeIfPresent(Int.self, forKey: .bogey) ?? classic.bogey
+        doubleBogey = try c.decodeIfPresent(Int.self, forKey: .doubleBogey) ?? classic.doubleBogey
+        tripleBogeyOrWorse = try c.decodeIfPresent(Int.self, forKey: .tripleBogeyOrWorse) ?? classic.tripleBogeyOrWorse
+        quadrupleBogeyOrWorse = try c.decodeIfPresent(Int.self, forKey: .quadrupleBogeyOrWorse) ?? classic.quadrupleBogeyOrWorse
+    }
+
+    var isClassic: Bool { self == Self.classic }
+
+    var clamped: RoundStablefordPoints {
+        RoundStablefordPoints(
+            albatrossOrBetter: Self.clamped(albatrossOrBetter),
+            eagle: Self.clamped(eagle),
+            birdie: Self.clamped(birdie),
+            par: Self.clamped(par),
+            bogey: Self.clamped(bogey),
+            doubleBogey: Self.clamped(doubleBogey),
+            tripleBogeyOrWorse: Self.clamped(tripleBogeyOrWorse),
+            quadrupleBogeyOrWorse: Self.clamped(quadrupleBogeyOrWorse)
+        )
+    }
+
+    var pointsMap: PointsMap {
+        PointsMap(
+            mode: .parRelative,
+            entries: [
+                .init(scoreToPar: -3, points: Double(albatrossOrBetter)),
+                .init(scoreToPar: -2, points: Double(eagle)),
+                .init(scoreToPar: -1, points: Double(birdie)),
+                .init(scoreToPar:  0, points: Double(par)),
+                .init(scoreToPar:  1, points: Double(bogey)),
+                .init(scoreToPar:  2, points: Double(doubleBogey)),
+                .init(scoreToPar:  3, points: Double(tripleBogeyOrWorse)),
+                .init(scoreToPar:  4, points: Double(quadrupleBogeyOrWorse)),
+            ]
+        )
+    }
+
+    private static func clamped(_ value: Int) -> Int {
+        min(maximumPointValue, max(minimumPointValue, value))
+    }
+}
+
+enum RoundStablefordPointsPreset: String, CaseIterable, Hashable, Identifiable {
+    case classic
+    case modified
+    case fibonacci
+
+    var id: String { rawValue }
+
+    var name: String {
+        switch self {
+        case .classic: return "Classic"
+        case .modified: return "Modified"
+        case .fibonacci: return "Fibonacci"
+        }
+    }
+
+    var points: RoundStablefordPoints {
+        switch self {
+        case .classic:
+            return .classic
+        case .modified:
+            return RoundStablefordPoints(
+                albatrossOrBetter: 8,
+                eagle: 5,
+                birdie: 2,
+                par: 0,
+                bogey: -1,
+                doubleBogey: -3,
+                tripleBogeyOrWorse: -3,
+                quadrupleBogeyOrWorse: -3
+            )
+        case .fibonacci:
+            return RoundStablefordPoints(
+                albatrossOrBetter: 21,
+                eagle: 13,
+                birdie: 8,
+                par: 5,
+                bogey: 3,
+                doubleBogey: 2,
+                tripleBogeyOrWorse: 1,
+                quadrupleBogeyOrWorse: 0
+            )
+        }
+    }
+
+    static func matching(_ points: RoundStablefordPoints) -> RoundStablefordPointsPreset? {
+        let clamped = points.clamped
+        return allCases.first { $0.points == clamped }
+    }
+}
+
 // MARK: - Standard Points Maps
 
 extension PointsMap {
@@ -75,6 +221,8 @@ extension PointsMap {
                 .init(scoreToPar:  0, points: 2),
                 .init(scoreToPar:  1, points: 1),
                 .init(scoreToPar:  2, points: 0),
+                .init(scoreToPar:  3, points: 0),
+                .init(scoreToPar:  4, points: 0),
             ]
         )
     }

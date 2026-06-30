@@ -44,6 +44,7 @@ struct DashboardHomeView: View {
     @State private var coursesSegment: CoursesSegment = .recent
     @State private var showDashboardSkeleton = true
     @State private var dashboardSkeletonStart: Date?
+    @State private var dashboardSkeletonTask: Task<Void, Never>?
     @State private var showRecentPlayers = false
     @State private var showRecentCourses = false
     @State private var showPlayAgainSheet = false
@@ -163,26 +164,27 @@ struct DashboardHomeView: View {
                 dashboardSkeletonStart = Date()
             }
             if isLoadingRounds || homeViewModel.isLoading {
-                dashboardSkeletonStart = Date()
-                showDashboardSkeleton = true
+                startDashboardSkeleton()
             }
             runDashboardSkeletonTimingIfNeeded()
         }
         .onChange(of: isLoadingRounds) { _, isNowLoading in
             if isNowLoading {
-                dashboardSkeletonStart = Date()
-                showDashboardSkeleton = true
+                startDashboardSkeleton()
             } else {
                 runDashboardSkeletonTimingIfNeeded()
             }
         }
         .onChange(of: homeViewModel.isLoading) { _, isNowLoading in
             if isNowLoading {
-                dashboardSkeletonStart = Date()
-                showDashboardSkeleton = true
+                startDashboardSkeleton()
             } else {
                 runDashboardSkeletonTimingIfNeeded()
             }
+        }
+        .onDisappear {
+            dashboardSkeletonTask?.cancel()
+            dashboardSkeletonTask = nil
         }
         .confirmationDialog("Delete round?", isPresented: Binding(
             get: { roundToDelete != nil },
@@ -199,21 +201,33 @@ struct DashboardHomeView: View {
         }
     }
 
+    private func startDashboardSkeleton() {
+        dashboardSkeletonTask?.cancel()
+        dashboardSkeletonTask = nil
+        dashboardSkeletonStart = Date()
+        showDashboardSkeleton = true
+    }
+
     private func runDashboardSkeletonTimingIfNeeded() {
         guard !isLoadingRounds, !homeViewModel.isLoading else { return }
+        dashboardSkeletonTask?.cancel()
         let start = dashboardSkeletonStart ?? Date()
-        Task {
-            while true {
+        dashboardSkeletonTask = Task { @MainActor in
+            while !Task.isCancelled {
                 let elapsed = Date().timeIntervalSince(start)
                 let canHide = viewModel.currentPlayerID != nil || elapsed >= kMaxSkeletonTime
                 if elapsed >= kMinSkeletonTime && canHide { break }
                 if elapsed >= kMaxSkeletonTime { break }
-                try? await Task.sleep(for: .milliseconds(50))
+                do {
+                    try await Task.sleep(for: .milliseconds(50))
+                } catch {
+                    return
+                }
             }
-            await MainActor.run {
-                dashboardSkeletonStart = nil
-                showDashboardSkeleton = false
-            }
+            guard !Task.isCancelled else { return }
+            dashboardSkeletonStart = nil
+            showDashboardSkeleton = false
+            dashboardSkeletonTask = nil
         }
     }
 
@@ -276,7 +290,7 @@ struct DashboardHomeView: View {
                     }
                 }
             } else {
-                ForEach(activeRounds, id: \.self) { round in
+                ForEach(activeRounds, id: \.id) { round in
                     Button {
                         Haptics.fire(.light)
                         onRoundTap(round)
@@ -379,10 +393,9 @@ struct DashboardHomeView: View {
         .padding(.vertical, 10)
     }
 
-    private func seriesTileRow(for series: Series) -> some View {
-        let linked = SeriesDashboardTileChip.linkedRoundsMap(from: appSession.rounds)
+    private func seriesTileRow(for series: Series, linkedRounds: [String: Round]) -> some View {
         let seriesRounds = appSession.seriesRoundsBySeriesID[series.id] ?? []
-        let chipMode = SeriesDashboardTileChip.chipMode(seriesRounds: seriesRounds, linkedRounds: linked)
+        let chipMode = SeriesDashboardTileChip.chipMode(seriesRounds: seriesRounds, linkedRounds: linkedRounds)
         return HStack(spacing: 12) {
             VStack(alignment: .leading, spacing: 4) {
                 Text(series.name)
@@ -401,6 +414,7 @@ struct DashboardHomeView: View {
     @ViewBuilder
     private var seriesSection: some View {
         let userSeries = appSession.seriesList
+        let linkedRounds = SeriesDashboardTileChip.linkedRoundsMap(from: appSession.rounds)
         VStack(spacing: 12) {
             HStack {
                 Text("My series")
@@ -423,7 +437,9 @@ struct DashboardHomeView: View {
 //                }
             }
 
-            if userSeries.isEmpty {
+            if appSession.isLoadingSeries && userSeries.isEmpty {
+                activeRoundsSkeleton
+            } else if userSeries.isEmpty {
                 VStack(spacing: 16) {
                     EmptyStateView(preset: .mySeries)
                     if let onCreateSeries {
@@ -446,7 +462,7 @@ struct DashboardHomeView: View {
                             Haptics.fire(.light)
                             onSeriesTap?(series)
                         } label: {
-                            seriesTileRow(for: series)
+                            seriesTileRow(for: series, linkedRounds: linkedRounds)
                         }
                         .buttonStyle(.plain)
                     }

@@ -22,17 +22,29 @@ extension AppSession {
             .filter { $0.status != .archived }
             .sorted { $0.lastUpdatedAt.unix > $1.lastUpdatedAt.unix }
 
+        let maxConcurrentRoundLoads = 4
+        let seriesIDs = sorted.map(\.id)
         var roundsBySeriesID: [String: [SeriesRound]] = [:]
         await withTaskGroup(of: (String, [SeriesRound]).self) { group in
-            for series in sorted {
-                let seriesID = series.id
+            var nextIndex = 0
+
+            func enqueueNext() {
+                guard nextIndex < seriesIDs.count else { return }
+                let seriesID = seriesIDs[nextIndex]
+                nextIndex += 1
                 group.addTask {
                     let rounds = await FirebaseService.shared.fetchSeriesRounds(seriesID: seriesID)
                     return (seriesID, rounds)
                 }
             }
+
+            for _ in 0..<min(maxConcurrentRoundLoads, seriesIDs.count) {
+                enqueueNext()
+            }
+
             for await (seriesID, rounds) in group {
                 roundsBySeriesID[seriesID] = rounds
+                enqueueNext()
             }
         }
 
