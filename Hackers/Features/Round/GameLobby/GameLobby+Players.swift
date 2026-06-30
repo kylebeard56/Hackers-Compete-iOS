@@ -59,7 +59,9 @@ private struct TeeGroupSlotRow: View {
                         size: playerAvatarSize,
                         fillColor: avatarFillColor,
                         glassTint: Color.neutral6,
-                        initialsColor: avatarFillColor != nil ? .white : palette.foregroundColor
+                        initialsColor: avatarFillColor.map {
+                            Color.accessibleLabelOnSolidBackground(background: $0, colorScheme: palette.scheme)
+                        } ?? palette.foregroundColor
                     )
                     .overlay {
                         if participant.isSubstitute {
@@ -1331,7 +1333,9 @@ extension GameLobby {
                 badgeIcon: badgeIcon,
                 badgeIconColor: Color.neutral,
                 badgeBackgroundColor: Color.clear,//accentGreen.opacity(0.25),
-                initialsColor: avatarFillColor != nil ? .white : nil
+                initialsColor: avatarFillColor.map {
+                    Color.accessibleLabelOnSolidBackground(background: $0, colorScheme: palette.scheme)
+                }
             )
             .overlay {
                 if participant.isSubstitute {
@@ -1796,7 +1800,9 @@ private struct TeamSlotRow: View {
                         size: playerAvatarSize,
                         fillColor: avatarFillColor,
                         glassTint: .neutral6,
-                        initialsColor: avatarFillColor != nil ? .white : nil
+                        initialsColor: avatarFillColor.map {
+                            Color.accessibleLabelOnSolidBackground(background: $0, colorScheme: palette.scheme)
+                        }
                     )
                     .overlay {
                         if participant.isSubstitute {
@@ -2040,9 +2046,13 @@ extension GameLobby {
         }
     }
 
-    private func teamHeaderNameColor(for team: RoundTeam) -> Color {
-        if snapshot.configuration.usesTeamColors, let c = team.displaySwatchColor { return c }
-        return palette.foregroundColor
+    private func teamHeaderColorStyle(for team: RoundTeam) -> AccessibleTeamColorStyle {
+        AccessibleTeamColorStyle.resolve(
+            teamColor: snapshot.configuration.usesTeamColors ? team.displaySwatchColor : nil,
+            palette: palette,
+            colorScheme: colorScheme,
+            surface: .glass
+        )
     }
 
     private func handicapStrokes(forTeam team: RoundTeam, players: [RoundParticipant]) -> Int {
@@ -2069,10 +2079,21 @@ extension GameLobby {
                     Haptics.fire(.light)
                     teamEditorTarget = team
                 } label: {
-                    Text(team.name)
-                        .fontStyle(kFontName, size: 17, weight: .semibold)
-                        .foregroundStyle(teamHeaderNameColor(for: team))
-                        .alignLeading()
+                    let style = teamHeaderColorStyle(for: team)
+                    HStack(spacing: 8) {
+                        if snapshot.configuration.usesTeamColors, team.displaySwatchColor != nil {
+                            Circle()
+                                .fill(style.accent)
+                                .frame(width: 8, height: 8)
+                                .accessibilityHidden(true)
+                        }
+
+                        Text(team.name)
+                            .fontStyle(kFontName, size: 17, weight: .semibold)
+                            .foregroundStyle(style.readableText)
+                            .lineLimit(1)
+                    }
+                    .alignLeading()
                 }
                 .buttonStyle(.plain)
                 .disabled(readOnly)

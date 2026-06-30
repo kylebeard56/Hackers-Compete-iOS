@@ -46,7 +46,15 @@ struct TeamScoringRow: View {
     }
 
     private var effectiveAccent: Color {
-        viewModel.hasTeamColorMatchingTheme ? palette.foregroundColor : viewModel.theme.color
+        viewModel.theme.color
+    }
+    private var teamColorStyle: AccessibleTeamColorStyle {
+        AccessibleTeamColorStyle.resolve(
+            teamColor: team.displaySwatchColor ?? effectiveAccent,
+            palette: palette,
+            colorScheme: colorScheme,
+            surface: .glass
+        )
     }
 
     var body: some View {
@@ -61,7 +69,7 @@ struct TeamScoringRow: View {
                     VStack(alignment: .leading, spacing: 4) {
                         Text(team.name)
                             .fontStyle(kFontName, size: 17, weight: .semibold)
-                            .foregroundStyle(team.displaySwatchColor ?? effectiveAccent)
+                            .foregroundStyle(teamColorStyle.readableText)
                             .lineLimit(1)
 
                         Text(memberNames)
@@ -82,7 +90,7 @@ struct TeamScoringRow: View {
     private var scorePill: some View {
         let scp = teamScoreToPar
         let isHoleScored = gross != nil
-        let badgeColor = team.displaySwatchColor ?? effectiveAccent
+        let badgeColor = teamColorStyle.accent
 
         ZStack(alignment: .topTrailing) {
             HStack(spacing: 1) {
@@ -120,14 +128,13 @@ struct TeamScoringRow: View {
     @ViewBuilder
     private var enterScoreContent: some View {
         let isScored = gross != nil
-        let color = team.displaySwatchColor ?? effectiveAccent
         let label = isScored
             ? (viewModel.isFriendlyScoreInputMode
                 ? viewModel.friendlyScoreLabel(relativeToPar: scoreInputValue ?? 0, par: holePar, format: .short)
                 : viewModel.friendlyScoreLabel(strokes: gross ?? 6, par: holePar, format: .shortWithStrokes))
             : "Enter score"
-        let tint = isScored ? color.opacity(colorScheme.translucent(0.10, 0.14)) : palette.whiteGlassButtonColor
-        let foreground: Color = isScored ? color : palette.foregroundColor
+        let tint = isScored ? teamColorStyle.subtleFill : palette.whiteGlassButtonColor
+        let foreground: Color = isScored ? teamColorStyle.readableText : palette.foregroundColor
 
         Text(label)
             .fontStyle(kFontName, size: 14, weight: .semibold)
@@ -186,8 +193,15 @@ struct SharedScoreOwnerRow: View {
     }
 
     private var effectiveAccent: Color {
-        accentColor
-        ?? (viewModel.hasTeamColorMatchingTheme ? palette.foregroundColor : viewModel.theme.color)
+        accentColor ?? viewModel.theme.color
+    }
+    private var accentStyle: AccessibleTeamColorStyle {
+        AccessibleTeamColorStyle.resolve(
+            teamColor: effectiveAccent,
+            palette: palette,
+            colorScheme: colorScheme,
+            surface: .glass
+        )
     }
 
     var body: some View {
@@ -212,7 +226,7 @@ struct SharedScoreOwnerRow: View {
     private var ownerIdentity: some View {
         HStack(alignment: .center, spacing: 12) {
             RoundedRectangle(cornerRadius: 999, style: .continuous)
-                .fill(effectiveAccent.opacity(0.95))
+                .fill(accentStyle.accent.opacity(0.95))
                 .frame(width: 4, height: accentBarHeight)
 
             VStack(alignment: .leading, spacing: 4) {
@@ -245,12 +259,12 @@ struct SharedScoreOwnerRow: View {
             ForEach(0..<4, id: \.self) { index in
                 Circle()
                     .strokeBorder(
-                        effectiveAccent,
+                        accentStyle.accent,
                         lineWidth: index < strokesReceived ? 0 : 1
                     )
                     .background(
                         Circle()
-                            .fill(index < strokesReceived ? effectiveAccent : .clear)
+                            .fill(index < strokesReceived ? accentStyle.accent : .clear)
                     )
                     .frame(width: dotSize, height: dotSize)
             }
@@ -258,7 +272,7 @@ struct SharedScoreOwnerRow: View {
             if let net, let gross, net != gross {
                 Text("Net \(net)")
                     .fontStyle(kFontName, size: 13, weight: .semibold)
-                    .foregroundStyle(effectiveAccent)
+                    .foregroundStyle(accentStyle.readableText)
             }
         }
     }
@@ -295,7 +309,7 @@ struct SharedScoreOwnerRow: View {
 
             if isHoleScored {
                 Icon(name: "f058", size: 14, weight: .solid)
-                    .foregroundStyle(effectiveAccent)
+                    .foregroundStyle(accentStyle.accent)
                     .offset(x: 2, y: -2)
             }
         }
@@ -309,8 +323,8 @@ struct SharedScoreOwnerRow: View {
                 ? viewModel.friendlyScoreLabel(relativeToPar: scoreInputValue ?? 0, par: holePar, format: .short)
                 : viewModel.friendlyScoreLabel(strokes: gross ?? 6, par: holePar, format: .shortWithStrokes))
             : "Enter score"
-        let tint = isScored ? effectiveAccent.opacity(colorScheme.translucent(0.10, 0.14)) : palette.whiteGlassButtonColor
-        let foreground: Color = isScored ? effectiveAccent : palette.foregroundColor
+        let tint = isScored ? accentStyle.subtleFill : palette.whiteGlassButtonColor
+        let foreground: Color = isScored ? accentStyle.readableText : palette.foregroundColor
 
         Text(label)
             .fontStyle(kFontName, size: 14, weight: .semibold)

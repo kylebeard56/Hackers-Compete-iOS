@@ -51,7 +51,7 @@ struct FullScorecardView: View {
     
     private var palette: DesignPalette { .init(theme: .primary, scheme: colorScheme) }
     private var effectiveAccent: Color {
-        viewModel.hasTeamColorMatchingTheme ? palette.foregroundColor : viewModel.theme.color
+        viewModel.theme.color
     }
     
     private var displayedHoles: [Int] {
@@ -381,9 +381,9 @@ private extension FullScorecardView {
             let strokesReceived = strokesReceived(for: row, holeNumber: holeNumber)
             let par = viewModel.hole(for: holeNumber)?.par ?? 4
             let isSelected = row.id == selectedParticipantID
-            let accentColor = participantHighlightColor(for: row.participant)
+            let highlightStyle = participantHighlightStyle(for: row.participant)
+            let accentColor = highlightStyle.accent.opacity(0.8)
             let canEditParticipant = allowsScoreEditing && viewModel.canEditScorecard(participant: row.participant)
-            let isTeamColor = viewModel.teamColor(for: row.participant) != nil
             let scoreCellView = scoreCell(
                 par: par,
                 gross: gross,
@@ -391,7 +391,7 @@ private extension FullScorecardView {
                 strokesReceived: strokesReceived,
                 isSelected: isSelected,
                 highlightColor: accentColor,
-                isTeamColor: isTeamColor
+                highlightTextColor: highlightStyle.readableText
             )
             let isEditing: Bool
             if case .scoreEdit(let anchor) = rightPanelContent, isRotated {
@@ -663,7 +663,7 @@ private extension FullScorecardView {
         let isSelected = row.id == selectedParticipantID
         let canEditParticipant = allowsScoreEditing && viewModel.canEditScorecard(participant: row.participant)
         let accrued = accruedScoreLabel(for: row)
-        let accruedColor = isSelected ? participantHighlightColor(for: row.participant) : palette.foregroundColor
+        let accruedColor = isSelected ? participantHighlightStyle(for: row.participant).readableText : palette.foregroundColor
         
         return VStack(alignment: .leading, spacing: 1) {
             HStack(spacing: 8) {
@@ -731,7 +731,7 @@ private extension FullScorecardView {
         let isSelected = row.id == selectedParticipantID
         let canEditParticipant = allowsScoreEditing && viewModel.canEditScorecard(participant: row.participant)
         let accrued = accruedScoreLabel(for: row)
-        let accruedColor = isSelected ? participantHighlightColor(for: row.participant) : palette.foregroundColor
+        let accruedColor = isSelected ? participantHighlightStyle(for: row.participant).readableText : palette.foregroundColor
         
         return VStack(alignment: .leading, spacing: 1) {
             Text(accrued)
@@ -780,7 +780,7 @@ private extension FullScorecardView {
         strokesReceived: Int,
         isSelected: Bool,
         highlightColor: Color,
-        isTeamColor: Bool = false
+        highlightTextColor: Color? = nil
     ) -> some View {
         let displayed = viewModel.scoreBasis == .gross ? gross : net
         let isScored = gross != nil
@@ -788,10 +788,13 @@ private extension FullScorecardView {
         let baseTextColor = isScored ? palette.foregroundColor : Color.neutral4
         let diff = (displayed ?? 0) - (par ?? 0)
         let isSolidShape = diff <= -2 || diff >= 2
-        let useWhiteOnSolid = isSelected && isScored && isSolidShape && isTeamColor
-        let textColor: Color = useWhiteOnSolid
-        ? .white
-        : (isSelected && !isScored ? highlightColor : baseTextColor)
+        let textColor: Color = if isSelected && isScored && isSolidShape {
+            Color.accessibleLabelOnSolidBackground(background: highlightColor, colorScheme: colorScheme)
+        } else if isSelected && !isScored {
+            highlightTextColor ?? highlightColor
+        } else {
+            baseTextColor
+        }
         
         return VStack(spacing: 8) {
             ZStack {
@@ -1055,15 +1058,21 @@ private extension FullScorecardView {
     
     private var filterMenuButtonLabel: some View {
         let teamColor = viewModel.teamColor(for: selectedParticipantID.flatMap { id in viewModel.snapshot.participants.first(where: { $0.id == id }) } ?? participant)
+        let style = AccessibleTeamColorStyle.resolve(
+            teamColor: teamColor ?? effectiveAccent,
+            palette: palette,
+            colorScheme: colorScheme,
+            surface: .solidFill
+        )
         return HStack(spacing: 6) {
             Icon(name: "f06e", size: 13, weight: .regular)
             Text("Edit visibility")
                 .fontStyle(kFontName, size: 13, weight: .semibold)
         }
-        .foregroundStyle(teamColor != nil ? .white : palette.backgroundColor)
+        .foregroundStyle(style.solidFillText)
         .padding(.vertical, 8)
         .padding(.horizontal, 12)
-        .background(effectiveAccent)
+        .background(style.accent)
         .clipShape(.capsule)
     }
     
@@ -1426,9 +1435,17 @@ private extension FullScorecardView {
         return value.map(String.init) ?? "—"
     }
     
+    func participantHighlightStyle(for participant: RoundParticipant) -> AccessibleTeamColorStyle {
+        AccessibleTeamColorStyle.resolve(
+            teamColor: viewModel.teamColor(for: participant) ?? effectiveAccent,
+            palette: palette,
+            colorScheme: colorScheme,
+            surface: .card
+        )
+    }
+
     func participantHighlightColor(for participant: RoundParticipant) -> Color {
-        let c = viewModel.teamColor(for: participant) ?? effectiveAccent
-        return c.opacity(0.8)
+        participantHighlightStyle(for: participant).accent.opacity(0.8)
     }
 
     func menuScoreLabel(value: Int, par: Int) -> String {

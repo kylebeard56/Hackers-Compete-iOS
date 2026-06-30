@@ -524,7 +524,7 @@ extension LiveRound {
     }
     
     private var effectiveAccent: Color {
-        viewModel.hasTeamColorMatchingTheme ? palette.foregroundColor : viewModel.theme.color
+        viewModel.theme.color
     }
 
     @ViewBuilder

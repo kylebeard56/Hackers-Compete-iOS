@@ -642,7 +642,12 @@ private struct RoundTeamEditorSheet: View {
 
     private var customChipForeground: Color {
         guard useCustomColor else { return palette.foregroundColor }
-        return ColorValue(color: effectiveCustomColor).preferredContrastingLabelColor
+        return AccessibleTeamColorStyle.resolve(
+            teamColor: effectiveCustomColor,
+            palette: palette,
+            colorScheme: colorScheme,
+            surface: .solidFill
+        ).solidFillText
     }
 
     private var customChipBackground: Color {
@@ -707,10 +712,16 @@ private struct RoundTeamEditorSheet: View {
                                         lastPreset = option
                                         Haptics.fire(.light)
                                     } label: {
+                                        let style = AccessibleTeamColorStyle.resolve(
+                                            teamColor: option.value,
+                                            palette: palette,
+                                            colorScheme: colorScheme,
+                                            surface: .solidFill
+                                        )
                                         Chip(
                                             text: option.name,
                                             size: .small,
-                                            foreground: !useCustomColor && color == option ? .white : option.value,
+                                            foreground: !useCustomColor && color == option ? style.solidFillText : style.readableText,
                                             background: !useCustomColor && color == option ? option.value : option.value.opacity(colorScheme.translucent)
                                         )
                                     }
@@ -743,12 +754,15 @@ private struct RoundTeamEditorSheet: View {
                                     color = .none
                                     Haptics.fire(.light)
                                 } label: {
+                                    let noneFill = Color.neutral4
                                     Chip(
                                         text: "None",
                                         size: .small,
-                                        foreground: !useCustomColor && color == .none ? .white : palette.foregroundColor,
+                                        foreground: !useCustomColor && color == .none
+                                            ? Color.accessibleLabelOnSolidBackground(background: noneFill, colorScheme: colorScheme)
+                                            : palette.foregroundColor,
                                         background: !useCustomColor && color == .none
-                                            ? Color.neutral4
+                                            ? noneFill
                                             : palette.cardEmbeddedRowBackground.opacity(colorScheme == .dark ? 0.35 : 0.65)
                                     )
                                 }

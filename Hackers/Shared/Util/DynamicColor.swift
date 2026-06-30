@@ -179,6 +179,86 @@ extension Color {
         let crBlack = (L + 0.05) / 0.05
         return crWhite >= crBlack ? .white : .black
     }
+
+    static func wcagContrastRatio(foreground: Color, background: Color, colorScheme: ColorScheme) -> Double {
+        contrastRatio(
+            resolvedLuminance(for: foreground, colorScheme: colorScheme),
+            resolvedLuminance(for: background, colorScheme: colorScheme)
+        )
+    }
+
+    private static func resolvedLuminance(for color: Color, colorScheme: ColorScheme) -> Double {
+        let traits = UITraitCollection(userInterfaceStyle: colorScheme == .dark ? .dark : .light)
+        let resolved = UIColor(color).resolvedColor(with: traits)
+        var r: CGFloat = 0, g: CGFloat = 0, b: CGFloat = 0, a: CGFloat = 0
+        if resolved.getRed(&r, green: &g, blue: &b, alpha: &a) {
+            return relativeLuminanceSRGB(Double(r), Double(g), Double(b))
+        }
+        let ci = CIColor(color: resolved)
+        return relativeLuminanceSRGB(Double(ci.red), Double(ci.green), Double(ci.blue))
+    }
+}
+
+enum AccessibleTeamColorSurface {
+    case page
+    case card
+    case glass
+    case solidFill
+
+    func backgroundColor(palette: DesignPalette, accent: Color?) -> Color {
+        switch self {
+        case .page:
+            return palette.backgroundColor
+        case .card:
+            return palette.cardColor
+        case .glass:
+            return palette.backgroundColor
+        case .solidFill:
+            return accent ?? palette.foregroundColor
+        }
+    }
+}
+
+enum AccessibleColorContrastPreference {
+    case normal
+    case increased
+}
+
+struct AccessibleTeamColorStyle {
+    let accent: Color
+    let readableText: Color
+    let subtleFill: Color
+    let border: Color
+    let solidFillText: Color
+    let usesAccentForText: Bool
+
+    static func resolve(
+        teamColor: Color?,
+        palette: DesignPalette,
+        colorScheme: ColorScheme,
+        accessibilityContrast: AccessibleColorContrastPreference? = nil,
+        surface: AccessibleTeamColorSurface = .page
+    ) -> AccessibleTeamColorStyle {
+        let accent = teamColor ?? palette.foregroundColor
+        let surfaceBackground = surface.backgroundColor(palette: palette, accent: teamColor)
+        let resolvedContrast = accessibilityContrast ?? (UIAccessibility.isDarkerSystemColorsEnabled ? .increased : .normal)
+        let threshold = resolvedContrast == .increased ? 7.0 : 4.5
+        let contrast = Color.wcagContrastRatio(
+            foreground: accent,
+            background: surfaceBackground,
+            colorScheme: colorScheme
+        )
+        let usesAccentForText = teamColor != nil && contrast >= threshold
+
+        return AccessibleTeamColorStyle(
+            accent: accent,
+            readableText: usesAccentForText ? accent : palette.foregroundColor,
+            subtleFill: accent.opacity(colorScheme.translucent(0.10, 0.14)),
+            border: accent.opacity(colorScheme.translucent(0.62, 0.74)),
+            solidFillText: Color.accessibleLabelOnSolidBackground(background: accent, colorScheme: colorScheme),
+            usesAccentForText: usesAccentForText
+        )
+    }
 }
 
 // MARK: - Conversion core

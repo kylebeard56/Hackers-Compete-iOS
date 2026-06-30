@@ -604,13 +604,6 @@ final class LiveRoundViewModel: ObservableObject, Loggable {
         snapshot.teamColor(for: participant)
     }
     
-    /// True when any team's color matches the theme color (e.g. Purple team + purple theme).
-    /// Use palette.foregroundColor for general UI in this case to avoid confusing team-specific vs neutral actions.
-    var hasTeamColorMatchingTheme: Bool {
-        guard snapshot.requiresTeams, snapshot.teams.isPopulated else { return false }
-        return snapshot.teams.contains { $0.displaySwatchColor == theme.color }
-    }
-    
     /// Groups the tee group by team, when the round requires teams.
     var teeGroupTeamSections: [TeamSection] {
         let players = teeGroupParticipants

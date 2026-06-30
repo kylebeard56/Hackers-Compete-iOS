@@ -231,11 +231,16 @@ struct ScorecardVisibilitySheet: View {
                 } label : {
                     HStack(spacing: 12) {
                         let teamColor = viewModel.teamColor(for: row.participant)
+                        let avatarBackground = teamColor ?? Color.neutral6
                         Text(row.participant.name.initials)
                             .fontStyle(kFontName, size: 15, weight: .semibold)
-                            .foregroundStyle(teamColor != nil ? .white : palette.foregroundColor)
+                            .foregroundStyle(
+                                teamColor.map {
+                                    Color.accessibleLabelOnSolidBackground(background: $0, colorScheme: colorScheme)
+                                } ?? palette.foregroundColor
+                            )
                             .frame(width: 32, height: 32)
-                            .background(teamColor ?? Color.neutral6)
+                            .background(avatarBackground)
                             .clipShape(Circle())
 
                         LiveRoundAdaptiveNameText(

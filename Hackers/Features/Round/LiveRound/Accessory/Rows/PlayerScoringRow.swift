@@ -52,7 +52,15 @@ struct PlayerScoringRow: View {
 
     private var useHandicaps: Bool { viewModel.snapshot.round.configuration.useHandicaps }
     private var effectiveAccent: Color {
-        viewModel.hasTeamColorMatchingTheme ? palette.foregroundColor : viewModel.theme.color
+        viewModel.theme.color
+    }
+    private var teamColorStyle: AccessibleTeamColorStyle {
+        AccessibleTeamColorStyle.resolve(
+            teamColor: (requiresTeams ? viewModel.teamColor(for: participant) : nil) ?? effectiveAccent,
+            palette: palette,
+            colorScheme: colorScheme,
+            surface: .glass
+        )
     }
     private var presenceStatus: RoundParticipantPresenceStatus {
         viewModel.effectivePresenceStatus(for: participant)
@@ -117,7 +125,7 @@ struct PlayerScoringRow: View {
     private var scorePill: some View {
         let scp = viewModel.scoreToPar(for: participant, basis: viewModel.scoreBasis)
         let isHoleScored = gross != nil
-        let badgeColor = viewModel.teamColor(for: participant) ?? effectiveAccent
+        let badgeColor = teamColorStyle.accent
 
         ZStack(alignment: .topTrailing) {
             HStack(spacing: 1) {
@@ -154,9 +162,8 @@ struct PlayerScoringRow: View {
     
     @ViewBuilder
     private var handicapDots: some View {
-        let teamColor = viewModel.teamColor(for: participant)
         let dotColor: Color = canScoreParticipant
-            ? ((requiresTeams ? teamColor : nil) ?? effectiveAccent)
+            ? teamColorStyle.accent
             : Color.neutral3
         
         HStack(spacing: 4) {
@@ -176,7 +183,7 @@ struct PlayerScoringRow: View {
             if let net, let gross, net != gross {
                 Text("Net \(net)")
                     .fontStyle(kFontName, size: 13, weight: .semibold)
-                    .foregroundStyle(canScoreParticipant ? ((requiresTeams ? teamColor : nil) ?? effectiveAccent) : Color.neutral2)
+                    .foregroundStyle(canScoreParticipant ? teamColorStyle.readableText : Color.neutral2)
             }
         }
     }
@@ -184,14 +191,14 @@ struct PlayerScoringRow: View {
     @ViewBuilder
     private var enterScoreContent: some View {
         let isScored = gross.exists
-        let color = (viewModel.teamColor(for: participant) ?? effectiveAccent)
+        let style = teamColorStyle
         let label = isScored
         ? (viewModel.isFriendlyScoreInputMode
             ? viewModel.friendlyScoreLabel(relativeToPar: scoreInputValue ?? 0, par: holePar, format: .short)
             : viewModel.friendlyScoreLabel(strokes: gross ?? 6, par: holePar, format: .shortWithStrokes))
         : "Enter score"
-        let tint = isScored ? color.opacity(colorScheme.translucent(0.10, 0.14)) : palette.whiteGlassButtonColor
-        let foreground: Color = isScored ? color : palette.foregroundColor
+        let tint = isScored ? style.subtleFill : palette.whiteGlassButtonColor
+        let foreground: Color = isScored ? style.readableText : palette.foregroundColor
 
         Text(label)
             .fontStyle(kFontName, size: 14, weight: .semibold)

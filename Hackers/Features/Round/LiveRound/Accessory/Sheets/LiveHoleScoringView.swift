@@ -25,10 +25,10 @@ struct LiveHoleScoringView: View, Loggable {
 
     private var palette: DesignPalette { .init(theme: .primary, scheme: colorScheme) }
     private var effectiveAccent: Color {
-        viewModel.hasTeamColorMatchingTheme ? palette.foregroundColor : viewModel.theme.color
+        viewModel.theme.color
     }
     private var effectiveAccentLabelColor: Color {
-        viewModel.hasTeamColorMatchingTheme ? palette.backgroundColor : .white
+        Color.accessibleLabelOnSolidBackground(background: effectiveAccent, colorScheme: colorScheme)
     }
     
     private enum NavigationDirection {
@@ -342,7 +342,9 @@ private extension LiveHoleScoringView {
                         glassTint: isCurrent
                             ? participantTint.opacity(colorScheme.translucent)
                             : palette.playerAvatarGlassTint,
-                        initialsColor: usesFill ? .white : palette.foregroundColor
+                        initialsColor: fillColor.map {
+                            Color.accessibleLabelOnSolidBackground(background: $0, colorScheme: colorScheme)
+                        } ?? palette.foregroundColor
                     )
                     .overlay {
                         if unit.participants.count > 1 {
