@@ -21,6 +21,8 @@ import SwiftUI
 //   scoring-profiles/{profileId}            // SeriesScoringProfile
 //   mappings/{mappingId}                    // SeriesRoundMapping
 //   point-awards/{awardId}                  // SeriesPointAward
+//   round-results/{generationId}             // SeriesRoundResult
+//   round-processing-states/{seriesRoundId}  // SeriesRoundProcessingState
 //   standings/{standingId}                  // SeriesStanding
 //   handicap-scores/{scoreId}               // SeriesHandicapScore
 //   handicap-overrides/{overrideId}         // SeriesHandicapOverride
@@ -36,6 +38,8 @@ enum SeriesSubcollection: String, CaseIterable {
     case scoringProfiles = "scoring-profiles"
     case mappings = "mappings"
     case pointAwards = "point-awards"
+    case roundResults = "round-results"
+    case roundProcessingStates = "round-processing-states"
     case standings = "standings"
     case handicapScores = "handicap-scores"
     case handicapOverrides = "handicap-overrides"
@@ -2900,6 +2904,243 @@ struct SeriesPointAward: FirebaseSubcollectable {
         case roundOwnerID = "round_owner_id"
         case awardedByMemberID = "awarded_by_member_id"
         case awardedAt = "awarded_at"
+        case createdAt = "created_at"
+        case lastUpdatedAt = "last_updated_at"
+        case parentID = "parent_id"
+    }
+}
+
+// MARK: - Canonical round results
+
+enum SeriesRoundProcessingStatus: String, Codable, Sendable {
+    case completed
+    case failed
+}
+
+struct SeriesRoundPerformanceMetric: Hashable, Codable, Sendable {
+    let scoringUnitID: String
+    let participantIDs: [String]
+    let countingParticipantIDs: [String]
+    let owner: ScoringOwner
+    let total: Double
+    let holesPlayed: Int
+    let rawStrokes: Int?
+    let netStrokes: Int?
+    let points: Double
+
+    enum CodingKeys: String, CodingKey {
+        case total, owner, points
+        case scoringUnitID = "scoring_unit_id"
+        case participantIDs = "participant_ids"
+        case countingParticipantIDs = "counting_participant_ids"
+        case holesPlayed = "holes_played"
+        case rawStrokes = "raw_strokes"
+        case netStrokes = "net_strokes"
+    }
+}
+
+struct SeriesRoundPointAwardProjection: Hashable, Codable, Sendable {
+    let id: String
+    let awardTrack: SeriesAwardTrack
+    let competitorType: SeriesCompetitorType
+    let competitorID: String
+    let competitorName: String
+    let profileKind: SeriesScoringProfileKind
+    let placement: Int?
+    let tieGroupSize: Int?
+    let basePoints: Double
+    let bonusPoints: Double
+    let totalPoints: Double
+    let source: SeriesAwardSource
+    let roundOwnerID: String?
+    let reason: String?
+
+    enum CodingKeys: String, CodingKey {
+        case id, placement, source, reason
+        case awardTrack = "award_track"
+        case competitorType = "competitor_type"
+        case competitorID = "competitor_id"
+        case competitorName = "competitor_name"
+        case profileKind = "profile_kind"
+        case tieGroupSize = "tie_group_size"
+        case basePoints = "base_points"
+        case bonusPoints = "bonus_points"
+        case totalPoints = "total_points"
+        case roundOwnerID = "round_owner_id"
+    }
+}
+
+struct SeriesRoundHandicapSampleProjection: Hashable, Codable, Sendable {
+    let id: String
+    let memberID: String
+    let score: Double
+    let par: Double
+    let holeSegment: HoleSegment
+    let teeBoxID: String?
+    let courseRating: Double?
+    let courseSlope: Int?
+    let countsTowardHandicapIndex: Bool
+
+    enum CodingKeys: String, CodingKey {
+        case id, score, par
+        case memberID = "member_id"
+        case holeSegment = "hole_segment"
+        case teeBoxID = "tee_box_id"
+        case courseRating = "course_rating"
+        case courseSlope = "course_slope"
+        case countsTowardHandicapIndex = "counts_toward_handicap_index"
+    }
+}
+
+struct SeriesRoundRuleCompatibilityProjection: Hashable, Codable, Sendable {
+    let ruleID: String
+    let awardTrack: SeriesAwardTrack
+    let classification: String
+    let details: [String]
+
+    enum CodingKeys: String, CodingKey {
+        case classification, details
+        case ruleID = "rule_id"
+        case awardTrack = "award_track"
+    }
+}
+
+struct SeriesRoundResult: FirebaseSubcollectable {
+    var id: String
+    var seriesRoundID: String
+    var linkedRoundID: String
+    var sourceRevision: String
+    var sourceUpdatedAt: Double
+    var policyRevisionID: String?
+    var policyFingerprint: String
+    var processorVersion: Int
+    var semanticHash: String
+    var compatibility: [SeriesRoundRuleCompatibilityProjection]
+    var performanceMetrics: [SeriesRoundPerformanceMetric]
+    var pointAwards: [SeriesRoundPointAwardProjection]
+    var handicapSamples: [SeriesRoundHandicapSampleProjection]
+    var generatedAt: Time
+    var createdAt: Time
+    var lastUpdatedAt: Time
+    var parentID: String
+    var schema: Int = 1
+
+    static var parentCollection: String { Collections.series.rawValue }
+    static var subcollectionName: String { SeriesSubcollection.roundResults.rawValue }
+
+    init(
+        id: String,
+        seriesRoundID: String,
+        linkedRoundID: String,
+        sourceRevision: String,
+        sourceUpdatedAt: Double,
+        policyRevisionID: String?,
+        policyFingerprint: String,
+        processorVersion: Int,
+        semanticHash: String,
+        compatibility: [SeriesRoundRuleCompatibilityProjection],
+        performanceMetrics: [SeriesRoundPerformanceMetric],
+        pointAwards: [SeriesRoundPointAwardProjection],
+        handicapSamples: [SeriesRoundHandicapSampleProjection],
+        generatedAt: Time = .init(),
+        createdAt: Time = .init(),
+        lastUpdatedAt: Time = .init(),
+        parentID: String
+    ) {
+        self.id = id
+        self.seriesRoundID = seriesRoundID
+        self.linkedRoundID = linkedRoundID
+        self.sourceRevision = sourceRevision
+        self.sourceUpdatedAt = sourceUpdatedAt
+        self.policyRevisionID = policyRevisionID
+        self.policyFingerprint = policyFingerprint
+        self.processorVersion = processorVersion
+        self.semanticHash = semanticHash
+        self.compatibility = compatibility
+        self.performanceMetrics = performanceMetrics
+        self.pointAwards = pointAwards
+        self.handicapSamples = handicapSamples
+        self.generatedAt = generatedAt
+        self.createdAt = createdAt
+        self.lastUpdatedAt = lastUpdatedAt
+        self.parentID = parentID
+    }
+
+    enum CodingKeys: String, CodingKey {
+        case id, compatibility, schema
+        case seriesRoundID = "series_round_id"
+        case linkedRoundID = "linked_round_id"
+        case sourceRevision = "source_revision"
+        case sourceUpdatedAt = "source_updated_at"
+        case policyRevisionID = "policy_revision_id"
+        case policyFingerprint = "policy_fingerprint"
+        case processorVersion = "processor_version"
+        case semanticHash = "semantic_hash"
+        case performanceMetrics = "performance_metrics"
+        case pointAwards = "point_awards"
+        case handicapSamples = "handicap_samples"
+        case generatedAt = "generated_at"
+        case createdAt = "created_at"
+        case lastUpdatedAt = "last_updated_at"
+        case parentID = "parent_id"
+    }
+}
+
+struct SeriesRoundProcessingState: FirebaseSubcollectable {
+    var id: String
+    var latestGenerationID: String
+    var sourceRevision: String
+    var sourceUpdatedAt: Double
+    var policyFingerprint: String
+    var processorVersion: Int
+    var resultSemanticHash: String
+    var status: SeriesRoundProcessingStatus
+    var completedAt: Time
+    var createdAt: Time
+    var lastUpdatedAt: Time
+    var parentID: String
+    var schema: Int = 1
+
+    static var parentCollection: String { Collections.series.rawValue }
+    static var subcollectionName: String { SeriesSubcollection.roundProcessingStates.rawValue }
+
+    init(
+        id: String,
+        latestGenerationID: String,
+        sourceRevision: String,
+        sourceUpdatedAt: Double,
+        policyFingerprint: String,
+        processorVersion: Int,
+        resultSemanticHash: String,
+        status: SeriesRoundProcessingStatus = .completed,
+        completedAt: Time = .init(),
+        createdAt: Time = .init(),
+        lastUpdatedAt: Time = .init(),
+        parentID: String
+    ) {
+        self.id = id
+        self.latestGenerationID = latestGenerationID
+        self.sourceRevision = sourceRevision
+        self.sourceUpdatedAt = sourceUpdatedAt
+        self.policyFingerprint = policyFingerprint
+        self.processorVersion = processorVersion
+        self.resultSemanticHash = resultSemanticHash
+        self.status = status
+        self.completedAt = completedAt
+        self.createdAt = createdAt
+        self.lastUpdatedAt = lastUpdatedAt
+        self.parentID = parentID
+    }
+
+    enum CodingKeys: String, CodingKey {
+        case id, status, schema
+        case latestGenerationID = "latest_generation_id"
+        case sourceRevision = "source_revision"
+        case sourceUpdatedAt = "source_updated_at"
+        case policyFingerprint = "policy_fingerprint"
+        case processorVersion = "processor_version"
+        case resultSemanticHash = "result_semantic_hash"
+        case completedAt = "completed_at"
         case createdAt = "created_at"
         case lastUpdatedAt = "last_updated_at"
         case parentID = "parent_id"

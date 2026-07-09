@@ -5161,8 +5161,14 @@ final class SeriesViewModel: ObservableObject, Loggable {
     }
 
     private enum AwardsFinalizationResult {
-        case published(status: SeriesAwardsStatus, awardsChanged: Bool)
+        case published(status: SeriesAwardsStatus, awardsChanged: Bool, awards: [SeriesPointAward])
         case writeFailed
+    }
+
+    private struct HandicapSyncResult {
+        var changed = false
+        var projectedScores: [SeriesHandicapScore] = []
+        var writeFailed = false
     }
 
     private struct SeriesDerivedInputs {
@@ -5208,25 +5214,42 @@ final class SeriesViewModel: ObservableObject, Loggable {
     ) async -> CompletedRoundProcessingResult {
         var result = CompletedRoundProcessingResult()
 
-        let didSyncHandicapScores = await syncRoundHandicapScores(
+        let handicapSync = await syncRoundHandicapScores(
             seriesRound: seriesRound,
             snapshot: snapshot,
             replacingExisting: overwriteDerivedData
         )
-        result.changed = didSyncHandicapScores
+        result.changed = handicapSync.changed
+
+        guard let segment = snapshot.roundSegment ?? snapshot.segments.first else {
+            return result
+        }
+        let canonicalScoringResult = scoringResult(from: snapshot, segment: segment)
 
         let finalization = await finalizeAwardsIfPossible(
             seriesRound: seriesRound,
             snapshot: snapshot,
+            scoringResult: canonicalScoringResult,
             existingAwards: existingAwards,
             mappings: mappings
         )
-        guard case .published(let awardsState, let awardsChanged) = finalization else {
+        guard case .published(let awardsState, let awardsChanged, let publishedAwards) = finalization else {
             result.awardWriteFailed = true
             return result
         }
         result.awardsChanged = awardsChanged
         result.changed = result.changed || awardsChanged
+
+        if !handicapSync.writeFailed {
+            await publishCanonicalRoundResult(
+                seriesRound: seriesRound,
+                snapshot: snapshot,
+                scoringResult: canonicalScoringResult,
+                awards: publishedAwards,
+                handicapScores: handicapSync.projectedScores,
+                providedMappings: mappings
+            )
+        }
 
         guard var currentRound = rounds.first(where: { $0.id == seriesRound.id }) else {
             return result
@@ -5259,11 +5282,75 @@ final class SeriesViewModel: ObservableObject, Loggable {
         return result
     }
 
+    private func publishCanonicalRoundResult(
+        seriesRound: SeriesRound,
+        snapshot: RoundSnapshot,
+        scoringResult: ScoringResult,
+        awards: [SeriesPointAward],
+        handicapScores: [SeriesHandicapScore],
+        providedMappings: [SeriesRoundMapping]?
+    ) async {
+        let mappings: [SeriesRoundMapping]
+        if let providedMappings {
+            mappings = providedMappings
+        } else {
+            switch await FirebaseService.shared.fetchSeriesRoundMappingsResult(
+                seriesID: seriesID,
+                seriesRoundID: seriesRound.id
+            ) {
+            case .success(let values):
+                mappings = values
+            case .failure(let error):
+                addBreadcrumb(level: .error, message: "Canonical round mappings read failed", error: error)
+                return
+            }
+        }
+
+        let policy = SeriesStandingsPolicyResolver.resolve(
+            round: seriesRound,
+            settings: series.settings
+        )
+        let compatibility = SeriesStandingsPolicyResolver.compatibility(
+            for: seriesRound,
+            in: series
+        )
+        guard let canonicalResult = SeriesRoundCanonicalBuilder.makeResult(
+            seriesID: seriesID,
+            seriesRound: seriesRound,
+            snapshot: snapshot,
+            mappings: mappings,
+            policy: policy,
+            compatibility: compatibility,
+            scoringResult: scoringResult,
+            awards: awards,
+            handicapScores: handicapScores
+        ) else {
+            return
+        }
+
+        switch await SeriesRoundResultPublicationService.shared.publish(canonicalResult) {
+        case .success(let decision):
+            addEvent(
+                "series.canonical_round_result_processed",
+                eventProps: seriesTelemetryProps([
+                    "series_round_id": seriesRound.id,
+                    "generation_id": canonicalResult.id,
+                    "decision": String(describing: decision),
+                    "award_projection_count": canonicalResult.pointAwards.count,
+                    "metric_count": canonicalResult.performanceMetrics.count
+                ])
+            )
+        case .failure(let error):
+            addBreadcrumb(level: .error, message: "Canonical round result shadow write failed", error: error)
+        }
+    }
+
     // MARK: - Awards
 
     private func finalizeAwardsIfPossible(
         seriesRound: SeriesRound,
         snapshot: RoundSnapshot,
+        scoringResult: ScoringResult,
         existingAwards providedExistingAwards: [SeriesPointAward]? = nil,
         mappings providedMappings: [SeriesRoundMapping]? = nil
     ) async -> AwardsFinalizationResult {
@@ -5271,7 +5358,7 @@ final class SeriesViewModel: ObservableObject, Loggable {
         let individualProfile = individualScoringProfile(for: seriesRound)
 
         guard teamProfile != nil || individualProfile != nil else {
-            return .published(status: .pending, awardsChanged: false)
+            return .published(status: .pending, awardsChanged: false, awards: [])
         }
 
         let existingAwards: [SeriesPointAward]
@@ -5304,7 +5391,8 @@ final class SeriesViewModel: ObservableObject, Loggable {
                     snapshot: snapshot,
                     awardTrack: .individual,
                     profile: individualProfile,
-                    mappings: mappings
+                    mappings: mappings,
+                    scoringResult: scoringResult
                 ) {
                 case .success(let awards):
                     rebuiltTracks.insert(.individual)
@@ -5332,7 +5420,8 @@ final class SeriesViewModel: ObservableObject, Loggable {
                     snapshot: snapshot,
                     awardTrack: .team,
                     profile: teamProfile,
-                    mappings: mappings
+                    mappings: mappings,
+                    scoringResult: scoringResult
                 )
             }
 
@@ -5384,7 +5473,8 @@ final class SeriesViewModel: ObservableObject, Loggable {
         }
         return .published(
             status: persistedStatus,
-            awardsChanged: publicationPlan.writeCount > 0
+            awardsChanged: publicationPlan.writeCount > 0,
+            awards: publicationPlan.published
         )
     }
 
@@ -5543,16 +5633,19 @@ final class SeriesViewModel: ObservableObject, Loggable {
             guard let roundID = seriesRound.roundID,
                   let profile = individualScoringProfile(for: seriesRound),
                   let snapshotResult = snapshotResults[roundID],
-                  case .success(let snapshot) = snapshotResult else {
+                  case .success(let snapshot) = snapshotResult,
+                  let segment = snapshot.roundSegment ?? snapshot.segments.first else {
                 continue
             }
+            let scoringResult = scoringResult(from: snapshot, segment: segment)
 
             let result = await buildAwards(
                 seriesRound: seriesRound,
                 snapshot: snapshot,
                 awardTrack: .individual,
                 profile: profile,
-                mappings: mappingsByRound[seriesRound.id] ?? []
+                mappings: mappingsByRound[seriesRound.id] ?? [],
+                scoringResult: scoringResult
             )
             guard case .success(let newIndividualAwards) = result else { continue }
 
@@ -5680,10 +5773,11 @@ final class SeriesViewModel: ObservableObject, Loggable {
         snapshot: RoundSnapshot,
         awardTrack: SeriesAwardTrack,
         profile: SeriesScoringProfile,
-        mappings: [SeriesRoundMapping]
+        mappings: [SeriesRoundMapping],
+        scoringResult: ScoringResult
     ) async -> AwardBuildResult {
         guard profile.kind != .manual, profile.outcomeSource != .manual else { return .needsReview }
-        guard let segment = snapshot.roundSegment ?? snapshot.segments.first else { return .needsReview }
+        guard snapshot.roundSegment != nil || snapshot.segments.first != nil else { return .needsReview }
         if profile.kind == .winTieLoss,
            seriesRound.roundConfig.resolvedCompetitionScope != .matchup {
             return .success([])
@@ -5706,17 +5800,16 @@ final class SeriesViewModel: ObservableObject, Loggable {
             ))
         }
 
-        let result = scoringResult(from: snapshot, segment: segment)
         let competitors: [AwardCompetitor]
 
         switch profile.outcomeSource {
         case .roundIndividualLeaderboard:
             competitors = []
         case .roundTeamLeaderboard:
-            competitors = buildTeamCompetitors(result: result, snapshot: snapshot, mappings: mappings)
+            competitors = buildTeamCompetitors(result: scoringResult, snapshot: snapshot, mappings: mappings)
         case .roundMatchResult:
             competitors = buildMatchupCompetitors(
-                result: result,
+                result: scoringResult,
                 snapshot: snapshot,
                 awardTrack: awardTrack,
                 mappings: mappings
@@ -6010,8 +6103,8 @@ final class SeriesViewModel: ObservableObject, Loggable {
         seriesRound: SeriesRound,
         snapshot: RoundSnapshot,
         replacingExisting: Bool = false
-    ) async -> Bool {
-        guard let roundID = seriesRound.roundID else { return false }
+    ) async -> HandicapSyncResult {
+        guard let roundID = seriesRound.roundID else { return HandicapSyncResult() }
         let excludedMemberIDs = Set(seriesRound.roundConfig.normalizedExcludedHandicapMemberIDs)
         let accruesForRound = shouldAccrueLeagueHandicap(for: seriesRound, snapshot: snapshot)
 
@@ -6030,15 +6123,20 @@ final class SeriesViewModel: ObservableObject, Loggable {
             : await FirebaseService.shared.fetchHandicapScores(seriesID: seriesID, sourceRoundID: roundID)
 
         var pendingHandicapScores: [SeriesHandicapScore] = []
+        var projectedScores: [SeriesHandicapScore] = []
+        var writeFailed = false
 
         for participant in snapshot.participants {
             guard let memberID = participant.seriesMemberID ?? members.first(where: { $0.playerID == participant.playerID })?.id else { continue }
             let excluded = excludedMemberIDs.contains(memberID)
             let countsTowardIndex = accruesForRound && !excluded
-            let alreadyIngested = (handicapScores + existingRoundScores).contains {
+            let existingScore = (handicapScores + existingRoundScores).first {
                 $0.memberID == memberID && $0.source == .round && $0.sourceRoundID == roundID
             }
-            guard replacingExisting || !alreadyIngested else { continue }
+            if !replacingExisting, let existingScore {
+                projectedScores.append(existingScore)
+                continue
+            }
 
             let entries = scoreEntriesByParticipant[participant.id] ?? []
             let tee = teeByParticipant[participant.id] ?? nil
@@ -6084,6 +6182,7 @@ final class SeriesViewModel: ObservableObject, Loggable {
                 countsTowardHandicapIndex: countsTowardIndex
             )
             pendingHandicapScores.append(score)
+            projectedScores.append(score)
         }
 
         if pendingHandicapScores.isPopulated {
@@ -6099,6 +6198,7 @@ final class SeriesViewModel: ObservableObject, Loggable {
                     ])
                 )
             case .failure(let error):
+                writeFailed = true
                 addBreadcrumb(level: .error, message: "Failed to batch ingest series handicap scores", error: error)
             }
         }
@@ -6106,7 +6206,11 @@ final class SeriesViewModel: ObservableObject, Loggable {
         if inserted || deleted {
             recomputeAllHandicaps()
         }
-        return inserted || deleted
+        return HandicapSyncResult(
+            changed: inserted || deleted,
+            projectedScores: projectedScores.sorted { $0.id < $1.id },
+            writeFailed: writeFailed
+        )
     }
 
     private func hydrateRoundHandicapScoreMetadataIfNeeded() async {
@@ -6191,14 +6295,14 @@ final class SeriesViewModel: ObservableObject, Loggable {
         seriesRound: SeriesRound,
         snapshot: RoundSnapshot,
         replacingExisting: Bool
-    ) async -> Bool {
+    ) async -> HandicapSyncResult {
         guard series.handicapConfig.mode.allowsAccrual else {
             if replacingExisting, let roundID = seriesRound.roundID {
                 let deleted = await deleteRoundHandicapScores(sourceRoundID: roundID)
                 if deleted { recomputeAllHandicaps() }
-                return deleted
+                return HandicapSyncResult(changed: deleted)
             }
-            return false
+            return HandicapSyncResult()
         }
 
         return await ingestRoundScores(

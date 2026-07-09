@@ -530,6 +530,65 @@ extension FirebaseService {
     }
 }
 
+// MARK: - Canonical Round Results
+
+extension FirebaseService {
+
+    func publishCanonicalRoundResultIfNeeded(
+        _ result: SeriesRoundResult
+    ) async -> Result<SeriesRoundResultPublicationDecision, Error> {
+        let db = Firestore.firestore()
+        let resultRef = SeriesRoundResult.documentReference(id: result.id, parentID: result.parentID)
+        let stateRef = SeriesRoundProcessingState.documentReference(
+            id: result.seriesRoundID,
+            parentID: result.parentID
+        )
+        do {
+            let rawDecision = try await db.runTransaction { transaction, errorPointer -> Any? in
+                do {
+                    let stateSnapshot = try transaction.getDocument(stateRef)
+                    let resultSnapshot = try transaction.getDocument(resultRef)
+                    let currentState = try? stateSnapshot.data(as: SeriesRoundProcessingState.self)
+                    let decision = SeriesRoundResultPublicationPlanner.decision(
+                        for: result,
+                        currentState: currentState,
+                        resultAlreadyExists: resultSnapshot.exists
+                    )
+                    guard decision == .publish else { return decision.rawValue }
+
+                    let state = SeriesRoundCanonicalBuilder.processingState(
+                        for: result,
+                        previous: currentState
+                    )
+                    transaction.setData(try result.toDictionary(), forDocument: resultRef)
+                    transaction.setData(try state.toDictionary(), forDocument: stateRef)
+                    return decision.rawValue
+                } catch {
+                    errorPointer?.pointee = error as NSError
+                    return nil
+                }
+            }
+            guard let value = rawDecision as? String,
+                  let decision = SeriesRoundResultPublicationDecision(rawValue: value) else {
+                return .failure(HackersError.documentNotFound)
+            }
+            return .success(decision)
+        } catch {
+            addBreadcrumb(level: .error, message: "Canonical round result publication failed", error: error)
+            return .failure(error)
+        }
+    }
+
+    func fetchCanonicalRoundResults(
+        seriesID: String,
+        seriesRoundID: String? = nil
+    ) async -> Result<[SeriesRoundResult], Error> {
+        let query = SeriesRoundResult.query(parentID: seriesID)
+            .whereField(useCondition: seriesRoundID != nil, "series_round_id", isEqualTo: seriesRoundID ?? "")
+        return await fetchDocuments(query: query)
+    }
+}
+
 // MARK: - Standings
 
 extension FirebaseService {
