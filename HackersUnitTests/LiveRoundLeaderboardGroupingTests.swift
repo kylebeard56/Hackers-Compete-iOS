@@ -87,7 +87,8 @@ final class LiveRoundLeaderboardGroupingTests: XCTestCase {
         scoringGroups: [RoundScoringGroup] = [],
         scoring: [ScoreEntry] = [],
         template: GameTemplate = FormatTemplateRegistry.captainsChoice,
-        gameConfiguration: GameConfiguration? = nil
+        gameConfiguration: GameConfiguration? = nil,
+        teamScoring: RoundTeamScoringConfiguration = .init()
     ) -> RoundSnapshot {
         let resolvedGameConfiguration = gameConfiguration ?? GameConfiguration(
             method: .aggregate,
@@ -106,7 +107,7 @@ final class LiveRoundLeaderboardGroupingTests: XCTestCase {
             formatSummary: RoundFormatSummary(from: template),
             courses: [courseSegment],
             competitionScope: .field,
-            teamScoring: .init(),
+            teamScoring: teamScoring,
             matchupResolutionStyle: .roundAggregate,
             scoreOwnerScope: scoreOwnerScope,
             matchupScoringStyle: .aggregateRoundTotal
@@ -268,6 +269,63 @@ final class LiveRoundLeaderboardGroupingTests: XCTestCase {
         XCTAssertEqual(grossRows["p1"]?.totalPoints, 2)
         XCTAssertEqual(netRows["p1"]?.totalPoints, 3)
         XCTAssertEqual(netRows["p2"]?.totalPoints, 2)
+    }
+
+    func testStablefordSoloDisplayShowsIndividualPointContributionsInTeamRound() {
+        let teams = [
+            makeTeam(id: "t1", name: "Red", color: "red", index: 0),
+            makeTeam(id: "t2", name: "Blue", color: "blue", index: 1)
+        ]
+        let teeGroups = [
+            makeTeeGroup(id: "g1", index: 0)
+        ]
+        let participants = [
+            makeParticipant(id: "p1", first: "Alice", last: "Adams", teamID: "t1", groupID: "g1", teeOrder: 1),
+            makeParticipant(id: "p2", first: "Bea", last: "Baker", teamID: "t1", groupID: "g1", teeOrder: 2),
+            makeParticipant(id: "p3", first: "Cara", last: "Cole", teamID: "t2", groupID: "g1", teeOrder: 3, handicap: 18),
+            makeParticipant(id: "p4", first: "Drew", last: "Diaz", teamID: "t2", groupID: "g1", teeOrder: 4, handicap: 18),
+            makeParticipant(id: "p5", first: "Evan", last: "Ellis", teamID: "t2", groupID: "g1", teeOrder: 5)
+        ]
+        let par = courseSegment.tee(from: teeBoxID)?.holes.first(where: { $0.number == 1 })?.par ?? 4
+        let viewModel = LiveRoundViewModel()
+        viewModel.set(snapshot: makeSnapshot(
+            scoreOwnerScope: .individual,
+            teams: teams,
+            teeGroups: teeGroups,
+            participants: participants,
+            scoring: [
+                makeScore(participantID: "p1", holeNumber: 1, strokes: par - 1),
+                makeScore(participantID: "p2", holeNumber: 1, strokes: par),
+                makeScore(participantID: "p3", holeNumber: 1, strokes: par + 1),
+                makeScore(participantID: "p4", holeNumber: 1, strokes: par + 2)
+            ],
+            template: FormatTemplateRegistry.stableford,
+            gameConfiguration: GameConfiguration(
+                method: .aggregate,
+                basis: .gross,
+                handicap: .individualStrokePlay,
+                requiresTeams: true
+            ),
+            teamScoring: RoundTeamScoringConfiguration(mode: .bestN, count: 1, scope: .perHole)
+        ))
+
+        viewModel.selectedLeaderboardChip = .stableford
+        viewModel.leaderboardMode = .individual
+
+        XCTAssertEqual(viewModel.effectiveLeaderboardRows.map(\.id), ["t1", "t2"])
+        XCTAssertEqual(viewModel.displayLeaderboardRows.map(\.id), ["p1", "p2", "p3", "p4", "p5"])
+        XCTAssertEqual(viewModel.displayLeaderboardRows.map(\.totalPoints), [3.0, 2.0, 1.0, 0.0, 0.0])
+        XCTAssertEqual(viewModel.displayLeaderboardRows.map(\.thru), [1, 1, 1, 1, 0])
+
+        viewModel.scoreBasis = .net
+
+        let netRowsByID = Dictionary(uniqueKeysWithValues: viewModel.displayLeaderboardRows.map { ($0.id, $0) })
+        XCTAssertEqual(netRowsByID["p1"]?.totalPoints, 3)
+        XCTAssertEqual(netRowsByID["p2"]?.totalPoints, 2)
+        XCTAssertEqual(netRowsByID["p3"]?.totalPoints, 2)
+        XCTAssertEqual(netRowsByID["p4"]?.totalPoints, 1)
+        XCTAssertEqual(netRowsByID["p5"]?.totalPoints, 0)
+        XCTAssertEqual(netRowsByID["p4"]?.thru, 1)
     }
 
     func testScoringParticipantsFollowTeeGroupScoringRowOrderAcrossTeams() {

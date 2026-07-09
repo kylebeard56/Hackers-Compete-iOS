@@ -182,6 +182,8 @@ final class LiveRoundViewModel: ObservableObject, Loggable {
     private var scoreIndex: [String: ScoreEntry] = [:]
     /// Cached engine results, keyed by the score basis each result was computed with.
     private var cachedEngineResults: [String: ScoringResult] = [:]
+    /// Participant-level format results for Solo leaderboard contribution views.
+    private var cachedIndividualContributionEngineResults: [String: ScoringResult] = [:]
     private var hasPerformedInitialHoleNudge = false
     private var hasSelectedInitialVisibleGroupStartingHole = false
     private var loadedSeriesAccessRoundID: String?
@@ -1304,6 +1306,7 @@ final class LiveRoundViewModel: ObservableObject, Loggable {
         }
         scoreIndex = index
         cachedEngineResults.removeAll()
+        cachedIndividualContributionEngineResults.removeAll()
     }
     
     func scoreEntry(for participantID: String, holeNumber: Int) -> ScoreEntry? {
@@ -2530,9 +2533,19 @@ final class LiveRoundViewModel: ObservableObject, Loggable {
         return effectiveLeaderboardChip == .strokes ? leaderboardRows : engineLeaderboardRows
     }
 
+    private var individualLeaderboardRowsForDisplay: [LeaderboardRow] {
+        guard usesIndividualContributionLeaderboardRows else { return effectiveLeaderboardRows }
+        return individualContributionLeaderboardRows
+    }
+
+    private var activeLeaderboardRowsForDisplay: [LeaderboardRow] {
+        leaderboardMode == .individual ? individualLeaderboardRowsForDisplay : effectiveLeaderboardRows
+    }
+
     var displayLeaderboardRows: [LeaderboardRow] {
-        guard !showScorelessLeaderboardRows else { return effectiveLeaderboardRows }
-        return effectiveLeaderboardRows.filter { $0.thru > 0 }
+        let rows = activeLeaderboardRowsForDisplay
+        guard !showScorelessLeaderboardRows else { return rows }
+        return rows.filter { $0.thru > 0 }
     }
 
     var outcomeLeaderboardRows: [LeaderboardRow] {
@@ -3395,6 +3408,16 @@ final class LiveRoundViewModel: ObservableObject, Loggable {
         engineResult(for: matchupScoreBasis)
     }
 
+    private var usesIndividualContributionLeaderboardRows: Bool {
+        let template = snapshot.resolvedActiveTemplate
+        return effectiveLeaderboardChip != .strokes
+            && !snapshot.isSharedScoreSource
+            && !snapshot.isVegasFormat
+            && template.subject == .participant
+            && template.scoreSource == .individual
+            && template.pipeline.isPopulated
+    }
+
     func engineResult(for basis: ScoreBasis) -> ScoringResult {
         if let cached = cachedEngineResults[basis.rawValue] {
             return cached
@@ -3411,6 +3434,51 @@ final class LiveRoundViewModel: ObservableObject, Loggable {
             scoreLookupSegmentIDs: scoreLookupIDs.isEmpty ? nil : scoreLookupIDs
         )
         cachedEngineResults[basis.rawValue] = result
+        return result
+    }
+
+    private func individualContributionEngineResult(for basis: ScoreBasis) -> ScoringResult {
+        if let cached = cachedIndividualContributionEngineResults[basis.rawValue] {
+            return cached
+        }
+
+        let segment = snapshot.roundSegment ?? RoundSegment()
+        let holes = defaultTee?.holes ?? []
+        let scoreLookupIDs = snapshot.segmentScoreLookupSegmentIDs
+        let handicapNormalizationMode = basis == .net ? snapshot.configuration.handicapNormalizationMode : .off
+        let eligibleParticipants = ScoringEngine.scoringEligibleParticipants(
+            snapshot.participants,
+            substitutesScore: snapshot.configuration.substitutesScore,
+            attendanceConfirmationEnabled: snapshot.configuration.attendanceConfirmationEnabled == true
+        )
+        let scoringParticipants = handicapNormalizationMode == .field
+            ? HandicapCalculator.normalizedParticipantsForField(eligibleParticipants)
+            : eligibleParticipants
+
+        let result = ScoringEngine.computeWithPipeline(
+            scores: snapshot.scoring,
+            participants: scoringParticipants,
+            unnormalizedParticipants: eligibleParticipants,
+            teams: snapshot.teams,
+            segment: segment,
+            holes: holes,
+            basis: basis,
+            scoreInputMode: snapshot.configuration.scoreInputMode,
+            template: snapshot.resolvedActiveTemplate,
+            scoreLookupSegmentIDs: scoreLookupIDs.isEmpty ? nil : scoreLookupIDs,
+            resolvedCompetitionScope: snapshot.configuration.resolvedCompetitionScope,
+            scoreOwnerScope: .individual,
+            selectionDomain: .participant,
+            teamScoring: .init(),
+            scoringGroups: snapshot.scoringGroups,
+            perHoleWinPoints: snapshot.configuration.resolvedHoleWinPoints,
+            sharedScoreHandicapConfig: snapshot.configuration.sharedScoreHandicapConfig,
+            handicapNormalizationMode: handicapNormalizationMode,
+            handicapStrokeBasis: snapshot.handicapStrokeBasis,
+            substitutesScore: snapshot.configuration.substitutesScore,
+            attendanceConfirmationEnabled: snapshot.configuration.attendanceConfirmationEnabled == true
+        )
+        cachedIndividualContributionEngineResults[basis.rawValue] = result
         return result
     }
 
@@ -3738,7 +3806,136 @@ final class LiveRoundViewModel: ObservableObject, Loggable {
     }
 
     var engineLeaderboardRows: [LeaderboardRow] {
-        let result = engineResult
+        leaderboardRows(from: engineResult)
+    }
+
+    private var individualContributionLeaderboardRows: [LeaderboardRow] {
+        let contributionRows = leaderboardRows(from: individualContributionEngineResult(for: scoreBasis))
+        let contributionByParticipantID = Dictionary(uniqueKeysWithValues: contributionRows.map { ($0.participant.id, $0) })
+        let rows = leaderboardRows.map { baseRow in
+            let contribution = contributionByParticipantID[baseRow.participant.id]
+            let pointSummary = stablefordPointSummary(for: baseRow, basis: scoreBasis)
+            let totalPoints = effectiveLeaderboardChip == .stableford
+                ? Double(pointSummary.total)
+                : (contribution?.totalPoints ?? 0)
+            return LeaderboardRow(
+                participant: baseRow.participant,
+                participants: baseRow.participants,
+                scoringUnitID: baseRow.scoringUnitID,
+                thru: effectiveLeaderboardChip == .stableford
+                    ? pointSummary.scoredCount
+                    : (contribution?.thru ?? baseRow.thru),
+                scoreToPar: effectiveLeaderboardChip == .stableford
+                    ? Int(totalPoints.rounded())
+                    : (contribution?.scoreToPar ?? Int(totalPoints.rounded())),
+                totalPoints: totalPoints,
+                isPinned: baseRow.isPinned,
+                placeLabel: "",
+                teamID: baseRow.teamID,
+                teamName: baseRow.teamName,
+                teamColor: baseRow.teamColor,
+                memberNames: baseRow.memberNames,
+                sharedHandicapLabel: baseRow.sharedHandicapLabel,
+                isSharedScoreUnit: baseRow.isSharedScoreUnit,
+                scoreCompleteness: baseRow.scoreCompleteness
+            )
+        }
+        let isHighestWins = individualContributionEngineResult(for: scoreBasis).template.leaderboardSort == .highestWins
+        let sorted = rows.sorted {
+            if $0.isPinned != $1.isPinned { return $0.isPinned && !$1.isPinned }
+            let a = $0.totalPoints ?? Double($0.scoreToPar)
+            let b = $1.totalPoints ?? Double($1.scoreToPar)
+            if a != b { return isHighestWins ? a > b : a < b }
+            return $0.participant.alphabeticName < $1.participant.alphabeticName
+        }
+        let placeLabels = engineLeaderboardPlaceLabels(for: sorted, isHighestWins: isHighestWins)
+        return sorted.map { row in
+            row.withPlaceLabel(placeLabels[row.id] ?? "-")
+        }
+    }
+
+    func stablefordPoints(scoreToPar: Int) -> Int {
+        let entries = stablefordPointsMap.entries ?? []
+        if let match = entries.first(where: { $0.scoreToPar == scoreToPar }) {
+            return Int(match.points.rounded())
+        }
+        if let worst = entries.max(by: { $0.scoreToPar < $1.scoreToPar }), scoreToPar > worst.scoreToPar {
+            return Int(worst.points.rounded())
+        }
+        if let best = entries.min(by: { $0.scoreToPar < $1.scoreToPar }), scoreToPar < best.scoreToPar {
+            return Int(best.points.rounded())
+        }
+        return 0
+    }
+
+    func stablefordPoints(displayedStrokes: Int?, par: Int?) -> Int? {
+        guard let displayedStrokes, let par else { return nil }
+        return stablefordPoints(scoreToPar: displayedStrokes - par)
+    }
+
+    func stablefordPointSummary(
+        for participant: RoundParticipant,
+        basis: ScoreBasis? = nil,
+        holes: [Int]? = nil
+    ) -> (total: Int, scoredCount: Int) {
+        let resolvedBasis = basis ?? scoreBasis
+        let resolvedHoles = holes ?? courseOrderHoleNumbers
+        let points = resolvedHoles.compactMap { holeNumber -> Int? in
+            guard let gross = grossStrokes(for: participant.id, holeNumber: holeNumber) else { return nil }
+            let displayed = stablefordDisplayedStrokes(gross: gross, participant: participant, holeNumber: holeNumber, basis: resolvedBasis)
+            return stablefordPoints(displayedStrokes: displayed, par: hole(for: holeNumber)?.par)
+        }
+        return (points.reduce(0, +), points.count)
+    }
+
+    func stablefordPointSummary(
+        for row: LeaderboardRow,
+        basis: ScoreBasis? = nil,
+        holes: [Int]? = nil
+    ) -> (total: Int, scoredCount: Int) {
+        guard row.isSharedScoreUnit else {
+            return stablefordPointSummary(for: row.participant, basis: basis, holes: holes)
+        }
+
+        let resolvedBasis = basis ?? scoreBasis
+        let resolvedHoles = holes ?? courseOrderHoleNumbers
+        let points = resolvedHoles.compactMap { holeNumber -> Int? in
+            let gross = scoringUnitGrossStrokes(scoringUnitID: row.scoringUnitID, holeNumber: holeNumber)
+            let net = scoringUnitNetStrokes(scoringUnitID: row.scoringUnitID, holeNumber: holeNumber)
+            let displayed = resolvedBasis == .gross ? gross : (net ?? gross)
+            return stablefordPoints(displayedStrokes: displayed, par: hole(for: holeNumber)?.par)
+        }
+        return (points.reduce(0, +), points.count)
+    }
+
+    private var stablefordPointsMap: PointsMap {
+        for stage in snapshot.resolvedActiveTemplate.pipeline {
+            if case .transform(let pointsMap) = stage, pointsMap.mode == .parRelative {
+                return pointsMap
+            }
+        }
+        return snapshot.configuration.resolvedStablefordPoints.clamped.pointsMap
+    }
+
+    private func stablefordDisplayedStrokes(
+        gross: Int,
+        participant: RoundParticipant,
+        holeNumber: Int,
+        basis: ScoreBasis
+    ) -> Int {
+        guard basis == .net else { return gross }
+        let received = ScoringEngine.strokesReceived(
+            handicap: participant.adjustedHandicap,
+            holeNumber: holeNumber,
+            holes: defaultTee?.holes ?? [],
+            playedHoleNumbers: snapshot.holeRange?.holeNumbers ?? Array(1...18),
+            useHandicaps: true,
+            handicapStrokeBasis: snapshot.handicapStrokeBasis
+        )
+        return max(0, gross - received)
+    }
+
+    private func leaderboardRows(from result: ScoringResult) -> [LeaderboardRow] {
         let participantMap = Dictionary(uniqueKeysWithValues: snapshot.participants.map { ($0.id, $0) })
         let teamMap = Dictionary(uniqueKeysWithValues: snapshot.teams.map { ($0.id, $0) })
         let scoringGroupMap = Dictionary(uniqueKeysWithValues: snapshot.scoringGroups.map { ($0.id, $0) })

@@ -143,6 +143,7 @@
 		B49BDDBF2E93D12200FFEC48 /* FirebaseFunctions in Frameworks */ = {isa = PBXBuildFile; productRef = B49BDDBE2E93D12200FFEC48 /* FirebaseFunctions */; };
 		B49C9C2B2E70332900A5DE6A /* RoundSession+Snapshot.swift in Sources */ = {isa = PBXBuildFile; fileRef = B49C9C2A2E70331F00A5DE6A /* RoundSession+Snapshot.swift */; };
 		B4A0DF2A2E392EE100F05F44 /* LegalFootnote.swift in Sources */ = {isa = PBXBuildFile; fileRef = B4A0DF292E392EE100F05F44 /* LegalFootnote.swift */; };
+		B4A0F00130A0000100ABCDEF /* SeriesPerformanceRecorder.swift in Sources */ = {isa = PBXBuildFile; fileRef = B4A0F00230A0000100ABCDEF /* SeriesPerformanceRecorder.swift */; };
 		B4A1001B2F30C001005FAF67 /* PlayerScoringRow.swift in Sources */ = {isa = PBXBuildFile; fileRef = B4A1001A2F30C001005FAF67 /* PlayerScoringRow.swift */; };
 		B4A1001D2F30C001005FAF67 /* LeaderboardRowView.swift in Sources */ = {isa = PBXBuildFile; fileRef = B4A1001C2F30C001005FAF67 /* LeaderboardRowView.swift */; };
 		B4A100212F30C001005FAF67 /* ScorecardHoleCell.swift in Sources */ = {isa = PBXBuildFile; fileRef = B4A100202F30C001005FAF67 /* ScorecardHoleCell.swift */; };
@@ -514,6 +515,7 @@
 		B49BDDBC2E93D05A00FFEC48 /* Firebase+Functions.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "Firebase+Functions.swift"; sourceTree = "<group>"; };
 		B49C9C2A2E70331F00A5DE6A /* RoundSession+Snapshot.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "RoundSession+Snapshot.swift"; sourceTree = "<group>"; };
 		B4A0DF292E392EE100F05F44 /* LegalFootnote.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LegalFootnote.swift; sourceTree = "<group>"; };
+		B4A0F00230A0000100ABCDEF /* SeriesPerformanceRecorder.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SeriesPerformanceRecorder.swift; sourceTree = "<group>"; };
 		B4A1001A2F30C001005FAF67 /* PlayerScoringRow.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PlayerScoringRow.swift; sourceTree = "<group>"; };
 		B4A1001C2F30C001005FAF67 /* LeaderboardRowView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LeaderboardRowView.swift; sourceTree = "<group>"; };
 		B4A100202F30C001005FAF67 /* ScorecardHoleCell.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ScorecardHoleCell.swift; sourceTree = "<group>"; };
@@ -1089,6 +1091,7 @@
 			isa = PBXGroup;
 			children = (
 				B4COMMG0022F90000700ABCDEF /* CommissionerGrossScoreDistributer.swift */,
+				B4A0F00230A0000100ABCDEF /* SeriesPerformanceRecorder.swift */,
 				B470A0012F68231500B96E60 /* SeriesRoundCreationMapping.swift */,
 				B45843492F68231500B96E60 /* SeriesRoundCreationService.swift */,
 				B40A1A3F2F851B2300C0FF09 /* SeriesRoundSyncPlanning.swift */,
@@ -2034,6 +2037,7 @@
 				B40A1A422F851B2300C0FF09 /* SeriesRoundSyncSheet.swift in Sources */,
 				B40A1A432F851B2300C0FF09 /* SeriesRoundSyncPlanning.swift in Sources */,
 				B40A1A442F851B2300C0FF09 /* SeriesRoundSyncService.swift in Sources */,
+				B4A0F00130A0000100ABCDEF /* SeriesPerformanceRecorder.swift in Sources */,
 				B40A1A512F851B2300C0FF09 /* SeriesRoundTileCopy.swift in Sources */,
 				B4F971E52E7AC94300B92463 /* InfoBanner.swift in Sources */,
 				B4CC84C22EE1F552007B011E /* GameLobby+Format.swift in Sources */,

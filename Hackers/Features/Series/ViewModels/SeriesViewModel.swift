@@ -1705,13 +1705,13 @@ final class SeriesViewModel: ObservableObject, Loggable {
     var teamStandings: [SeriesStanding] {
         standings
             .filter { $0.awardTrack == .team }
-            .sorted(by: standingsSort)
+            .sorted(by: Self.standingsSort)
     }
 
     var individualStandings: [SeriesStanding] {
         standings
             .filter { $0.awardTrack == .individual }
-            .sorted(by: standingsSort)
+            .sorted(by: Self.standingsSort)
     }
 
     var individualStatsRows: [SeriesIndividualStatsRow] {
@@ -2327,6 +2327,8 @@ final class SeriesViewModel: ObservableObject, Loggable {
     // MARK: - Loading
 
     func load(seriesID: String) async {
+        let fullLoadStartedAt = ContinuousClock.now
+        let coreLoadStartedAt = fullLoadStartedAt
         if realtimeSourceSeriesID != seriesID {
             stopRealtimeSourceListeners()
         }
@@ -2376,6 +2378,24 @@ final class SeriesViewModel: ObservableObject, Loggable {
         handicapScores = await scoresTask
         handicapOverrides = await overridesTask
         startRealtimeSourceListeners(for: seriesID)
+        SeriesPerformanceRecorder.shared.record(
+            .coreLoad,
+            startedAt: coreLoadStartedAt,
+            logicalReadCount: 12,
+            activeListenerCount: 2 + linkedRoundListeners.count,
+            itemCount: members.count
+                + invites.count
+                + teams.count
+                + pods.count
+                + rounds.count
+                + announcements.count
+                + scoringProfiles.count
+                + pointAwards.count
+                + standings.count
+                + handicapScores.count
+                + handicapOverrides.count,
+            context: seriesID
+        )
 
         isLoading = false
         isEnriching = true
@@ -2387,6 +2407,13 @@ final class SeriesViewModel: ObservableObject, Loggable {
         await hydrateRoundHandicapScoreMetadataIfNeeded()
         await backfillOfflineMemberUserIDs()
         await createBuiltInScoringProfilesIfNeeded()
+        SeriesPerformanceRecorder.shared.record(
+            .fullLoad,
+            startedAt: fullLoadStartedAt,
+            activeListenerCount: 2 + linkedRoundListeners.count,
+            itemCount: rounds.count,
+            context: seriesID
+        )
     }
 
     private func startRealtimeSourceListeners(for seriesID: String) {
@@ -2509,11 +2536,18 @@ final class SeriesViewModel: ObservableObject, Loggable {
 
     @discardableResult
     private func loadLinkedRounds(for roundIDs: Set<String>) async -> Set<String> {
+        let startedAt = ContinuousClock.now
         reconcileLinkedRoundListeners(for: roundIDs)
 
         guard roundIDs.isPopulated else {
             linkedRounds = [:]
             linkedRoundSnapshotCache = [:]
+            SeriesPerformanceRecorder.shared.record(
+                .linkedRoundRootsLoad,
+                startedAt: startedAt,
+                activeListenerCount: 2 + linkedRoundListeners.count,
+                context: seriesID
+            )
             return []
         }
 
@@ -2523,6 +2557,14 @@ final class SeriesViewModel: ObservableObject, Loggable {
         nextLinkedRounds.merge(fetchedByID) { _, fresh in fresh }
         linkedRounds = nextLinkedRounds
         linkedRoundSnapshotCache = linkedRoundSnapshotCache.filter { roundIDs.contains($0.key) }
+        SeriesPerformanceRecorder.shared.record(
+            .linkedRoundRootsLoad,
+            startedAt: startedAt,
+            logicalReadCount: 1,
+            activeListenerCount: 2 + linkedRoundListeners.count,
+            itemCount: fetchedByID.count,
+            context: seriesID
+        )
         return Set(fetchedByID.keys)
     }
 
@@ -2582,19 +2624,33 @@ final class SeriesViewModel: ObservableObject, Loggable {
     }
 
     func loadAttendanceForRSVPEligibleRounds() async {
+        let startedAt = ContinuousClock.now
         guard series.settings.isAttendanceEnabled else {
             attendanceByRound = [:]
+            SeriesPerformanceRecorder.shared.record(
+                .attendancePreload,
+                startedAt: startedAt,
+                context: seriesID
+            )
             return
         }
 
         var dictionary = attendanceByRound
-        for round in rounds where shouldPreloadAttendance(for: round) {
+        let eligibleRounds = rounds.filter(shouldPreloadAttendance)
+        for round in eligibleRounds {
             dictionary[round.id] = await FirebaseService.shared.fetchSeriesRoundAttendance(
                 seriesID: seriesID,
                 seriesRoundID: round.id
             )
         }
         attendanceByRound = dictionary
+        SeriesPerformanceRecorder.shared.record(
+            .attendancePreload,
+            startedAt: startedAt,
+            logicalReadCount: eligibleRounds.count,
+            itemCount: dictionary.values.reduce(0) { $0 + $1.count },
+            context: seriesID
+        )
     }
 
     func loadAttendance(for seriesRoundID: String) async {
@@ -4991,6 +5047,7 @@ final class SeriesViewModel: ObservableObject, Loggable {
     func rebuildAutomaticAwardsAndStandingsForCompletedRounds() async -> Bool {
         guard isCommissioner, !isRebuildingAutomaticAwards else { return false }
 
+        let startedAt = ContinuousClock.now
         isRebuildingAutomaticAwards = true
         defer { isRebuildingAutomaticAwards = false }
 
@@ -5021,6 +5078,13 @@ final class SeriesViewModel: ObservableObject, Loggable {
                 "processed_round_count": processedRoundCount,
                 "changed": didChange || processedRoundCount > 0
             ])
+        )
+        SeriesPerformanceRecorder.shared.record(
+            .automaticAwardsRefresh,
+            startedAt: startedAt,
+            logicalReadCount: 3,
+            itemCount: processedRoundCount,
+            context: seriesID
         )
         return didChange || processedRoundCount > 0
     }
@@ -5232,6 +5296,7 @@ final class SeriesViewModel: ObservableObject, Loggable {
     }
 
     private func rebuildStandings(only track: SeriesAwardTrack?) async {
+        let startedAt = ContinuousClock.now
         let awards = await FirebaseService.shared.fetchPointAwards(seriesID: seriesID)
         pointAwards = awards
         let existingStandings = await FirebaseService.shared.fetchStandings(seriesID: seriesID)
@@ -5242,7 +5307,7 @@ final class SeriesViewModel: ObservableObject, Loggable {
         let computedForTarget = Self.computedStandings(
             from: targetAwards,
             seriesID: seriesID,
-            sort: standingsSort
+            sort: Self.standingsSort
         )
 
         let standingsToDelete = track.map { target in
@@ -5267,6 +5332,14 @@ final class SeriesViewModel: ObservableObject, Loggable {
         addEvent(
             eventName,
             eventProps: seriesTelemetryProps(["standing_row_count": computedForTarget.count])
+        )
+        SeriesPerformanceRecorder.shared.record(
+            .standingsRebuild,
+            startedAt: startedAt,
+            logicalReadCount: 2,
+            logicalWriteCount: standingsToDelete.count + computedForTarget.count,
+            itemCount: computedForTarget.count,
+            context: track?.rawValue ?? "all"
         )
     }
 
@@ -5770,6 +5843,7 @@ final class SeriesViewModel: ObservableObject, Loggable {
     }
 
     func teamInsight(for standing: SeriesStanding) async -> SeriesTeamInsight? {
+        let startedAt = ContinuousClock.now
         guard standing.awardTrack == .team,
               let team = teams.first(where: { $0.id == standing.competitorID }) else {
             return nil
@@ -5783,7 +5857,7 @@ final class SeriesViewModel: ObservableObject, Loggable {
         }
 
         let statusBySeriesRoundID = Dictionary(uniqueKeysWithValues: rounds.map { ($0.id, effectiveStatus(for: $0)) })
-        return SeriesTeamInsightBuilder.build(
+        let insight = SeriesTeamInsightBuilder.build(
             team: team,
             standing: standing,
             teams: teams,
@@ -5793,6 +5867,13 @@ final class SeriesViewModel: ObservableObject, Loggable {
             snapshotsBySeriesRoundID: snapshotsBySeriesRoundID,
             statusBySeriesRoundID: statusBySeriesRoundID
         )
+        SeriesPerformanceRecorder.shared.record(
+            .teamInsight,
+            startedAt: startedAt,
+            itemCount: snapshotsBySeriesRoundID.count,
+            context: standing.competitorID
+        )
+        return insight
     }
 
     func teeChoices(for course: SeriesCourseSelection?) -> [Tee] {
@@ -6105,6 +6186,17 @@ final class SeriesViewModel: ObservableObject, Loggable {
     }
 
     private func loadRoundSnapshot(roundID: String) async -> RoundSnapshot? {
+        let startedAt = ContinuousClock.now
+        var loadedItemCount = 0
+        defer {
+            SeriesPerformanceRecorder.shared.record(
+                .roundSnapshotLoad,
+                startedAt: startedAt,
+                logicalReadCount: 7,
+                itemCount: loadedItemCount,
+                context: roundID
+            )
+        }
         addBreadcrumb(message: "\(#function) roundID: \(roundID)")
         // Work around a Swift 6.3 async-let runtime crash seen with larger return structs.
         let fetchedRound = await FirebaseService.shared.getRoundDocument(byID: roundID)
@@ -6154,6 +6246,12 @@ final class SeriesViewModel: ObservableObject, Loggable {
             scoringGroups=\(scoringGroups.count)
             """
         )
+        loadedItemCount = participants.count
+            + roundTeams.count
+            + teeGroups.count
+            + segments.count
+            + scores.count
+            + scoringGroups.count
 
         return RoundSnapshot(
             round: round,
@@ -7454,7 +7552,7 @@ final class SeriesViewModel: ObservableObject, Loggable {
         }
     }
 
-    private func standingsSort(_ lhs: SeriesStanding, _ rhs: SeriesStanding) -> Bool {
+    nonisolated static func standingsSort(_ lhs: SeriesStanding, _ rhs: SeriesStanding) -> Bool {
         if lhs.totalPoints != rhs.totalPoints { return lhs.totalPoints > rhs.totalPoints }
         if lhs.wins != rhs.wins { return lhs.wins > rhs.wins }
         if lhs.bestPlacement != rhs.bestPlacement { return (lhs.bestPlacement ?? .max) < (rhs.bestPlacement ?? .max) }

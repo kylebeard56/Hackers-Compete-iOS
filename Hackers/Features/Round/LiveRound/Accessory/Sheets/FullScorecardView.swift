@@ -41,6 +41,7 @@ struct FullScorecardView: View {
     @State private var showPar = true
     @State private var showYardage = true
     @State private var showHandicap = true
+    @State private var scoreDisplayMode: ScorecardScoringDisplay = .strokes
     @State private var scoreEditAnchor: ScoreEditAnchor?
     @State private var scoreEditCustomText: String = ""
     @State private var scoreEditShowCustomPrompt = false
@@ -127,7 +128,11 @@ struct FullScorecardView: View {
             if selectedParticipantID == nil {
                 selectedParticipantID = initialSelectedScoringUnitID ?? participant.id
             }
+            resetUnavailableScoreDisplayMode()
             previousVerticalOffset = verticalOffset
+        }
+        .onChange(of: viewModel.snapshot.resolvedActiveTemplate.id) { _, _ in
+            resetUnavailableScoreDisplayMode()
         }
         .onChange(of: verticalOffset) { _, newValue in
             handleVerticalScrollChange(newValue)
@@ -184,6 +189,10 @@ private extension FullScorecardView {
             Spacer(minLength: 0)
             
             if isRotated {
+                if scoreDisplayModes.count > 1 {
+                    scoreDisplayPicker
+                }
+
                 if viewModel.handicapsEnabled {
                     grossNetPicker
                 }
@@ -455,14 +464,13 @@ private extension FullScorecardView {
                         }
                     }
                 } label: {
-                    HStack {
+                    if currentValue == strokes {
+                        Label(menuScoreLabel(value: strokes, par: par), systemImage: "checkmark")
+                    } else {
                         Text(menuScoreLabel(value: strokes, par: par))
-                            .foregroundStyle(currentValue == strokes ? effectiveAccent : palette.foregroundColor)
-                        Spacer(minLength: 0)
-                        if currentValue == strokes {
-                            Icon(name: "checkmark", size: 16, weight: .semibold)
-                                .foregroundStyle(effectiveAccent)
-                        }
+                    }
+                    if let subtitle = stablefordMenuSubtitle(value: strokes, par: par, row: row, holeNumber: holeNumber) {
+                        Text(subtitle)
                     }
                 }
             }
@@ -481,14 +489,13 @@ private extension FullScorecardView {
                             }
                         }
                     } label: {
-                        HStack {
+                        if currentValue == strokes {
+                            Label(menuScoreLabel(value: strokes, par: par), systemImage: "checkmark")
+                        } else {
                             Text(menuScoreLabel(value: strokes, par: par))
-                                .foregroundStyle(currentValue == strokes ? effectiveAccent : palette.foregroundColor)
-                            Spacer(minLength: 0)
-                            if currentValue == strokes {
-                                Icon(name: "checkmark", size: 16, weight: .semibold)
-                                    .foregroundStyle(effectiveAccent)
-                            }
+                        }
+                        if let subtitle = stablefordMenuSubtitle(value: strokes, par: par, row: row, holeNumber: holeNumber) {
+                            Text(subtitle)
                         }
                     }
                 }
@@ -784,7 +791,13 @@ private extension FullScorecardView {
     ) -> some View {
         let displayed = viewModel.scoreBasis == .gross ? gross : net
         let isScored = gross != nil
-        let value = isScored ? "\(displayed ?? 0)" : "—"
+        let value: String
+        switch effectiveScoreDisplayMode {
+        case .strokes:
+            value = isScored ? "\(displayed ?? 0)" : "—"
+        case .stableford:
+            value = isScored ? "\(viewModel.stablefordPoints(displayedStrokes: displayed, par: par) ?? 0)" : "—"
+        }
         let baseTextColor = isScored ? palette.foregroundColor : Color.neutral4
         let diff = (displayed ?? 0) - (par ?? 0)
         let isSolidShape = diff <= -2 || diff >= 2
@@ -932,9 +945,43 @@ private extension FullScorecardView {
     }
     
     // MARK: - Supporting
-    
+
+    enum ScorecardScoringDisplay: String, CaseIterable {
+        case strokes
+        case stableford
+
+        var label: String {
+            switch self {
+            case .strokes: "Strokes"
+            case .stableford: "Stableford"
+            }
+        }
+    }
+
+    var scoreDisplayModes: [ScorecardScoringDisplay] {
+        var modes: [ScorecardScoringDisplay] = [.strokes]
+        if viewModel.availableLeaderboardChips.contains(.stableford) {
+            modes.append(.stableford)
+        }
+        return modes
+    }
+
+    var effectiveScoreDisplayMode: ScorecardScoringDisplay {
+        scoreDisplayModes.contains(scoreDisplayMode) ? scoreDisplayMode : .strokes
+    }
+
+    func resetUnavailableScoreDisplayMode() {
+        if !scoreDisplayModes.contains(scoreDisplayMode) {
+            scoreDisplayMode = .strokes
+        }
+    }
+
     var floatingToolbar: some View {
         HStack(spacing: 10) {
+            if scoreDisplayModes.count > 1 {
+                scoreDisplayPicker
+            }
+
             if viewModel.handicapsEnabled {
                 grossNetPicker
                 
@@ -957,16 +1004,48 @@ private extension FullScorecardView {
         .pickerStyle(.segmented)
         .frame(width: 130)
     }
+
+    private var scoreDisplayPicker: some View {
+        Picker("", selection: $scoreDisplayMode) {
+            ForEach(scoreDisplayModes, id: \.rawValue) { mode in
+                Text(mode.label).tag(mode)
+            }
+        }
+        .pickerStyle(.segmented)
+        .frame(width: 168)
+    }
     
     private var toolbarFooter: some View {
-        HStack {
-            if viewModel.handicapsEnabled {
-                grossNetPicker
+        ViewThatFits(in: .horizontal) {
+            HStack(spacing: 8) {
+                if scoreDisplayModes.count > 1 {
+                    scoreDisplayPicker
+                }
+
+                if viewModel.handicapsEnabled {
+                    grossNetPicker
+                }
+
+                Spacer(minLength: 0)
+
+                filterMenuButton
             }
-            
-            Spacer(minLength: 0)
-            
-            filterMenuButton
+
+            HStack(alignment: .bottom, spacing: 8) {
+                VStack(alignment: .leading, spacing: 8) {
+                    if scoreDisplayModes.count > 1 {
+                        scoreDisplayPicker
+                    }
+
+                    if viewModel.handicapsEnabled {
+                        grossNetPicker
+                    }
+                }
+
+                Spacer(minLength: 0)
+
+                filterMenuButton
+            }
         }
     }
     
@@ -1454,6 +1533,19 @@ private extension FullScorecardView {
         }
         return viewModel.friendlyScoreLabel(strokes: value, par: par, format: .fullWithStrokes)
     }
+
+    func stablefordMenuSubtitle(
+        value: Int,
+        par: Int,
+        row: LiveRoundViewModel.LeaderboardRow,
+        holeNumber: Int
+    ) -> String? {
+        guard scoreDisplayModes.contains(.stableford) else { return nil }
+        let grossRelativeToPar = viewModel.isFriendlyScoreInputMode ? value : value - par
+        let handicapAdjustment = viewModel.scoreBasis == .net ? strokesReceived(for: row, holeNumber: holeNumber) : 0
+        let points = viewModel.stablefordPoints(scoreToPar: grossRelativeToPar - handicapAdjustment)
+        return "\(points) Stableford"
+    }
     
     func parLabel(for holeNumber: Int) -> String {
         guard let par = viewModel.hole(for: holeNumber)?.par else { return "—" }
@@ -1468,6 +1560,12 @@ private extension FullScorecardView {
     }
     
     func segmentScoreSummary(for participant: RoundParticipant, holes: [Int]) -> (primary: String, secondary: String) {
+        if effectiveScoreDisplayMode == .stableford {
+            let points = viewModel.stablefordPointSummary(for: participant, holes: holes)
+            guard points.scoredCount > 0 else { return ("—", "") }
+            return ("\(points.total)", "Pts")
+        }
+
         let segmentScores = holes.compactMap { holeNumber -> (strokes: Int, par: Int)? in
             guard let par = viewModel.hole(for: holeNumber)?.par else { return nil }
             guard let gross = viewModel.grossStrokes(for: participant.id, holeNumber: holeNumber) else { return nil }
@@ -1484,6 +1582,12 @@ private extension FullScorecardView {
     }
 
     func segmentScoreSummary(for row: LiveRoundViewModel.LeaderboardRow, holes: [Int]) -> (primary: String, secondary: String) {
+        if effectiveScoreDisplayMode == .stableford {
+            let points = viewModel.stablefordPointSummary(for: row, holes: holes)
+            guard points.scoredCount > 0 else { return ("—", "") }
+            return ("\(points.total)", "Pts")
+        }
+
         guard row.isSharedScoreUnit else {
             return segmentScoreSummary(for: row.participant, holes: holes)
         }
@@ -1504,11 +1608,19 @@ private extension FullScorecardView {
     }
     
     func accruedScoreLabel(for participant: RoundParticipant) -> String {
+        if effectiveScoreDisplayMode == .stableford {
+            return "\(viewModel.stablefordPointSummary(for: participant).total)"
+        }
+
         let score = viewModel.scoreToPar(for: participant, basis: viewModel.scoreBasis)
         return scoreToParLabel(score)
     }
 
     func accruedScoreLabel(for row: LiveRoundViewModel.LeaderboardRow) -> String {
+        if effectiveScoreDisplayMode == .stableford {
+            return "\(viewModel.stablefordPointSummary(for: row).total)"
+        }
+
         guard row.isSharedScoreUnit else {
             return accruedScoreLabel(for: row.participant)
         }

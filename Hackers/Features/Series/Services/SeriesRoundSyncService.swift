@@ -23,6 +23,15 @@ struct SeriesRoundSyncService: Loggable {
         hostPlayerID: String?,
         options: SeriesRoundSyncOptions
     ) async -> Result<Void, SeriesRoundSyncError> {
+        let startedAt = ContinuousClock.now
+        defer {
+            SeriesPerformanceRecorder.shared.record(
+                .roundSync,
+                startedAt: startedAt,
+                itemCount: snapshot.participants.count,
+                context: seriesRound.id
+            )
+        }
         guard options.hasAny else { return .success(()) }
 
         if let err = SeriesRoundSyncPlanning.validateOptions(options, roundStatus: roundStatus) {
