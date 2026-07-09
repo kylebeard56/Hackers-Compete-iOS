@@ -11,6 +11,17 @@ import Foundation
 
 private let collection = Collections.series.rawValue
 
+enum SeriesDerivedBatchWriteError: Error, LocalizedError {
+    case operationLimitExceeded(entity: String, count: Int)
+
+    var errorDescription: String? {
+        switch self {
+        case .operationLimitExceeded(let entity, let count):
+            return "Atomic \(entity) publication supports at most 500 operations; received \(count)."
+        }
+    }
+}
+
 // MARK: - Series CRUD
 
 extension FirebaseService {
@@ -350,14 +361,22 @@ extension FirebaseService {
 
     func fetchSeriesRoundMappings(seriesID: String, seriesRoundID: String? = nil) async -> [SeriesRoundMapping] {
         addBreadcrumb(message: "\(#function), seriesID: \(seriesID)")
-        do {
-            let query = SeriesRoundMapping.query(parentID: seriesID)
-                .whereField(useCondition: seriesRoundID != nil, "series_round_id", isEqualTo: seriesRoundID ?? "")
-            return try await fetchDocuments(query: query).get()
-        } catch {
+        switch await fetchSeriesRoundMappingsResult(seriesID: seriesID, seriesRoundID: seriesRoundID) {
+        case .success(let mappings):
+            return mappings
+        case .failure(let error):
             addBreadcrumb(level: .error, message: "Cannot fetch series mappings", error: error)
             return []
         }
+    }
+
+    func fetchSeriesRoundMappingsResult(
+        seriesID: String,
+        seriesRoundID: String? = nil
+    ) async -> Result<[SeriesRoundMapping], Error> {
+        let query = SeriesRoundMapping.query(parentID: seriesID)
+            .whereField(useCondition: seriesRoundID != nil, "series_round_id", isEqualTo: seriesRoundID ?? "")
+        return await fetchDocuments(query: query)
     }
 }
 
@@ -450,66 +469,64 @@ extension FirebaseService {
         return await award.delete()
     }
 
-    /// Applies deletes and upserts in Firestore batches (max 500 writes per commit).
+    /// Atomically applies one round's award replacement in a single Firestore batch.
     func batchReplacePointAwards(deleting: [SeriesPointAward], upserting: [SeriesPointAward]) async -> Result<Void, Error> {
         let totalOps = deleting.count + upserting.count
         guard totalOps > 0 else { return .success(()) }
+        guard totalOps <= 500 else {
+            return .failure(
+                SeriesDerivedBatchWriteError.operationLimitExceeded(
+                    entity: "point award",
+                    count: totalOps
+                )
+            )
+        }
 
         addBreadcrumb(message: "\(#function), delete: \(deleting.count), upsert: \(upserting.count)")
 
         let db = Firestore.firestore()
-        let maxOpsPerBatch = 500
-
-        var deleteIndex = 0
-        var upsertIndex = 0
-
-        while deleteIndex < deleting.count || upsertIndex < upserting.count {
-            let batch = db.batch()
-            var opsInBatch = 0
-
-            while opsInBatch < maxOpsPerBatch, deleteIndex < deleting.count {
-                let award = deleting[deleteIndex]
-                let ref = SeriesPointAward.documentReference(id: award.id, parentID: award.parentID)
-                batch.deleteDocument(ref)
-                deleteIndex += 1
-                opsInBatch += 1
-            }
-
-            while opsInBatch < maxOpsPerBatch, upsertIndex < upserting.count {
-                var award = upserting[upsertIndex]
-                award.lastUpdatedAt = .init()
-                let ref = SeriesPointAward.documentReference(id: award.id, parentID: award.parentID)
-                do {
-                    try batch.setData(try award.toDictionary(), forDocument: ref)
-                } catch {
-                    addBreadcrumb(level: .error, message: "\(#function) encode failed", error: error)
-                    return .failure(error)
-                }
-                upsertIndex += 1
-                opsInBatch += 1
-            }
-
+        let batch = db.batch()
+        for award in deleting {
+            let ref = SeriesPointAward.documentReference(id: award.id, parentID: award.parentID)
+            batch.deleteDocument(ref)
+        }
+        for var award in upserting {
+            award.lastUpdatedAt = .init()
+            let ref = SeriesPointAward.documentReference(id: award.id, parentID: award.parentID)
             do {
-                try await batch.commit()
+                batch.setData(try award.toDictionary(), forDocument: ref)
             } catch {
-                addBreadcrumb(level: .error, message: "\(#function) commit failed", error: error)
+                addBreadcrumb(level: .error, message: "\(#function) encode failed", error: error)
                 return .failure(error)
             }
         }
-
-        return .success(())
+        do {
+            try await batch.commit()
+            return .success(())
+        } catch {
+            addBreadcrumb(level: .error, message: "\(#function) commit failed", error: error)
+            return .failure(error)
+        }
     }
 
     func fetchPointAwards(seriesID: String, seriesRoundID: String? = nil) async -> [SeriesPointAward] {
         addBreadcrumb(message: "\(#function), seriesID: \(seriesID)")
-        do {
-            let query = SeriesPointAward.query(parentID: seriesID)
-                .whereField(useCondition: seriesRoundID != nil, "series_round_id", isEqualTo: seriesRoundID ?? "")
-            return try await fetchDocuments(query: query).get()
-        } catch {
+        switch await fetchPointAwardsResult(seriesID: seriesID, seriesRoundID: seriesRoundID) {
+        case .success(let awards):
+            return awards
+        case .failure(let error):
             addBreadcrumb(level: .error, message: "Cannot fetch point awards", error: error)
             return []
         }
+    }
+
+    func fetchPointAwardsResult(
+        seriesID: String,
+        seriesRoundID: String? = nil
+    ) async -> Result<[SeriesPointAward], Error> {
+        let query = SeriesPointAward.query(parentID: seriesID)
+            .whereField(useCondition: seriesRoundID != nil, "series_round_id", isEqualTo: seriesRoundID ?? "")
+        return await fetchDocuments(query: query)
     }
 }
 
@@ -524,17 +541,62 @@ extension FirebaseService {
 
     func fetchStandings(seriesID: String) async -> [SeriesStanding] {
         addBreadcrumb(message: "\(#function), seriesID: \(seriesID)")
-        do {
-            return try await getSubcollectionItems(parentID: seriesID).get()
-        } catch {
+        switch await fetchStandingsResult(seriesID: seriesID) {
+        case .success(let standings):
+            return standings
+        case .failure(let error):
             addBreadcrumb(level: .error, message: "Cannot fetch standings", error: error)
             return []
         }
     }
 
+    func fetchStandingsResult(seriesID: String) async -> Result<[SeriesStanding], Error> {
+        await getSubcollectionItems(parentID: seriesID)
+    }
+
     func deleteStanding(_ standing: SeriesStanding) async -> Result<Bool, Error> {
         addBreadcrumb(message: "\(#function), id: \(standing.id)")
         return await standing.delete()
+    }
+
+    /// Atomically applies the semantic standings diff. Larger publications require a generation-based schema.
+    func batchReplaceStandings(
+        deleting: [SeriesStanding],
+        upserting: [SeriesStanding]
+    ) async -> Result<Void, Error> {
+        let totalOps = deleting.count + upserting.count
+        guard totalOps > 0 else { return .success(()) }
+        guard totalOps <= 500 else {
+            return .failure(
+                SeriesDerivedBatchWriteError.operationLimitExceeded(
+                    entity: "standings",
+                    count: totalOps
+                )
+            )
+        }
+
+        addBreadcrumb(message: "\(#function), delete: \(deleting.count), upsert: \(upserting.count)")
+        let batch = Firestore.firestore().batch()
+        for standing in deleting {
+            let ref = SeriesStanding.documentReference(id: standing.id, parentID: standing.parentID)
+            batch.deleteDocument(ref)
+        }
+        for standing in upserting {
+            let ref = SeriesStanding.documentReference(id: standing.id, parentID: standing.parentID)
+            do {
+                batch.setData(try standing.toDictionary(), forDocument: ref)
+            } catch {
+                addBreadcrumb(level: .error, message: "\(#function) encode failed", error: error)
+                return .failure(error)
+            }
+        }
+        do {
+            try await batch.commit()
+            return .success(())
+        } catch {
+            addBreadcrumb(level: .error, message: "\(#function) commit failed", error: error)
+            return .failure(error)
+        }
     }
 }
 
