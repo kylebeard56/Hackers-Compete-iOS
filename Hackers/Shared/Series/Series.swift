@@ -876,6 +876,168 @@ struct SeriesHandicapConfig: Hashable, Codable {
     }
 }
 
+// MARK: - Series policy contracts
+
+/// Convenience defaults used to seed future rounds. These remain separate from the
+/// standings policy that decides whether an authored round may contribute results.
+struct SeriesRoundDefaults: Hashable, Codable {
+    var course: SeriesCourseSelection?
+    var courseRotationMode: SeriesDefaultCourseRotationMode
+    var configuration: SeriesRoundConfiguration
+    var teamScoringProfileID: String?
+    var individualScoringProfileID: String?
+    var scheduledTeeTimeMinutesFromMidnight: Int?
+    var recurringPlayWeekdays: [Int]?
+
+    init(
+        course: SeriesCourseSelection? = nil,
+        courseRotationMode: SeriesDefaultCourseRotationMode = .fixed,
+        configuration: SeriesRoundConfiguration = .init(),
+        teamScoringProfileID: String? = nil,
+        individualScoringProfileID: String? = nil,
+        scheduledTeeTimeMinutesFromMidnight: Int? = nil,
+        recurringPlayWeekdays: [Int]? = nil
+    ) {
+        self.course = course
+        self.courseRotationMode = courseRotationMode
+        self.configuration = configuration
+        self.teamScoringProfileID = teamScoringProfileID
+        self.individualScoringProfileID = individualScoringProfileID
+        self.scheduledTeeTimeMinutesFromMidnight = scheduledTeeTimeMinutesFromMidnight
+        self.recurringPlayWeekdays = recurringPlayWeekdays
+    }
+
+    enum CodingKeys: String, CodingKey {
+        case course
+        case courseRotationMode = "course_rotation_mode"
+        case configuration
+        case teamScoringProfileID = "team_scoring_profile_id"
+        case individualScoringProfileID = "individual_scoring_profile_id"
+        case scheduledTeeTimeMinutesFromMidnight = "scheduled_tee_time_minutes_from_midnight"
+        case recurringPlayWeekdays = "recurring_play_weekdays"
+    }
+}
+
+enum SeriesRoundScoringFamily: String, Hashable, Codable {
+    case strokePlay = "stroke_play"
+    case matchPlay = "match_play"
+}
+
+enum SeriesRoundNormalizationPolicy: String, Hashable, Codable {
+    case none
+    case nineHoleToEighteenHole = "nine_hole_to_eighteen_hole"
+}
+
+struct SeriesStandingsRule: Hashable, Codable, Identifiable {
+    let id: String
+    let track: SeriesAwardTrack
+    let acceptedFormatTemplateIDs: [String]?
+    let acceptedScoreBases: [ScoreBasis]?
+    let acceptedHoleCounts: [Int]?
+    let acceptedScoringFamilies: [SeriesRoundScoringFamily]?
+    let requiredTeamScoring: RoundTeamScoringConfiguration?
+    let requiredSubstitutesScore: Bool?
+    let normalizationPolicy: SeriesRoundNormalizationPolicy
+
+    init(
+        id: String,
+        track: SeriesAwardTrack,
+        acceptedFormatTemplateIDs: [String]? = nil,
+        acceptedScoreBases: [ScoreBasis]? = nil,
+        acceptedHoleCounts: [Int]? = nil,
+        acceptedScoringFamilies: [SeriesRoundScoringFamily]? = nil,
+        requiredTeamScoring: RoundTeamScoringConfiguration? = nil,
+        requiredSubstitutesScore: Bool? = nil,
+        normalizationPolicy: SeriesRoundNormalizationPolicy = .none
+    ) {
+        self.id = id
+        self.track = track
+        self.acceptedFormatTemplateIDs = acceptedFormatTemplateIDs.map { Array(Set($0)).sorted() }
+        self.acceptedScoreBases = acceptedScoreBases.map { Array(Set($0)).sorted { $0.rawValue < $1.rawValue } }
+        self.acceptedHoleCounts = acceptedHoleCounts.map { Array(Set($0)).sorted() }
+        self.acceptedScoringFamilies = acceptedScoringFamilies.map { Array(Set($0)).sorted { $0.rawValue < $1.rawValue } }
+        self.requiredTeamScoring = requiredTeamScoring
+        self.requiredSubstitutesScore = requiredSubstitutesScore
+        self.normalizationPolicy = normalizationPolicy
+    }
+
+    enum CodingKeys: String, CodingKey {
+        case id, track
+        case acceptedFormatTemplateIDs = "accepted_format_template_ids"
+        case acceptedScoreBases = "accepted_score_bases"
+        case acceptedHoleCounts = "accepted_hole_counts"
+        case acceptedScoringFamilies = "accepted_scoring_families"
+        case requiredTeamScoring = "required_team_scoring"
+        case requiredSubstitutesScore = "required_substitutes_score"
+        case normalizationPolicy = "normalization_policy"
+    }
+}
+
+struct SeriesStandingsPolicy: Hashable, Codable {
+    let schemaVersion: Int
+    let rules: [SeriesStandingsRule]
+
+    init(schemaVersion: Int = 1, rules: [SeriesStandingsRule]) {
+        self.schemaVersion = schemaVersion
+        self.rules = rules.sorted {
+            if $0.id != $1.id { return $0.id < $1.id }
+            return $0.track.rawValue < $1.track.rawValue
+        }
+    }
+
+    enum CodingKeys: String, CodingKey {
+        case schemaVersion = "schema_version"
+        case rules
+    }
+}
+
+/// Immutable policy snapshot. Replacing a policy creates a new revision rather than
+/// mutating the contract already bound to authored rounds.
+struct SeriesPolicyRevision: Hashable, Codable, Identifiable {
+    let id: String
+    let sequence: Int
+    let policy: SeriesStandingsPolicy
+    let resolvedPolicyFingerprint: String
+    let createdAt: Time
+
+    enum CodingKeys: String, CodingKey {
+        case id, sequence, policy
+        case resolvedPolicyFingerprint = "resolved_policy_fingerprint"
+        case createdAt = "created_at"
+    }
+}
+
+/// Self-contained binding so an old round never resolves against today's settings.
+struct SeriesRoundPolicyBinding: Hashable, Codable {
+    let revisionID: String
+    let revisionSequence: Int
+    let policy: SeriesStandingsPolicy
+    let resolvedPolicyFingerprint: String
+    let resolvedSubstitutesScore: Bool?
+
+    init(
+        revisionID: String,
+        revisionSequence: Int,
+        policy: SeriesStandingsPolicy,
+        resolvedPolicyFingerprint: String,
+        resolvedSubstitutesScore: Bool? = nil
+    ) {
+        self.revisionID = revisionID
+        self.revisionSequence = revisionSequence
+        self.policy = policy
+        self.resolvedPolicyFingerprint = resolvedPolicyFingerprint
+        self.resolvedSubstitutesScore = resolvedSubstitutesScore
+    }
+
+    enum CodingKeys: String, CodingKey {
+        case policy
+        case revisionID = "revision_id"
+        case revisionSequence = "revision_sequence"
+        case resolvedPolicyFingerprint = "resolved_policy_fingerprint"
+        case resolvedSubstitutesScore = "resolved_substitutes_score"
+    }
+}
+
 struct SeriesSettings: Hashable, Codable {
     var experiencePreset: SeriesExperiencePreset
     var defaultCourse: SeriesCourseSelection?
@@ -898,6 +1060,8 @@ struct SeriesSettings: Hashable, Codable {
     var defaultScheduledTeeTimeMinutesFromMidnight: Int?
     /// `Calendar` weekday integers (1 = Sunday … 7 = Saturday). Empty/nil = no fixed play-day filter.
     var recurringPlayWeekdays: [Int]?
+    /// Optional explicit policy. Nil preserves the historical standings behavior.
+    var standingsPolicyRevision: SeriesPolicyRevision?
 
     init(
         experiencePreset: SeriesExperiencePreset = .league,
@@ -918,7 +1082,8 @@ struct SeriesSettings: Hashable, Codable {
         showScoreboardTile: Bool = false,
         substitutesScore: Bool = false,
         defaultScheduledTeeTimeMinutesFromMidnight: Int? = nil,
-        recurringPlayWeekdays: [Int]? = nil
+        recurringPlayWeekdays: [Int]? = nil,
+        standingsPolicyRevision: SeriesPolicyRevision? = nil
     ) {
         self.experiencePreset = experiencePreset
         self.defaultCourse = defaultCourse
@@ -939,6 +1104,7 @@ struct SeriesSettings: Hashable, Codable {
         self.substitutesScore = substitutesScore
         self.defaultScheduledTeeTimeMinutesFromMidnight = defaultScheduledTeeTimeMinutesFromMidnight
         self.recurringPlayWeekdays = recurringPlayWeekdays
+        self.standingsPolicyRevision = standingsPolicyRevision
     }
 
     enum CodingKeys: String, CodingKey {
@@ -961,6 +1127,7 @@ struct SeriesSettings: Hashable, Codable {
         case substitutesScore = "substitutes_score"
         case defaultScheduledTeeTimeMinutesFromMidnight = "default_scheduled_tee_time_minutes_from_midnight"
         case recurringPlayWeekdays = "recurring_play_weekdays"
+        case standingsPolicyRevision = "standings_policy_revision"
     }
 
     init(from decoder: Decoder) throws {
@@ -984,6 +1151,7 @@ struct SeriesSettings: Hashable, Codable {
         substitutesScore = try c.decodeIfPresent(Bool.self, forKey: .substitutesScore) ?? false
         defaultScheduledTeeTimeMinutesFromMidnight = try c.decodeIfPresent(Int.self, forKey: .defaultScheduledTeeTimeMinutesFromMidnight)
         recurringPlayWeekdays = try c.decodeIfPresent([Int].self, forKey: .recurringPlayWeekdays)
+        standingsPolicyRevision = try c.decodeIfPresent(SeriesPolicyRevision.self, forKey: .standingsPolicyRevision)
     }
 
     func encode(to encoder: Encoder) throws {
@@ -1007,6 +1175,7 @@ struct SeriesSettings: Hashable, Codable {
         try c.encode(substitutesScore, forKey: .substitutesScore)
         try c.encodeIfPresent(defaultScheduledTeeTimeMinutesFromMidnight, forKey: .defaultScheduledTeeTimeMinutesFromMidnight)
         try c.encodeIfPresent(recurringPlayWeekdays, forKey: .recurringPlayWeekdays)
+        try c.encodeIfPresent(standingsPolicyRevision, forKey: .standingsPolicyRevision)
     }
 
     static func seeded(for preset: SeriesExperiencePreset) -> SeriesSettings {
@@ -1036,6 +1205,29 @@ struct SeriesSettings: Hashable, Codable {
 
     func resolvedPlayWeekdaySet() -> Set<Int> {
         Set(recurringPlayWeekdays ?? [])
+    }
+
+    var roundDefaults: SeriesRoundDefaults {
+        get {
+            SeriesRoundDefaults(
+                course: defaultCourse,
+                courseRotationMode: defaultCourseRotationMode,
+                configuration: defaultRoundConfig,
+                teamScoringProfileID: defaultTeamScoringProfileID,
+                individualScoringProfileID: defaultIndividualScoringProfileID,
+                scheduledTeeTimeMinutesFromMidnight: defaultScheduledTeeTimeMinutesFromMidnight,
+                recurringPlayWeekdays: recurringPlayWeekdays
+            )
+        }
+        set {
+            defaultCourse = newValue.course
+            defaultCourseRotationMode = newValue.courseRotationMode
+            defaultRoundConfig = newValue.configuration
+            defaultTeamScoringProfileID = newValue.teamScoringProfileID
+            defaultIndividualScoringProfileID = newValue.individualScoringProfileID
+            defaultScheduledTeeTimeMinutesFromMidnight = newValue.scheduledTeeTimeMinutesFromMidnight
+            recurringPlayWeekdays = newValue.recurringPlayWeekdays
+        }
     }
 }
 
@@ -2120,6 +2312,7 @@ struct SeriesRound: FirebaseSubcollectable, IndexIterable {
     var completedAt: Time?
     var courseOverride: SeriesCourseSelection?
     var roundConfig: SeriesRoundConfiguration
+    var policyBinding: SeriesRoundPolicyBinding?
     var teamScoringProfileID: String?
     var individualScoringProfileID: String?
     var matchupPlans: [SeriesRoundMatchupPlan]
@@ -2153,6 +2346,7 @@ struct SeriesRound: FirebaseSubcollectable, IndexIterable {
         completedAt: Time? = nil,
         courseOverride: SeriesCourseSelection? = nil,
         roundConfig: SeriesRoundConfiguration = .init(),
+        policyBinding: SeriesRoundPolicyBinding? = nil,
         teamScoringProfileID: String? = nil,
         individualScoringProfileID: String? = nil,
         matchupPlans: [SeriesRoundMatchupPlan] = [],
@@ -2181,6 +2375,7 @@ struct SeriesRound: FirebaseSubcollectable, IndexIterable {
         self.completedAt = completedAt
         self.courseOverride = courseOverride
         self.roundConfig = roundConfig
+        self.policyBinding = policyBinding
         self.teamScoringProfileID = teamScoringProfileID
         self.individualScoringProfileID = individualScoringProfileID
         self.matchupPlans = matchupPlans
@@ -2208,6 +2403,7 @@ struct SeriesRound: FirebaseSubcollectable, IndexIterable {
         case completedAt = "completed_at"
         case courseOverride = "course_override"
         case roundConfig = "round_config"
+        case policyBinding = "policy_binding"
         case teamScoringProfileID = "team_scoring_profile_id"
         case individualScoringProfileID = "individual_scoring_profile_id"
         case matchupPlans = "matchup_plans"
@@ -2238,6 +2434,7 @@ struct SeriesRound: FirebaseSubcollectable, IndexIterable {
         completedAt = try c.decodeIfPresent(Time.self, forKey: .completedAt)
         courseOverride = try c.decodeIfPresent(SeriesCourseSelection.self, forKey: .courseOverride)
         roundConfig = try c.decodeIfPresent(SeriesRoundConfiguration.self, forKey: .roundConfig) ?? .init()
+        policyBinding = try c.decodeIfPresent(SeriesRoundPolicyBinding.self, forKey: .policyBinding)
         teamScoringProfileID = try c.decodeIfPresent(String.self, forKey: .teamScoringProfileID)
         individualScoringProfileID = try c.decodeIfPresent(String.self, forKey: .individualScoringProfileID)
         matchupPlans = try c.decodeIfPresent([SeriesRoundMatchupPlan].self, forKey: .matchupPlans) ?? []
@@ -2269,6 +2466,7 @@ struct SeriesRound: FirebaseSubcollectable, IndexIterable {
         try c.encodeIfPresent(completedAt, forKey: .completedAt)
         try c.encodeIfPresent(courseOverride, forKey: .courseOverride)
         try c.encode(roundConfig, forKey: .roundConfig)
+        try c.encodeIfPresent(policyBinding, forKey: .policyBinding)
         try c.encodeIfPresent(teamScoringProfileID, forKey: .teamScoringProfileID)
         try c.encodeIfPresent(individualScoringProfileID, forKey: .individualScoringProfileID)
         try c.encode(matchupPlans, forKey: .matchupPlans)

@@ -130,7 +130,8 @@ enum SeriesRoundCreationMapping {
             handicapNormalizationMode: seriesRound.roundConfig.handicapNormalizationMode,
             leagueHandicapMaximum: series.handicapConfig.isEnabled ? series.handicapConfig.config.maximumHandicap : nil,
             attendanceConfirmationEnabled: series.settings.isAttendanceEnabled,
-            substitutesScore: series.settings.substitutesScore
+            substitutesScore: seriesRound.policyBinding?.resolvedSubstitutesScore
+                ?? series.settings.substitutesScore
         )
     }
 

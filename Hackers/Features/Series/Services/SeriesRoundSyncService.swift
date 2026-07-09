@@ -151,7 +151,8 @@ struct SeriesRoundSyncService: Loggable {
         var workingScoringGroups = snapshot.scoringGroups
         var workingTeeGroups = snapshot.teeGroups
         var workingRound = snapshot.round
-        let desiredSubstitutesScore = series.settings.substitutesScore
+        let desiredSubstitutesScore = seriesRound.policyBinding?.resolvedSubstitutesScore
+            ?? series.settings.substitutesScore
         let desiredRoundName = Round.normalizedName(seriesRound.title)
 
         if workingRound.name != desiredRoundName {

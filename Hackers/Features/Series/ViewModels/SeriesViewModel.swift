@@ -1887,6 +1887,10 @@ final class SeriesViewModel: ObservableObject, Loggable {
         seriesRound.roundConfig
     }
 
+    func standingsPolicyCompatibility(for seriesRound: SeriesRound) -> [SeriesStandingsRuleCompatibility] {
+        SeriesStandingsPolicyResolver.compatibility(for: seriesRound, in: series)
+    }
+
     func shouldUseLinkedRoundConfiguration(for seriesRound: SeriesRound, linkedRound: Round) -> Bool {
         false
     }
@@ -3389,7 +3393,8 @@ final class SeriesViewModel: ObservableObject, Loggable {
         scheduledAt: Time? = nil,
         format: GameFormat = .strokePlay
     ) async -> SeriesRound? {
-        var defaultConfig = series.settings.defaultRoundConfig
+        let defaults = series.settings.roundDefaults
+        var defaultConfig = defaults.configuration
         if format != .strokePlay {
             defaultConfig.formatTemplateID = templateID(for: format)
         }
@@ -3398,8 +3403,8 @@ final class SeriesViewModel: ObservableObject, Loggable {
             scheduledAt: scheduledAt,
             courseOverride: nil,
             roundConfig: defaultConfig,
-            teamScoringProfileID: series.settings.defaultTeamScoringProfileID,
-            individualScoringProfileID: series.settings.defaultIndividualScoringProfileID,
+            teamScoringProfileID: defaults.teamScoringProfileID,
+            individualScoringProfileID: defaults.individualScoringProfileID,
             matchupPlans: [],
             plannedMatchups: [],
             plannedTeeGroups: [],
@@ -3434,6 +3439,7 @@ final class SeriesViewModel: ObservableObject, Loggable {
             scheduledAt: scheduledAt,
             courseOverride: roundCourse,
             roundConfig: roundConfig,
+            policyBinding: SeriesStandingsPolicyResolver.bindingForNewRound(settings: series.settings),
             teamScoringProfileID: teamScoringProfileID,
             individualScoringProfileID: individualScoringProfileID,
             matchupPlans: matchupPlans.sorted { $0.index < $1.index },
@@ -3544,6 +3550,26 @@ final class SeriesViewModel: ObservableObject, Loggable {
         }
         updatedRound.teamScoringProfileID = teamScoringProfileID
         updatedRound.individualScoringProfileID = individualScoringProfileID
+        let effectiveLifecycleStatus = effectiveStatus(for: previousRound)
+        guard SeriesRoundLifecycleGuard.permitsScoreContractChange(
+            from: previousRound,
+            to: updatedRound,
+            effectiveStatus: effectiveLifecycleStatus,
+            in: series
+        ) else {
+            addBreadcrumb(
+                level: .warning,
+                message: "Blocked Series round score-contract mutation after start"
+            )
+            addEvent(
+                "series.round_score_contract_change_blocked",
+                eventProps: seriesTelemetryProps([
+                    "series_round_id": round.id,
+                    "effective_status": effectiveLifecycleStatus.rawValue
+                ])
+            )
+            return false
+        }
         updatedRound.lastUpdatedAt = .init()
         switch await FirebaseService.shared.updateSeriesRound(updatedRound) {
         case .success(let saved):
@@ -4573,6 +4599,23 @@ final class SeriesViewModel: ObservableObject, Loggable {
             )
         }
         workingRound = seriesRoundForSyncPreservingAuthoredConfiguration(workingRound)
+
+        let policyCompatibility = standingsPolicyCompatibility(for: workingRound)
+        let hasInvalidPolicyContract = policyCompatibility.contains { result in
+            if case .invalid = result.classification { return true }
+            return false
+        }
+        guard !hasInvalidPolicyContract else {
+            addBreadcrumb(
+                level: .warning,
+                message: "Blocked Series round creation with an invalid standings policy contract"
+            )
+            addEvent(
+                "series.round_policy_preflight_failed",
+                eventProps: seriesTelemetryProps(["series_round_id": seriesRound.id])
+            )
+            return nil
+        }
 
         guard let roundID = await SeriesRoundCreationService().createRoundFromSeries(
             series: series,

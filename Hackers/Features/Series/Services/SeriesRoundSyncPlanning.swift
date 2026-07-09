@@ -783,7 +783,8 @@ enum SeriesRoundSyncPlanning {
             round.configuration.leagueHandicapMaximum = series.handicapConfig.isEnabled
                 ? series.handicapConfig.config.maximumHandicap
                 : nil
-            round.configuration.substitutesScore = series.settings.substitutesScore
+            round.configuration.substitutesScore = seriesRound.policyBinding?.resolvedSubstitutesScore
+                ?? series.settings.substitutesScore
         }
         round.lastUpdatedAt = .init()
 
