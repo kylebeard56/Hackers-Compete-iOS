@@ -146,6 +146,8 @@
 		B4A0F00130A0000100ABCDEF /* SeriesPerformanceRecorder.swift in Sources */ = {isa = PBXBuildFile; fileRef = B4A0F00230A0000100ABCDEF /* SeriesPerformanceRecorder.swift */; };
 		B4A0F00330A0000100ABCDEF /* SeriesRoundSnapshotRepository.swift in Sources */ = {isa = PBXBuildFile; fileRef = B4A0F00430A0000100ABCDEF /* SeriesRoundSnapshotRepository.swift */; };
 		B4A0F00530A0000100ABCDEF /* SeriesStandingsPublication.swift in Sources */ = {isa = PBXBuildFile; fileRef = B4A0F00630A0000100ABCDEF /* SeriesStandingsPublication.swift */; };
+		B4A0F00730A0000100ABCDEF /* SeriesRoundDraft.swift in Sources */ = {isa = PBXBuildFile; fileRef = B4A0F00830A0000100ABCDEF /* SeriesRoundDraft.swift */; };
+		B4A0F00930A0000100ABCDEF /* SeriesRoundConfigurationReconciler.swift in Sources */ = {isa = PBXBuildFile; fileRef = B4A0F00A30A0000100ABCDEF /* SeriesRoundConfigurationReconciler.swift */; };
 		B4A1001B2F30C001005FAF67 /* PlayerScoringRow.swift in Sources */ = {isa = PBXBuildFile; fileRef = B4A1001A2F30C001005FAF67 /* PlayerScoringRow.swift */; };
 		B4A1001D2F30C001005FAF67 /* LeaderboardRowView.swift in Sources */ = {isa = PBXBuildFile; fileRef = B4A1001C2F30C001005FAF67 /* LeaderboardRowView.swift */; };
 		B4A100212F30C001005FAF67 /* ScorecardHoleCell.swift in Sources */ = {isa = PBXBuildFile; fileRef = B4A100202F30C001005FAF67 /* ScorecardHoleCell.swift */; };
@@ -520,6 +522,8 @@
 		B4A0F00230A0000100ABCDEF /* SeriesPerformanceRecorder.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SeriesPerformanceRecorder.swift; sourceTree = "<group>"; };
 		B4A0F00430A0000100ABCDEF /* SeriesRoundSnapshotRepository.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SeriesRoundSnapshotRepository.swift; sourceTree = "<group>"; };
 		B4A0F00630A0000100ABCDEF /* SeriesStandingsPublication.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SeriesStandingsPublication.swift; sourceTree = "<group>"; };
+		B4A0F00830A0000100ABCDEF /* SeriesRoundDraft.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SeriesRoundDraft.swift; sourceTree = "<group>"; };
+		B4A0F00A30A0000100ABCDEF /* SeriesRoundConfigurationReconciler.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SeriesRoundConfigurationReconciler.swift; sourceTree = "<group>"; };
 		B4A1001A2F30C001005FAF67 /* PlayerScoringRow.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PlayerScoringRow.swift; sourceTree = "<group>"; };
 		B4A1001C2F30C001005FAF67 /* LeaderboardRowView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LeaderboardRowView.swift; sourceTree = "<group>"; };
 		B4A100202F30C001005FAF67 /* ScorecardHoleCell.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ScorecardHoleCell.swift; sourceTree = "<group>"; };
@@ -1098,6 +1102,8 @@
 				B4A0F00230A0000100ABCDEF /* SeriesPerformanceRecorder.swift */,
 				B4A0F00430A0000100ABCDEF /* SeriesRoundSnapshotRepository.swift */,
 				B4A0F00630A0000100ABCDEF /* SeriesStandingsPublication.swift */,
+				B4A0F00830A0000100ABCDEF /* SeriesRoundDraft.swift */,
+				B4A0F00A30A0000100ABCDEF /* SeriesRoundConfigurationReconciler.swift */,
 				B470A0012F68231500B96E60 /* SeriesRoundCreationMapping.swift */,
 				B45843492F68231500B96E60 /* SeriesRoundCreationService.swift */,
 				B40A1A3F2F851B2300C0FF09 /* SeriesRoundSyncPlanning.swift */,
@@ -2046,6 +2052,8 @@
 				B4A0F00130A0000100ABCDEF /* SeriesPerformanceRecorder.swift in Sources */,
 				B4A0F00330A0000100ABCDEF /* SeriesRoundSnapshotRepository.swift in Sources */,
 				B4A0F00530A0000100ABCDEF /* SeriesStandingsPublication.swift in Sources */,
+				B4A0F00730A0000100ABCDEF /* SeriesRoundDraft.swift in Sources */,
+				B4A0F00930A0000100ABCDEF /* SeriesRoundConfigurationReconciler.swift in Sources */,
 				B40A1A512F851B2300C0FF09 /* SeriesRoundTileCopy.swift in Sources */,
 				B4F971E52E7AC94300B92463 /* InfoBanner.swift in Sources */,
 				B4CC84C22EE1F552007B011E /* GameLobby+Format.swift in Sources */,

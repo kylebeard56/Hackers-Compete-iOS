@@ -71,9 +71,6 @@ enum SeriesRoundCreationMapping {
 
     private static func primaryGameFormat(series: Series, seriesRound: SeriesRound) -> GameFormat {
         var format = seriesRound.roundConfig.legacyGameFormat
-        if let defaultMaxScoreOverPar = series.settings.defaultRoundConfig.maxScoreOverPar {
-            format.configuration.maxScoreOverPar = defaultMaxScoreOverPar
-        }
         if series.handicapConfig.isEnabled, seriesRound.roundConfig.scoreBasisOverride == nil {
             format.configuration.basis = .net
         }

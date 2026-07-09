@@ -1583,6 +1583,7 @@ final class SeriesViewModel: ObservableObject, Loggable {
     @Published var attendanceByMember: [String: SeriesRoundAttendance] = [:]
     @Published var attendanceByRound: [String: [SeriesRoundAttendance]] = [:]
     @Published var linkedRounds: [String: Round] = [:]
+    @Published private(set) var linkedConfigurationDivergences: [String: SeriesRoundConfigurationDivergence] = [:]
     private let snapshotRepository: SeriesRoundSnapshotRepository
     private let standingsPublicationService: SeriesStandingsPublicationService
     private var linkedRoundListeners: [String: ListenerRegistration] = [:]
@@ -1883,18 +1884,30 @@ final class SeriesViewModel: ObservableObject, Loggable {
     }
 
     func effectiveRoundConfig(for seriesRound: SeriesRound) -> SeriesRoundConfiguration {
-        guard let roundID = seriesRound.roundID,
-              let linkedRound = linkedRounds[roundID],
-              shouldUseLinkedRoundConfiguration(for: seriesRound, linkedRound: linkedRound)
-        else { return seriesRound.roundConfig }
-        if shouldPreserveSeriesMatchupConfig(for: seriesRound, linkedRound: linkedRound) {
-            return seriesRound.roundConfig
-        }
-        return roundConfig(from: linkedRound, fallback: seriesRound.roundConfig)
+        seriesRound.roundConfig
     }
 
     func shouldUseLinkedRoundConfiguration(for seriesRound: SeriesRound, linkedRound: Round) -> Bool {
         false
+    }
+
+    func linkedConfigurationDivergence(for seriesRound: SeriesRound) -> SeriesRoundConfigurationDivergence? {
+        linkedConfigurationDivergences[seriesRound.id]
+    }
+
+    private func refreshLinkedConfigurationDivergences() {
+        linkedConfigurationDivergences = Dictionary(
+            uniqueKeysWithValues: rounds.compactMap { seriesRound in
+                guard let roundID = seriesRound.roundID,
+                      let linkedRound = linkedRounds[roundID],
+                      let divergence = SeriesRoundConfigurationReconciler.divergence(
+                        series: series,
+                        seriesRound: seriesRound,
+                        linkedRound: linkedRound
+                      ) else { return nil }
+                return (seriesRound.id, divergence)
+            }
+        )
     }
 
     private func shouldPreserveSeriesMatchupConfig(for seriesRound: SeriesRound, linkedRound: Round) -> Bool {
@@ -2461,6 +2474,7 @@ final class SeriesViewModel: ObservableObject, Loggable {
                         guard let self, self.realtimeSourceSeriesID == seriesID else { return }
                         let previousSettings = self.series.settings
                         self.series = updated
+                        self.refreshLinkedConfigurationDivergences()
                         if previousSettings != updated.settings {
                             self.recomputeAllHandicaps()
                             await self.loadAttendanceForRSVPEligibleRounds()
@@ -2560,6 +2574,7 @@ final class SeriesViewModel: ObservableObject, Loggable {
 
         guard roundIDs.isPopulated else {
             linkedRounds = [:]
+            linkedConfigurationDivergences = [:]
             snapshotRepository.invalidateAll()
             SeriesPerformanceRecorder.shared.record(
                 .linkedRoundRootsLoad,
@@ -2575,6 +2590,7 @@ final class SeriesViewModel: ObservableObject, Loggable {
         var nextLinkedRounds = linkedRounds.filter { roundIDs.contains($0.key) }
         nextLinkedRounds.merge(fetchedByID) { _, fresh in fresh }
         linkedRounds = nextLinkedRounds
+        refreshLinkedConfigurationDivergences()
         snapshotRepository.retain(roundIDs: roundIDs)
         SeriesPerformanceRecorder.shared.record(
             .linkedRoundRootsLoad,
@@ -2630,11 +2646,13 @@ final class SeriesViewModel: ObservableObject, Loggable {
     private func stopLinkedRoundListeners() {
         linkedRoundListeners.values.forEach { $0.remove() }
         linkedRoundListeners = [:]
+        linkedConfigurationDivergences = [:]
         snapshotRepository.invalidateAll()
     }
 
     private func applyFreshLinkedRound(_ linkedRound: Round) async {
         linkedRounds[linkedRound.id] = linkedRound
+        refreshLinkedConfigurationDivergences()
         snapshotRepository.invalidate(roundID: linkedRound.id)
         await syncLinkedRoundState(persistingStatusesFor: [linkedRound.id])
     }
@@ -3403,9 +3421,11 @@ final class SeriesViewModel: ObservableObject, Loggable {
         plannedTeeGroups: [SeriesRoundPlannedTeeGroup],
         partnershipPlans: [SeriesRoundPartnershipPlan] = [],
         notes: String?,
-        duplicateSourceSeriesRoundID: String? = nil
+        duplicateSourceSeriesRoundID: String? = nil,
+        resolveDefaultCourseWhenMissing: Bool = true
     ) async -> SeriesRound? {
-        let roundCourse = courseOverride ?? resolvedDefaultCourseSelection(forRoundIndex: rounds.nextIndex)
+        let roundCourse = courseOverride
+            ?? (resolveDefaultCourseWhenMissing ? resolvedDefaultCourseSelection(forRoundIndex: rounds.nextIndex) : nil)
         let round = SeriesRound(
             id: HackersID.string(),
             title: title,
@@ -3456,6 +3476,38 @@ final class SeriesViewModel: ObservableObject, Loggable {
         }
     }
 
+    func addRound(
+        draft: SeriesRoundDraft,
+        courseHandicapAvailable: Bool,
+        fallbackTitle: String
+    ) async -> SeriesRound? {
+        let values: SeriesRoundDraftPersistenceValues
+        do {
+            values = try draft.persistedValues(
+                usesTeams: usesTeams,
+                courseHandicapAvailable: courseHandicapAvailable,
+                fallbackTitle: fallbackTitle
+            )
+        } catch {
+            addBreadcrumb(level: .error, message: "Invalid Series round draft", error: error)
+            return nil
+        }
+        return await addRound(
+            title: values.title,
+            scheduledAt: values.scheduledAt,
+            courseOverride: values.courseOverride,
+            roundConfig: values.roundConfig,
+            teamScoringProfileID: values.teamScoringProfileID,
+            individualScoringProfileID: values.individualScoringProfileID,
+            matchupPlans: values.matchupPlans,
+            plannedMatchups: values.plannedMatchups,
+            plannedTeeGroups: values.plannedTeeGroups,
+            partnershipPlans: values.partnershipPlans,
+            notes: values.notes
+        )
+    }
+
+    @discardableResult
     func updateSeriesRound(
         _ round: SeriesRound,
         title: String? = nil,
@@ -3469,9 +3521,11 @@ final class SeriesViewModel: ObservableObject, Loggable {
         plannedMatchups: [SeriesRoundPlannedMatchup]? = nil,
         plannedTeeGroups: [SeriesRoundPlannedTeeGroup]? = nil,
         partnershipPlans: [SeriesRoundPartnershipPlan]? = nil,
-        notes: String? = nil
-    ) async {
-        guard var updatedRound = rounds.first(where: { $0.id == round.id }) else { return }
+        notes: String? = nil,
+        shouldUpdateNotes: Bool = false,
+        syncLinkedLobby: Bool = true
+    ) async -> Bool {
+        guard var updatedRound = rounds.first(where: { $0.id == round.id }) else { return false }
         let previousRound = updatedRound
         if let title { updatedRound.title = title }
         updatedRound.scheduledAt = scheduledAt
@@ -3484,7 +3538,7 @@ final class SeriesViewModel: ObservableObject, Loggable {
         if let plannedMatchups { updatedRound.plannedMatchups = plannedMatchups }
         if let plannedTeeGroups { updatedRound.plannedTeeGroups = plannedTeeGroups }
         if let partnershipPlans { updatedRound.partnershipPlans = partnershipPlans }
-        if let notes { updatedRound.notes = notes }
+        if shouldUpdateNotes { updatedRound.notes = notes }
         if shouldUpdateCourseOverride {
             updatedRound.courseOverride = courseOverride
         }
@@ -3499,7 +3553,7 @@ final class SeriesViewModel: ObservableObject, Loggable {
             }
         case .failure(let error):
             addBreadcrumb(level: .error, message: "Failed to persist Series round update", error: error)
-            return
+            return false
         }
 
         let handicapSettingsChanged =
@@ -3535,7 +3589,8 @@ final class SeriesViewModel: ObservableObject, Loggable {
                 recomputeAllHandicaps()
             }
         }
-        if shouldSyncLinkedLobbyAfterSeriesRoundUpdate(previous: previousRound, updated: updatedRound),
+        if syncLinkedLobby,
+           shouldSyncLinkedLobbyAfterSeriesRoundUpdate(previous: previousRound, updated: updatedRound),
            let roundID = updatedRound.roundID,
            await linkedRoundIsLobbyForSync(roundID: roundID) {
             let options = SeriesRoundSyncOptions(
@@ -3555,6 +3610,45 @@ final class SeriesViewModel: ObservableObject, Loggable {
         addEvent(
             "series.round_updated",
             eventProps: seriesTelemetryProps(["series_round_id": round.id])
+        )
+        refreshLinkedConfigurationDivergences()
+        return true
+    }
+
+    @discardableResult
+    func updateSeriesRound(
+        _ round: SeriesRound,
+        draft: SeriesRoundDraft,
+        courseHandicapAvailable: Bool,
+        syncLinkedLobby: Bool = true
+    ) async -> Bool {
+        let values: SeriesRoundDraftPersistenceValues
+        do {
+            values = try draft.persistedValues(
+                usesTeams: usesTeams,
+                courseHandicapAvailable: courseHandicapAvailable,
+                fallbackTitle: round.title.isPopulated ? round.title : "Round \(round.index + 1)"
+            )
+        } catch {
+            addBreadcrumb(level: .error, message: "Invalid Series round draft", error: error)
+            return false
+        }
+        return await updateSeriesRound(
+            round,
+            title: values.title,
+            scheduledAt: values.scheduledAt,
+            courseOverride: values.courseOverride,
+            shouldUpdateCourseOverride: true,
+            roundConfig: values.roundConfig,
+            teamScoringProfileID: values.teamScoringProfileID,
+            individualScoringProfileID: values.individualScoringProfileID,
+            matchupPlans: values.matchupPlans,
+            plannedMatchups: values.plannedMatchups,
+            plannedTeeGroups: values.plannedTeeGroups,
+            partnershipPlans: values.partnershipPlans,
+            notes: values.notes,
+            shouldUpdateNotes: true,
+            syncLinkedLobby: syncLinkedLobby
         )
     }
 
@@ -3621,7 +3715,8 @@ final class SeriesViewModel: ObservableObject, Loggable {
                 return plan
             },
             notes: source.notes,
-            duplicateSourceSeriesRoundID: source.id
+            duplicateSourceSeriesRoundID: source.id,
+            resolveDefaultCourseWhenMissing: false
         )
     }
 
@@ -4477,7 +4572,7 @@ final class SeriesViewModel: ObservableObject, Loggable {
                 holeSegment: courseSegment.holeSegment
             )
         }
-        workingRound = seriesRoundForSyncApplyingLeagueDefaults(workingRound)
+        workingRound = seriesRoundForSyncPreservingAuthoredConfiguration(workingRound)
 
         guard let roundID = await SeriesRoundCreationService().createRoundFromSeries(
             series: series,
@@ -4586,20 +4681,96 @@ final class SeriesViewModel: ObservableObject, Loggable {
         return result
     }
 
+    /// Replaces Series-owned lobby configuration with the linked lobby's current setup.
+    func adoptLinkedRoundConfiguration(
+        for seriesRound: SeriesRound
+    ) async -> Result<Void, SeriesRoundSyncError> {
+        guard isCommissioner else {
+            return .failure(.preflightFailed("Only a commissioner can adopt lobby settings."))
+        }
+        guard let roundID = seriesRound.roundID else { return .failure(.roundNotLinked) }
+        guard let snapshot = await loadRoundSnapshot(roundID: roundID) else {
+            return .failure(.writeFailed("Could not load the linked lobby configuration."))
+        }
+        guard snapshot.round.status == .lobby else {
+            return .failure(.optionsDisallowedForRoundStatus)
+        }
+
+        let mappings: [SeriesRoundMapping]
+        switch await FirebaseService.shared.fetchSeriesRoundMappingsResult(
+            seriesID: seriesID,
+            seriesRoundID: seriesRound.id
+        ) {
+        case .success(let fetchedMappings):
+            mappings = fetchedMappings
+        case .failure(let error):
+            addBreadcrumb(level: .error, message: "Adopt lobby mappings read failed", error: error)
+            return .failure(.writeFailed("Could not load round mappings."))
+        }
+
+        let sourceRound = cachedSourceSeriesRoundForSync(seriesRound)
+        let adoptedConfiguration = SeriesRoundConfigurationReconciler.adoptingLinkedConfiguration(
+            from: snapshot.round,
+            segment: snapshot.roundSegment,
+            preserving: sourceRound.roundConfig
+        )
+        var adoptedRound = sourceRound
+        adoptedRound.roundConfig = adoptedConfiguration
+        let adoptedMatchups = seriesMatchupPlans(
+            from: snapshot,
+            seriesRound: adoptedRound,
+            mappings: mappings
+        ) ?? []
+
+        let saved = await updateSeriesRound(
+            sourceRound,
+            scheduledAt: sourceRound.scheduledAt,
+            courseOverride: SeriesRoundConfigurationReconciler.courseSelection(from: snapshot.courseSegment),
+            shouldUpdateCourseOverride: true,
+            roundConfig: adoptedConfiguration,
+            teamScoringProfileID: sourceRound.teamScoringProfileID,
+            individualScoringProfileID: sourceRound.individualScoringProfileID,
+            matchupPlans: adoptedMatchups,
+            syncLinkedLobby: false
+        )
+        guard saved else {
+            return .failure(.writeFailed("Could not save the adopted lobby configuration."))
+        }
+
+        linkedRounds[roundID] = snapshot.round
+        refreshLinkedConfigurationDivergences()
+        return .success(())
+    }
+
+    /// Restores the linked lobby to the Series-owned configuration.
+    func resetLinkedRoundConfiguration(
+        for seriesRound: SeriesRound
+    ) async -> Result<Void, SeriesRoundSyncError> {
+        guard isCommissioner else {
+            return .failure(.preflightFailed("Only a commissioner can reset lobby settings."))
+        }
+        let options = SeriesRoundSyncOptions(
+            syncPlayerData: true,
+            syncFormat: true,
+            syncOrganization: true,
+            syncPairs: true,
+            syncMatchups: true,
+            syncHandicapSettings: true,
+            preserveManualHandicapEdits: false
+        )
+        return await syncLinkedRoundFromSeries(seriesRound: seriesRound, options: options)
+    }
+
     func sourceSeriesRoundForSync(_ seriesRound: SeriesRound) -> SeriesRound {
-        seriesRoundForSyncApplyingLeagueDefaults(cachedSourceSeriesRoundForSync(seriesRound))
+        seriesRoundForSyncPreservingAuthoredConfiguration(cachedSourceSeriesRoundForSync(seriesRound))
     }
 
     func cachedSourceSeriesRoundForSync(_ seriesRound: SeriesRound) -> SeriesRound {
         rounds.first { $0.id == seriesRound.id } ?? seriesRound
     }
 
-    func seriesRoundForSyncApplyingLeagueDefaults(_ seriesRound: SeriesRound) -> SeriesRound {
-        var sourceRound = seriesRound
-        if let defaultMaxScoreOverPar = series.settings.defaultRoundConfig.maxScoreOverPar {
-            sourceRound.roundConfig.maxScoreOverPar = defaultMaxScoreOverPar
-        }
-        return sourceRound
+    func seriesRoundForSyncPreservingAuthoredConfiguration(_ seriesRound: SeriesRound) -> SeriesRound {
+        seriesRound
     }
 
     func refreshLinkedRoundState() async {
@@ -4610,7 +4781,10 @@ final class SeriesViewModel: ObservableObject, Loggable {
     }
 
     func syncLinkedRoundState(persistingStatusesFor freshRoundIDs: Set<String>) async {
-        guard linkedRounds.isPopulated else { return }
+        guard linkedRounds.isPopulated else {
+            linkedConfigurationDivergences = [:]
+            return
+        }
 
         let sourceRounds = rounds
         let contexts = sourceRounds.compactMap { seriesRound -> (
@@ -4806,6 +4980,7 @@ final class SeriesViewModel: ObservableObject, Loggable {
         }
 
         await refreshSeriesCachesIfNeeded()
+        refreshLinkedConfigurationDivergences()
     }
 
     nonisolated static func mergingLinkedStateChanges(
@@ -6545,33 +6720,11 @@ final class SeriesViewModel: ObservableObject, Loggable {
         segment: RoundSegment? = nil,
         fallback: SeriesRoundConfiguration
     ) -> SeriesRoundConfiguration {
-        var updated = fallback
-        updated.formatTemplateID = linkedRound.configuration.formatSummary?.templateID ?? fallback.formatTemplateID
-        updated.competitionScope = linkedRound.configuration.competitionScope
-        updated.teamScoring = linkedRound.configuration.teamScoring
-        updated.matchupResolutionStyle = linkedRound.configuration.matchupResolutionStyle
-        let template = FormatTemplateRegistry.template(for: updated.formatTemplateID)
-        updated.scoreOwnerScope = template.scoreSource == .shared ? linkedRound.configuration.scoreOwnerScope : .individual
-        updated.matchupScoringStyle = linkedRound.configuration.matchupScoringStyle
-        updated.holeWinPoints = linkedRound.configuration.holeWinPoints
-        updated.matchWinnerBonusPoints = linkedRound.configuration.matchWinnerBonusPoints
-        updated.matchTiePolicy = linkedRound.configuration.matchTiePolicy
-        updated.selectionDomain = linkedRound.configuration.selectionDomain
-        updated.sequentialTeeStartsEnabled = linkedRound.configuration.sequentialTeeStartsEnabled ?? fallback.sequentialTeeStartsEnabled ?? false
-        updated.maxScoreOverPar = linkedRound.configuration.primaryFormat.configuration.maxScoreOverPar
-        updated.handicapEntryFormat = linkedRound.configuration.handicapEntryFormat
-        updated.handicapNormalizationMode = linkedRound.configuration.handicapNormalizationMode
-        updated.handicapStrokeBasis = linkedRound.configuration.handicapStrokeBasis
-        if linkedRound.configuration.resolvedCompetitionScope == .matchup {
-            updated.matchupMode = seriesMatchupMode(
-                from: linkedRound.configuration,
-                segment: segment,
-                fallback: fallback.matchupMode
-            )
-        } else {
-            updated.matchupMode = .field
-        }
-        return updated
+        SeriesRoundConfigurationReconciler.adoptingLinkedConfiguration(
+            from: linkedRound,
+            segment: segment,
+            preserving: fallback
+        )
     }
 
     private func seriesMatchupMode(
@@ -7156,13 +7309,7 @@ final class SeriesViewModel: ObservableObject, Loggable {
     }
 
     private func courseSelection(from segment: CourseSegment?) -> SeriesCourseSelection? {
-        guard let segment else { return nil }
-        return SeriesCourseSelection(
-            courseID: segment.courseInfo.golfCourseApiID.map(String.init) ?? segment.courseInfo.id,
-            cachedName: segment.courseInfo.name,
-            defaultTeeBoxID: segment.defaultTee ?? "",
-            holeSegment: segment.holeSegment
-        )
+        SeriesRoundConfigurationReconciler.courseSelection(from: segment)
     }
 
     private func seriesMatchupPlans(

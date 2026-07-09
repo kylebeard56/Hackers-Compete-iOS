@@ -1205,14 +1205,25 @@ struct SeriesView: View {
 
             Divider().padding(.vertical, 2)
 
-            // Adjusted chip
-            if round.isAdjusted {
-                Chip(
-                    text: "Adjusted",
-                    size: .xSmall,
-                    foreground: .orange,
-                    background: Color.orange.opacity(colorScheme.translucent)
-                )
+            if round.isAdjusted || viewModel.linkedConfigurationDivergence(for: round) != nil {
+                HStack(spacing: 8) {
+                    if round.isAdjusted {
+                        Chip(
+                            text: "Adjusted",
+                            size: .xSmall,
+                            foreground: .orange,
+                            background: Color.orange.opacity(colorScheme.translucent)
+                        )
+                    }
+                    if viewModel.linkedConfigurationDivergence(for: round) != nil {
+                        Chip(
+                            text: "Setup differs",
+                            size: .xSmall,
+                            foreground: .orange,
+                            background: Color.orange.opacity(colorScheme.translucent)
+                        )
+                    }
+                }
             }
 
             // Attendance / player counts

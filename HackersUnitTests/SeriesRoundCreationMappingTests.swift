@@ -230,7 +230,7 @@ final class SeriesRoundCreationMappingTests: XCTestCase {
         XCTAssertEqual(draft.configuration.primaryFormat.configuration.maxScoreOverPar, .twoTimesPar)
     }
 
-    func testRoundDraft_usesLeagueDefaultMaxScoreForLegacySeriesRoundConfig() {
+    func testRoundDraft_preservesExistingRoundMaxScoreWhenLeagueDefaultChanges() {
         var config = SeriesRoundConfiguration()
         config.maxScoreOverPar = .quad
         let sr = fieldSeriesRound(config: config)
@@ -244,7 +244,7 @@ final class SeriesRoundCreationMappingTests: XCTestCase {
             courseSegment: makeCourseSegment()
         )
 
-        XCTAssertEqual(draft.configuration.primaryFormat.configuration.maxScoreOverPar, .twoTimesParPlusOne)
+        XCTAssertEqual(draft.configuration.primaryFormat.configuration.maxScoreOverPar, .quad)
     }
 
     func testRoundConfigurationCopiesSharedScoreHandicapConfig() {

@@ -8,6 +8,34 @@
 import SwiftUI
 
 struct SeriesRoundSyncSheet: View {
+    private enum ReconciliationAction {
+        case adoptLobby
+        case resetLobby
+
+        var title: String {
+            switch self {
+            case .adoptLobby: return "Adopt lobby settings?"
+            case .resetLobby: return "Reset lobby settings?"
+            }
+        }
+
+        var message: String {
+            switch self {
+            case .adoptLobby:
+                return "This replaces the Series round setup with the linked lobby's current settings."
+            case .resetLobby:
+                return "This replaces the linked lobby setup with the settings saved on the Series round."
+            }
+        }
+
+        var buttonTitle: String {
+            switch self {
+            case .adoptLobby: return "Adopt lobby"
+            case .resetLobby: return "Reset lobby"
+            }
+        }
+    }
+
     @Environment(\.colorScheme) var colorScheme
 
     @ObservedObject var viewModel: SeriesViewModel
@@ -22,6 +50,8 @@ struct SeriesRoundSyncSheet: View {
     @State private var syncHandicapSettings = true
     @State private var preserveManualHandicap = false
     @State private var isApplying = false
+    @State private var isReconciling = false
+    @State private var reconciliationAction: ReconciliationAction?
     @State private var errorMessage: String?
 
     private var palette: DesignPalette { .init(theme: .primary, scheme: colorScheme) }
@@ -37,6 +67,10 @@ struct SeriesRoundSyncSheet: View {
 
     private var isLive: Bool {
         linkedStatus == .live || linkedStatus == .paused
+    }
+
+    private var configurationDivergence: SeriesRoundConfigurationDivergence? {
+        viewModel.linkedConfigurationDivergence(for: seriesRound)
     }
 
     private var canToggleFormat: Bool { !isCompleteRound }
@@ -62,13 +96,17 @@ struct SeriesRoundSyncSheet: View {
                     title: "Sync Round",
                     subtitle: "Choose which league round settings should update the linked round.",
                     onClose: {
-                        guard !isApplying else { return }
+                        guard !isApplying, !isReconciling else { return }
                         onDismiss()
                     }
                 )
             },
             content: {
                 VStack(spacing: 16) {
+                    if let configurationDivergence {
+                        configurationDivergenceCard(configurationDivergence)
+                    }
+
                     if isLive {
                         betaWarningTile
                     }
@@ -114,6 +152,66 @@ struct SeriesRoundSyncSheet: View {
             Button("OK", role: .cancel) { errorMessage = nil }
         } message: {
             Text(verbatim: errorMessage ?? "")
+        }
+        .confirmationDialog(
+            reconciliationAction?.title ?? "Confirm configuration change",
+            isPresented: Binding(
+                get: { reconciliationAction != nil },
+                set: { if !$0 { reconciliationAction = nil } }
+            ),
+            titleVisibility: .visible
+        ) {
+            if let action = reconciliationAction {
+                Button(action.buttonTitle, role: .destructive) {
+                    Task { await reconcile(action) }
+                }
+            }
+            Button("Cancel", role: .cancel) {
+                reconciliationAction = nil
+            }
+        } message: {
+            if let reconciliationAction {
+                Text(reconciliationAction.message)
+            }
+        }
+    }
+
+    private func configurationDivergenceCard(
+        _ divergence: SeriesRoundConfigurationDivergence
+    ) -> some View {
+        SeriesSheetCard(palette: palette) {
+            SeriesSheetRow(palette: palette) {
+                VStack(alignment: .leading, spacing: 8) {
+                    Label("Lobby setup differs", systemImage: "exclamationmark.triangle.fill")
+                        .fontStyle(kFontName, size: 15, weight: .semibold)
+                        .foregroundStyle(Color.orange)
+
+                    Text("The linked lobby differs in \(divergence.summary). Choose which setup should become authoritative.")
+                        .fontStyle(kFontName, size: 12, weight: .regular)
+                        .foregroundStyle(Color.neutral)
+                        .fixedSize(horizontal: false, vertical: true)
+
+                    HStack(spacing: 10) {
+                        Button {
+                            reconciliationAction = .adoptLobby
+                        } label: {
+                            Label("Adopt lobby", systemImage: "arrow.down.to.line")
+                                .frame(maxWidth: .infinity)
+                        }
+                        .buttonStyle(.bordered)
+
+                        Button {
+                            reconciliationAction = .resetLobby
+                        } label: {
+                            Label("Reset lobby", systemImage: "arrow.up.to.line")
+                                .frame(maxWidth: .infinity)
+                        }
+                        .buttonStyle(.borderedProminent)
+                    }
+                    .fontStyle(kFontName, size: 12, weight: .semibold)
+                    .disabled(isApplying || isReconciling)
+                }
+            }
         }
     }
 
@@ -280,7 +378,26 @@ struct SeriesRoundSyncSheet: View {
     }
 
     private var applyButtonDisabled: Bool {
-        !hasSelectedSync || isApplying || isCompleteRound
+        !hasSelectedSync || isApplying || isReconciling || isCompleteRound
+    }
+
+    private func reconcile(_ action: ReconciliationAction) async {
+        guard !isApplying, !isReconciling else { return }
+        reconciliationAction = nil
+        isReconciling = true
+        defer { isReconciling = false }
+
+        let result: Result<Void, SeriesRoundSyncError>
+        switch action {
+        case .adoptLobby:
+            result = await viewModel.adoptLinkedRoundConfiguration(for: seriesRound)
+        case .resetLobby:
+            result = await viewModel.resetLinkedRoundConfiguration(for: seriesRound)
+        }
+
+        if case .failure(let error) = result {
+            errorMessage = error.localizedDescription
+        }
     }
 
     private func applySync() async {

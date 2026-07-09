@@ -619,7 +619,7 @@ final class SeriesRoundSyncServiceTests: XCTestCase {
     }
 
     @MainActor
-    func testSeriesRoundForSyncApplyingLeagueDefaultsOverridesStoredLegacyMaxScore() {
+    func testSeriesRoundForSyncPreservesStoredMaxScoreWhenLeagueDefaultChanges() {
         let viewModel = SeriesViewModel()
         var settings = SeriesSettings()
         settings.defaultRoundConfig.maxScoreOverPar = .twoTimesParPlusOne
@@ -632,14 +632,14 @@ final class SeriesRoundSyncServiceTests: XCTestCase {
             parentID: "series1"
         )
 
-        let source = viewModel.seriesRoundForSyncApplyingLeagueDefaults(seriesRound)
+        let source = viewModel.seriesRoundForSyncPreservingAuthoredConfiguration(seriesRound)
 
-        XCTAssertEqual(source.roundConfig.maxScoreOverPar, .twoTimesParPlusOne)
+        XCTAssertEqual(source.roundConfig.maxScoreOverPar, .quad)
         XCTAssertEqual(source.plannedTeeGroups.first?.startingHole, 4)
     }
 
     @MainActor
-    func testSeriesRoundForSyncApplyingLeagueDefaultsPreservesRoundMaxScoreWhenLeagueDefaultMissing() {
+    func testSeriesRoundForSyncPreservesRoundMaxScoreWhenLeagueDefaultMissing() {
         let viewModel = SeriesViewModel()
         viewModel.series = Series(id: "series1")
         let seriesRound = SeriesRound(
@@ -649,7 +649,7 @@ final class SeriesRoundSyncServiceTests: XCTestCase {
             parentID: "series1"
         )
 
-        let source = viewModel.seriesRoundForSyncApplyingLeagueDefaults(seriesRound)
+        let source = viewModel.seriesRoundForSyncPreservingAuthoredConfiguration(seriesRound)
 
         XCTAssertEqual(source.roundConfig.maxScoreOverPar, .double)
     }

@@ -7,37 +7,7 @@ import Flow
 import SwiftUI
 
 struct EditSeriesRoundSheet: View {
-    private enum MatchupSource: Hashable {
-        case byTeam
-        case byPair
-        case byIndividual
-
-        var title: String {
-            switch self {
-            case .byTeam:
-                return "By team"
-            case .byPair:
-                return "By pair"
-            case .byIndividual:
-                return "By individual"
-            }
-        }
-
-        init(mode: SeriesMatchupMode, usesTeams: Bool) {
-            guard usesTeams else {
-                self = .byIndividual
-                return
-            }
-            switch mode {
-            case .teeGroupPartnerships:
-                self = .byPair
-            case .individualVsIndividual:
-                self = .byIndividual
-            case .teamVsTeam, .field, .none:
-                self = .byTeam
-            }
-        }
-    }
+    private typealias MatchupSource = SeriesRoundMatchupSource
 
     private enum MatchupAutoFillAction: String, Identifiable, Hashable {
         case random
@@ -77,40 +47,13 @@ struct EditSeriesRoundSheet: View {
     let seriesRound: SeriesRound
     var onSaved: () -> Void
 
-    @State private var title = ""
-    @State private var scheduledDate = Date()
-    @State private var hasDate = false
-    @State private var selectedTemplateID = FormatTemplateRegistry.strokePlay.id
-    @State private var competitionScope: CompetitionScope = .field
-    @State private var scoreOwnerScope: RoundScoreOwnerScope = .individual
-    @State private var matchupScoringStyle: RoundMatchupScoringStyle = .aggregateRoundTotal
-    @State private var holeWinPoints: Double = 1
-    @State private var matchWinnerBonusPoints: Double = 0
-    @State private var sharedScoreAllowanceText = ""
-    @State private var maxScoreOverPar: MaxScoreOverPar = .quad
-    @State private var teamScoring = RoundTeamScoringConfiguration(mode: .bestN, count: 2, scope: .perRound)
-    @State private var selectionDomain: ScoringSelectionDomain?
-    @State private var sequentialTeeStartsEnabled = false
-    @State private var podGroupingStrategy: SeriesPodGroupingStrategy = .disabled
-    @State private var matchupSource: MatchupSource = .byTeam
-    @State private var selectedTeamProfileID: String?
-    @State private var selectedIndividualProfileID: String?
-    @State private var handicapEntryFormat: HandicapEntryFormat = .strokes
-    @State private var handicapNormalizationMode: HandicapNormalizationMode = .off
-    @State private var handicapStrokeBasis: SeriesHandicapStrokeBasis?
+    @State private var draft: SeriesRoundDraft
     @State private var courseHandicapAvailable = false
-    @State private var countsTowardHandicapPool = true
-    @State private var excludedHandicapMemberIDs: [String] = []
-    @State private var notes = ""
-    @State private var selectedCourse: SeriesCourseSelection?
-    @State private var matchupPlans: [SeriesRoundMatchupPlan] = []
-    @State private var plannedMatchups: [SeriesRoundPlannedMatchup] = []
-    @State private var plannedTeeGroups: [SeriesRoundPlannedTeeGroup] = []
-    @State private var partnershipPlans: [SeriesRoundPartnershipPlan] = []
     @State private var profileEditorSeed: SeriesScoringProfileEditorSeed?
     @State private var showCoursePicker = false
     @State private var showMatchupAutoFillDialog = false
     @State private var isSaving = false
+    @State private var errorMessage: String?
 
     private enum RoundEditorField: Hashable {
         case title
@@ -159,6 +102,136 @@ struct EditSeriesRoundSheet: View {
         case .byIndividual:
             return [.random, .byHandicap, .mirrorTeeSheet]
         }
+    }
+
+    init(viewModel: SeriesViewModel, seriesRound: SeriesRound, onSaved: @escaping () -> Void) {
+        self.viewModel = viewModel
+        self.seriesRound = seriesRound
+        self.onSaved = onSaved
+        _draft = State(
+            initialValue: SeriesRoundDraft(
+                seriesRound: seriesRound,
+                fallbackCourse: viewModel.suggestedCourseSelection(forRoundIndex: seriesRound.index),
+                usesTeams: viewModel.usesTeams
+            )
+        )
+    }
+
+    private var title: String {
+        get { draft.title }
+        nonmutating set { draft.title = newValue }
+    }
+    private var scheduledDate: Date {
+        get { draft.scheduledDate }
+        nonmutating set { draft.scheduledDate = newValue }
+    }
+    private var hasDate: Bool {
+        get { draft.hasDate }
+        nonmutating set { draft.hasDate = newValue }
+    }
+    private var selectedTemplateID: String {
+        get { draft.selectedTemplateID }
+        nonmutating set { draft.selectedTemplateID = newValue }
+    }
+    private var competitionScope: CompetitionScope {
+        get { draft.competitionScope }
+        nonmutating set { draft.competitionScope = newValue }
+    }
+    private var scoreOwnerScope: RoundScoreOwnerScope {
+        get { draft.scoreOwnerScope }
+        nonmutating set { draft.scoreOwnerScope = newValue }
+    }
+    private var matchupScoringStyle: RoundMatchupScoringStyle {
+        get { draft.matchupScoringStyle }
+        nonmutating set { draft.matchupScoringStyle = newValue }
+    }
+    private var holeWinPoints: Double {
+        get { draft.holeWinPoints }
+        nonmutating set { draft.holeWinPoints = newValue }
+    }
+    private var matchWinnerBonusPoints: Double {
+        get { draft.matchWinnerBonusPoints }
+        nonmutating set { draft.matchWinnerBonusPoints = newValue }
+    }
+    private var sharedScoreAllowanceText: String {
+        get { draft.sharedScoreAllowanceText }
+        nonmutating set { draft.sharedScoreAllowanceText = newValue }
+    }
+    private var maxScoreOverPar: MaxScoreOverPar {
+        get { draft.maxScoreOverPar }
+        nonmutating set { draft.maxScoreOverPar = newValue }
+    }
+    private var teamScoring: RoundTeamScoringConfiguration {
+        get { draft.teamScoring }
+        nonmutating set { draft.teamScoring = newValue }
+    }
+    private var selectionDomain: ScoringSelectionDomain? {
+        get { draft.selectionDomain }
+        nonmutating set { draft.selectionDomain = newValue }
+    }
+    private var sequentialTeeStartsEnabled: Bool {
+        get { draft.sequentialTeeStartsEnabled }
+        nonmutating set { draft.sequentialTeeStartsEnabled = newValue }
+    }
+    private var podGroupingStrategy: SeriesPodGroupingStrategy {
+        get { draft.podGroupingStrategy }
+        nonmutating set { draft.podGroupingStrategy = newValue }
+    }
+    private var matchupSource: MatchupSource {
+        get { draft.matchupSource }
+        nonmutating set { draft.matchupSource = newValue }
+    }
+    private var selectedTeamProfileID: String? {
+        get { draft.selectedTeamProfileID }
+        nonmutating set { draft.selectedTeamProfileID = newValue }
+    }
+    private var selectedIndividualProfileID: String? {
+        get { draft.selectedIndividualProfileID }
+        nonmutating set { draft.selectedIndividualProfileID = newValue }
+    }
+    private var handicapEntryFormat: HandicapEntryFormat {
+        get { draft.handicapEntryFormat }
+        nonmutating set { draft.handicapEntryFormat = newValue }
+    }
+    private var handicapNormalizationMode: HandicapNormalizationMode {
+        get { draft.handicapNormalizationMode }
+        nonmutating set { draft.handicapNormalizationMode = newValue }
+    }
+    private var handicapStrokeBasis: SeriesHandicapStrokeBasis? {
+        get { draft.handicapStrokeBasis }
+        nonmutating set { draft.handicapStrokeBasis = newValue }
+    }
+    private var countsTowardHandicapPool: Bool {
+        get { draft.countsTowardHandicapPool }
+        nonmutating set { draft.countsTowardHandicapPool = newValue }
+    }
+    private var excludedHandicapMemberIDs: [String] {
+        get { draft.excludedHandicapMemberIDs }
+        nonmutating set { draft.excludedHandicapMemberIDs = newValue }
+    }
+    private var notes: String {
+        get { draft.notes }
+        nonmutating set { draft.notes = newValue }
+    }
+    private var selectedCourse: SeriesCourseSelection? {
+        get { draft.selectedCourse }
+        nonmutating set { draft.selectedCourse = newValue }
+    }
+    private var matchupPlans: [SeriesRoundMatchupPlan] {
+        get { draft.matchupPlans }
+        nonmutating set { draft.matchupPlans = newValue }
+    }
+    private var plannedMatchups: [SeriesRoundPlannedMatchup] {
+        get { draft.plannedMatchups }
+        nonmutating set { draft.plannedMatchups = newValue }
+    }
+    private var plannedTeeGroups: [SeriesRoundPlannedTeeGroup] {
+        get { draft.plannedTeeGroups }
+        nonmutating set { draft.plannedTeeGroups = newValue }
+    }
+    private var partnershipPlans: [SeriesRoundPartnershipPlan] {
+        get { draft.partnershipPlans }
+        nonmutating set { draft.partnershipPlans = newValue }
     }
 
     var body: some View {
@@ -222,46 +295,8 @@ struct EditSeriesRoundSheet: View {
         }
         .task {
             await viewModel.createBuiltInScoringProfilesIfNeeded()
-            title = seriesRound.title
-            if let scheduledAt = seriesRound.scheduledAt {
-                hasDate = true
-                scheduledDate = Date(timeIntervalSince1970: scheduledAt.unix)
-            }
-            selectedTemplateID = seriesRound.roundConfig.formatTemplateID
             normalizeSelectedTemplate()
-            competitionScope = seriesRound.roundConfig.resolvedCompetitionScope
-            scoreOwnerScope = seriesRound.roundConfig.scoreOwnerScope
-            matchupSource = MatchupSource(mode: seriesRound.roundConfig.matchupMode, usesTeams: viewModel.usesTeams)
-            matchupScoringStyle = seriesRound.roundConfig.matchupScoringStyle
-            holeWinPoints = seriesRound.roundConfig.resolvedHoleWinPoints
-            matchWinnerBonusPoints = seriesRound.roundConfig.resolvedMatchWinnerBonusPoints
-            sharedScoreAllowanceText = allowanceText(
-                from: seriesRound.roundConfig.sharedScoreHandicapConfig ?? FormatTemplateRegistry.template(for: selectedTemplateID).requirements.defaultHandicapConfig
-            )
-            maxScoreOverPar = seriesRound.roundConfig.maxScoreOverPar ?? .quad
-            teamScoring = seriesRound.roundConfig.teamScoring
-            selectionDomain = seriesRound.roundConfig.selectionDomain
-            sequentialTeeStartsEnabled = seriesRound.roundConfig.sequentialTeeStartsEnabled ?? false
-            podGroupingStrategy = seriesRound.roundConfig.podGroupingStrategy
-            handicapEntryFormat = seriesRound.roundConfig.handicapEntryFormat
-            handicapStrokeBasis = seriesRound.roundConfig.handicapStrokeBasis
-            handicapNormalizationMode = normalizedHandicapNormalizationMode(
-                seriesRound.roundConfig.handicapNormalizationMode,
-                for: competitionScope
-            )
-            countsTowardHandicapPool = seriesRound.roundConfig.countsTowardHandicapPool
-            excludedHandicapMemberIDs = seriesRound.roundConfig.normalizedExcludedHandicapMemberIDs
-            selectedTeamProfileID = seriesRound.teamScoringProfileID
-            selectedIndividualProfileID = seriesRound.individualScoringProfileID
-            notes = seriesRound.notes ?? seriesRound.roundConfig.notes ?? ""
-            selectedCourse = seriesRound.courseOverride ?? viewModel.suggestedCourseSelection(forRoundIndex: seriesRound.index)
             await refreshCourseHandicapAvailability()
-            matchupPlans = competitionScope == .matchup
-                ? seriesRound.matchupPlans.sorted { $0.index < $1.index }
-                : []
-            plannedMatchups = seriesRound.plannedMatchups
-            plannedTeeGroups = seriesRound.plannedTeeGroups
-            partnershipPlans = seriesRound.partnershipPlans
             refreshPlanningStructure(forceRegenerate: !seriesRound.plannedTeeGroups.isPopulated)
             normalizeSelectedProfilesForCompetition()
         }
@@ -320,6 +355,14 @@ struct EditSeriesRoundSheet: View {
             }
             Button("Cancel", role: .cancel) {}
         }
+        .alert("Could not save round", isPresented: Binding(
+            get: { errorMessage != nil },
+            set: { if !$0 { errorMessage = nil } }
+        )) {
+            Button("OK", role: .cancel) { errorMessage = nil }
+        } message: {
+            Text(verbatim: errorMessage ?? "")
+        }
     }
 
     private var basicsSection: some View {
@@ -331,7 +374,7 @@ struct EditSeriesRoundSheet: View {
                     .fontStyle(kFontName, size: 13, weight: .semibold)
                     .foregroundStyle(palette.foregroundColor)
 
-                TextField("Round title", text: $title)
+                TextField("Round title", text: $draft.title)
                     .fontStyle(kFontName, size: 15, weight: .regular)
                     .foregroundStyle(palette.foregroundColor)
                     .focused($focusedField, equals: .title)
@@ -369,7 +412,7 @@ struct EditSeriesRoundSheet: View {
                 }
 
                 if hasDate {
-                    DatePicker("Scheduled date", selection: $scheduledDate, displayedComponents: [.date, .hourAndMinute])
+                    DatePicker("Scheduled date", selection: $draft.scheduledDate, displayedComponents: [.date, .hourAndMinute])
                         .labelsHidden()
                         .datePickerStyle(.compact)
                         .frame(maxWidth: .infinity, alignment: .leading)
@@ -459,7 +502,7 @@ struct EditSeriesRoundSheet: View {
                     ForEach(availableTemplates, id: \.id) { template in
                         Button {
                             selectedTemplateID = template.id
-                            sharedScoreAllowanceText = allowanceText(from: template.requirements.defaultHandicapConfig)
+                            sharedScoreAllowanceText = SeriesRoundDraft.allowanceText(from: template.requirements.defaultHandicapConfig)
                         } label: {
                             HStack {
                                 Text(template.name)
@@ -533,7 +576,7 @@ struct EditSeriesRoundSheet: View {
                     title: "Handicap allowance",
                     subtitle: "Comma-separated percentages applied from lowest to highest course handicap."
                 ) {
-                    TextField("35,15", text: $sharedScoreAllowanceText)
+                    TextField("35,15", text: $draft.sharedScoreAllowanceText)
                         .keyboardType(.numbersAndPunctuation)
                         .textInputAutocapitalization(.never)
                         .autocorrectionDisabled()
@@ -730,9 +773,9 @@ struct EditSeriesRoundSheet: View {
 
     private var handicapOptionsMenu: some View {
         HandicapOptionsMenu(
-            handicapEntryFormat: $handicapEntryFormat,
-            handicapNormalizationMode: $handicapNormalizationMode,
-            handicapStrokeBasis: $handicapStrokeBasis,
+            handicapEntryFormat: $draft.handicapEntryFormat,
+            handicapNormalizationMode: $draft.handicapNormalizationMode,
+            handicapStrokeBasis: $draft.handicapStrokeBasis,
             courseHandicapAvailable: courseHandicapAvailable,
             competitionScope: competitionScope,
             resolvedAutoBasis: nil,
@@ -827,8 +870,8 @@ struct EditSeriesRoundSheet: View {
             viewModel: viewModel,
             seriesRound: seriesRound,
             selectedTemplateID: selectedTemplateID,
-            countsTowardHandicapPool: $countsTowardHandicapPool,
-            excludedHandicapMemberIDs: $excludedHandicapMemberIDs
+            countsTowardHandicapPool: $draft.countsTowardHandicapPool,
+            excludedHandicapMemberIDs: $draft.excludedHandicapMemberIDs
         )
     }
 
@@ -915,7 +958,7 @@ struct EditSeriesRoundSheet: View {
                     competitorType: .team,
                     competitionScope: competitionScope,
                     supportsWinTieLoss: teamMatchupUsesWLT,
-                    selectedProfileID: $selectedTeamProfileID
+                    selectedProfileID: $draft.selectedTeamProfileID
                 ) { seed in
                     profileEditorSeed = seed
                 }
@@ -928,7 +971,7 @@ struct EditSeriesRoundSheet: View {
                 competitorType: .member,
                 competitionScope: competitionScope,
                 supportsWinTieLoss: individualMatchupUsesWLT,
-                selectedProfileID: $selectedIndividualProfileID
+                selectedProfileID: $draft.selectedIndividualProfileID
             ) { seed in
                 profileEditorSeed = seed
             }
@@ -981,31 +1024,11 @@ struct EditSeriesRoundSheet: View {
     }
 
     private var confidenceRoundConfig: SeriesRoundConfiguration {
-        SeriesRoundConfiguration(
-            formatTemplateID: selectedTemplateID,
-            competitionScope: competitionScope,
-            teamScoring: teamScoring,
-            matchupResolutionStyle: .roundAggregate,
-            scoreOwnerScope: effectiveScoreOwnerScope,
-            matchupScoringStyle: matchupScoringStyle,
-            holeWinPoints: competitionScope == .matchup ? holeWinPoints : nil,
-            matchWinnerBonusPoints: competitionScope == .matchup ? matchWinnerBonusPoints : nil,
-            matchTiePolicy: .half,
-            sequentialTeeStartsEnabled: sequentialTeeStartsEnabled,
-            selectionDomain: selectionDomain,
-            matchupMode: resolvedMatchupMode(for: competitionScope),
-            podGroupingStrategy: podGroupingStrategy,
-            teamAssignmentMode: viewModel.usesTeams ? .seriesTeams : .manual,
-            teeGroupMode: podGroupingStrategy.usesPodAlignment ? .podAligned : .auto,
-            notes: notes.isEmpty ? nil : notes,
-            sharedScoreHandicapConfig: sharedScoreAllowanceConfig,
-            maxScoreOverPar: maxScoreOverPar,
-            handicapStrokeBasis: handicapStrokeBasis,
-            handicapEntryFormat: resolvedHandicapEntryFormat,
-            handicapNormalizationMode: resolvedHandicapNormalizationMode(for: competitionScope),
-            countsTowardHandicapPool: countsTowardHandicapPool,
-            excludedHandicapMemberIDs: excludedHandicapMemberIDs
-        )
+        (try? draft.persistedConfiguration(
+            usesTeams: viewModel.usesTeams,
+            courseHandicapAvailable: courseHandicapAvailable,
+            notes: notes.trimmingCharacters(in: .whitespacesAndNewlines)
+        )) ?? seriesRound.roundConfig
     }
 
     private var notesSection: some View {
@@ -1016,7 +1039,7 @@ struct EditSeriesRoundSheet: View {
                 .fontStyle(kFontName, size: 13, weight: .regular)
                 .foregroundStyle(Color.neutral)
 
-            TextEditor(text: $notes)
+            TextEditor(text: $draft.notes)
                 .fontStyle(kFontName, size: 14, weight: .regular)
                 .foregroundStyle(palette.foregroundColor)
                 .frame(minHeight: 120)
@@ -1032,73 +1055,37 @@ struct EditSeriesRoundSheet: View {
 
     private func save() {
         guard !isSaving else { return }
-        isSaving = true
-        let resolvedCompetitionScope = competitionScope
-        var roundConfig = SeriesRoundConfiguration(
-            formatTemplateID: selectedTemplateID,
-            competitionScope: resolvedCompetitionScope,
-            teamScoring: teamScoring,
-            matchupResolutionStyle: .roundAggregate,
-            scoreOwnerScope: effectiveScoreOwnerScope,
-            matchupScoringStyle: matchupScoringStyle,
-            holeWinPoints: competitionScope == .matchup ? holeWinPoints : nil,
-            matchWinnerBonusPoints: competitionScope == .matchup ? matchWinnerBonusPoints : nil,
-            matchTiePolicy: .half,
-            sequentialTeeStartsEnabled: sequentialTeeStartsEnabled,
-            selectionDomain: selectionDomain,
-            matchupMode: resolvedMatchupMode(for: resolvedCompetitionScope),
-            podGroupingStrategy: podGroupingStrategy,
-            teamAssignmentMode: viewModel.usesTeams ? .seriesTeams : .manual,
-            teeGroupMode: podGroupingStrategy.usesPodAlignment ? .podAligned : .auto,
-            notes: notes.isEmpty ? nil : notes,
-            sharedScoreHandicapConfig: sharedScoreAllowanceConfig,
-            maxScoreOverPar: maxScoreOverPar,
-            handicapStrokeBasis: handicapStrokeBasis,
-            handicapEntryFormat: resolvedHandicapEntryFormat,
-            handicapNormalizationMode: resolvedHandicapNormalizationMode(for: competitionScope),
-            countsTowardHandicapPool: countsTowardHandicapPool,
-            excludedHandicapMemberIDs: excludedHandicapMemberIDs
-        )
-        roundConfig.allowCourseOverride = seriesRound.roundConfig.allowCourseOverride
-        roundConfig.allowFormatOverride = seriesRound.roundConfig.allowFormatOverride
-        roundConfig.allowLobbyBackPropagation = resolvedAllowLobbyBackPropagation()
-        roundConfig.scoreBasisOverride = seriesRound.roundConfig.scoreBasisOverride
-        let resolvedMatchups = normalizedMatchupPlans()
+        var persistedDraft = draft
+        persistedDraft.matchupPlans = normalizedMatchupPlans()
         let plannedStructure = persistedPlanningStructure()
-        let resolvedPartnershipPlans = normalizedPartnershipPlans()
+        persistedDraft.plannedMatchups = plannedStructure.matchups
+        persistedDraft.plannedTeeGroups = plannedStructure.teeGroups
+        persistedDraft.partnershipPlans = normalizedPartnershipPlans()
+        do {
+            _ = try persistedDraft.persistedValues(
+                usesTeams: viewModel.usesTeams,
+                courseHandicapAvailable: courseHandicapAvailable,
+                fallbackTitle: seriesRound.title.isPopulated ? seriesRound.title : "Round \(seriesRound.index + 1)"
+            )
+        } catch {
+            errorMessage = error.localizedDescription
+            return
+        }
 
+        isSaving = true
         Task {
-            await viewModel.updateSeriesRound(
+            let saved = await viewModel.updateSeriesRound(
                 seriesRound,
-                title: title,
-                scheduledAt: hasDate ? Time(for: scheduledDate) : nil,
-                courseOverride: selectedCourse,
-                shouldUpdateCourseOverride: true,
-                roundConfig: roundConfig,
-                teamScoringProfileID: selectedTeamProfileID,
-                individualScoringProfileID: selectedIndividualProfileID,
-                matchupPlans: resolvedMatchups,
-                plannedMatchups: plannedStructure.matchups,
-                plannedTeeGroups: plannedStructure.teeGroups,
-                partnershipPlans: resolvedPartnershipPlans,
-                notes: notes.isEmpty ? nil : notes
+                draft: persistedDraft,
+                courseHandicapAvailable: courseHandicapAvailable
             )
             isSaving = false
+            guard saved else {
+                errorMessage = "The round could not be saved. Your selections are still here so you can try again."
+                return
+            }
             onSaved()
             dismiss()
-        }
-    }
-
-    private func resolvedAllowLobbyBackPropagation() -> Bool {
-        guard let linked = viewModel.linkedRound(for: seriesRound) else {
-            return seriesRound.roundConfig.allowLobbyBackPropagation
-        }
-
-        switch linked.status {
-        case .lobby, .live, .paused:
-            return false
-        case .complete, .archived:
-            return seriesRound.roundConfig.allowLobbyBackPropagation
         }
     }
 
@@ -1366,31 +1353,6 @@ struct EditSeriesRoundSheet: View {
     }
 
     private var planningDraftRound: SeriesRound {
-        let roundConfig = SeriesRoundConfiguration(
-            formatTemplateID: selectedTemplateID,
-            competitionScope: competitionScope,
-            teamScoring: teamScoring,
-            matchupResolutionStyle: .roundAggregate,
-            scoreOwnerScope: effectiveScoreOwnerScope,
-            matchupScoringStyle: matchupScoringStyle,
-            holeWinPoints: competitionScope == .matchup ? holeWinPoints : nil,
-            matchWinnerBonusPoints: competitionScope == .matchup ? matchWinnerBonusPoints : nil,
-            matchTiePolicy: .half,
-            sequentialTeeStartsEnabled: sequentialTeeStartsEnabled,
-            selectionDomain: selectionDomain,
-            matchupMode: resolvedMatchupMode(for: competitionScope),
-            podGroupingStrategy: podGroupingStrategy,
-            teamAssignmentMode: viewModel.usesTeams ? .seriesTeams : .manual,
-            teeGroupMode: podGroupingStrategy.usesPodAlignment ? .podAligned : .auto,
-            notes: notes.isEmpty ? nil : notes,
-            sharedScoreHandicapConfig: sharedScoreAllowanceConfig,
-            maxScoreOverPar: maxScoreOverPar,
-            handicapStrokeBasis: handicapStrokeBasis,
-            handicapEntryFormat: resolvedHandicapEntryFormat,
-            handicapNormalizationMode: resolvedHandicapNormalizationMode(for: competitionScope),
-            countsTowardHandicapPool: countsTowardHandicapPool,
-            excludedHandicapMemberIDs: excludedHandicapMemberIDs
-        )
         return SeriesRound(
             id: seriesRound.id,
             title: title,
@@ -1401,7 +1363,7 @@ struct EditSeriesRoundSheet: View {
             startedAt: seriesRound.startedAt,
             completedAt: seriesRound.completedAt,
             courseOverride: planningCourseSelection,
-            roundConfig: roundConfig,
+            roundConfig: confidenceRoundConfig,
             teamScoringProfileID: selectedTeamProfileID,
             individualScoringProfileID: selectedIndividualProfileID,
             matchupPlans: normalizedMatchupPlans(),
@@ -1795,8 +1757,8 @@ struct EditSeriesRoundSheet: View {
             teamsByID: planningTeamsByID,
             handicapsEnabled: viewModel.series.handicapConfig.isEnabled,
             effectiveHandicapText: handicapValueText(for:),
-            plannedTeeGroups: $plannedTeeGroups,
-            partnershipPlans: $partnershipPlans,
+            plannedTeeGroups: $draft.plannedTeeGroups,
+            partnershipPlans: $draft.partnershipPlans,
             showPairStatus: matchupSource == .byPair,
             onRegenerate: { refreshPlanningStructure(forceRegenerate: true) },
             onResetManualOverrides: { refreshPlanningStructure(forceRegenerate: true) }
@@ -2503,36 +2465,8 @@ struct EditSeriesRoundSheet: View {
         }
     }
 
-    private var sharedScoreAllowanceConfig: HandicapConfiguration? {
-        let percentages = allowancePercentages(from: sharedScoreAllowanceText)
-        guard percentages.isPopulated else { return nil }
-        return HandicapConfiguration(percentage: 1.0, isTeamCombined: true, positionPercentages: percentages)
-    }
-
     private var availableTemplates: [GameTemplate] {
         FormatTemplateRegistry.seriesTemplates
-    }
-
-    private func allowanceText(from config: HandicapConfiguration) -> String {
-        guard let percentages = config.positionPercentages, percentages.isPopulated else { return "" }
-        return percentages.map { percentage in
-            let whole = percentage * 100
-            if abs(whole - whole.rounded()) < 0.000_001 {
-                return "\(Int(whole.rounded()))"
-            }
-            return String(format: "%.1f", whole)
-        }
-        .joined(separator: ",")
-    }
-
-    private func allowancePercentages(from text: String) -> [Double] {
-        text
-            .split(separator: ",")
-            .compactMap { raw in
-                let trimmed = raw.trimmingCharacters(in: .whitespacesAndNewlines)
-                guard let value = Double(trimmed), value >= 0 else { return nil }
-                return value > 1 ? value / 100 : value
-            }
     }
 
     private var seriesPointsDescription: String {
