@@ -1587,6 +1587,8 @@ final class SeriesViewModel: ObservableObject, Loggable {
     private let snapshotRepository: SeriesRoundSnapshotRepository
     private let standingsPublicationService: SeriesStandingsPublicationService
     private var linkedRoundListeners: [String: ListenerRegistration] = [:]
+    private var canonicalProcessingStates: [String: SeriesRoundProcessingState] = [:]
+    private var canonicalRetryRoundIDs = Set<String>()
     @Published var isLoading = true
     @Published var isEnriching = false
     @Published var isSaving = false
@@ -2391,6 +2393,7 @@ final class SeriesViewModel: ObservableObject, Loggable {
         async let standingsTask = FirebaseService.shared.fetchStandingsResult(seriesID: seriesID)
         async let scoresTask = FirebaseService.shared.fetchHandicapScores(seriesID: seriesID)
         async let overridesTask = FirebaseService.shared.fetchHandicapOverrides(seriesID: seriesID)
+        async let canonicalStatesTask = FirebaseService.shared.fetchCanonicalRoundProcessingStates(seriesID: seriesID)
 
         members = await membersTask
         invites = await invitesTask
@@ -2413,11 +2416,18 @@ final class SeriesViewModel: ObservableObject, Loggable {
         }
         handicapScores = await scoresTask
         handicapOverrides = await overridesTask
+        switch await canonicalStatesTask {
+        case .success(let states):
+            canonicalProcessingStates = Dictionary(uniqueKeysWithValues: states.map { ($0.id, $0) })
+        case .failure(let error):
+            canonicalProcessingStates = [:]
+            addBreadcrumb(level: .error, message: "Failed to load canonical processing states", error: error)
+        }
         startRealtimeSourceListeners(for: seriesID)
         SeriesPerformanceRecorder.shared.record(
             .coreLoad,
             startedAt: coreLoadStartedAt,
-            logicalReadCount: 12,
+            logicalReadCount: 13,
             activeListenerCount: 2 + linkedRoundListeners.count,
             itemCount: members.count
                 + invites.count
@@ -2429,7 +2439,8 @@ final class SeriesViewModel: ObservableObject, Loggable {
                 + pointAwards.count
                 + standings.count
                 + handicapScores.count
-                + handicapOverrides.count,
+                + handicapOverrides.count
+                + canonicalProcessingStates.count,
             context: seriesID
         )
 
@@ -4167,7 +4178,44 @@ final class SeriesViewModel: ObservableObject, Loggable {
 
     @discardableResult
     func saveScoringProfile(_ profile: SeriesScoringProfile) async -> SeriesScoringProfile? {
-        if scoringProfiles.contains(where: { $0.id == profile.id }) {
+        if let existing = scoringProfiles.first(where: { $0.id == profile.id }) {
+            let isReferencedByStartedRound = rounds.contains { round in
+                guard round.teamScoringProfileID == profile.id || round.individualScoringProfileID == profile.id else {
+                    return false
+                }
+                switch effectiveStatus(for: round) {
+                case .planned, .lobby:
+                    return false
+                case .live, .complete, .canceled:
+                    return true
+                }
+            }
+
+            if isReferencedByStartedRound {
+                let revision = Self.revisedScoringProfile(
+                    profile,
+                    existing: existing,
+                    allProfiles: scoringProfiles
+                )
+                switch await FirebaseService.shared.addScoringProfile(revision) {
+                case .success(let created):
+                    scoringProfiles.append(created)
+                    addEvent(
+                        "series.scoring_profile_saved",
+                        eventProps: seriesTelemetryProps([
+                            "profile_id": created.id,
+                            "is_new": true,
+                            "is_revision": true,
+                            "profile_kind": created.kind.rawValue
+                        ])
+                    )
+                    return created
+                case .failure(let error):
+                    addBreadcrumb(level: .error, message: "Failed to create scoring profile revision", error: error)
+                    return nil
+                }
+            }
+
             switch await FirebaseService.shared.updateScoringProfile(profile) {
             case .success(let updated):
                 if let index = scoringProfiles.firstIndex(where: { $0.id == updated.id }) {
@@ -4204,6 +4252,28 @@ final class SeriesViewModel: ObservableObject, Loggable {
             addBreadcrumb(level: .error, message: "Failed to create scoring profile", error: error)
             return nil
         }
+    }
+
+    nonisolated static func revisedScoringProfile(
+        _ proposed: SeriesScoringProfile,
+        existing: SeriesScoringProfile,
+        allProfiles: [SeriesScoringProfile],
+        id: String = HackersID.string(),
+        createdAt: Time = .init()
+    ) -> SeriesScoringProfile {
+        let rootID = existing.revisionRootID ?? existing.id
+        let nextSequence = allProfiles
+            .filter { ($0.revisionRootID ?? $0.id) == rootID }
+            .compactMap { $0.revisionSequence ?? 1 }
+            .max()
+            .map { $0 + 1 } ?? 2
+        var revision = proposed
+        revision.id = id
+        revision.revisionRootID = rootID
+        revision.revisionSequence = nextSequence
+        revision.createdAt = createdAt
+        revision.lastUpdatedAt = createdAt
+        return revision
     }
 
     func updateSeriesRound(
@@ -5099,6 +5169,11 @@ final class SeriesViewModel: ObservableObject, Loggable {
         guard newStatus == .complete else { return false }
         if previousStatus != .complete { return true }
 
+        let needsCanonicalRetry = canonicalRetryRoundIDs.contains(seriesRound.id)
+            || SeriesRoundCanonicalRetryPlanner.needsProcessing(
+                state: canonicalProcessingStates[seriesRound.id]
+            )
+
         let needsHandicapRefresh: Bool = {
             guard series.handicapConfig.mode.allowsAccrual else { return false }
             return !handicapScores.contains { $0.source == .round && $0.sourceRoundID == roundID }
@@ -5108,13 +5183,13 @@ final class SeriesViewModel: ObservableObject, Loggable {
         let hasAwardRows = pointAwards.contains { $0.seriesRoundID == seriesRound.id }
         let needsAwardRefresh = hasAssignedAwardProfile
             && seriesRound.awardsStatus == .pending
-            && !hasAwardRows
+            && (!hasAwardRows || hasAutomaticAwardProfile(for: seriesRound))
 
         let needsFinalizedAwardRefresh = hasAutomaticAwardProfile(for: seriesRound)
             && seriesRound.awardsStatus == .finalized
             && (!hasAwardRows || completedLinkedRoundNeedsFinalizedAutomaticAwardRefresh(seriesRound: seriesRound, linkedRound: linkedRound))
 
-        return needsHandicapRefresh || needsAwardRefresh || needsFinalizedAwardRefresh
+        return needsHandicapRefresh || needsAwardRefresh || needsFinalizedAwardRefresh || needsCanonicalRetry
     }
 
     private func hasAssignedAwardProfile(for seriesRound: SeriesRound) -> Bool {
@@ -5158,6 +5233,7 @@ final class SeriesViewModel: ObservableObject, Loggable {
         var changed = false
         var awardsChanged = false
         var awardWriteFailed = false
+        var canonicalWriteFailed = false
     }
 
     private enum AwardsFinalizationResult {
@@ -5240,8 +5316,9 @@ final class SeriesViewModel: ObservableObject, Loggable {
         result.awardsChanged = awardsChanged
         result.changed = result.changed || awardsChanged
 
+        let canonicalPublished: Bool
         if !handicapSync.writeFailed {
-            await publishCanonicalRoundResult(
+            canonicalPublished = await publishCanonicalRoundResult(
                 seriesRound: seriesRound,
                 snapshot: snapshot,
                 scoringResult: canonicalScoringResult,
@@ -5249,7 +5326,15 @@ final class SeriesViewModel: ObservableObject, Loggable {
                 handicapScores: handicapSync.projectedScores,
                 providedMappings: mappings
             )
+        } else {
+            canonicalPublished = false
         }
+        guard canonicalPublished else {
+            result.canonicalWriteFailed = true
+            canonicalRetryRoundIDs.insert(seriesRound.id)
+            return result
+        }
+        canonicalRetryRoundIDs.remove(seriesRound.id)
 
         guard var currentRound = rounds.first(where: { $0.id == seriesRound.id }) else {
             return result
@@ -5289,7 +5374,7 @@ final class SeriesViewModel: ObservableObject, Loggable {
         awards: [SeriesPointAward],
         handicapScores: [SeriesHandicapScore],
         providedMappings: [SeriesRoundMapping]?
-    ) async {
+    ) async -> Bool {
         let mappings: [SeriesRoundMapping]
         if let providedMappings {
             mappings = providedMappings
@@ -5302,7 +5387,7 @@ final class SeriesViewModel: ObservableObject, Loggable {
                 mappings = values
             case .failure(let error):
                 addBreadcrumb(level: .error, message: "Canonical round mappings read failed", error: error)
-                return
+                return false
             }
         }
 
@@ -5314,6 +5399,15 @@ final class SeriesViewModel: ObservableObject, Loggable {
             for: seriesRound,
             in: series
         )
+        let teamProfile = seriesRound.teamScoringProfileID.flatMap { scoringProfile(id: $0) }
+        let individualProfile = individualScoringProfile(for: seriesRound)
+        let processingInputs = SeriesRoundCanonicalBuilder.processingInputs(
+            teamProfile: teamProfile,
+            individualProfile: individualProfile,
+            handicapConfig: series.handicapConfig,
+            members: members,
+            teams: teams
+        )
         guard let canonicalResult = SeriesRoundCanonicalBuilder.makeResult(
             seriesID: seriesID,
             seriesRound: seriesRound,
@@ -5323,25 +5417,53 @@ final class SeriesViewModel: ObservableObject, Loggable {
             compatibility: compatibility,
             scoringResult: scoringResult,
             awards: awards,
-            handicapScores: handicapScores
+            handicapScores: handicapScores,
+            processingInputs: processingInputs
         ) else {
-            return
+            return false
+        }
+
+        switch await FirebaseService.shared.markCanonicalRoundResultPending(canonicalResult) {
+        case .success(.alreadyPublished):
+            canonicalProcessingStates[seriesRound.id] = SeriesRoundCanonicalBuilder.processingState(
+                for: canonicalResult,
+                previous: canonicalProcessingStates[seriesRound.id]
+            )
+            return true
+        case .success(.stale):
+            return true
+        case .success(.repairState), .success(.publish):
+            break
+        case .failure(let error):
+            addBreadcrumb(level: .error, message: "Canonical round pending state write failed", error: error)
+            return false
         }
 
         switch await SeriesRoundResultPublicationService.shared.publish(canonicalResult) {
         case .success(let decision):
+            canonicalProcessingStates[seriesRound.id] = SeriesRoundCanonicalBuilder.processingState(
+                for: canonicalResult,
+                previous: canonicalProcessingStates[seriesRound.id]
+            )
+            let shadowValidation = SeriesRoundShadowValidator.validate(
+                authoritativeAwards: awards,
+                canonicalResult: canonicalResult
+            )
             addEvent(
                 "series.canonical_round_result_processed",
                 eventProps: seriesTelemetryProps([
                     "series_round_id": seriesRound.id,
                     "generation_id": canonicalResult.id,
                     "decision": String(describing: decision),
+                    "shadow_equivalent": shadowValidation.isEquivalent,
                     "award_projection_count": canonicalResult.pointAwards.count,
                     "metric_count": canonicalResult.performanceMetrics.count
                 ])
             )
+            return true
         case .failure(let error):
             addBreadcrumb(level: .error, message: "Canonical round result shadow write failed", error: error)
+            return false
         }
     }
 

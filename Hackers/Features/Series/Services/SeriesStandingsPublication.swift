@@ -81,6 +81,7 @@ enum SeriesPointAwardsPublicationPlanner {
 
 enum SeriesRoundResultPublicationDecision: String, Equatable {
     case publish
+    case repairState = "repair_state"
     case alreadyPublished = "already_published"
     case stale
 }
@@ -91,13 +92,63 @@ enum SeriesRoundResultPublicationPlanner {
         currentState: SeriesRoundProcessingState?,
         resultAlreadyExists: Bool
     ) -> SeriesRoundResultPublicationDecision {
-        if resultAlreadyExists || currentState?.latestGenerationID == result.id {
-            return .alreadyPublished
+        if resultAlreadyExists {
+            if currentState?.latestGenerationID == result.id, currentState?.status == .completed {
+                return .alreadyPublished
+            }
+            return .repairState
         }
         if let currentState, result.sourceUpdatedAt < currentState.sourceUpdatedAt {
             return .stale
         }
+        if let currentState,
+           result.sourceUpdatedAt == currentState.sourceUpdatedAt,
+           result.sourceRevision != currentState.sourceRevision {
+            return .stale
+        }
         return .publish
+    }
+}
+
+enum SeriesRoundCanonicalRetryPlanner {
+    static func needsProcessing(
+        state: SeriesRoundProcessingState?,
+        processorVersion: Int = SeriesRoundCanonicalBuilder.processorVersion
+    ) -> Bool {
+        guard let state else { return false }
+        if state.status == .pending || state.status == .failed { return true }
+        return state.processorVersion < processorVersion
+    }
+}
+
+struct SeriesRoundShadowValidation: Equatable {
+    let missingAwardIDs: [String]
+    let unexpectedAwardIDs: [String]
+    let mismatchedAwardIDs: [String]
+
+    var isEquivalent: Bool {
+        missingAwardIDs.isEmpty && unexpectedAwardIDs.isEmpty && mismatchedAwardIDs.isEmpty
+    }
+}
+
+enum SeriesRoundShadowValidator {
+    static func validate(
+        authoritativeAwards: [SeriesPointAward],
+        canonicalResult: SeriesRoundResult
+    ) -> SeriesRoundShadowValidation {
+        let authoritative = Dictionary(
+            uniqueKeysWithValues: SeriesRoundCanonicalBuilder.awardProjections(from: authoritativeAwards).map { ($0.id, $0) }
+        )
+        let canonical = Dictionary(uniqueKeysWithValues: canonicalResult.pointAwards.map { ($0.id, $0) })
+        let authoritativeIDs = Set(authoritative.keys)
+        let canonicalIDs = Set(canonical.keys)
+        return SeriesRoundShadowValidation(
+            missingAwardIDs: authoritativeIDs.subtracting(canonicalIDs).sorted(),
+            unexpectedAwardIDs: canonicalIDs.subtracting(authoritativeIDs).sorted(),
+            mismatchedAwardIDs: authoritativeIDs.intersection(canonicalIDs)
+                .filter { authoritative[$0] != canonical[$0] }
+                .sorted()
+        )
     }
 }
 
@@ -119,12 +170,14 @@ enum SeriesRoundCanonicalBuilder {
     static func sourceRevision(
         seriesRound: SeriesRound,
         snapshot: RoundSnapshot,
-        mappings: [SeriesRoundMapping]
+        mappings: [SeriesRoundMapping],
+        processingInputs: SeriesRoundProcessingInputManifest? = nil
     ) -> String {
         let source = CanonicalSource(
             seriesRound: seriesRound,
             snapshot: snapshot,
-            mappings: mappings
+            mappings: mappings,
+            processingInputs: processingInputs
         )
         return hash(source)
     }
@@ -135,17 +188,27 @@ enum SeriesRoundCanonicalBuilder {
             snapshot.round.lastUpdatedAt.unix,
             snapshot.participants.map { $0.lastUpdatedAt.unix }.compactMap { $0 }.max() ?? 0,
             snapshot.teams.map { $0.lastUpdatedAt.unix }.compactMap { $0 }.max() ?? 0,
+            snapshot.teeGroups.map { $0.lastUpdatedAt.unix }.compactMap { $0 }.max() ?? 0,
             snapshot.segments.map { $0.lastUpdatedAt.unix }.compactMap { $0 }.max() ?? 0,
+            snapshot.scoringGroups.map { $0.lastUpdatedAt.unix }.compactMap { $0 }.max() ?? 0,
             snapshot.scoring.map { $0.lastUpdatedAt.unix }.compactMap { $0 }.max() ?? 0
         ]
         return sourceTimes.max() ?? 0
     }
 
-    static func performanceMetrics(from result: ScoringResult) -> [SeriesRoundPerformanceMetric] {
+    static func performanceMetrics(
+        from result: ScoringResult,
+        seriesRound: SeriesRound? = nil,
+        snapshot: RoundSnapshot? = nil
+    ) -> [SeriesRoundPerformanceMetric] {
         result.rows.map { row in
             let holeValues = row.holeValues.values
             let rawValues = holeValues.compactMap(\.rawStrokes)
             let netValues = holeValues.compactMap(\.netStrokes)
+            let context = metricContext(for: row, seriesRound: seriesRound, snapshot: snapshot)
+            let basisStrokes = context?.scoreBasis == .net
+                ? (netValues.isEmpty ? nil : netValues.reduce(0, +))
+                : (rawValues.isEmpty ? nil : rawValues.reduce(0, +))
             return SeriesRoundPerformanceMetric(
                 scoringUnitID: row.scoringUnitID,
                 participantIDs: row.participantIDs.sorted(),
@@ -155,10 +218,99 @@ enum SeriesRoundCanonicalBuilder {
                 holesPlayed: row.holesPlayed,
                 rawStrokes: rawValues.isEmpty ? nil : rawValues.reduce(0, +),
                 netStrokes: netValues.isEmpty ? nil : netValues.reduce(0, +),
-                points: holeValues.reduce(0) { $0 + $1.points }
+                points: holeValues.reduce(0) { $0 + $1.points },
+                context: context,
+                scoreToPar: basisStrokes.flatMap { strokes in
+                    context?.aggregatePar.map { Double(strokes) - $0 }
+                },
+                isComplete: context.map { row.holesPlayed >= $0.expectedHoleCount }
             )
         }
         .sorted { $0.scoringUnitID < $1.scoringUnitID }
+    }
+
+    static func processingInputs(
+        teamProfile: SeriesScoringProfile?,
+        individualProfile: SeriesScoringProfile?,
+        handicapConfig: SeriesHandicapConfig,
+        members: [SeriesMember],
+        teams: [SeriesTeam]
+    ) -> SeriesRoundProcessingInputManifest {
+        SeriesRoundProcessingInputManifest(
+            schemaVersion: 1,
+            teamScoringProfile: teamProfile.map(profileSnapshot),
+            individualScoringProfile: individualProfile.map(profileSnapshot),
+            handicapConfig: handicapConfig,
+            members: members.map {
+                SeriesRoundProcessingMemberInput(
+                    id: $0.id,
+                    playerID: $0.playerID,
+                    teamID: $0.teamID,
+                    name: $0.name.fullName
+                )
+            }
+            .sorted { $0.id < $1.id },
+            teams: teams.map { SeriesRoundProcessingTeamInput(id: $0.id, name: $0.name) }
+                .sorted { $0.id < $1.id }
+        )
+    }
+
+    private static func profileSnapshot(_ profile: SeriesScoringProfile) -> SeriesRoundScoringProfileSnapshot {
+        SeriesRoundScoringProfileSnapshot(
+            id: profile.id,
+            revisionRootID: profile.revisionRootID ?? profile.id,
+            revisionSequence: profile.revisionSequence ?? 1,
+            outcomeSource: profile.outcomeSource,
+            competitorType: profile.competitorType,
+            kind: profile.kind,
+            tieHandling: profile.tieHandling,
+            placementRules: profile.placementRules.sorted { $0.id < $1.id },
+            resultPoints: profile.resultPoints,
+            bonusRules: profile.bonusRules.sorted { $0.id < $1.id }
+        )
+    }
+
+    private static func metricContext(
+        for row: ScoringRow,
+        seriesRound: SeriesRound?,
+        snapshot: RoundSnapshot?
+    ) -> SeriesRoundPerformanceMetricContext? {
+        guard let seriesRound, let snapshot else { return nil }
+        let config = seriesRound.roundConfig
+        let expectedHoleCount = snapshot.roundSegment?.holeRange.count
+            ?? snapshot.holeRange?.count
+            ?? snapshot.holeSegment.holeCount
+        let coursePar = aggregateCoursePar(snapshot: snapshot)
+        let contributionCount: Int
+        if row.owner == .team, snapshot.usesTeamScoringAggregates {
+            switch config.teamScoring.mode {
+            case .all:
+                contributionCount = max(1, row.participantIDs.count)
+            case .bestN, .worstN:
+                contributionCount = max(1, min(config.teamScoring.count, row.participantIDs.count))
+            }
+        } else {
+            contributionCount = 1
+        }
+        return SeriesRoundPerformanceMetricContext(
+            formatTemplateID: config.formatTemplateID,
+            scoringFamily: SeriesStandingsPolicyResolver.scoringFamily(for: config),
+            scoreBasis: config.scoreBasisOverride ?? config.template.requirements.defaultScoreBasis,
+            expectedHoleCount: expectedHoleCount,
+            aggregatePar: coursePar.map { Double($0 * contributionCount) },
+            teamScoring: config.teamScoring
+        )
+    }
+
+    private static func aggregateCoursePar(snapshot: RoundSnapshot) -> Int? {
+        guard let tee = snapshot.defaultTee ?? snapshot.courseInfo?.tees.first else { return nil }
+        let holeNumbers = Set(
+            snapshot.roundSegment?.holeRange.holeNumbers
+                ?? snapshot.holeRange?.holeNumbers
+                ?? snapshot.holeSegment.holeRange.holeNumbers
+        )
+        let holes = tee.holes.filter { holeNumbers.contains($0.number) }
+        return holes.isEmpty ? nil : holes.reduce(0) { $0 + $1.par }
     }
 
     static func awardProjections(from awards: [SeriesPointAward]) -> [SeriesRoundPointAwardProjection] {
@@ -246,20 +398,26 @@ enum SeriesRoundCanonicalBuilder {
         scoringResult: ScoringResult,
         awards: [SeriesPointAward],
         handicapScores: [SeriesHandicapScore],
+        processingInputs: SeriesRoundProcessingInputManifest? = nil,
         generatedAt: Time = .init()
     ) -> SeriesRoundResult? {
         guard let linkedRoundID = seriesRound.roundID else { return nil }
         let sourceRevision = sourceRevision(
             seriesRound: seriesRound,
             snapshot: snapshot,
-            mappings: mappings
+            mappings: mappings,
+            processingInputs: processingInputs
         )
         let generationID = generationID(
             sourceRevision: sourceRevision,
             policyFingerprint: policy.fingerprint,
             processorVersion: processorVersion
         )
-        let metrics = performanceMetrics(from: scoringResult)
+        let metrics = performanceMetrics(
+            from: scoringResult,
+            seriesRound: seriesRound,
+            snapshot: snapshot
+        )
         let awardValues = awardProjections(from: awards)
         let handicapValues = handicapProjections(from: handicapScores)
         let compatibilityValues = compatibilityProjections(compatibility)
@@ -291,6 +449,7 @@ enum SeriesRoundCanonicalBuilder {
             performanceMetrics: metrics,
             pointAwards: awardValues,
             handicapSamples: handicapValues,
+            processingInputs: processingInputs,
             generatedAt: generatedAt,
             createdAt: generatedAt,
             lastUpdatedAt: generatedAt,
@@ -301,7 +460,8 @@ enum SeriesRoundCanonicalBuilder {
     static func processingState(
         for result: SeriesRoundResult,
         previous: SeriesRoundProcessingState?,
-        completedAt: Time = .init()
+        status: SeriesRoundProcessingStatus = .completed,
+        now: Time = .init()
     ) -> SeriesRoundProcessingState {
         SeriesRoundProcessingState(
             id: result.seriesRoundID,
@@ -311,9 +471,10 @@ enum SeriesRoundCanonicalBuilder {
             policyFingerprint: result.policyFingerprint,
             processorVersion: result.processorVersion,
             resultSemanticHash: result.semanticHash,
-            completedAt: completedAt,
-            createdAt: previous?.createdAt ?? completedAt,
-            lastUpdatedAt: completedAt,
+            status: status,
+            completedAt: status == .completed ? now : previous?.completedAt,
+            createdAt: previous?.createdAt ?? now,
+            lastUpdatedAt: now,
             parentID: result.parentID
         )
     }
@@ -353,11 +514,19 @@ enum SeriesRoundCanonicalBuilder {
         let partnershipPlans: [SeriesRoundPartnershipPlan]
         let participants: [CanonicalParticipant]
         let teams: [CanonicalTeam]
-        let segments: [RoundSegment]
+        let teeGroups: [CanonicalTeeGroup]
+        let segments: [CanonicalSegment]
+        let scoringGroups: [CanonicalScoringGroup]
         let scoring: [CanonicalScore]
         let mappings: [CanonicalMapping]
+        let processingInputs: SeriesRoundProcessingInputManifest?
 
-        init(seriesRound: SeriesRound, snapshot: RoundSnapshot, mappings: [SeriesRoundMapping]) {
+        init(
+            seriesRound: SeriesRound,
+            snapshot: RoundSnapshot,
+            mappings: [SeriesRoundMapping],
+            processingInputs: SeriesRoundProcessingInputManifest?
+        ) {
             seriesRoundID = seriesRound.id
             linkedRoundID = seriesRound.roundID
             roundConfiguration = seriesRound.roundConfig
@@ -372,12 +541,15 @@ enum SeriesRoundCanonicalBuilder {
             partnershipPlans = seriesRound.partnershipPlans.sorted { $0.id < $1.id }
             participants = snapshot.participants.map(CanonicalParticipant.init).sorted { $0.id < $1.id }
             teams = snapshot.teams.map(CanonicalTeam.init).sorted { $0.id < $1.id }
-            segments = snapshot.segments.sorted { $0.id < $1.id }
+            teeGroups = snapshot.teeGroups.map(CanonicalTeeGroup.init).sorted { $0.id < $1.id }
+            segments = snapshot.segments.map(CanonicalSegment.init).sorted { $0.id < $1.id }
+            scoringGroups = snapshot.scoringGroups.map(CanonicalScoringGroup.init).sorted { $0.id < $1.id }
             scoring = snapshot.scoring.map(CanonicalScore.init).sorted { $0.id < $1.id }
             self.mappings = mappings
                 .filter { $0.seriesRoundID == seriesRound.id }
                 .map(CanonicalMapping.init)
                 .sorted { $0.id < $1.id }
+            self.processingInputs = processingInputs
         }
     }
 
@@ -420,6 +592,64 @@ enum SeriesRoundCanonicalBuilder {
             id = team.id
             name = team.name
             index = team.index
+        }
+    }
+
+    private struct CanonicalTeeGroup: Codable {
+        let id: String
+        let index: Int
+        let teeTime: String?
+        let startingHole: Int
+        let lastCompletedHole: Int?
+
+        init(_ group: TeeTimeGroup) {
+            id = group.id
+            index = group.index
+            teeTime = group.teeTime
+            startingHole = group.startingHole
+            lastCompletedHole = group.lastCompletedHole
+        }
+    }
+
+    private struct CanonicalSegment: Codable {
+        let id: String
+        let roundID: String
+        let holeRange: HoleRange
+        let gameFormat: GameFormat
+        let templateID: String?
+        let scoringUnits: [ScoringUnit]
+        let matchups: [TeamMatchup]?
+        let competitionScope: CompetitionScope?
+
+        init(_ segment: RoundSegment) {
+            id = segment.id
+            roundID = segment.roundID
+            holeRange = segment.holeRange
+            gameFormat = segment.gameFormat
+            templateID = segment.templateID
+            scoringUnits = segment.scoringUnits.sorted { $0.id < $1.id }
+            matchups = segment.matchups?.sorted { $0.id < $1.id }
+            competitionScope = segment.competitionScope
+        }
+    }
+
+    private struct CanonicalScoringGroup: Codable {
+        let id: String
+        let teamID: String?
+        let teeGroupID: String?
+        let kind: RoundScoringGroupKind
+        let memberIDs: [String]
+        let label: String?
+        let seedSeriesPodID: String?
+
+        init(_ group: RoundScoringGroup) {
+            id = group.id
+            teamID = group.teamID
+            teeGroupID = group.teeGroupID
+            kind = group.kind
+            memberIDs = group.memberIDs.sorted()
+            label = group.label
+            seedSeriesPodID = group.seedSeriesPodID
         }
     }
 

@@ -932,6 +932,50 @@ enum SeriesRoundNormalizationPolicy: String, Hashable, Codable {
     case nineHoleToEighteenHole = "nine_hole_to_eighteen_hole"
 }
 
+enum SeriesTiebreakMetric: String, Hashable, Codable {
+    case scoringAverage = "scoring_average"
+}
+
+enum SeriesTiebreakDirection: String, Hashable, Codable {
+    case lowestFirst = "lowest_first"
+    case highestFirst = "highest_first"
+}
+
+enum SeriesTiebreakScoreComponent: String, Hashable, Codable {
+    case total
+    case rawStrokes = "raw_strokes"
+    case netStrokes = "net_strokes"
+    case scoreToPar = "score_to_par"
+}
+
+struct SeriesTiebreakRule: Hashable, Codable, Identifiable {
+    let id: String
+    let metric: SeriesTiebreakMetric
+    let direction: SeriesTiebreakDirection
+    let scoreComponent: SeriesTiebreakScoreComponent
+    let minimumEligibleRounds: Int
+
+    init(
+        id: String,
+        metric: SeriesTiebreakMetric = .scoringAverage,
+        direction: SeriesTiebreakDirection = .lowestFirst,
+        scoreComponent: SeriesTiebreakScoreComponent = .total,
+        minimumEligibleRounds: Int = 1
+    ) {
+        self.id = id
+        self.metric = metric
+        self.direction = direction
+        self.scoreComponent = scoreComponent
+        self.minimumEligibleRounds = max(1, minimumEligibleRounds)
+    }
+
+    enum CodingKeys: String, CodingKey {
+        case id, metric, direction
+        case scoreComponent = "score_component"
+        case minimumEligibleRounds = "minimum_eligible_rounds"
+    }
+}
+
 struct SeriesStandingsRule: Hashable, Codable, Identifiable {
     let id: String
     let track: SeriesAwardTrack
@@ -942,6 +986,7 @@ struct SeriesStandingsRule: Hashable, Codable, Identifiable {
     let requiredTeamScoring: RoundTeamScoringConfiguration?
     let requiredSubstitutesScore: Bool?
     let normalizationPolicy: SeriesRoundNormalizationPolicy
+    let tiebreakers: [SeriesTiebreakRule]?
 
     init(
         id: String,
@@ -952,7 +997,8 @@ struct SeriesStandingsRule: Hashable, Codable, Identifiable {
         acceptedScoringFamilies: [SeriesRoundScoringFamily]? = nil,
         requiredTeamScoring: RoundTeamScoringConfiguration? = nil,
         requiredSubstitutesScore: Bool? = nil,
-        normalizationPolicy: SeriesRoundNormalizationPolicy = .none
+        normalizationPolicy: SeriesRoundNormalizationPolicy = .none,
+        tiebreakers: [SeriesTiebreakRule]? = nil
     ) {
         self.id = id
         self.track = track
@@ -963,6 +1009,7 @@ struct SeriesStandingsRule: Hashable, Codable, Identifiable {
         self.requiredTeamScoring = requiredTeamScoring
         self.requiredSubstitutesScore = requiredSubstitutesScore
         self.normalizationPolicy = normalizationPolicy
+        self.tiebreakers = tiebreakers?.isEmpty == true ? nil : tiebreakers
     }
 
     enum CodingKeys: String, CodingKey {
@@ -974,7 +1021,10 @@ struct SeriesStandingsRule: Hashable, Codable, Identifiable {
         case requiredTeamScoring = "required_team_scoring"
         case requiredSubstitutesScore = "required_substitutes_score"
         case normalizationPolicy = "normalization_policy"
+        case tiebreakers
     }
+
+    var resolvedTiebreakers: [SeriesTiebreakRule] { tiebreakers ?? [] }
 }
 
 struct SeriesStandingsPolicy: Hashable, Codable {
@@ -2707,6 +2757,8 @@ struct SeriesScoringProfile: FirebaseSubcollectable {
     var placementRules: [SeriesPlacementRule]
     var resultPoints: SeriesResultPoints?
     var bonusRules: [SeriesBonusRule]
+    var revisionRootID: String?
+    var revisionSequence: Int?
     var isArchived: Bool
     var createdAt: Time
     var lastUpdatedAt: Time
@@ -2727,6 +2779,8 @@ struct SeriesScoringProfile: FirebaseSubcollectable {
         placementRules: [SeriesPlacementRule] = [],
         resultPoints: SeriesResultPoints? = nil,
         bonusRules: [SeriesBonusRule] = [],
+        revisionRootID: String? = nil,
+        revisionSequence: Int? = nil,
         isArchived: Bool = false,
         createdAt: Time = .init(),
         lastUpdatedAt: Time = .init(),
@@ -2742,6 +2796,8 @@ struct SeriesScoringProfile: FirebaseSubcollectable {
         self.placementRules = placementRules
         self.resultPoints = resultPoints
         self.bonusRules = bonusRules
+        self.revisionRootID = revisionRootID
+        self.revisionSequence = revisionSequence
         self.isArchived = isArchived
         self.createdAt = createdAt
         self.lastUpdatedAt = lastUpdatedAt
@@ -2757,6 +2813,8 @@ struct SeriesScoringProfile: FirebaseSubcollectable {
         case placementRules = "placement_rules"
         case resultPoints = "result_points"
         case bonusRules = "bonus_rules"
+        case revisionRootID = "revision_root_id"
+        case revisionSequence = "revision_sequence"
         case isArchived = "is_archived"
         case createdAt = "created_at"
         case lastUpdatedAt = "last_updated_at"
@@ -2913,8 +2971,87 @@ struct SeriesPointAward: FirebaseSubcollectable {
 // MARK: - Canonical round results
 
 enum SeriesRoundProcessingStatus: String, Codable, Sendable {
+    case pending
     case completed
     case failed
+}
+
+struct SeriesRoundScoringProfileSnapshot: Hashable, Codable {
+    let id: String
+    let revisionRootID: String
+    let revisionSequence: Int
+    let outcomeSource: SeriesOutcomeSource
+    let competitorType: SeriesCompetitorType
+    let kind: SeriesScoringProfileKind
+    let tieHandling: SeriesTieHandling
+    let placementRules: [SeriesPlacementRule]
+    let resultPoints: SeriesResultPoints?
+    let bonusRules: [SeriesBonusRule]
+
+    enum CodingKeys: String, CodingKey {
+        case id, kind
+        case revisionRootID = "revision_root_id"
+        case revisionSequence = "revision_sequence"
+        case outcomeSource = "outcome_source"
+        case competitorType = "competitor_type"
+        case tieHandling = "tie_handling"
+        case placementRules = "placement_rules"
+        case resultPoints = "result_points"
+        case bonusRules = "bonus_rules"
+    }
+}
+
+struct SeriesRoundProcessingMemberInput: Hashable, Codable {
+    let id: String
+    let playerID: String?
+    let teamID: String?
+    let name: String
+
+    enum CodingKeys: String, CodingKey {
+        case id, name
+        case playerID = "player_id"
+        case teamID = "team_id"
+    }
+}
+
+struct SeriesRoundProcessingTeamInput: Hashable, Codable {
+    let id: String
+    let name: String
+}
+
+struct SeriesRoundProcessingInputManifest: Hashable, Codable {
+    let schemaVersion: Int
+    let teamScoringProfile: SeriesRoundScoringProfileSnapshot?
+    let individualScoringProfile: SeriesRoundScoringProfileSnapshot?
+    let handicapConfig: SeriesHandicapConfig
+    let members: [SeriesRoundProcessingMemberInput]
+    let teams: [SeriesRoundProcessingTeamInput]
+
+    enum CodingKeys: String, CodingKey {
+        case members, teams
+        case schemaVersion = "schema_version"
+        case teamScoringProfile = "team_scoring_profile"
+        case individualScoringProfile = "individual_scoring_profile"
+        case handicapConfig = "handicap_config"
+    }
+}
+
+struct SeriesRoundPerformanceMetricContext: Hashable, Codable, Sendable {
+    let formatTemplateID: String
+    let scoringFamily: SeriesRoundScoringFamily
+    let scoreBasis: ScoreBasis
+    let expectedHoleCount: Int
+    let aggregatePar: Double?
+    let teamScoring: RoundTeamScoringConfiguration
+
+    enum CodingKeys: String, CodingKey {
+        case scoringFamily = "scoring_family"
+        case scoreBasis = "score_basis"
+        case teamScoring = "team_scoring"
+        case formatTemplateID = "format_template_id"
+        case expectedHoleCount = "expected_hole_count"
+        case aggregatePar = "aggregate_par"
+    }
 }
 
 struct SeriesRoundPerformanceMetric: Hashable, Codable, Sendable {
@@ -2927,15 +3064,48 @@ struct SeriesRoundPerformanceMetric: Hashable, Codable, Sendable {
     let rawStrokes: Int?
     let netStrokes: Int?
     let points: Double
+    let context: SeriesRoundPerformanceMetricContext?
+    let scoreToPar: Double?
+    let isComplete: Bool?
+
+    init(
+        scoringUnitID: String,
+        participantIDs: [String],
+        countingParticipantIDs: [String],
+        owner: ScoringOwner,
+        total: Double,
+        holesPlayed: Int,
+        rawStrokes: Int?,
+        netStrokes: Int?,
+        points: Double,
+        context: SeriesRoundPerformanceMetricContext? = nil,
+        scoreToPar: Double? = nil,
+        isComplete: Bool? = nil
+    ) {
+        self.scoringUnitID = scoringUnitID
+        self.participantIDs = participantIDs
+        self.countingParticipantIDs = countingParticipantIDs
+        self.owner = owner
+        self.total = total
+        self.holesPlayed = holesPlayed
+        self.rawStrokes = rawStrokes
+        self.netStrokes = netStrokes
+        self.points = points
+        self.context = context
+        self.scoreToPar = scoreToPar
+        self.isComplete = isComplete
+    }
 
     enum CodingKeys: String, CodingKey {
-        case total, owner, points
+        case total, owner, points, context
         case scoringUnitID = "scoring_unit_id"
         case participantIDs = "participant_ids"
         case countingParticipantIDs = "counting_participant_ids"
         case holesPlayed = "holes_played"
         case rawStrokes = "raw_strokes"
         case netStrokes = "net_strokes"
+        case scoreToPar = "score_to_par"
+        case isComplete = "is_complete"
     }
 }
 
@@ -3019,6 +3189,7 @@ struct SeriesRoundResult: FirebaseSubcollectable {
     var performanceMetrics: [SeriesRoundPerformanceMetric]
     var pointAwards: [SeriesRoundPointAwardProjection]
     var handicapSamples: [SeriesRoundHandicapSampleProjection]
+    var processingInputs: SeriesRoundProcessingInputManifest?
     var generatedAt: Time
     var createdAt: Time
     var lastUpdatedAt: Time
@@ -3042,6 +3213,7 @@ struct SeriesRoundResult: FirebaseSubcollectable {
         performanceMetrics: [SeriesRoundPerformanceMetric],
         pointAwards: [SeriesRoundPointAwardProjection],
         handicapSamples: [SeriesRoundHandicapSampleProjection],
+        processingInputs: SeriesRoundProcessingInputManifest? = nil,
         generatedAt: Time = .init(),
         createdAt: Time = .init(),
         lastUpdatedAt: Time = .init(),
@@ -3060,6 +3232,7 @@ struct SeriesRoundResult: FirebaseSubcollectable {
         self.performanceMetrics = performanceMetrics
         self.pointAwards = pointAwards
         self.handicapSamples = handicapSamples
+        self.processingInputs = processingInputs
         self.generatedAt = generatedAt
         self.createdAt = createdAt
         self.lastUpdatedAt = lastUpdatedAt
@@ -3079,6 +3252,7 @@ struct SeriesRoundResult: FirebaseSubcollectable {
         case performanceMetrics = "performance_metrics"
         case pointAwards = "point_awards"
         case handicapSamples = "handicap_samples"
+        case processingInputs = "processing_inputs"
         case generatedAt = "generated_at"
         case createdAt = "created_at"
         case lastUpdatedAt = "last_updated_at"
@@ -3095,7 +3269,7 @@ struct SeriesRoundProcessingState: FirebaseSubcollectable {
     var processorVersion: Int
     var resultSemanticHash: String
     var status: SeriesRoundProcessingStatus
-    var completedAt: Time
+    var completedAt: Time?
     var createdAt: Time
     var lastUpdatedAt: Time
     var parentID: String
@@ -3113,7 +3287,7 @@ struct SeriesRoundProcessingState: FirebaseSubcollectable {
         processorVersion: Int,
         resultSemanticHash: String,
         status: SeriesRoundProcessingStatus = .completed,
-        completedAt: Time = .init(),
+        completedAt: Time? = nil,
         createdAt: Time = .init(),
         lastUpdatedAt: Time = .init(),
         parentID: String

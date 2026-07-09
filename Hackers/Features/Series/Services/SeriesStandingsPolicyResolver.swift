@@ -285,7 +285,7 @@ enum SeriesStandingsPolicyResolver {
         }
     }
 
-    private static func scoringFamily(for config: SeriesRoundConfiguration) -> SeriesRoundScoringFamily {
+    static func scoringFamily(for config: SeriesRoundConfiguration) -> SeriesRoundScoringFamily {
         let comparesScores = config.template.pipeline.contains { stage in
             if case .compare = stage { return true }
             return false
@@ -306,7 +306,8 @@ enum SeriesStandingsPolicyResolver {
                     acceptedScoringFamilies: rule.acceptedScoringFamilies,
                     requiredTeamScoring: rule.requiredTeamScoring,
                     requiredSubstitutesScore: rule.requiredSubstitutesScore,
-                    normalizationPolicy: rule.normalizationPolicy
+                    normalizationPolicy: rule.normalizationPolicy,
+                    tiebreakers: rule.tiebreakers
                 )
             }
         )

@@ -13,6 +13,7 @@ enum SeriesRoundConfigurationField: String, CaseIterable, Hashable, Sendable {
     case matchupScoring = "matchup_scoring"
     case handicap
     case course
+    case teeStarts = "tee_starts"
 
     var displayName: String {
         switch self {
@@ -23,6 +24,7 @@ enum SeriesRoundConfigurationField: String, CaseIterable, Hashable, Sendable {
         case .matchupScoring: return "match scoring"
         case .handicap: return "handicaps"
         case .course: return "course"
+        case .teeStarts: return "tee starts"
         }
     }
 }
@@ -90,6 +92,10 @@ enum SeriesRoundConfigurationReconciler {
             || desired.handicapNormalizationMode != linked.handicapNormalizationMode
             || desired.sharedScoreHandicapConfig != linked.sharedScoreHandicapConfig {
             fields.insert(.handicap)
+        }
+
+        if (desired.sequentialTeeStartsEnabled ?? false) != (linked.sequentialTeeStartsEnabled ?? false) {
+            fields.insert(.teeStarts)
         }
 
         if courseIdentity(seriesRound.resolvedCourse(using: series)) != courseIdentity(linked.courses.first) {
