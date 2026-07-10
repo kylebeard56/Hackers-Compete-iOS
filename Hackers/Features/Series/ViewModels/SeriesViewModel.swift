@@ -1575,6 +1575,7 @@ final class SeriesViewModel: ObservableObject, Loggable {
     @Published var scoringProfiles: [SeriesScoringProfile] = []
     @Published var pointAwards: [SeriesPointAward] = []
     @Published var standings: [SeriesStanding] = []
+    @Published private(set) var standingsReadSource: SeriesStandingsReadSource = .legacy
     @Published var handicapScores: [SeriesHandicapScore] = []
     @Published var handicapOverrides: [SeriesHandicapOverride] = []
     @Published var memberHandicaps: [String: SeriesMemberHandicap] = [:]
@@ -1588,6 +1589,8 @@ final class SeriesViewModel: ObservableObject, Loggable {
     private let standingsPublicationService: SeriesStandingsPublicationService
     private var linkedRoundListeners: [String: ListenerRegistration] = [:]
     private var canonicalProcessingStates: [String: SeriesRoundProcessingState] = [:]
+    private var canonicalRoundResults: [String: SeriesRoundResult] = [:]
+    private var legacyStandings: [SeriesStanding] = []
     private var canonicalRetryRoundIDs = Set<String>()
     @Published var isLoading = true
     @Published var isEnriching = false
@@ -2394,6 +2397,9 @@ final class SeriesViewModel: ObservableObject, Loggable {
         async let scoresTask = FirebaseService.shared.fetchHandicapScores(seriesID: seriesID)
         async let overridesTask = FirebaseService.shared.fetchHandicapOverrides(seriesID: seriesID)
         async let canonicalStatesTask = FirebaseService.shared.fetchCanonicalRoundProcessingStates(seriesID: seriesID)
+        async let canonicalResultsTask = series.settings.standingsReadAuthority == .canonicalWhenReady
+            ? FirebaseService.shared.fetchCanonicalRoundResults(seriesID: seriesID)
+            : .success([])
 
         members = await membersTask
         invites = await invitesTask
@@ -2410,8 +2416,11 @@ final class SeriesViewModel: ObservableObject, Loggable {
         }
         switch await standingsTask {
         case .success(let loadedStandings):
+            legacyStandings = loadedStandings
             standings = loadedStandings
         case .failure(let error):
+            legacyStandings = []
+            standings = []
             addBreadcrumb(level: .error, message: "Failed to load standings", error: error)
         }
         handicapScores = await scoresTask
@@ -2423,11 +2432,19 @@ final class SeriesViewModel: ObservableObject, Loggable {
             canonicalProcessingStates = [:]
             addBreadcrumb(level: .error, message: "Failed to load canonical processing states", error: error)
         }
+        switch await canonicalResultsTask {
+        case .success(let results):
+            canonicalRoundResults = Dictionary(uniqueKeysWithValues: results.map { ($0.id, $0) })
+        case .failure(let error):
+            canonicalRoundResults = [:]
+            addBreadcrumb(level: .error, message: "Failed to load canonical round results", error: error)
+        }
+        standings = resolvedStandings(legacyStandings: legacyStandings)
         startRealtimeSourceListeners(for: seriesID)
         SeriesPerformanceRecorder.shared.record(
             .coreLoad,
             startedAt: coreLoadStartedAt,
-            logicalReadCount: 13,
+            logicalReadCount: 13 + (series.settings.standingsReadAuthority == .canonicalWhenReady ? 1 : 0),
             activeListenerCount: 2 + linkedRoundListeners.count,
             itemCount: members.count
                 + invites.count
@@ -2440,7 +2457,8 @@ final class SeriesViewModel: ObservableObject, Loggable {
                 + standings.count
                 + handicapScores.count
                 + handicapOverrides.count
-                + canonicalProcessingStates.count,
+                + canonicalProcessingStates.count
+                + canonicalRoundResults.count,
             context: seriesID
         )
 
@@ -5091,6 +5109,9 @@ final class SeriesViewModel: ObservableObject, Loggable {
         if awardsChanged, !hadAwardWriteFailure {
             _ = await rebuildStandings(only: nil)
         }
+        if series.settings.standingsReadAuthority == .canonicalWhenReady {
+            standings = resolvedStandings(legacyStandings: legacyStandings)
+        }
 
         await refreshSeriesCachesIfNeeded()
         refreshLinkedConfigurationDivergences()
@@ -5441,6 +5462,7 @@ final class SeriesViewModel: ObservableObject, Loggable {
 
         switch await SeriesRoundResultPublicationService.shared.publish(canonicalResult) {
         case .success(let decision):
+            canonicalRoundResults[canonicalResult.id] = canonicalResult
             canonicalProcessingStates[seriesRound.id] = SeriesRoundCanonicalBuilder.processingState(
                 for: canonicalResult,
                 previous: canonicalProcessingStates[seriesRound.id]
@@ -6147,7 +6169,8 @@ final class SeriesViewModel: ObservableObject, Loggable {
         }
 
         pointAwards = awards
-        standings = plan.published
+        legacyStandings = plan.published
+        standings = resolvedStandings(legacyStandings: legacyStandings)
 
         let eventName = track == .individual
             ? "series.individual_standings_recomputed"
@@ -6165,6 +6188,27 @@ final class SeriesViewModel: ObservableObject, Loggable {
             context: track?.rawValue ?? "all"
         )
         return true
+    }
+
+    private func resolvedStandings(legacyStandings: [SeriesStanding]) -> [SeriesStanding] {
+        guard series.settings.standingsReadAuthority == .canonicalWhenReady else {
+            standingsReadSource = .legacy
+            return legacyStandings
+        }
+        let projection = SeriesCanonicalStandingsProjector.project(
+            series: series,
+            completedRounds: rounds.filter { effectiveStatus(for: $0) == .complete },
+            processingStates: Array(canonicalProcessingStates.values),
+            results: Array(canonicalRoundResults.values)
+        )
+        switch projection {
+        case .success(let canonical):
+            standingsReadSource = .canonical
+            return canonical.standings
+        case .failure(let error):
+            standingsReadSource = .legacyFallback(error)
+            return legacyStandings
+        }
     }
 
     static func computedStandings(

@@ -948,6 +948,11 @@ enum SeriesTiebreakScoreComponent: String, Hashable, Codable {
     case scoreToPar = "score_to_par"
 }
 
+enum SeriesStandingsReadAuthority: String, Hashable, Codable {
+    case legacy
+    case canonicalWhenReady = "canonical_when_ready"
+}
+
 struct SeriesTiebreakRule: Hashable, Codable, Identifiable {
     let id: String
     let metric: SeriesTiebreakMetric
@@ -1116,6 +1121,7 @@ struct SeriesSettings: Hashable, Codable {
     var recurringPlayWeekdays: [Int]?
     /// Optional explicit policy. Nil preserves the historical standings behavior.
     var standingsPolicyRevision: SeriesPolicyRevision?
+    var standingsReadAuthority: SeriesStandingsReadAuthority
 
     init(
         experiencePreset: SeriesExperiencePreset = .league,
@@ -1137,7 +1143,8 @@ struct SeriesSettings: Hashable, Codable {
         substitutesScore: Bool = false,
         defaultScheduledTeeTimeMinutesFromMidnight: Int? = nil,
         recurringPlayWeekdays: [Int]? = nil,
-        standingsPolicyRevision: SeriesPolicyRevision? = nil
+        standingsPolicyRevision: SeriesPolicyRevision? = nil,
+        standingsReadAuthority: SeriesStandingsReadAuthority = .legacy
     ) {
         self.experiencePreset = experiencePreset
         self.defaultCourse = defaultCourse
@@ -1159,6 +1166,7 @@ struct SeriesSettings: Hashable, Codable {
         self.defaultScheduledTeeTimeMinutesFromMidnight = defaultScheduledTeeTimeMinutesFromMidnight
         self.recurringPlayWeekdays = recurringPlayWeekdays
         self.standingsPolicyRevision = standingsPolicyRevision
+        self.standingsReadAuthority = standingsReadAuthority
     }
 
     enum CodingKeys: String, CodingKey {
@@ -1182,6 +1190,7 @@ struct SeriesSettings: Hashable, Codable {
         case defaultScheduledTeeTimeMinutesFromMidnight = "default_scheduled_tee_time_minutes_from_midnight"
         case recurringPlayWeekdays = "recurring_play_weekdays"
         case standingsPolicyRevision = "standings_policy_revision"
+        case standingsReadAuthority = "standings_read_authority"
     }
 
     init(from decoder: Decoder) throws {
@@ -1206,6 +1215,7 @@ struct SeriesSettings: Hashable, Codable {
         defaultScheduledTeeTimeMinutesFromMidnight = try c.decodeIfPresent(Int.self, forKey: .defaultScheduledTeeTimeMinutesFromMidnight)
         recurringPlayWeekdays = try c.decodeIfPresent([Int].self, forKey: .recurringPlayWeekdays)
         standingsPolicyRevision = try c.decodeIfPresent(SeriesPolicyRevision.self, forKey: .standingsPolicyRevision)
+        standingsReadAuthority = try c.decodeIfPresent(SeriesStandingsReadAuthority.self, forKey: .standingsReadAuthority) ?? .legacy
     }
 
     func encode(to encoder: Encoder) throws {
@@ -1230,6 +1240,7 @@ struct SeriesSettings: Hashable, Codable {
         try c.encodeIfPresent(defaultScheduledTeeTimeMinutesFromMidnight, forKey: .defaultScheduledTeeTimeMinutesFromMidnight)
         try c.encodeIfPresent(recurringPlayWeekdays, forKey: .recurringPlayWeekdays)
         try c.encodeIfPresent(standingsPolicyRevision, forKey: .standingsPolicyRevision)
+        try c.encode(standingsReadAuthority, forKey: .standingsReadAuthority)
     }
 
     static func seeded(for preset: SeriesExperiencePreset) -> SeriesSettings {
@@ -3334,6 +3345,7 @@ struct SeriesStanding: FirebaseSubcollectable {
     var lastPlacement: Int?
     var bestPlacement: Int?
     var rank: Int?
+    var tiebreakSummaries: [SeriesStandingTiebreakSummary]?
     var createdAt: Time
     var lastUpdatedAt: Time
     var parentID: String
@@ -3355,6 +3367,7 @@ struct SeriesStanding: FirebaseSubcollectable {
         lastPlacement: Int? = nil,
         bestPlacement: Int? = nil,
         rank: Int? = nil,
+        tiebreakSummaries: [SeriesStandingTiebreakSummary]? = nil,
         createdAt: Time = .init(),
         lastUpdatedAt: Time = .init(),
         parentID: String = ""
@@ -3371,6 +3384,7 @@ struct SeriesStanding: FirebaseSubcollectable {
         self.lastPlacement = lastPlacement
         self.bestPlacement = bestPlacement
         self.rank = rank
+        self.tiebreakSummaries = tiebreakSummaries
         self.createdAt = createdAt
         self.lastUpdatedAt = lastUpdatedAt
         self.parentID = parentID
@@ -3387,9 +3401,46 @@ struct SeriesStanding: FirebaseSubcollectable {
         case topThrees = "top_threes"
         case lastPlacement = "last_placement"
         case bestPlacement = "best_placement"
+        case tiebreakSummaries = "tiebreak_summaries"
         case createdAt = "created_at"
         case lastUpdatedAt = "last_updated_at"
         case parentID = "parent_id"
+    }
+}
+
+struct SeriesStandingRoundTiebreakValue: Hashable, Codable, Sendable {
+    let seriesRoundID: String
+    let value: Double
+    let aggregatePar: Double?
+    let expectedHoleCount: Int
+
+    enum CodingKeys: String, CodingKey {
+        case value
+        case seriesRoundID = "series_round_id"
+        case aggregatePar = "aggregate_par"
+        case expectedHoleCount = "expected_hole_count"
+    }
+}
+
+struct SeriesStandingTiebreakSummary: Hashable, Codable, Sendable {
+    let ruleID: String
+    let metric: SeriesTiebreakMetric
+    let direction: SeriesTiebreakDirection
+    let scoreComponent: SeriesTiebreakScoreComponent
+    let average: Double?
+    let roundsCounted: Int
+    let minimumEligibleRounds: Int
+    let isEligible: Bool
+    let roundValues: [SeriesStandingRoundTiebreakValue]
+
+    enum CodingKeys: String, CodingKey {
+        case metric, direction, average
+        case ruleID = "rule_id"
+        case scoreComponent = "score_component"
+        case roundsCounted = "rounds_counted"
+        case minimumEligibleRounds = "minimum_eligible_rounds"
+        case isEligible = "is_eligible"
+        case roundValues = "round_values"
     }
 }
 

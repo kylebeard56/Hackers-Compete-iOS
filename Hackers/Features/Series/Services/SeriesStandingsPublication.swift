@@ -153,12 +153,12 @@ enum SeriesRoundShadowValidator {
 }
 
 enum SeriesRoundCanonicalBuilder {
-    static let processorVersion = 1
+    static let processorVersion = 2
 
     static func generationID(
         sourceRevision: String,
         policyFingerprint: String,
-        processorVersion: Int = 1
+        processorVersion: Int = SeriesRoundCanonicalBuilder.processorVersion
     ) -> String {
         hash(GenerationKey(
             sourceRevision: sourceRevision,
@@ -171,18 +171,27 @@ enum SeriesRoundCanonicalBuilder {
         seriesRound: SeriesRound,
         snapshot: RoundSnapshot,
         mappings: [SeriesRoundMapping],
-        processingInputs: SeriesRoundProcessingInputManifest? = nil
+        processingInputs: SeriesRoundProcessingInputManifest? = nil,
+        awards: [SeriesPointAward] = [],
+        handicapScores: [SeriesHandicapScore] = []
     ) -> String {
         let source = CanonicalSource(
             seriesRound: seriesRound,
             snapshot: snapshot,
             mappings: mappings,
-            processingInputs: processingInputs
+            processingInputs: processingInputs,
+            pointAwards: awardProjections(from: awards),
+            handicapSamples: handicapProjections(from: handicapScores)
         )
         return hash(source)
     }
 
-    static func sourceUpdatedAt(seriesRound: SeriesRound, snapshot: RoundSnapshot) -> Double {
+    static func sourceUpdatedAt(
+        seriesRound: SeriesRound,
+        snapshot: RoundSnapshot,
+        awards: [SeriesPointAward] = [],
+        handicapScores: [SeriesHandicapScore] = []
+    ) -> Double {
         let sourceTimes: [Double] = [
             seriesRound.lastUpdatedAt.unix,
             snapshot.round.lastUpdatedAt.unix,
@@ -191,7 +200,9 @@ enum SeriesRoundCanonicalBuilder {
             snapshot.teeGroups.map { $0.lastUpdatedAt.unix }.compactMap { $0 }.max() ?? 0,
             snapshot.segments.map { $0.lastUpdatedAt.unix }.compactMap { $0 }.max() ?? 0,
             snapshot.scoringGroups.map { $0.lastUpdatedAt.unix }.compactMap { $0 }.max() ?? 0,
-            snapshot.scoring.map { $0.lastUpdatedAt.unix }.compactMap { $0 }.max() ?? 0
+            snapshot.scoring.map { $0.lastUpdatedAt.unix }.compactMap { $0 }.max() ?? 0,
+            awards.map { $0.lastUpdatedAt.unix }.max() ?? 0,
+            handicapScores.map { $0.lastUpdatedAt.unix }.max() ?? 0
         ]
         return sourceTimes.max() ?? 0
     }
@@ -402,11 +413,15 @@ enum SeriesRoundCanonicalBuilder {
         generatedAt: Time = .init()
     ) -> SeriesRoundResult? {
         guard let linkedRoundID = seriesRound.roundID else { return nil }
+        let awardValues = awardProjections(from: awards)
+        let handicapValues = handicapProjections(from: handicapScores)
         let sourceRevision = sourceRevision(
             seriesRound: seriesRound,
             snapshot: snapshot,
             mappings: mappings,
-            processingInputs: processingInputs
+            processingInputs: processingInputs,
+            awards: awards,
+            handicapScores: handicapScores
         )
         let generationID = generationID(
             sourceRevision: sourceRevision,
@@ -418,8 +433,6 @@ enum SeriesRoundCanonicalBuilder {
             seriesRound: seriesRound,
             snapshot: snapshot
         )
-        let awardValues = awardProjections(from: awards)
-        let handicapValues = handicapProjections(from: handicapScores)
         let compatibilityValues = compatibilityProjections(compatibility)
         let semanticHash = hash(SemanticResult(
             compatibility: compatibilityValues,
@@ -440,7 +453,12 @@ enum SeriesRoundCanonicalBuilder {
             seriesRoundID: seriesRound.id,
             linkedRoundID: linkedRoundID,
             sourceRevision: sourceRevision,
-            sourceUpdatedAt: sourceUpdatedAt(seriesRound: seriesRound, snapshot: snapshot),
+            sourceUpdatedAt: sourceUpdatedAt(
+                seriesRound: seriesRound,
+                snapshot: snapshot,
+                awards: awards,
+                handicapScores: handicapScores
+            ),
             policyRevisionID: policyRevisionID,
             policyFingerprint: policy.fingerprint,
             processorVersion: processorVersion,
@@ -520,12 +538,16 @@ enum SeriesRoundCanonicalBuilder {
         let scoring: [CanonicalScore]
         let mappings: [CanonicalMapping]
         let processingInputs: SeriesRoundProcessingInputManifest?
+        let pointAwards: [SeriesRoundPointAwardProjection]
+        let handicapSamples: [SeriesRoundHandicapSampleProjection]
 
         init(
             seriesRound: SeriesRound,
             snapshot: RoundSnapshot,
             mappings: [SeriesRoundMapping],
-            processingInputs: SeriesRoundProcessingInputManifest?
+            processingInputs: SeriesRoundProcessingInputManifest?,
+            pointAwards: [SeriesRoundPointAwardProjection],
+            handicapSamples: [SeriesRoundHandicapSampleProjection]
         ) {
             seriesRoundID = seriesRound.id
             linkedRoundID = seriesRound.roundID
@@ -550,6 +572,8 @@ enum SeriesRoundCanonicalBuilder {
                 .map(CanonicalMapping.init)
                 .sorted { $0.id < $1.id }
             self.processingInputs = processingInputs
+            self.pointAwards = pointAwards
+            self.handicapSamples = handicapSamples
         }
     }
 

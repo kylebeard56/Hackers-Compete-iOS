@@ -16,6 +16,8 @@ struct ResolvedSeriesStandingsPolicy: Hashable {
 enum SeriesRoundPolicyCompatibilityReason: Hashable {
     case emptyRuleID
     case duplicateRuleID(String)
+    case ambiguousTrack(SeriesAwardTrack)
+    case invalidTiebreakRule(String)
     case policyFingerprintMismatch
     case missingCourse
     case formatTemplate(expected: [String], actual: String)
@@ -191,12 +193,18 @@ enum SeriesStandingsPolicyResolver {
                 .filter { $0.value.count > 1 }
                 .keys
         )
+        let ambiguousTracks = Set(
+            Dictionary(grouping: resolved.policy.rules, by: \SeriesStandingsRule.track)
+                .filter { $0.value.count > 1 }
+                .keys
+        )
         let context = context(for: round, in: series)
 
         return resolved.policy.rules.map { rule in
             let invalidReasons = invalidReasons(
                 for: rule,
                 duplicateIDs: duplicateIDs,
+                ambiguousTracks: ambiguousTracks,
                 context: context,
                 fingerprintIsValid: resolved.hasValidFingerprint
             )
@@ -293,6 +301,20 @@ enum SeriesStandingsPolicyResolver {
         return config.template.category == .match || comparesScores ? .matchPlay : .strokePlay
     }
 
+    static func isValidTiebreakPolicy(_ rule: SeriesStandingsRule) -> Bool {
+        let tiebreakers = rule.resolvedTiebreakers
+        guard tiebreakers.isPopulated else { return true }
+        let ids = tiebreakers.map(\.id)
+        guard ids.allSatisfy(\.isPopulated), Set(ids).count == ids.count else { return false }
+        guard rule.acceptedScoringFamilies == [.strokePlay],
+              rule.acceptedScoreBases?.count == 1,
+              rule.acceptedHoleCounts?.count == 1 else {
+            return false
+        }
+        if rule.track == .team, rule.requiredTeamScoring == nil { return false }
+        return tiebreakers.allSatisfy { $0.minimumEligibleRounds >= 1 }
+    }
+
     private static func canonicalized(_ policy: SeriesStandingsPolicy) -> SeriesStandingsPolicy {
         SeriesStandingsPolicy(
             schemaVersion: policy.schemaVersion,
@@ -316,12 +338,15 @@ enum SeriesStandingsPolicyResolver {
     private static func invalidReasons(
         for rule: SeriesStandingsRule,
         duplicateIDs: Set<String>,
+        ambiguousTracks: Set<SeriesAwardTrack>,
         context: CompatibilityContext,
         fingerprintIsValid: Bool
     ) -> [SeriesRoundPolicyCompatibilityReason] {
         var reasons: [SeriesRoundPolicyCompatibilityReason] = []
         if !rule.id.isPopulated { reasons.append(.emptyRuleID) }
         if duplicateIDs.contains(rule.id) { reasons.append(.duplicateRuleID(rule.id)) }
+        if ambiguousTracks.contains(rule.track) { reasons.append(.ambiguousTrack(rule.track)) }
+        if !isValidTiebreakPolicy(rule) { reasons.append(.invalidTiebreakRule(rule.id)) }
         if !fingerprintIsValid { reasons.append(.policyFingerprintMismatch) }
         if rule.acceptedHoleCounts != nil, context.holeCount == nil { reasons.append(.missingCourse) }
         return reasons
