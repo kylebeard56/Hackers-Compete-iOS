@@ -107,6 +107,10 @@ final class SeriesPhase6StandingsRolloutTests: XCTestCase {
 
         XCTAssertEqual(protected.standingsPolicyRevision, revision)
         XCTAssertEqual(protected.standingsReadAuthority, .legacy)
+        XCTAssertFalse(SeriesStandingsRollout.revisionMatchesCurrentScoringContract(
+            settings: protected,
+            revision: revision
+        ))
     }
 
     func testDraftRoundTripsExistingPolicyOptions() throws {

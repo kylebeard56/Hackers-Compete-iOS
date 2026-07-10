@@ -15,6 +15,8 @@ enum SeriesPerformanceOperation: String, Sendable {
     case roundSync = "round_sync"
     case automaticAwardsRefresh = "automatic_awards_refresh"
     case standingsRebuild = "standings_rebuild"
+    case standingsMigrationAssessment = "standings_migration_assessment"
+    case standingsMigrationBatch = "standings_migration_batch"
     case teamInsight = "team_insight"
 }
 

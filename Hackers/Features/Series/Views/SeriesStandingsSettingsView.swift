@@ -7,14 +7,18 @@ struct SeriesStandingsSettingsView: View {
 
     @State private var draft = SeriesStandingsTiebreakDraft()
     @State private var hasLoaded = false
+    @State private var showPreparationConfirmation = false
     @State private var showActivationConfirmation = false
+    @State private var showLegacyRepairConfirmation = false
     @State private var showLegacyConfirmation = false
     @State private var showError = false
     @State private var errorMessage = ""
 
     private var palette: DesignPalette { .init(theme: .primary, scheme: colorScheme) }
     private var isBusy: Bool {
-        viewModel.isSavingStandingsPolicy || viewModel.isPreparingCanonicalStandings
+        viewModel.isSavingStandingsPolicy
+            || viewModel.isAssessingStandingsMigration
+            || viewModel.isPreparingCanonicalStandings
     }
 
     var body: some View {
@@ -53,14 +57,26 @@ struct SeriesStandingsSettingsView: View {
             hasLoaded = true
         }
         .confirmationDialog(
-            "Prepare canonical standings?",
+            "Prepare the next standings batch?",
+            isPresented: $showPreparationConfirmation,
+            titleVisibility: .visible
+        ) {
+            Button("Prepare up to \(SeriesViewModel.standingsMigrationBatchSize) rounds") {
+                prepareNextBatch()
+            }
+            Button("Cancel", role: .cancel) {}
+        } message: {
+            Text("Only the next unprepared completed rounds will be rebound and regenerated. Legacy standings remain authoritative.")
+        }
+        .confirmationDialog(
+            "Activate canonical standings?",
             isPresented: $showActivationConfirmation,
             titleVisibility: .visible
         ) {
-            Button("Prepare and activate") { prepareAndActivate() }
+            Button("Activate standings") { activateCanonicalStandings() }
             Button("Cancel", role: .cancel) {}
         } message: {
-            Text("Completed rounds will be rebound to this policy and regenerated. Legacy standings remain visible unless every round verifies successfully.")
+            Text("The readiness check found complete canonical coverage and no unexplained legacy mismatch. Canonical ordering and scoring averages will become authoritative.")
         }
         .confirmationDialog(
             "Use legacy standings?",
@@ -71,6 +87,16 @@ struct SeriesStandingsSettingsView: View {
             Button("Cancel", role: .cancel) {}
         } message: {
             Text("The existing persisted leaderboard will become authoritative again. Canonical round results are retained.")
+        }
+        .confirmationDialog(
+            "Rebuild legacy standings?",
+            isPresented: $showLegacyRepairConfirmation,
+            titleVisibility: .visible
+        ) {
+            Button("Rebuild legacy standings") { repairLegacyStandings() }
+            Button("Cancel", role: .cancel) {}
+        } message: {
+            Text("The persisted V1 leaderboard will be rebuilt from its existing point awards, then compared with canonical results again. Authority will not change.")
         }
         .alert("Standings update failed", isPresented: $showError) {
             Button("OK", role: .cancel) {}
@@ -102,11 +128,18 @@ struct SeriesStandingsSettingsView: View {
                 Spacer(minLength: 0)
             }
 
-            if viewModel.isPreparingCanonicalStandings, let progress = viewModel.standingsRolloutProgress {
+            if viewModel.isAssessingStandingsMigration {
+                HStack(spacing: 8) {
+                    ProgressView()
+                    Text("Checking canonical coverage")
+                        .fontStyle(kFontName, size: 12, weight: .medium)
+                        .foregroundStyle(Color.neutral)
+                }
+            } else if viewModel.isPreparingCanonicalStandings, let progress = viewModel.standingsRolloutProgress {
                 VStack(alignment: .leading, spacing: 8) {
                     ProgressView(value: progress.fractionCompleted)
                         .tint(Color.accentGreen)
-                    Text("Preparing round \(progress.completedCount) of \(progress.totalCount)")
+                    Text("Prepared \(progress.completedCount) of \(progress.totalCount) rounds")
                         .fontStyle(kFontName, size: 12, weight: .medium)
                         .foregroundStyle(Color.neutral)
                 }
@@ -119,14 +152,112 @@ struct SeriesStandingsSettingsView: View {
                 .buttonStyle(.plain)
                 .disabled(isBusy)
             } else if savedPolicyMatchesDraft {
-                Button("Prepare and activate", systemImage: "checkmark.shield") {
+                migrationActions
+            }
+        }
+    }
+
+    @ViewBuilder
+    private var migrationActions: some View {
+        Divider()
+
+        if let assessment = viewModel.standingsMigrationAssessment {
+            VStack(alignment: .leading, spacing: 6) {
+                migrationCountRow("Ready", count: assessment.plan.readyItems.count)
+                migrationCountRow("Needs preparation", count: assessment.plan.pendingItems.count)
+                migrationCountRow("Blocked", count: assessment.plan.blockedItems.count)
+                if let comparison = assessment.comparison {
+                    migrationCountRow(
+                        "Unexplained mismatches",
+                        count: comparison.unexplainedMismatchCount
+                    )
+                }
+            }
+
+            ForEach(Array(assessment.plan.blockedItems.prefix(3))) { item in
+                if case .blocked(let blocker) = item.disposition {
+                    Label("\(item.title): \(migrationBlockerTitle(blocker))", systemImage: "exclamationmark.triangle.fill")
+                        .fontStyle(kFontName, size: 12, weight: .medium)
+                        .foregroundStyle(Color.systemOrange)
+                        .fixedSize(horizontal: false, vertical: true)
+                }
+            }
+            if assessment.projectionError != nil {
+                Label(
+                    "Canonical results do not yet pass final validation.",
+                    systemImage: "exclamationmark.triangle.fill"
+                )
+                .fontStyle(kFontName, size: 12, weight: .medium)
+                .foregroundStyle(Color.systemOrange)
+                .fixedSize(horizontal: false, vertical: true)
+            }
+
+            if assessment.canActivate {
+                Button("Activate standings", systemImage: "checkmark.shield") {
                     showActivationConfirmation = true
                 }
                 .fontStyle(kFontName, size: 13, weight: .semibold)
                 .foregroundStyle(Color.accentGreen)
                 .buttonStyle(.plain)
-                .disabled(isBusy || policyValidationError != nil)
+                .disabled(isBusy)
+            } else if assessment.plan.blockedItems.isEmpty,
+                      assessment.plan.pendingItems.isPopulated {
+                Button(
+                    "Prepare next \(min(SeriesViewModel.standingsMigrationBatchSize, assessment.plan.pendingItems.count))",
+                    systemImage: "arrow.forward.square"
+                ) {
+                    showPreparationConfirmation = true
+                }
+                .fontStyle(kFontName, size: 13, weight: .semibold)
+                .foregroundStyle(Color.accentGreen)
+                .buttonStyle(.plain)
+                .disabled(isBusy)
+            } else if assessment.plan.isReadyForActivation,
+                      assessment.comparison?.isActivationSafe == false {
+                Button("Rebuild legacy standings", systemImage: "wrench.and.screwdriver") {
+                    showLegacyRepairConfirmation = true
+                }
+                .fontStyle(kFontName, size: 13, weight: .semibold)
+                .foregroundStyle(Color.systemOrange)
+                .buttonStyle(.plain)
+                .disabled(isBusy)
+            } else {
+                Button("Check again", systemImage: "arrow.clockwise") {
+                    refreshMigrationAssessment()
+                }
+                .fontStyle(kFontName, size: 13, weight: .semibold)
+                .foregroundStyle(palette.foregroundColor)
+                .buttonStyle(.plain)
+                .disabled(isBusy)
             }
+        } else {
+            Button("Run readiness check", systemImage: "checkmark.circle") {
+                refreshMigrationAssessment()
+            }
+            .fontStyle(kFontName, size: 13, weight: .semibold)
+            .foregroundStyle(palette.foregroundColor)
+            .buttonStyle(.plain)
+            .disabled(isBusy || policyValidationError != nil)
+        }
+    }
+
+    private func migrationCountRow(_ title: String, count: Int) -> some View {
+        HStack(spacing: 8) {
+            Text(title)
+                .foregroundStyle(Color.neutral)
+            Spacer(minLength: 8)
+            Text("\(count)")
+                .foregroundStyle(palette.foregroundColor)
+                .monospacedDigit()
+        }
+        .fontStyle(kFontName, size: 12, weight: .medium)
+    }
+
+    private func migrationBlockerTitle(_ blocker: SeriesStandingsMigrationBlocker) -> String {
+        switch blocker {
+        case .missingLinkedRound: return "missing linked round"
+        case .snapshotUnavailable: return "snapshot unavailable"
+        case .invalidCompatibility: return "invalid scoring compatibility"
         }
     }
 
@@ -262,18 +393,33 @@ struct SeriesStandingsSettingsView: View {
         if isCanonicalActive {
             return "Canonical round results determine ordering and scoring-average tiebreaks."
         }
+        if viewModel.series.settings.standingsPolicyRevision != nil,
+           !savedPolicyMatchesCurrentScoringContract {
+            return "The league scoring contract changed. Save the policy again before checking completed rounds."
+        }
         if viewModel.series.settings.standingsPolicyRevision != nil {
-            return "The policy is saved. Prepare completed rounds before switching authority."
+            return "The policy is saved. Check, prepare, and activate completed rounds in resumable batches."
         }
         return "Save a policy before preparing canonical standings."
     }
 
     private var hasUnsavedChanges: Bool {
         draft != SeriesStandingsRollout.draft(from: viewModel.series.settings)
+            || !savedPolicyMatchesCurrentScoringContract
     }
 
     private var savedPolicyMatchesDraft: Bool {
-        viewModel.series.settings.standingsPolicyRevision != nil && !hasUnsavedChanges
+        viewModel.series.settings.standingsPolicyRevision != nil
+            && savedPolicyMatchesCurrentScoringContract
+            && draft == SeriesStandingsRollout.draft(from: viewModel.series.settings)
+    }
+
+    private var savedPolicyMatchesCurrentScoringContract: Bool {
+        guard let revision = viewModel.series.settings.standingsPolicyRevision else { return true }
+        return SeriesStandingsRollout.revisionMatchesCurrentScoringContract(
+            settings: viewModel.series.settings,
+            revision: revision
+        )
     }
 
     private var enabledTracks: [SeriesAwardTrack] {
@@ -343,9 +489,33 @@ struct SeriesStandingsSettingsView: View {
         }
     }
 
-    private func prepareAndActivate() {
+    private func refreshMigrationAssessment() {
         Task {
-            if case .failure(let error) = await viewModel.prepareAndActivateCanonicalStandings() {
+            if case .failure(let error) = await viewModel.refreshStandingsMigrationAssessment() {
+                if !(error is CancellationError) { present(error) }
+            }
+        }
+    }
+
+    private func prepareNextBatch() {
+        Task {
+            if case .failure(let error) = await viewModel.prepareNextCanonicalStandingsBatch() {
+                if !(error is CancellationError) { present(error) }
+            }
+        }
+    }
+
+    private func activateCanonicalStandings() {
+        Task {
+            if case .failure(let error) = await viewModel.activateCanonicalStandings() {
+                if !(error is CancellationError) { present(error) }
+            }
+        }
+    }
+
+    private func repairLegacyStandings() {
+        Task {
+            if case .failure(let error) = await viewModel.repairLegacyStandingsForMigration() {
                 if !(error is CancellationError) { present(error) }
             }
         }

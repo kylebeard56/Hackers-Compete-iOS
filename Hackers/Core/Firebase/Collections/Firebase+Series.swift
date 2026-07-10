@@ -70,6 +70,37 @@ extension FirebaseService {
         addBreadcrumb(message: "\(#function), id: \(series.id)")
         return await series.put()
     }
+
+    func updateSeriesStandingsAuthority(
+        seriesID: String,
+        authority: SeriesStandingsReadAuthority,
+        expectedPolicyRevisionID: String?
+    ) async -> Result<Series, Error> {
+        let db = Firestore.firestore()
+        let reference = db.collection(collection).document(seriesID)
+        do {
+            _ = try await db.runTransaction { transaction, errorPointer -> Any? in
+                do {
+                    let snapshot = try transaction.getDocument(reference)
+                    let current = try snapshot.data(as: Series.self)
+                    let updated = try SeriesStandingsAuthorityTransition.applying(
+                        authority,
+                        to: current,
+                        expectedPolicyRevisionID: expectedPolicyRevisionID
+                    ).get()
+                    transaction.setData(try updated.toDictionary(), forDocument: reference)
+                    return authority.rawValue
+                } catch {
+                    errorPointer?.pointee = error as NSError
+                    return nil
+                }
+            }
+            return await fetchSeries(id: seriesID)
+        } catch {
+            addBreadcrumb(level: .error, message: "Series standings authority transaction failed", error: error)
+            return .failure(error)
+        }
+    }
 }
 
 // MARK: - Members

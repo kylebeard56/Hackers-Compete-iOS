@@ -100,12 +100,16 @@ enum SeriesStandingsRolloutOperationError: Error, LocalizedError {
     case commissionerRequired
     case operationInProgress
     case policyNotConfigured
+    case policyOutdated
     case missingLinkedRound(String)
     case snapshotUnavailable(String)
     case sourceReadFailed
     case roundWriteFailed(String)
     case roundProcessingFailed(String)
     case canonicalReadFailed
+    case migrationBlocked(Int)
+    case migrationIncomplete(Int)
+    case shadowMismatch(Int)
     case projectionFailed(SeriesCanonicalStandingsProjectionError)
     case seriesWriteFailed
 
@@ -117,6 +121,8 @@ enum SeriesStandingsRolloutOperationError: Error, LocalizedError {
             return "A standings update is already in progress."
         case .policyNotConfigured:
             return "Save a scoring-average policy before preparing standings."
+        case .policyOutdated:
+            return "Save the standings policy again because the league scoring contract changed."
         case .missingLinkedRound(let title):
             return "\(title) is not linked to a scoring round."
         case .snapshotUnavailable(let title):
@@ -129,6 +135,12 @@ enum SeriesStandingsRolloutOperationError: Error, LocalizedError {
             return "Canonical results could not be prepared for \(title)."
         case .canonicalReadFailed:
             return "Prepared canonical results could not be verified."
+        case .migrationBlocked(let count):
+            return "Resolve the " + String(count) + " blocked completed round(s) before preparing standings."
+        case .migrationIncomplete(let count):
+            return "Prepare the remaining " + String(count) + " completed round(s) before activation."
+        case .shadowMismatch(let count):
+            return "Activation is blocked by " + String(count) + " unexplained legacy standings mismatch(es)."
         case .projectionFailed(let error):
             return "Canonical standings are not ready (\(error.telemetryValue))."
         case .seriesWriteFailed:
@@ -269,6 +281,28 @@ enum SeriesStandingsRollout {
             protected.standingsReadAuthority = .legacy
         }
         return protected
+    }
+
+    static func revisionMatchesCurrentScoringContract(
+        settings: SeriesSettings,
+        revision: SeriesPolicyRevision
+    ) -> Bool {
+        let revisionContract = SeriesStandingsPolicy(rules: revision.policy.rules.map { rule in
+            SeriesStandingsRule(
+                id: rule.id,
+                track: rule.track,
+                acceptedFormatTemplateIDs: rule.acceptedFormatTemplateIDs,
+                acceptedScoreBases: rule.acceptedScoreBases,
+                acceptedHoleCounts: rule.acceptedHoleCounts,
+                acceptedScoringFamilies: rule.acceptedScoringFamilies,
+                requiredTeamScoring: rule.requiredTeamScoring,
+                requiredSubstitutesScore: rule.requiredSubstitutesScore,
+                normalizationPolicy: rule.normalizationPolicy
+            )
+        })
+        let currentContract = SeriesStandingsPolicyResolver.strictPolicy(settings: settings)
+        return SeriesStandingsPolicyResolver.fingerprint(for: revisionContract)
+            == SeriesStandingsPolicyResolver.fingerprint(for: currentContract)
     }
 }
 

@@ -1604,8 +1604,12 @@ final class SeriesViewModel: ObservableObject, Loggable {
     @Published var isRebuildingIndividualStandings = false
     @Published var isRebuildingAutomaticAwards = false
     @Published private(set) var isSavingStandingsPolicy = false
+    @Published private(set) var isAssessingStandingsMigration = false
     @Published private(set) var isPreparingCanonicalStandings = false
     @Published private(set) var standingsRolloutProgress: SeriesStandingsRolloutProgress?
+    @Published private(set) var standingsMigrationAssessment: SeriesStandingsMigrationAssessment?
+
+    nonisolated static let standingsMigrationBatchSize = 5
 
     var seriesID: String { series.id }
     var currentUserID: String?
@@ -2522,6 +2526,9 @@ final class SeriesViewModel: ObservableObject, Loggable {
                         guard let self, self.realtimeSourceSeriesID == seriesID else { return }
                         let previousSettings = self.series.settings
                         self.series = updated
+                        if previousSettings != updated.settings {
+                            self.standingsMigrationAssessment = nil
+                        }
                         self.refreshLinkedConfigurationDivergences()
                         self.configureCanonicalSourceListeners(for: seriesID)
                         self.standings = self.resolvedStandings(legacyStandings: self.legacyStandings)
@@ -2598,6 +2605,7 @@ final class SeriesViewModel: ObservableObject, Loggable {
                     Task { @MainActor [weak self] in
                         guard let self, self.realtimeSourceSeriesID == seriesID else { return }
                         self.canonicalProcessingStates = Dictionary(uniqueKeysWithValues: states.map { ($0.id, $0) })
+                        self.standingsMigrationAssessment = nil
                         self.standings = self.resolvedStandings(legacyStandings: self.legacyStandings)
                     }
                 } catch {
@@ -2621,6 +2629,7 @@ final class SeriesViewModel: ObservableObject, Loggable {
                     Task { @MainActor [weak self] in
                         guard let self, self.realtimeSourceSeriesID == seriesID else { return }
                         self.canonicalRoundResults = Dictionary(uniqueKeysWithValues: results.map { ($0.id, $0) })
+                        self.standingsMigrationAssessment = nil
                         self.standings = self.resolvedStandings(legacyStandings: self.legacyStandings)
                     }
                 } catch {
@@ -2649,6 +2658,7 @@ final class SeriesViewModel: ObservableObject, Loggable {
     }
 
     private func applyRealtimeSeriesRounds(_ updated: [SeriesRound]) async {
+        standingsMigrationAssessment = nil
         rounds = updated
         recomputeAllHandicaps()
 
@@ -2771,6 +2781,7 @@ final class SeriesViewModel: ObservableObject, Loggable {
     }
 
     private func applyFreshLinkedRound(_ linkedRound: Round) async {
+        standingsMigrationAssessment = nil
         linkedRounds[linkedRound.id] = linkedRound
         refreshLinkedConfigurationDivergences()
         snapshotRepository.invalidate(roundID: linkedRound.id)
@@ -2891,7 +2902,7 @@ final class SeriesViewModel: ObservableObject, Loggable {
         guard isCommissioner else {
             return .failure(SeriesStandingsRolloutOperationError.commissionerRequired)
         }
-        guard !isSavingStandingsPolicy, !isPreparingCanonicalStandings else {
+        guard !isSavingStandingsPolicy, !isAssessingStandingsMigration, !isPreparingCanonicalStandings else {
             return .failure(SeriesStandingsRolloutOperationError.operationInProgress)
         }
 
@@ -2917,6 +2928,7 @@ final class SeriesViewModel: ObservableObject, Loggable {
         switch await FirebaseService.shared.updateSeries(updated) {
         case .success(let saved):
             series = saved
+            standingsMigrationAssessment = nil
             standings = legacyStandings
             standingsReadSource = .legacy
             configureCanonicalSourceListeners(for: saved.id)
@@ -2935,67 +2947,112 @@ final class SeriesViewModel: ObservableObject, Loggable {
         }
     }
 
-    func prepareAndActivateCanonicalStandings() async -> Result<SeriesCanonicalStandingsProjection, Error> {
+    private struct StandingsMigrationContext {
+        let revision: SeriesPolicyRevision
+        let targetRounds: [SeriesRound]
+        let snapshotsBySeriesRoundID: [String: RoundSnapshot]
+        let mappingsByRound: [String: [SeriesRoundMapping]]
+        let awardsByRound: [String: [SeriesPointAward]]
+        let processingStates: [SeriesRoundProcessingState]
+        let results: [SeriesRoundResult]
+        let legacyStandings: [SeriesStanding]
+        let assessment: SeriesStandingsMigrationAssessment
+        let projection: SeriesCanonicalStandingsProjection?
+    }
+
+    func refreshStandingsMigrationAssessment() async -> Result<SeriesStandingsMigrationAssessment, Error> {
         guard isCommissioner else {
             return .failure(SeriesStandingsRolloutOperationError.commissionerRequired)
         }
-        guard !isSavingStandingsPolicy, !isPreparingCanonicalStandings else {
+        guard !isSavingStandingsPolicy, !isAssessingStandingsMigration, !isPreparingCanonicalStandings else {
             return .failure(SeriesStandingsRolloutOperationError.operationInProgress)
         }
-        guard let revision = series.settings.standingsPolicyRevision else {
-            return .failure(SeriesStandingsRolloutOperationError.policyNotConfigured)
+
+        let startedAt = ContinuousClock.now
+        isAssessingStandingsMigration = true
+        defer { isAssessingStandingsMigration = false }
+
+        switch await standingsMigrationContext() {
+        case .success(let context):
+            applyStandingsMigrationContext(context)
+            let comparison = context.assessment.comparison
+            addEvent(
+                "series.standings_migration_assessed",
+                eventProps: seriesTelemetryProps([
+                    "ready_round_count": context.assessment.plan.readyItems.count,
+                    "pending_round_count": context.assessment.plan.pendingItems.count,
+                    "blocked_round_count": context.assessment.plan.blockedItems.count,
+                    "unexplained_mismatch_count": comparison?.unexplainedMismatchCount ?? 0,
+                    "activation_ready": context.assessment.canActivate
+                ])
+            )
+            SeriesPerformanceRecorder.shared.record(
+                .standingsMigrationAssessment,
+                startedAt: startedAt,
+                logicalReadCount: 6,
+                itemCount: context.targetRounds.count,
+                context: seriesID
+            )
+            return .success(context.assessment)
+        case .failure(let error):
+            addBreadcrumb(level: .error, message: "Standings migration assessment failed", error: error)
+            return .failure(error)
+        }
+    }
+
+    func prepareNextCanonicalStandingsBatch(
+        limit: Int = SeriesViewModel.standingsMigrationBatchSize
+    ) async -> Result<SeriesStandingsMigrationAssessment, Error> {
+        guard isCommissioner else {
+            return .failure(SeriesStandingsRolloutOperationError.commissionerRequired)
+        }
+        guard !isSavingStandingsPolicy, !isAssessingStandingsMigration, !isPreparingCanonicalStandings else {
+            return .failure(SeriesStandingsRolloutOperationError.operationInProgress)
+        }
+        guard limit > 0 else {
+            return .failure(SeriesStandingsRolloutOperationError.operationInProgress)
         }
 
+        let startedAt = ContinuousClock.now
         isPreparingCanonicalStandings = true
-        let targetRounds = completedRounds.sorted {
-            if $0.index != $1.index { return $0.index < $1.index }
-            return $0.id < $1.id
-        }
-        standingsRolloutProgress = .init(completedCount: 0, totalCount: targetRounds.count)
         defer {
             isPreparingCanonicalStandings = false
             standingsRolloutProgress = nil
         }
 
-        for round in targetRounds where round.roundID?.isPopulated != true {
-            return .failure(SeriesStandingsRolloutOperationError.missingLinkedRound(round.title))
-        }
-        let snapshotResults = await snapshotRepository.snapshots(
-            roundIDs: targetRounds.compactMap(\.roundID),
-            policy: .reload
-        )
-        var snapshotsBySeriesRoundID: [String: RoundSnapshot] = [:]
-        for round in targetRounds {
-            guard let roundID = round.roundID,
-                  let result = snapshotResults[roundID],
-                  case .success(let snapshot) = result else {
-                return .failure(SeriesStandingsRolloutOperationError.snapshotUnavailable(round.title))
-            }
-            snapshotsBySeriesRoundID[round.id] = snapshot
-        }
-
-        let derivedInputs: SeriesDerivedInputs
-        switch await fetchDerivedInputs() {
-        case .success(let inputs):
-            derivedInputs = inputs
+        let initialContext: StandingsMigrationContext
+        switch await standingsMigrationContext() {
+        case .success(let context):
+            initialContext = context
+            applyStandingsMigrationContext(context)
         case .failure(let error):
-            addBreadcrumb(level: .error, message: "Standings rollout inputs read failed", error: error)
-            return .failure(SeriesStandingsRolloutOperationError.sourceReadFailed)
+            return .failure(error)
         }
-        let mappingsByRound = Dictionary(grouping: derivedInputs.mappings, by: \.seriesRoundID)
-        let awardsByRound = Dictionary(grouping: derivedInputs.awards, by: \.seriesRoundID)
+        let plan = initialContext.assessment.plan
+        guard plan.blockedItems.isEmpty else {
+            return .failure(SeriesStandingsRolloutOperationError.migrationBlocked(plan.blockedItems.count))
+        }
+        let batch = plan.nextBatch(limit: limit)
+        guard batch.isPopulated else { return .success(initialContext.assessment) }
+
         let binding = SeriesStandingsPolicyResolver.binding(
-            for: revision,
+            for: initialContext.revision,
             substitutesScore: series.settings.substitutesScore
         )
+        standingsRolloutProgress = .init(
+            completedCount: plan.readyItems.count,
+            totalCount: plan.items.count
+        )
+        var awardsChanged = false
 
-        for (index, sourceRound) in targetRounds.enumerated() {
+        for (offset, item) in batch.enumerated() {
             if Task.isCancelled { return .failure(CancellationError()) }
-            guard series.settings.standingsPolicyRevision?.id == revision.id else {
+            guard series.settings.standingsPolicyRevision?.id == initialContext.revision.id else {
                 return .failure(SeriesStandingsRolloutOperationError.policyNotConfigured)
             }
-            guard let snapshot = snapshotsBySeriesRoundID[sourceRound.id] else {
-                return .failure(SeriesStandingsRolloutOperationError.snapshotUnavailable(sourceRound.title))
+            guard let sourceRound = initialContext.targetRounds.first(where: { $0.id == item.id }),
+                  let snapshot = initialContext.snapshotsBySeriesRoundID[item.id] else {
+                return .failure(SeriesStandingsRolloutOperationError.snapshotUnavailable(item.title))
             }
 
             var preparedRound = sourceRound
@@ -3010,66 +3067,99 @@ final class SeriesViewModel: ObservableObject, Loggable {
                     }
                 case .failure(let error):
                     addBreadcrumb(level: .error, message: "Historical round policy binding failed", error: error)
-                    return .failure(SeriesStandingsRolloutOperationError.roundWriteFailed(sourceRound.title))
+                    return .failure(SeriesStandingsRolloutOperationError.roundWriteFailed(item.title))
                 }
             }
 
             let processing = await processCompletedRound(
                 seriesRound: preparedRound,
                 snapshot: snapshot,
-                existingAwards: awardsByRound[preparedRound.id] ?? [],
-                mappings: mappingsByRound[preparedRound.id] ?? []
+                existingAwards: initialContext.awardsByRound[preparedRound.id] ?? [],
+                mappings: initialContext.mappingsByRound[preparedRound.id] ?? []
             )
             guard !processing.awardWriteFailed, !processing.canonicalWriteFailed else {
-                return .failure(SeriesStandingsRolloutOperationError.roundProcessingFailed(sourceRound.title))
+                return .failure(SeriesStandingsRolloutOperationError.roundProcessingFailed(item.title))
             }
+            awardsChanged = awardsChanged || processing.awardsChanged
             standingsRolloutProgress = .init(
-                completedCount: index + 1,
-                totalCount: targetRounds.count
+                completedCount: min(plan.items.count, plan.readyItems.count + offset + 1),
+                totalCount: plan.items.count
             )
         }
+        if awardsChanged, !(await rebuildStandings()) {
+            return .failure(SeriesStandingsRolloutOperationError.seriesWriteFailed)
+        }
 
-        async let statesTask = FirebaseService.shared.fetchCanonicalRoundProcessingStates(seriesID: seriesID)
-        async let resultsTask = FirebaseService.shared.fetchCanonicalRoundResults(seriesID: seriesID)
-        let statesResult = await statesTask
-        let resultsResult = await resultsTask
-        let verifiedStates: [SeriesRoundProcessingState]
-        let verifiedResults: [SeriesRoundResult]
-        switch (statesResult, resultsResult) {
-        case (.success(let states), .success(let results)):
-            verifiedStates = states
-            verifiedResults = results
-        case (.failure(let error), _), (_, .failure(let error)):
-            addBreadcrumb(level: .error, message: "Canonical rollout verification read failed", error: error)
+        switch await standingsMigrationContext() {
+        case .success(let refreshedContext):
+            applyStandingsMigrationContext(refreshedContext)
+            addEvent(
+                "series.standings_migration_batch_completed",
+                eventProps: seriesTelemetryProps([
+                    "batch_size": batch.count,
+                    "remaining_round_count": refreshedContext.assessment.plan.pendingItems.count
+                ])
+            )
+            SeriesPerformanceRecorder.shared.record(
+                .standingsMigrationBatch,
+                startedAt: startedAt,
+                logicalReadCount: 12,
+                logicalWriteCount: batch.count,
+                itemCount: batch.count,
+                context: seriesID
+            )
+            return .success(refreshedContext.assessment)
+        case .failure(let error):
+            return .failure(error)
+        }
+    }
+
+    func activateCanonicalStandings() async -> Result<SeriesCanonicalStandingsProjection, Error> {
+        guard isCommissioner else {
+            return .failure(SeriesStandingsRolloutOperationError.commissionerRequired)
+        }
+        guard !isSavingStandingsPolicy, !isAssessingStandingsMigration, !isPreparingCanonicalStandings else {
+            return .failure(SeriesStandingsRolloutOperationError.operationInProgress)
+        }
+
+        isPreparingCanonicalStandings = true
+        defer { isPreparingCanonicalStandings = false }
+
+        let context: StandingsMigrationContext
+        switch await standingsMigrationContext() {
+        case .success(let value):
+            context = value
+            applyStandingsMigrationContext(value)
+        case .failure(let error):
+            return .failure(error)
+        }
+        let plan = context.assessment.plan
+        guard plan.blockedItems.isEmpty else {
+            return .failure(SeriesStandingsRolloutOperationError.migrationBlocked(plan.blockedItems.count))
+        }
+        guard plan.pendingItems.isEmpty else {
+            return .failure(SeriesStandingsRolloutOperationError.migrationIncomplete(plan.pendingItems.count))
+        }
+        guard let projection = context.projection else {
+            if let error = context.assessment.projectionError {
+                return .failure(SeriesStandingsRolloutOperationError.projectionFailed(error))
+            }
             return .failure(SeriesStandingsRolloutOperationError.canonicalReadFailed)
         }
-        canonicalProcessingStates = Dictionary(uniqueKeysWithValues: verifiedStates.map { ($0.id, $0) })
-        canonicalRoundResults = Dictionary(uniqueKeysWithValues: verifiedResults.map { ($0.id, $0) })
-
-        guard series.settings.standingsPolicyRevision?.id == revision.id else {
+        guard let comparison = context.assessment.comparison, comparison.isActivationSafe else {
+            return .failure(SeriesStandingsRolloutOperationError.shadowMismatch(
+                context.assessment.comparison?.unexplainedMismatchCount ?? 1
+            ))
+        }
+        guard series.settings.standingsPolicyRevision?.id == context.revision.id else {
             return .failure(SeriesStandingsRolloutOperationError.policyNotConfigured)
         }
-        var activatedSeries = series
-        activatedSeries.settings.standingsReadAuthority = .canonicalWhenReady
-        activatedSeries.lastUpdatedAt = .init()
-        let projection: SeriesCanonicalStandingsProjection
-        switch SeriesCanonicalStandingsProjector.project(
-            series: activatedSeries,
-            completedRounds: rounds.filter { effectiveStatus(for: $0) == .complete },
-            processingStates: verifiedStates,
-            results: verifiedResults
-        ) {
-        case .success(let value):
-            projection = value
-        case .failure(let error):
-            addEvent(
-                "series.canonical_standings_activation_blocked",
-                eventProps: seriesTelemetryProps(["reason": error.telemetryValue])
-            )
-            return .failure(SeriesStandingsRolloutOperationError.projectionFailed(error))
-        }
 
-        switch await FirebaseService.shared.updateSeries(activatedSeries) {
+        switch await FirebaseService.shared.updateSeriesStandingsAuthority(
+            seriesID: seriesID,
+            authority: .canonicalWhenReady,
+            expectedPolicyRevisionID: context.revision.id
+        ) {
         case .success(let saved):
             series = saved
             standings = projection.standings
@@ -3078,8 +3168,10 @@ final class SeriesViewModel: ObservableObject, Loggable {
             addEvent(
                 "series.canonical_standings_activated",
                 eventProps: seriesTelemetryProps([
-                    "round_count": targetRounds.count,
-                    "generation_count": projection.generationIDs.count
+                    "round_count": context.targetRounds.count,
+                    "generation_count": projection.generationIDs.count,
+                    "authority_changed_standing_count": comparison.authorityChangedStandingIDs.count,
+                    "ordering_changed_track_count": comparison.tracksWithOrderingChanges.count
                 ])
             )
             return .success(projection)
@@ -3089,19 +3181,251 @@ final class SeriesViewModel: ObservableObject, Loggable {
         }
     }
 
+    func repairLegacyStandingsForMigration() async -> Result<SeriesStandingsMigrationAssessment, Error> {
+        guard isCommissioner else {
+            return .failure(SeriesStandingsRolloutOperationError.commissionerRequired)
+        }
+        guard !isSavingStandingsPolicy, !isAssessingStandingsMigration, !isPreparingCanonicalStandings else {
+            return .failure(SeriesStandingsRolloutOperationError.operationInProgress)
+        }
+
+        isPreparingCanonicalStandings = true
+        defer { isPreparingCanonicalStandings = false }
+
+        let initialContext: StandingsMigrationContext
+        switch await standingsMigrationContext() {
+        case .success(let value):
+            initialContext = value
+            applyStandingsMigrationContext(value)
+        case .failure(let error):
+            return .failure(error)
+        }
+        guard initialContext.assessment.plan.blockedItems.isEmpty else {
+            return .failure(SeriesStandingsRolloutOperationError.migrationBlocked(
+                initialContext.assessment.plan.blockedItems.count
+            ))
+        }
+        guard initialContext.assessment.plan.pendingItems.isEmpty else {
+            return .failure(SeriesStandingsRolloutOperationError.migrationIncomplete(
+                initialContext.assessment.plan.pendingItems.count
+            ))
+        }
+        guard let comparison = initialContext.assessment.comparison else {
+            if let error = initialContext.assessment.projectionError {
+                return .failure(SeriesStandingsRolloutOperationError.projectionFailed(error))
+            }
+            return .failure(SeriesStandingsRolloutOperationError.canonicalReadFailed)
+        }
+        guard !comparison.isActivationSafe else {
+            return .success(initialContext.assessment)
+        }
+        guard await rebuildStandings() else {
+            return .failure(SeriesStandingsRolloutOperationError.seriesWriteFailed)
+        }
+
+        switch await standingsMigrationContext() {
+        case .success(let refreshedContext):
+            applyStandingsMigrationContext(refreshedContext)
+            addEvent(
+                "series.legacy_standings_migration_repaired",
+                eventProps: seriesTelemetryProps([
+                    "remaining_mismatch_count": refreshedContext.assessment.comparison?.unexplainedMismatchCount ?? 0
+                ])
+            )
+            return .success(refreshedContext.assessment)
+        case .failure(let error):
+            return .failure(error)
+        }
+    }
+
+    private func standingsMigrationContext() async -> Result<StandingsMigrationContext, Error> {
+        guard let revision = series.settings.standingsPolicyRevision else {
+            return .failure(SeriesStandingsRolloutOperationError.policyNotConfigured)
+        }
+        guard SeriesStandingsRollout.revisionMatchesCurrentScoringContract(
+            settings: series.settings,
+            revision: revision
+        ) else {
+            return .failure(SeriesStandingsRolloutOperationError.policyOutdated)
+        }
+        let targetRounds = completedRounds.sorted {
+            if $0.index != $1.index { return $0.index < $1.index }
+            return $0.id < $1.id
+        }
+        let linkedRoundIDs = targetRounds.compactMap(\.roundID).filter(\.isPopulated)
+
+        async let snapshotsTask = snapshotRepository.snapshots(
+            roundIDs: linkedRoundIDs,
+            policy: .reload
+        )
+        async let inputsTask = fetchDerivedInputs()
+        async let statesTask = FirebaseService.shared.fetchCanonicalRoundProcessingStates(seriesID: seriesID)
+        async let resultsTask = FirebaseService.shared.fetchCanonicalRoundResults(seriesID: seriesID)
+        async let legacyTask = FirebaseService.shared.fetchStandingsResult(seriesID: seriesID)
+        async let handicapScoresTask = FirebaseService.shared.fetchHandicapScores(seriesID: seriesID)
+
+        let snapshotResults = await snapshotsTask
+        let inputsResult = await inputsTask
+        let statesResult = await statesTask
+        let resultsResult = await resultsTask
+        let legacyResult = await legacyTask
+        let verifiedHandicapScores = await handicapScoresTask
+
+        guard series.settings.standingsPolicyRevision?.id == revision.id else {
+            return .failure(SeriesStandingsRolloutOperationError.policyOutdated)
+        }
+        let currentTargetRounds = completedRounds.sorted {
+            if $0.index != $1.index { return $0.index < $1.index }
+            return $0.id < $1.id
+        }
+        guard currentTargetRounds.map(\.id) == targetRounds.map(\.id),
+              zip(currentTargetRounds, targetRounds).allSatisfy({ $0.lastUpdatedAt == $1.lastUpdatedAt }) else {
+            return .failure(SeriesStandingsRolloutOperationError.sourceReadFailed)
+        }
+
+        let derivedInputs: SeriesDerivedInputs
+        switch inputsResult {
+        case .success(let value): derivedInputs = value
+        case .failure(let error):
+            addBreadcrumb(level: .error, message: "Standings migration source read failed", error: error)
+            return .failure(SeriesStandingsRolloutOperationError.sourceReadFailed)
+        }
+        let verifiedStates: [SeriesRoundProcessingState]
+        let verifiedResults: [SeriesRoundResult]
+        switch (statesResult, resultsResult) {
+        case (.success(let states), .success(let results)):
+            verifiedStates = states
+            verifiedResults = results
+        case (.failure(let error), _), (_, .failure(let error)):
+            addBreadcrumb(level: .error, message: "Canonical migration read failed", error: error)
+            return .failure(SeriesStandingsRolloutOperationError.canonicalReadFailed)
+        }
+        let verifiedLegacyStandings: [SeriesStanding]
+        switch legacyResult {
+        case .success(let values): verifiedLegacyStandings = values
+        case .failure(let error):
+            addBreadcrumb(level: .error, message: "Legacy standings comparison read failed", error: error)
+            return .failure(SeriesStandingsRolloutOperationError.sourceReadFailed)
+        }
+
+        let mappingsByRound = Dictionary(grouping: derivedInputs.mappings, by: \.seriesRoundID)
+        let awardsByRound = Dictionary(grouping: derivedInputs.awards, by: \.seriesRoundID)
+        let binding = SeriesStandingsPolicyResolver.binding(
+            for: revision,
+            substitutesScore: series.settings.substitutesScore
+        )
+        var snapshotsBySeriesRoundID: [String: RoundSnapshot] = [:]
+        var unavailableRoundIDs = Set<String>()
+        var expectedSourceRevisions: [String: String] = [:]
+
+        for sourceRound in targetRounds {
+            guard let linkedRoundID = sourceRound.roundID,
+                  let snapshotResult = snapshotResults[linkedRoundID],
+                  case .success(let snapshot) = snapshotResult else {
+                unavailableRoundIDs.insert(sourceRound.id)
+                continue
+            }
+            snapshotsBySeriesRoundID[sourceRound.id] = snapshot
+            var expectedRound = sourceRound
+            expectedRound.policyBinding = binding
+            let teamProfile = expectedRound.teamScoringProfileID.flatMap { scoringProfile(id: $0) }
+            let individualProfile = individualScoringProfile(for: expectedRound)
+            let processingInputs = SeriesRoundCanonicalBuilder.processingInputs(
+                teamProfile: teamProfile,
+                individualProfile: individualProfile,
+                handicapConfig: series.handicapConfig,
+                members: members,
+                teams: teams
+            )
+            let roundHandicapScores = series.handicapConfig.mode.allowsAccrual
+                ? verifiedHandicapScores.filter { $0.sourceRoundID == linkedRoundID }
+                : []
+            expectedSourceRevisions[sourceRound.id] = SeriesRoundCanonicalBuilder.sourceRevision(
+                seriesRound: expectedRound,
+                snapshot: snapshot,
+                mappings: mappingsByRound[sourceRound.id] ?? [],
+                processingInputs: processingInputs,
+                awards: awardsByRound[sourceRound.id] ?? [],
+                handicapScores: roundHandicapScores
+            )
+        }
+
+        let plan = SeriesStandingsMigrationPlanner.plan(
+            revision: revision,
+            substitutesScore: series.settings.substitutesScore,
+            completedRounds: targetRounds,
+            expectedSourceRevisions: expectedSourceRevisions,
+            unavailableRoundIDs: unavailableRoundIDs,
+            processingStates: verifiedStates,
+            results: verifiedResults
+        )
+        var projection: SeriesCanonicalStandingsProjection?
+        var projectionError: SeriesCanonicalStandingsProjectionError?
+        var comparison: SeriesStandingsMigrationComparison?
+        if plan.isReadyForActivation {
+            var candidateSeries = series
+            candidateSeries.settings.standingsReadAuthority = .canonicalWhenReady
+            switch SeriesCanonicalStandingsProjector.project(
+                series: candidateSeries,
+                completedRounds: targetRounds,
+                processingStates: verifiedStates,
+                results: verifiedResults
+            ) {
+            case .success(let value):
+                projection = value
+                let resultsByID = Dictionary(uniqueKeysWithValues: verifiedResults.map { ($0.id, $0) })
+                let orderedResults = plan.readyGenerationIDs.compactMap { resultsByID[$0] }
+                comparison = SeriesStandingsMigrationComparator.compare(
+                    legacyStandings: verifiedLegacyStandings,
+                    canonicalStandings: value.standings,
+                    orderedCanonicalResults: orderedResults,
+                    seriesID: seriesID
+                )
+            case .failure(let error):
+                projectionError = error
+            }
+        }
+        let assessment = SeriesStandingsMigrationAssessment(
+            plan: plan,
+            comparison: comparison,
+            projectionError: projectionError
+        )
+        return .success(StandingsMigrationContext(
+            revision: revision,
+            targetRounds: targetRounds,
+            snapshotsBySeriesRoundID: snapshotsBySeriesRoundID,
+            mappingsByRound: mappingsByRound,
+            awardsByRound: awardsByRound,
+            processingStates: verifiedStates,
+            results: verifiedResults,
+            legacyStandings: verifiedLegacyStandings,
+            assessment: assessment,
+            projection: projection
+        ))
+    }
+
+    private func applyStandingsMigrationContext(_ context: StandingsMigrationContext) {
+        canonicalProcessingStates = Dictionary(uniqueKeysWithValues: context.processingStates.map { ($0.id, $0) })
+        canonicalRoundResults = Dictionary(uniqueKeysWithValues: context.results.map { ($0.id, $0) })
+        legacyStandings = context.legacyStandings
+        standingsMigrationAssessment = context.assessment
+        standings = resolvedStandings(legacyStandings: context.legacyStandings)
+    }
+
     func useLegacyStandings() async -> Result<SeriesStandingsReadAuthority, Error> {
         guard isCommissioner else {
             return .failure(SeriesStandingsRolloutOperationError.commissionerRequired)
         }
-        guard !isPreparingCanonicalStandings, !isSavingStandingsPolicy else {
+        guard !isPreparingCanonicalStandings, !isAssessingStandingsMigration, !isSavingStandingsPolicy else {
             return .failure(SeriesStandingsRolloutOperationError.operationInProgress)
         }
         guard series.settings.standingsReadAuthority != .legacy else { return .success(.legacy) }
 
-        var updated = series
-        updated.settings.standingsReadAuthority = .legacy
-        updated.lastUpdatedAt = .init()
-        switch await FirebaseService.shared.updateSeries(updated) {
+        switch await FirebaseService.shared.updateSeriesStandingsAuthority(
+            seriesID: seriesID,
+            authority: .legacy,
+            expectedPolicyRevisionID: nil
+        ) {
         case .success(let saved):
             series = saved
             standings = legacyStandings

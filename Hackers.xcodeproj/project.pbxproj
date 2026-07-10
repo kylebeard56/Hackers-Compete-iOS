@@ -152,6 +152,7 @@
 		B4A0F00D30A0000100ABCDEF /* SeriesCanonicalStandingsProjector.swift in Sources */ = {isa = PBXBuildFile; fileRef = B4A0F00E30A0000100ABCDEF /* SeriesCanonicalStandingsProjector.swift */; };
 		B4A0F00F30A0000100ABCDEF /* SeriesStandingsRollout.swift in Sources */ = {isa = PBXBuildFile; fileRef = B4A0F01030A0000100ABCDEF /* SeriesStandingsRollout.swift */; };
 		B4A0F01130A0000100ABCDEF /* SeriesStandingsSettingsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = B4A0F01230A0000100ABCDEF /* SeriesStandingsSettingsView.swift */; };
+		B4A0F01330A0000100ABCDEF /* SeriesStandingsMigration.swift in Sources */ = {isa = PBXBuildFile; fileRef = B4A0F01430A0000100ABCDEF /* SeriesStandingsMigration.swift */; };
 		B4A1001B2F30C001005FAF67 /* PlayerScoringRow.swift in Sources */ = {isa = PBXBuildFile; fileRef = B4A1001A2F30C001005FAF67 /* PlayerScoringRow.swift */; };
 		B4A1001D2F30C001005FAF67 /* LeaderboardRowView.swift in Sources */ = {isa = PBXBuildFile; fileRef = B4A1001C2F30C001005FAF67 /* LeaderboardRowView.swift */; };
 		B4A100212F30C001005FAF67 /* ScorecardHoleCell.swift in Sources */ = {isa = PBXBuildFile; fileRef = B4A100202F30C001005FAF67 /* ScorecardHoleCell.swift */; };
@@ -532,6 +533,7 @@
 		B4A0F00E30A0000100ABCDEF /* SeriesCanonicalStandingsProjector.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SeriesCanonicalStandingsProjector.swift; sourceTree = "<group>"; };
 		B4A0F01030A0000100ABCDEF /* SeriesStandingsRollout.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SeriesStandingsRollout.swift; sourceTree = "<group>"; };
 		B4A0F01230A0000100ABCDEF /* SeriesStandingsSettingsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SeriesStandingsSettingsView.swift; sourceTree = "<group>"; };
+		B4A0F01430A0000100ABCDEF /* SeriesStandingsMigration.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SeriesStandingsMigration.swift; sourceTree = "<group>"; };
 		B4A1001A2F30C001005FAF67 /* PlayerScoringRow.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PlayerScoringRow.swift; sourceTree = "<group>"; };
 		B4A1001C2F30C001005FAF67 /* LeaderboardRowView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LeaderboardRowView.swift; sourceTree = "<group>"; };
 		B4A100202F30C001005FAF67 /* ScorecardHoleCell.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ScorecardHoleCell.swift; sourceTree = "<group>"; };
@@ -1070,8 +1072,8 @@
 				B45843702F68231500B96E60 /* SeriesHandicapOverrideView.swift */,
 				B45843462F68231500B96E60 /* SeriesHandicapSettingsView.swift */,
 				B45843472F68231500B96E60 /* SeriesLeaderboardView.swift */,
-					B4F0A0023099000100ABCDEF /* SeriesLeagueSettingsView.swift */,
-					B4A0F01230A0000100ABCDEF /* SeriesStandingsSettingsView.swift */,
+				B4F0A0023099000100ABCDEF /* SeriesLeagueSettingsView.swift */,
+				B4A0F01230A0000100ABCDEF /* SeriesStandingsSettingsView.swift */,
 				B45843482F68231500B96E60 /* SeriesRosterView.swift */,
 				B45843662F68238000B96E60 /* SeriesRoundAttendanceView.swift */,
 				B458434A2F68231500B96E60 /* SeriesView.swift */,
@@ -1114,8 +1116,9 @@
 				B4A0F00830A0000100ABCDEF /* SeriesRoundDraft.swift */,
 				B4A0F00A30A0000100ABCDEF /* SeriesRoundConfigurationReconciler.swift */,
 				B4A0F00C30A0000100ABCDEF /* SeriesStandingsPolicyResolver.swift */,
-					B4A0F00E30A0000100ABCDEF /* SeriesCanonicalStandingsProjector.swift */,
-					B4A0F01030A0000100ABCDEF /* SeriesStandingsRollout.swift */,
+				B4A0F00E30A0000100ABCDEF /* SeriesCanonicalStandingsProjector.swift */,
+				B4A0F01030A0000100ABCDEF /* SeriesStandingsRollout.swift */,
+				B4A0F01430A0000100ABCDEF /* SeriesStandingsMigration.swift */,
 				B470A0012F68231500B96E60 /* SeriesRoundCreationMapping.swift */,
 				B45843492F68231500B96E60 /* SeriesRoundCreationService.swift */,
 				B40A1A3F2F851B2300C0FF09 /* SeriesRoundSyncPlanning.swift */,
@@ -2067,8 +2070,9 @@
 				B4A0F00730A0000100ABCDEF /* SeriesRoundDraft.swift in Sources */,
 				B4A0F00930A0000100ABCDEF /* SeriesRoundConfigurationReconciler.swift in Sources */,
 				B4A0F00B30A0000100ABCDEF /* SeriesStandingsPolicyResolver.swift in Sources */,
-					B4A0F00D30A0000100ABCDEF /* SeriesCanonicalStandingsProjector.swift in Sources */,
-					B4A0F00F30A0000100ABCDEF /* SeriesStandingsRollout.swift in Sources */,
+				B4A0F00D30A0000100ABCDEF /* SeriesCanonicalStandingsProjector.swift in Sources */,
+				B4A0F00F30A0000100ABCDEF /* SeriesStandingsRollout.swift in Sources */,
+				B4A0F01330A0000100ABCDEF /* SeriesStandingsMigration.swift in Sources */,
 				B40A1A512F851B2300C0FF09 /* SeriesRoundTileCopy.swift in Sources */,
 				B4F971E52E7AC94300B92463 /* InfoBanner.swift in Sources */,
 				B4CC84C22EE1F552007B011E /* GameLobby+Format.swift in Sources */,
@@ -2267,8 +2271,8 @@
 				B4A1E0122F90000200ABCDEF /* SeriesActiveAnnouncementsSection.swift in Sources */,
 				B4ANN1012F90000300ABCDEF /* SeriesAnnouncementEditorSheet.swift in Sources */,
 				B4ANN1032F90000300ABCDEF /* SeriesAnnouncementsView.swift in Sources */,
-					B4F0A0013099000100ABCDEF /* SeriesLeagueSettingsView.swift in Sources */,
-					B4A0F01130A0000100ABCDEF /* SeriesStandingsSettingsView.swift in Sources */,
+				B4F0A0013099000100ABCDEF /* SeriesLeagueSettingsView.swift in Sources */,
+				B4A0F01130A0000100ABCDEF /* SeriesStandingsSettingsView.swift in Sources */,
 				B4F0A0033099000100ABCDEF /* SeriesRoundDetailSheets.swift in Sources */,
 				B45843512F68231500B96E60 /* SeriesHandicapSettingsView.swift in Sources */,
 				B45843522F68231500B96E60 /* SeriesBaselineScoresView.swift in Sources */,
