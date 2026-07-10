@@ -22,6 +22,7 @@ struct SeriesLeagueSettingsView: View {
     @State private var showInviteSheet = false
     @State private var showDefaultCourseSheet = false
     @State private var showHandicapSettingsSheet = false
+    @State private var showStandingsSettingsSheet = false
     @State private var showDefaultTeeTimeSheet = false
     @State private var profileEditorSeed: SeriesScoringProfileEditorSeed?
 
@@ -69,6 +70,7 @@ struct SeriesLeagueSettingsView: View {
                     leagueDetailsSection
                     leagueBasicsSection
                     pointsAwardsSection
+                    standingsTiebreakSection
                     behaviorSection
                     rulesConfirmationSection
                     invitesSection.hidden()
@@ -145,6 +147,10 @@ struct SeriesLeagueSettingsView: View {
         }
         .sheet(isPresented: $showHandicapSettingsSheet) {
             SeriesHandicapSettingsView(viewModel: viewModel)
+                .presentationDragIndicator(.visible)
+        }
+        .sheet(isPresented: $showStandingsSettingsSheet) {
+            SeriesStandingsSettingsView(viewModel: viewModel)
                 .presentationDragIndicator(.visible)
         }
         .sheet(isPresented: $showDefaultTeeTimeSheet) {
@@ -693,6 +699,44 @@ struct SeriesLeagueSettingsView: View {
                 ) { seed in
                     profileEditorSeed = seed
                 }
+            }
+        }
+    }
+
+    private var standingsTiebreakSection: some View {
+        settingsGroup(title: "Standings") {
+            SeriesSheetCard(palette: palette) {
+                Button {
+                    Haptics.fire(.light)
+                    showStandingsSettingsSheet = true
+                } label: {
+                    HStack(spacing: 12) {
+                        Image(systemName: "list.number")
+                            .font(.system(size: 16, weight: .semibold))
+                            .foregroundStyle(Color.accentGreen)
+                            .frame(width: 24, height: 24)
+                            .accessibilityHidden(true)
+
+                        VStack(alignment: .leading, spacing: 4) {
+                            Text("Scoring-average tiebreakers")
+                                .fontStyle(kFontName, size: 15, weight: .semibold)
+                                .foregroundStyle(palette.foregroundColor)
+                            Text(standingsTiebreakSubtitle)
+                                .fontStyle(kFontName, size: 12, weight: .regular)
+                                .foregroundStyle(Color.neutral)
+                                .multilineTextAlignment(.leading)
+                        }
+
+                        Spacer(minLength: 0)
+
+                        Image(systemName: "chevron.right")
+                            .font(.system(size: 12, weight: .semibold))
+                            .foregroundStyle(Color.neutral2)
+                            .accessibilityHidden(true)
+                    }
+                    .contentShape(.rect)
+                }
+                .buttonStyle(.plain)
             }
         }
     }
@@ -1316,6 +1360,17 @@ struct SeriesLeagueSettingsView: View {
 
     private var pairGroupingSubtitle: String {
         viewModel.pairGroupingSubtitle(for: draftSettings.podGroupingDefault)
+    }
+
+    private var standingsTiebreakSubtitle: String {
+        switch viewModel.series.settings.standingsReadAuthority {
+        case .legacy:
+            return viewModel.series.settings.standingsPolicyRevision == nil
+                ? "Not configured"
+                : "Policy saved, legacy standings active"
+        case .canonicalWhenReady:
+            return "Canonical scoring averages active"
+        }
     }
 
     private var hasUnsavedChanges: Bool {

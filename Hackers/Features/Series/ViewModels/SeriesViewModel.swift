@@ -1603,6 +1603,9 @@ final class SeriesViewModel: ObservableObject, Loggable {
     @Published var seriesCourseTeesByCourseID: [String: [Tee]] = [:]
     @Published var isRebuildingIndividualStandings = false
     @Published var isRebuildingAutomaticAwards = false
+    @Published private(set) var isSavingStandingsPolicy = false
+    @Published private(set) var isPreparingCanonicalStandings = false
+    @Published private(set) var standingsRolloutProgress: SeriesStandingsRolloutProgress?
 
     var seriesID: String { series.id }
     var currentUserID: String?
@@ -1611,6 +1614,16 @@ final class SeriesViewModel: ObservableObject, Loggable {
     private var realtimeSourceSeriesID: String?
     private var seriesSourceListener: ListenerRegistration?
     private var seriesRoundsSourceListener: ListenerRegistration?
+    private var canonicalStatesSourceListener: ListenerRegistration?
+    private var canonicalResultsSourceListener: ListenerRegistration?
+
+    private var activeRealtimeListenerCount: Int {
+        (seriesSourceListener == nil ? 0 : 1)
+            + (seriesRoundsSourceListener == nil ? 0 : 1)
+            + (canonicalStatesSourceListener == nil ? 0 : 1)
+            + (canonicalResultsSourceListener == nil ? 0 : 1)
+            + linkedRoundListeners.count
+    }
 
     init(
         snapshotRepository: SeriesRoundSnapshotRepository? = nil,
@@ -1623,6 +1636,8 @@ final class SeriesViewModel: ObservableObject, Loggable {
     deinit {
         seriesSourceListener?.remove()
         seriesRoundsSourceListener?.remove()
+        canonicalStatesSourceListener?.remove()
+        canonicalResultsSourceListener?.remove()
         linkedRoundListeners.values.forEach { $0.remove() }
     }
 
@@ -2445,7 +2460,7 @@ final class SeriesViewModel: ObservableObject, Loggable {
             .coreLoad,
             startedAt: coreLoadStartedAt,
             logicalReadCount: 13 + (series.settings.standingsReadAuthority == .canonicalWhenReady ? 1 : 0),
-            activeListenerCount: 2 + linkedRoundListeners.count,
+            activeListenerCount: activeRealtimeListenerCount,
             itemCount: members.count
                 + invites.count
                 + teams.count
@@ -2475,7 +2490,7 @@ final class SeriesViewModel: ObservableObject, Loggable {
         SeriesPerformanceRecorder.shared.record(
             .fullLoad,
             startedAt: fullLoadStartedAt,
-            activeListenerCount: 2 + linkedRoundListeners.count,
+            activeListenerCount: activeRealtimeListenerCount,
             itemCount: rounds.count,
             context: seriesID
         )
@@ -2508,6 +2523,8 @@ final class SeriesViewModel: ObservableObject, Loggable {
                         let previousSettings = self.series.settings
                         self.series = updated
                         self.refreshLinkedConfigurationDivergences()
+                        self.configureCanonicalSourceListeners(for: seriesID)
+                        self.standings = self.resolvedStandings(legacyStandings: self.legacyStandings)
                         if previousSettings != updated.settings {
                             self.recomputeAllHandicaps()
                             await self.loadAttendanceForRSVPEligibleRounds()
@@ -2550,6 +2567,75 @@ final class SeriesViewModel: ObservableObject, Loggable {
                     }
                 }
             }
+
+        configureCanonicalSourceListeners(for: seriesID)
+    }
+
+    private func configureCanonicalSourceListeners(for seriesID: String) {
+        guard series.settings.standingsReadAuthority == .canonicalWhenReady else {
+            stopCanonicalSourceListeners()
+            standings = legacyStandings
+            standingsReadSource = .legacy
+            return
+        }
+        guard canonicalStatesSourceListener == nil, canonicalResultsSourceListener == nil else { return }
+
+        let seriesDocument = Firestore.firestore()
+            .collection(Collections.series.name)
+            .document(seriesID)
+        canonicalStatesSourceListener = seriesDocument
+            .collection(SeriesSubcollection.roundProcessingStates.rawValue)
+            .addSnapshotListener(includeMetadataChanges: true) { [weak self] snapshot, error in
+                if let error {
+                    Task { @MainActor [weak self] in
+                        self?.addBreadcrumb(level: .error, message: "Canonical processing listener failed", error: error)
+                    }
+                    return
+                }
+                guard let snapshot, !snapshot.metadata.hasPendingWrites else { return }
+                do {
+                    let states = try snapshot.documents.map { try $0.data(as: SeriesRoundProcessingState.self) }
+                    Task { @MainActor [weak self] in
+                        guard let self, self.realtimeSourceSeriesID == seriesID else { return }
+                        self.canonicalProcessingStates = Dictionary(uniqueKeysWithValues: states.map { ($0.id, $0) })
+                        self.standings = self.resolvedStandings(legacyStandings: self.legacyStandings)
+                    }
+                } catch {
+                    Task { @MainActor [weak self] in
+                        self?.addBreadcrumb(level: .error, message: "Canonical processing listener decode failed", error: error)
+                    }
+                }
+            }
+        canonicalResultsSourceListener = seriesDocument
+            .collection(SeriesSubcollection.roundResults.rawValue)
+            .addSnapshotListener(includeMetadataChanges: true) { [weak self] snapshot, error in
+                if let error {
+                    Task { @MainActor [weak self] in
+                        self?.addBreadcrumb(level: .error, message: "Canonical results listener failed", error: error)
+                    }
+                    return
+                }
+                guard let snapshot, !snapshot.metadata.hasPendingWrites else { return }
+                do {
+                    let results = try snapshot.documents.map { try $0.data(as: SeriesRoundResult.self) }
+                    Task { @MainActor [weak self] in
+                        guard let self, self.realtimeSourceSeriesID == seriesID else { return }
+                        self.canonicalRoundResults = Dictionary(uniqueKeysWithValues: results.map { ($0.id, $0) })
+                        self.standings = self.resolvedStandings(legacyStandings: self.legacyStandings)
+                    }
+                } catch {
+                    Task { @MainActor [weak self] in
+                        self?.addBreadcrumb(level: .error, message: "Canonical results listener decode failed", error: error)
+                    }
+                }
+            }
+    }
+
+    private func stopCanonicalSourceListeners() {
+        canonicalStatesSourceListener?.remove()
+        canonicalResultsSourceListener?.remove()
+        canonicalStatesSourceListener = nil
+        canonicalResultsSourceListener = nil
     }
 
     private func stopRealtimeSourceListeners() {
@@ -2557,6 +2643,7 @@ final class SeriesViewModel: ObservableObject, Loggable {
         seriesRoundsSourceListener?.remove()
         seriesSourceListener = nil
         seriesRoundsSourceListener = nil
+        stopCanonicalSourceListeners()
         stopLinkedRoundListeners()
         realtimeSourceSeriesID = nil
     }
@@ -2612,7 +2699,7 @@ final class SeriesViewModel: ObservableObject, Loggable {
             SeriesPerformanceRecorder.shared.record(
                 .linkedRoundRootsLoad,
                 startedAt: startedAt,
-                activeListenerCount: 2 + linkedRoundListeners.count,
+                activeListenerCount: activeRealtimeListenerCount,
                 context: seriesID
             )
             return []
@@ -2629,7 +2716,7 @@ final class SeriesViewModel: ObservableObject, Loggable {
             .linkedRoundRootsLoad,
             startedAt: startedAt,
             logicalReadCount: 1,
-            activeListenerCount: 2 + linkedRoundListeners.count,
+            activeListenerCount: activeRealtimeListenerCount,
             itemCount: fetchedByID.count,
             context: seriesID
         )
@@ -2789,6 +2876,245 @@ final class SeriesViewModel: ObservableObject, Loggable {
         return true
     }
 
+    func standingsRolloutPreview() -> SeriesStandingsRolloutPreview? {
+        guard let revision = series.settings.standingsPolicyRevision else { return nil }
+        return SeriesStandingsRollout.preview(
+            series: series,
+            completedRounds: completedRounds,
+            revision: revision
+        )
+    }
+
+    func saveStandingsTiebreakPolicy(
+        _ draft: SeriesStandingsTiebreakDraft
+    ) async -> Result<SeriesPolicyRevision, Error> {
+        guard isCommissioner else {
+            return .failure(SeriesStandingsRolloutOperationError.commissionerRequired)
+        }
+        guard !isSavingStandingsPolicy, !isPreparingCanonicalStandings else {
+            return .failure(SeriesStandingsRolloutOperationError.operationInProgress)
+        }
+
+        let revision: SeriesPolicyRevision
+        switch SeriesStandingsRollout.makeRevision(
+            settings: series.settings,
+            draft: draft,
+            id: "standings_\(HackersID.string())"
+        ) {
+        case .success(let value):
+            revision = value
+        case .failure(let error):
+            return .failure(error)
+        }
+
+        isSavingStandingsPolicy = true
+        defer { isSavingStandingsPolicy = false }
+
+        var updated = series
+        updated.settings.standingsPolicyRevision = revision
+        updated.settings.standingsReadAuthority = .legacy
+        updated.lastUpdatedAt = .init()
+        switch await FirebaseService.shared.updateSeries(updated) {
+        case .success(let saved):
+            series = saved
+            standings = legacyStandings
+            standingsReadSource = .legacy
+            configureCanonicalSourceListeners(for: saved.id)
+            addEvent(
+                "series.standings_policy_saved",
+                eventProps: seriesTelemetryProps([
+                    "policy_revision": revision.sequence,
+                    "team_tiebreak_enabled": draft.team.isEnabled,
+                    "individual_tiebreak_enabled": draft.individual.isEnabled
+                ])
+            )
+            return .success(revision)
+        case .failure(let error):
+            addBreadcrumb(level: .error, message: "Standings policy write failed", error: error)
+            return .failure(error)
+        }
+    }
+
+    func prepareAndActivateCanonicalStandings() async -> Result<SeriesCanonicalStandingsProjection, Error> {
+        guard isCommissioner else {
+            return .failure(SeriesStandingsRolloutOperationError.commissionerRequired)
+        }
+        guard !isSavingStandingsPolicy, !isPreparingCanonicalStandings else {
+            return .failure(SeriesStandingsRolloutOperationError.operationInProgress)
+        }
+        guard let revision = series.settings.standingsPolicyRevision else {
+            return .failure(SeriesStandingsRolloutOperationError.policyNotConfigured)
+        }
+
+        isPreparingCanonicalStandings = true
+        let targetRounds = completedRounds.sorted {
+            if $0.index != $1.index { return $0.index < $1.index }
+            return $0.id < $1.id
+        }
+        standingsRolloutProgress = .init(completedCount: 0, totalCount: targetRounds.count)
+        defer {
+            isPreparingCanonicalStandings = false
+            standingsRolloutProgress = nil
+        }
+
+        for round in targetRounds where round.roundID?.isPopulated != true {
+            return .failure(SeriesStandingsRolloutOperationError.missingLinkedRound(round.title))
+        }
+        let snapshotResults = await snapshotRepository.snapshots(
+            roundIDs: targetRounds.compactMap(\.roundID),
+            policy: .reload
+        )
+        var snapshotsBySeriesRoundID: [String: RoundSnapshot] = [:]
+        for round in targetRounds {
+            guard let roundID = round.roundID,
+                  let result = snapshotResults[roundID],
+                  case .success(let snapshot) = result else {
+                return .failure(SeriesStandingsRolloutOperationError.snapshotUnavailable(round.title))
+            }
+            snapshotsBySeriesRoundID[round.id] = snapshot
+        }
+
+        let derivedInputs: SeriesDerivedInputs
+        switch await fetchDerivedInputs() {
+        case .success(let inputs):
+            derivedInputs = inputs
+        case .failure(let error):
+            addBreadcrumb(level: .error, message: "Standings rollout inputs read failed", error: error)
+            return .failure(SeriesStandingsRolloutOperationError.sourceReadFailed)
+        }
+        let mappingsByRound = Dictionary(grouping: derivedInputs.mappings, by: \.seriesRoundID)
+        let awardsByRound = Dictionary(grouping: derivedInputs.awards, by: \.seriesRoundID)
+        let binding = SeriesStandingsPolicyResolver.binding(
+            for: revision,
+            substitutesScore: series.settings.substitutesScore
+        )
+
+        for (index, sourceRound) in targetRounds.enumerated() {
+            if Task.isCancelled { return .failure(CancellationError()) }
+            guard series.settings.standingsPolicyRevision?.id == revision.id else {
+                return .failure(SeriesStandingsRolloutOperationError.policyNotConfigured)
+            }
+            guard let snapshot = snapshotsBySeriesRoundID[sourceRound.id] else {
+                return .failure(SeriesStandingsRolloutOperationError.snapshotUnavailable(sourceRound.title))
+            }
+
+            var preparedRound = sourceRound
+            if preparedRound.policyBinding != binding {
+                preparedRound.policyBinding = binding
+                preparedRound.lastUpdatedAt = .init()
+                switch await FirebaseService.shared.updateSeriesRound(preparedRound) {
+                case .success(let saved):
+                    preparedRound = saved
+                    if let roundIndex = rounds.firstIndex(where: { $0.id == saved.id }) {
+                        rounds[roundIndex] = saved
+                    }
+                case .failure(let error):
+                    addBreadcrumb(level: .error, message: "Historical round policy binding failed", error: error)
+                    return .failure(SeriesStandingsRolloutOperationError.roundWriteFailed(sourceRound.title))
+                }
+            }
+
+            let processing = await processCompletedRound(
+                seriesRound: preparedRound,
+                snapshot: snapshot,
+                existingAwards: awardsByRound[preparedRound.id] ?? [],
+                mappings: mappingsByRound[preparedRound.id] ?? []
+            )
+            guard !processing.awardWriteFailed, !processing.canonicalWriteFailed else {
+                return .failure(SeriesStandingsRolloutOperationError.roundProcessingFailed(sourceRound.title))
+            }
+            standingsRolloutProgress = .init(
+                completedCount: index + 1,
+                totalCount: targetRounds.count
+            )
+        }
+
+        async let statesTask = FirebaseService.shared.fetchCanonicalRoundProcessingStates(seriesID: seriesID)
+        async let resultsTask = FirebaseService.shared.fetchCanonicalRoundResults(seriesID: seriesID)
+        let statesResult = await statesTask
+        let resultsResult = await resultsTask
+        let verifiedStates: [SeriesRoundProcessingState]
+        let verifiedResults: [SeriesRoundResult]
+        switch (statesResult, resultsResult) {
+        case (.success(let states), .success(let results)):
+            verifiedStates = states
+            verifiedResults = results
+        case (.failure(let error), _), (_, .failure(let error)):
+            addBreadcrumb(level: .error, message: "Canonical rollout verification read failed", error: error)
+            return .failure(SeriesStandingsRolloutOperationError.canonicalReadFailed)
+        }
+        canonicalProcessingStates = Dictionary(uniqueKeysWithValues: verifiedStates.map { ($0.id, $0) })
+        canonicalRoundResults = Dictionary(uniqueKeysWithValues: verifiedResults.map { ($0.id, $0) })
+
+        guard series.settings.standingsPolicyRevision?.id == revision.id else {
+            return .failure(SeriesStandingsRolloutOperationError.policyNotConfigured)
+        }
+        var activatedSeries = series
+        activatedSeries.settings.standingsReadAuthority = .canonicalWhenReady
+        activatedSeries.lastUpdatedAt = .init()
+        let projection: SeriesCanonicalStandingsProjection
+        switch SeriesCanonicalStandingsProjector.project(
+            series: activatedSeries,
+            completedRounds: rounds.filter { effectiveStatus(for: $0) == .complete },
+            processingStates: verifiedStates,
+            results: verifiedResults
+        ) {
+        case .success(let value):
+            projection = value
+        case .failure(let error):
+            addEvent(
+                "series.canonical_standings_activation_blocked",
+                eventProps: seriesTelemetryProps(["reason": error.telemetryValue])
+            )
+            return .failure(SeriesStandingsRolloutOperationError.projectionFailed(error))
+        }
+
+        switch await FirebaseService.shared.updateSeries(activatedSeries) {
+        case .success(let saved):
+            series = saved
+            standings = projection.standings
+            standingsReadSource = .canonical
+            configureCanonicalSourceListeners(for: saved.id)
+            addEvent(
+                "series.canonical_standings_activated",
+                eventProps: seriesTelemetryProps([
+                    "round_count": targetRounds.count,
+                    "generation_count": projection.generationIDs.count
+                ])
+            )
+            return .success(projection)
+        case .failure(let error):
+            addBreadcrumb(level: .error, message: "Canonical standings authority write failed", error: error)
+            return .failure(SeriesStandingsRolloutOperationError.seriesWriteFailed)
+        }
+    }
+
+    func useLegacyStandings() async -> Result<SeriesStandingsReadAuthority, Error> {
+        guard isCommissioner else {
+            return .failure(SeriesStandingsRolloutOperationError.commissionerRequired)
+        }
+        guard !isPreparingCanonicalStandings, !isSavingStandingsPolicy else {
+            return .failure(SeriesStandingsRolloutOperationError.operationInProgress)
+        }
+        guard series.settings.standingsReadAuthority != .legacy else { return .success(.legacy) }
+
+        var updated = series
+        updated.settings.standingsReadAuthority = .legacy
+        updated.lastUpdatedAt = .init()
+        switch await FirebaseService.shared.updateSeries(updated) {
+        case .success(let saved):
+            series = saved
+            standings = legacyStandings
+            standingsReadSource = .legacy
+            configureCanonicalSourceListeners(for: saved.id)
+            addEvent("series.legacy_standings_restored", eventProps: seriesTelemetryProps())
+            return .success(.legacy)
+        case .failure(let error):
+            addBreadcrumb(level: .error, message: "Legacy standings authority write failed", error: error)
+            return .failure(error)
+        }
+    }
+
     func updateDefaultCourse(
         courseID: String,
         cachedName: String,
@@ -2889,7 +3215,10 @@ final class SeriesViewModel: ObservableObject, Loggable {
     }
 
     private func sanitizedLeagueSettings(_ settings: SeriesSettings) -> SeriesSettings {
-        var sanitized = settings
+        var sanitized = SeriesStandingsRollout.preservingManagedSettings(
+            draft: settings,
+            current: series.settings
+        )
         if sanitized.useTeams {
             sanitized.defaultRoundConfig.teamAssignmentMode = .seriesTeams
             sanitized.defaultRoundConfig.matchupMode = sanitized.defaultRoundConfig.resolvedCompetitionScope == .matchup ? .teamVsTeam : .field

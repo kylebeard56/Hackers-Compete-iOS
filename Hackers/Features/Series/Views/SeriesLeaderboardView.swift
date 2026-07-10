@@ -236,9 +236,10 @@ struct SeriesLeaderboardView: View {
             )
             .frame(minHeight: 200)
         } else {
-            standingsHeader(isTeam: isTeam)
+            let showsAverage = standings.contains { primaryTiebreakSummary(for: $0)?.average != nil }
+            standingsHeader(isTeam: isTeam, showsAverage: showsAverage)
             ForEach(Array(standings.enumerated()), id: \.element.id) { index, standing in
-                standingRow(standing, rank: index + 1, isTeam: isTeam)
+                standingRow(standing, rank: index + 1, isTeam: isTeam, showsAverage: showsAverage)
             }
         }
 
@@ -420,17 +421,23 @@ struct SeriesLeaderboardView: View {
         }
     }
 
-    private func standingsHeader(isTeam: Bool) -> some View {
+    private func standingsHeader(isTeam: Bool, showsAverage: Bool) -> some View {
         HStack(spacing: 0) {
             Text("#")
                 .frame(width: 28, alignment: .center)
             Text("Name")
                 .alignLeading()
             Text(isTeam ? "Pts" : "Points")
-                .frame(width: isTeam ? 44 : 64, alignment: .trailing)
+                .frame(width: isTeam ? 44 : (showsAverage ? 52 : 64), alignment: .trailing)
+            if showsAverage {
+                Text("Avg")
+                    .frame(width: 48, alignment: .trailing)
+            }
             if isTeam {
-                Text("W")
-                    .frame(width: 32, alignment: .trailing)
+                if !showsAverage {
+                    Text("W")
+                        .frame(width: 32, alignment: .trailing)
+                }
                 Text("Rds")
                     .frame(width: 36, alignment: .trailing)
             }
@@ -502,22 +509,32 @@ struct SeriesLeaderboardView: View {
     }
 
     @ViewBuilder
-    private func standingRow(_ standing: SeriesStanding, rank: Int, isTeam: Bool) -> some View {
+    private func standingRow(
+        _ standing: SeriesStanding,
+        rank: Int,
+        isTeam: Bool,
+        showsAverage: Bool
+    ) -> some View {
         if isTeam {
             Button {
                 Haptics.fire(.light)
                 selectedTeamStanding = standing
             } label: {
-                standingRowContent(standing, rank: rank, isTeam: true)
+                standingRowContent(standing, rank: rank, isTeam: true, showsAverage: showsAverage)
             }
             .buttonStyle(.plain)
             .accessibilityLabel("View details for \(standing.competitorName)")
         } else {
-            standingRowContent(standing, rank: rank, isTeam: false)
+            standingRowContent(standing, rank: rank, isTeam: false, showsAverage: showsAverage)
         }
     }
 
-    private func standingRowContent(_ standing: SeriesStanding, rank: Int, isTeam: Bool) -> some View {
+    private func standingRowContent(
+        _ standing: SeriesStanding,
+        rank: Int,
+        isTeam: Bool,
+        showsAverage: Bool
+    ) -> some View {
         HStack(spacing: 0) {
             Text("\(rank)")
                 .frame(width: 28, alignment: .center)
@@ -540,15 +557,25 @@ struct SeriesLeaderboardView: View {
             .alignLeading()
 
             Text(standing.totalPoints.seriesPointsDisplayString)
-                .frame(width: isTeam ? 44 : 64, alignment: .trailing)
+                .frame(width: isTeam ? 44 : (showsAverage ? 52 : 64), alignment: .trailing)
                 .fontStyle(kFontName, size: 14, weight: .semibold)
                 .foregroundStyle(palette.foregroundColor)
 
-            if isTeam {
-                Text("\(standing.wins)")
-                    .frame(width: 32, alignment: .trailing)
-                    .fontStyle(kFontName, size: 13, weight: .regular)
+            if showsAverage {
+                Text(formattedTiebreakAverage(for: standing))
+                    .frame(width: 48, alignment: .trailing)
+                    .fontStyle(kFontName, size: 13, weight: .semibold)
                     .foregroundStyle(Color.neutral)
+                    .monospacedDigit()
+            }
+
+            if isTeam {
+                if !showsAverage {
+                    Text("\(standing.wins)")
+                        .frame(width: 32, alignment: .trailing)
+                        .fontStyle(kFontName, size: 13, weight: .regular)
+                        .foregroundStyle(Color.neutral)
+                }
 
                 Text("\(standing.roundsCounted)")
                     .frame(width: 36, alignment: .trailing)
@@ -561,6 +588,16 @@ struct SeriesLeaderboardView: View {
             }
         }
         .padding(.vertical, 6)
+    }
+
+    private func primaryTiebreakSummary(for standing: SeriesStanding) -> SeriesStandingTiebreakSummary? {
+        standing.tiebreakSummaries?.first
+    }
+
+    private func formattedTiebreakAverage(for standing: SeriesStanding) -> String {
+        guard let summary = primaryTiebreakSummary(for: standing),
+              summary.isEligible else { return "—" }
+        return SeriesStandingsAverageFormatter.string(summary.average)
     }
 
     private func individualStatsRow(_ row: SeriesIndividualStatsRow, rank: Int) -> some View {
@@ -710,6 +747,9 @@ private struct SeriesTeamDetailSheet: View {
                 VStack(spacing: 16) {
                     if let insight {
                         overviewSection(insight)
+                        if let tiebreakSummary {
+                            tiebreakSection(tiebreakSummary)
+                        }
                         topContributorSection(insight)
                         playerFormSection(insight)
                         scheduleSection(insight)
@@ -758,6 +798,74 @@ private struct SeriesTeamDetailSheet: View {
         .padding(16)
         .background(palette.cardColor)
         .cornerRadius(20)
+    }
+
+    private var tiebreakSummary: SeriesStandingTiebreakSummary? {
+        standing.tiebreakSummaries?.first
+    }
+
+    private func tiebreakSection(_ summary: SeriesStandingTiebreakSummary) -> some View {
+        let averageText = SeriesStandingsAverageFormatter.string(summary.average)
+
+        return VStack(alignment: .leading, spacing: 12) {
+            sectionTitle("Scoring Average")
+
+            HStack(alignment: .firstTextBaseline, spacing: 12) {
+                VStack(alignment: .leading, spacing: 4) {
+                    Text(tiebreakComponentTitle(summary.scoreComponent))
+                        .fontStyle(kFontName, size: 13, weight: .medium)
+                        .foregroundStyle(palette.foregroundColor)
+                    Text(summary.isEligible ? "Eligible tiebreak" : "Needs \(summary.minimumEligibleRounds) rounds")
+                        .fontStyle(kFontName, size: 11, weight: .regular)
+                        .foregroundStyle(Color.neutral)
+                }
+                Spacer(minLength: 0)
+                Text(averageText)
+                    .fontStyle(kFontName, size: 24, weight: .semibold)
+                    .foregroundStyle(palette.foregroundColor)
+                    .monospacedDigit()
+            }
+            .padding(12)
+            .background(palette.cardEmbeddedRowBackground)
+            .clipShape(.rect(cornerRadius: 8))
+
+            ForEach(summary.roundValues, id: \.seriesRoundID) { value in
+                HStack(spacing: 12) {
+                    VStack(alignment: .leading, spacing: 2) {
+                        Text(roundTitle(for: value.seriesRoundID))
+                            .fontStyle(kFontName, size: 13, weight: .medium)
+                            .foregroundStyle(palette.foregroundColor)
+                            .lineLimit(1)
+                        Text("\(value.expectedHoleCount) holes")
+                            .fontStyle(kFontName, size: 11, weight: .regular)
+                            .foregroundStyle(Color.neutral)
+                    }
+                    Spacer(minLength: 0)
+                    Text(SeriesStandingsAverageFormatter.string(value.value))
+                        .fontStyle(kFontName, size: 14, weight: .semibold)
+                        .foregroundStyle(palette.foregroundColor)
+                        .monospacedDigit()
+                }
+                .padding(.horizontal, 12)
+                .padding(.vertical, 8)
+            }
+        }
+        .padding(16)
+        .background(palette.cardColor)
+        .cornerRadius(20)
+    }
+
+    private func roundTitle(for seriesRoundID: String) -> String {
+        viewModel.rounds.first(where: { $0.id == seriesRoundID })?.title ?? "Round"
+    }
+
+    private func tiebreakComponentTitle(_ component: SeriesTiebreakScoreComponent) -> String {
+        switch component {
+        case .total: return "Scoring total average"
+        case .rawStrokes: return "Raw stroke average"
+        case .netStrokes: return "Net stroke average"
+        case .scoreToPar: return "Average score to par"
+        }
     }
 
     private func topContributorSection(_ insight: SeriesTeamInsight) -> some View {
