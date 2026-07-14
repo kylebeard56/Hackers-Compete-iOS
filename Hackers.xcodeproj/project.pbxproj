@@ -153,6 +153,7 @@
 		B4A0F00F30A0000100ABCDEF /* SeriesStandingsRollout.swift in Sources */ = {isa = PBXBuildFile; fileRef = B4A0F01030A0000100ABCDEF /* SeriesStandingsRollout.swift */; };
 		B4A0F01130A0000100ABCDEF /* SeriesStandingsSettingsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = B4A0F01230A0000100ABCDEF /* SeriesStandingsSettingsView.swift */; };
 		B4A0F01330A0000100ABCDEF /* SeriesStandingsMigration.swift in Sources */ = {isa = PBXBuildFile; fileRef = B4A0F01430A0000100ABCDEF /* SeriesStandingsMigration.swift */; };
+		B4A0F01530A0000100ABCDEF /* SeriesRuntimeStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = B4A0F01630A0000100ABCDEF /* SeriesRuntimeStore.swift */; };
 		B4A1001B2F30C001005FAF67 /* PlayerScoringRow.swift in Sources */ = {isa = PBXBuildFile; fileRef = B4A1001A2F30C001005FAF67 /* PlayerScoringRow.swift */; };
 		B4A1001D2F30C001005FAF67 /* LeaderboardRowView.swift in Sources */ = {isa = PBXBuildFile; fileRef = B4A1001C2F30C001005FAF67 /* LeaderboardRowView.swift */; };
 		B4A100212F30C001005FAF67 /* ScorecardHoleCell.swift in Sources */ = {isa = PBXBuildFile; fileRef = B4A100202F30C001005FAF67 /* ScorecardHoleCell.swift */; };
@@ -534,6 +535,7 @@
 		B4A0F01030A0000100ABCDEF /* SeriesStandingsRollout.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SeriesStandingsRollout.swift; sourceTree = "<group>"; };
 		B4A0F01230A0000100ABCDEF /* SeriesStandingsSettingsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SeriesStandingsSettingsView.swift; sourceTree = "<group>"; };
 		B4A0F01430A0000100ABCDEF /* SeriesStandingsMigration.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SeriesStandingsMigration.swift; sourceTree = "<group>"; };
+		B4A0F01630A0000100ABCDEF /* SeriesRuntimeStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SeriesRuntimeStore.swift; sourceTree = "<group>"; };
 		B4A1001A2F30C001005FAF67 /* PlayerScoringRow.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PlayerScoringRow.swift; sourceTree = "<group>"; };
 		B4A1001C2F30C001005FAF67 /* LeaderboardRowView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LeaderboardRowView.swift; sourceTree = "<group>"; };
 		B4A100202F30C001005FAF67 /* ScorecardHoleCell.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ScorecardHoleCell.swift; sourceTree = "<group>"; };
@@ -1119,6 +1121,7 @@
 				B4A0F00E30A0000100ABCDEF /* SeriesCanonicalStandingsProjector.swift */,
 				B4A0F01030A0000100ABCDEF /* SeriesStandingsRollout.swift */,
 				B4A0F01430A0000100ABCDEF /* SeriesStandingsMigration.swift */,
+				B4A0F01630A0000100ABCDEF /* SeriesRuntimeStore.swift */,
 				B470A0012F68231500B96E60 /* SeriesRoundCreationMapping.swift */,
 				B45843492F68231500B96E60 /* SeriesRoundCreationService.swift */,
 				B40A1A3F2F851B2300C0FF09 /* SeriesRoundSyncPlanning.swift */,
@@ -2073,6 +2076,7 @@
 				B4A0F00D30A0000100ABCDEF /* SeriesCanonicalStandingsProjector.swift in Sources */,
 				B4A0F00F30A0000100ABCDEF /* SeriesStandingsRollout.swift in Sources */,
 				B4A0F01330A0000100ABCDEF /* SeriesStandingsMigration.swift in Sources */,
+				B4A0F01530A0000100ABCDEF /* SeriesRuntimeStore.swift in Sources */,
 				B40A1A512F851B2300C0FF09 /* SeriesRoundTileCopy.swift in Sources */,
 				B4F971E52E7AC94300B92463 /* InfoBanner.swift in Sources */,
 				B4CC84C22EE1F552007B011E /* GameLobby+Format.swift in Sources */,

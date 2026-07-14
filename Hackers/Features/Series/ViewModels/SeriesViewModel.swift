@@ -3,8 +3,6 @@
 //  Hackers
 //
 
-import Firebase
-import FirebaseFirestoreCombineSwift
 import SwiftUI
 
 struct SeriesScoreCorrectionChange: Identifiable, Hashable {
@@ -1587,7 +1585,6 @@ final class SeriesViewModel: ObservableObject, Loggable {
     @Published private(set) var linkedConfigurationDivergences: [String: SeriesRoundConfigurationDivergence] = [:]
     private let snapshotRepository: SeriesRoundSnapshotRepository
     private let standingsPublicationService: SeriesStandingsPublicationService
-    private var linkedRoundListeners: [String: ListenerRegistration] = [:]
     private var canonicalProcessingStates: [String: SeriesRoundProcessingState] = [:]
     private var canonicalRoundResults: [String: SeriesRoundResult] = [:]
     private var legacyStandings: [SeriesStanding] = []
@@ -1615,18 +1612,31 @@ final class SeriesViewModel: ObservableObject, Loggable {
     var currentUserID: String?
     var currentPlayerID: String?
     private var isHydratingHandicapScoreMetadata = false
-    private var realtimeSourceSeriesID: String?
-    private var seriesSourceListener: ListenerRegistration?
-    private var seriesRoundsSourceListener: ListenerRegistration?
-    private var canonicalStatesSourceListener: ListenerRegistration?
-    private var canonicalResultsSourceListener: ListenerRegistration?
+    private lazy var realtimeSourceStore = SeriesRealtimeSourceStore(
+        callbacks: SeriesRealtimeSourceStore.Callbacks(
+            didReceiveSeries: { [weak self] updated in
+                await self?.applyRealtimeSeries(updated)
+            },
+            didReceiveRounds: { [weak self] updated in
+                await self?.applyRealtimeSeriesRounds(updated)
+            },
+            didReceiveCanonicalStates: { [weak self] states in
+                self?.applyRealtimeCanonicalStates(states)
+            },
+            didReceiveCanonicalResults: { [weak self] results in
+                self?.applyRealtimeCanonicalResults(results)
+            },
+            didReceiveLinkedRound: { [weak self] round in
+                await self?.applyFreshLinkedRound(round)
+            },
+            didFail: { [weak self] message, error in
+                self?.addBreadcrumb(level: .error, message: message, error: error)
+            }
+        )
+    )
 
     private var activeRealtimeListenerCount: Int {
-        (seriesSourceListener == nil ? 0 : 1)
-            + (seriesRoundsSourceListener == nil ? 0 : 1)
-            + (canonicalStatesSourceListener == nil ? 0 : 1)
-            + (canonicalResultsSourceListener == nil ? 0 : 1)
-            + linkedRoundListeners.count
+        realtimeSourceStore.activeListenerCount
     }
 
     init(
@@ -1635,14 +1645,6 @@ final class SeriesViewModel: ObservableObject, Loggable {
     ) {
         self.snapshotRepository = snapshotRepository ?? SeriesRoundSnapshotRepository()
         self.standingsPublicationService = standingsPublicationService ?? SeriesStandingsPublicationService()
-    }
-
-    deinit {
-        seriesSourceListener?.remove()
-        seriesRoundsSourceListener?.remove()
-        canonicalStatesSourceListener?.remove()
-        canonicalResultsSourceListener?.remove()
-        linkedRoundListeners.values.forEach { $0.remove() }
     }
 
     var isCommissioner: Bool {
@@ -2036,9 +2038,18 @@ final class SeriesViewModel: ObservableObject, Loggable {
     }
 
     func linkedRoundNavigationTarget(for seriesRound: SeriesRound) -> LinkedRoundNavigationTarget {
-        guard let roundID = seriesRound.roundID,
-              let linked = linkedRounds[roundID] else {
+        guard let roundID = seriesRound.roundID else {
             return .lobby
+        }
+        guard let linked = linkedRounds[roundID] else {
+            switch seriesRound.status {
+            case .complete:
+                return .roundOutcome
+            case .live:
+                return .liveRound
+            case .planned, .lobby, .canceled:
+                return .lobby
+            }
         }
         if linked.status == .paused {
             return .roundOutcome
@@ -2093,19 +2104,27 @@ final class SeriesViewModel: ObservableObject, Loggable {
     /// Returns `nil` when there is no linked round or the current player cannot be identified.
     func currentUserScoreContext(for seriesRound: SeriesRound) -> (played: Bool, scoreLabel: String?)? {
         guard let roundID = seriesRound.roundID,
-              let linked = linkedRounds[roundID],
               let playerID = currentPlayerID else { return nil }
+        let linked = linkedRounds[roundID]
+        let persistedScore = currentMemberID.flatMap { memberID in
+            handicapScores.first { $0.sourceRoundID == roundID && $0.memberID == memberID }
+        }
+
+        guard let linked else {
+            guard seriesRound.status == .complete, let persistedScore else { return nil }
+            return (played: true, scoreLabel: scoreLabel(for: persistedScore))
+        }
 
         let played = linked.players.contains(playerID)
 
-        guard played,
-              let memberID = currentMemberID,
-              let hs = handicapScores.first(where: { $0.sourceRoundID == roundID && $0.memberID == memberID })
-        else { return (played: played, scoreLabel: nil) }
+        guard played, let persistedScore else { return (played: played, scoreLabel: nil) }
+        return (played: true, scoreLabel: scoreLabel(for: persistedScore))
+    }
 
-        let diff = Int(hs.score) - Int(hs.par)
+    private func scoreLabel(for handicapScore: SeriesHandicapScore) -> String {
+        let diff = Int(handicapScore.score) - Int(handicapScore.par)
         let label = diff == 0 ? "E" : diff > 0 ? "+\(diff)" : "\(diff)"
-        return (played: true, scoreLabel: label)
+        return label
     }
 
     /// Force-completes all remaining players for a live round (commissioner action).
@@ -2379,7 +2398,7 @@ final class SeriesViewModel: ObservableObject, Loggable {
     func load(seriesID: String) async {
         let fullLoadStartedAt = ContinuousClock.now
         let coreLoadStartedAt = fullLoadStartedAt
-        if realtimeSourceSeriesID != seriesID {
+        if realtimeSourceStore.currentSeriesID != seriesID {
             stopRealtimeSourceListeners()
         }
         isLoading = true
@@ -2488,7 +2507,6 @@ final class SeriesViewModel: ObservableObject, Loggable {
         await syncLinkedRoundState(persistingStatusesFor: refreshedRoundIDs)
         await loadAttendanceForRSVPEligibleRounds()
         recomputeAllHandicaps()
-        await hydrateRoundHandicapScoreMetadataIfNeeded()
         await backfillOfflineMemberUserIDs()
         await createBuiltInScoringProfilesIfNeeded()
         SeriesPerformanceRecorder.shared.record(
@@ -2501,171 +2519,93 @@ final class SeriesViewModel: ObservableObject, Loggable {
     }
 
     private func startRealtimeSourceListeners(for seriesID: String) {
-        guard realtimeSourceSeriesID != seriesID
-                || seriesSourceListener == nil
-                || seriesRoundsSourceListener == nil else {
-            return
-        }
-        stopRealtimeSourceListeners()
-        realtimeSourceSeriesID = seriesID
-
-        seriesSourceListener = Firestore.firestore()
-            .collection(Collections.series.name)
-            .document(seriesID)
-            .addSnapshotListener(includeMetadataChanges: true) { [weak self] snapshot, error in
-                if let error {
-                    Task { @MainActor [weak self] in
-                        self?.addBreadcrumb(level: .error, message: "Series source listener failed", error: error)
-                    }
-                    return
-                }
-                guard let snapshot, snapshot.exists, !snapshot.metadata.hasPendingWrites else { return }
-                do {
-                    let updated = try snapshot.data(as: Series.self)
-                    Task { @MainActor [weak self] in
-                        guard let self, self.realtimeSourceSeriesID == seriesID else { return }
-                        let previousSettings = self.series.settings
-                        self.series = updated
-                        if previousSettings != updated.settings {
-                            self.standingsMigrationAssessment = nil
-                        }
-                        self.refreshLinkedConfigurationDivergences()
-                        self.configureCanonicalSourceListeners(for: seriesID)
-                        self.standings = self.resolvedStandings(legacyStandings: self.legacyStandings)
-                        if previousSettings != updated.settings {
-                            self.recomputeAllHandicaps()
-                            await self.loadAttendanceForRSVPEligibleRounds()
-                        }
-                    }
-                } catch {
-                    Task { @MainActor [weak self] in
-                        self?.addBreadcrumb(level: .error, message: "Series source listener decode failed", error: error)
-                    }
-                }
-            }
-
-        seriesRoundsSourceListener = Firestore.firestore()
-            .collection(Collections.series.name)
-            .document(seriesID)
-            .collection(SeriesSubcollection.rounds.rawValue)
-            .order(by: "index")
-            .addSnapshotListener(includeMetadataChanges: true) { [weak self] snapshot, error in
-                if let error {
-                    Task { @MainActor [weak self] in
-                        self?.addBreadcrumb(level: .error, message: "Series rounds source listener failed", error: error)
-                    }
-                    return
-                }
-                guard let snapshot, !snapshot.metadata.hasPendingWrites else { return }
-                do {
-                    let updated = try snapshot.documents
-                        .map { try $0.data(as: SeriesRound.self) }
-                        .sorted {
-                            if $0.index != $1.index { return $0.index < $1.index }
-                            return $0.id < $1.id
-                        }
-                    Task { @MainActor [weak self] in
-                        guard let self, self.realtimeSourceSeriesID == seriesID else { return }
-                        await self.applyRealtimeSeriesRounds(updated)
-                    }
-                } catch {
-                    Task { @MainActor [weak self] in
-                        self?.addBreadcrumb(level: .error, message: "Series rounds source listener decode failed", error: error)
-                    }
-                }
-            }
-
-        configureCanonicalSourceListeners(for: seriesID)
+        realtimeSourceStore.start(
+            seriesID: seriesID,
+            canonicalStandingsEnabled: series.settings.standingsReadAuthority == .canonicalWhenReady
+        )
     }
 
-    private func configureCanonicalSourceListeners(for seriesID: String) {
-        guard series.settings.standingsReadAuthority == .canonicalWhenReady else {
-            stopCanonicalSourceListeners()
+    private func configureCanonicalSourceListeners(for _: String) {
+        let canonicalEnabled = series.settings.standingsReadAuthority == .canonicalWhenReady
+        realtimeSourceStore.configureCanonicalListeners(enabled: canonicalEnabled)
+        if !canonicalEnabled {
             standings = legacyStandings
             standingsReadSource = .legacy
-            return
         }
-        guard canonicalStatesSourceListener == nil, canonicalResultsSourceListener == nil else { return }
-
-        let seriesDocument = Firestore.firestore()
-            .collection(Collections.series.name)
-            .document(seriesID)
-        canonicalStatesSourceListener = seriesDocument
-            .collection(SeriesSubcollection.roundProcessingStates.rawValue)
-            .addSnapshotListener(includeMetadataChanges: true) { [weak self] snapshot, error in
-                if let error {
-                    Task { @MainActor [weak self] in
-                        self?.addBreadcrumb(level: .error, message: "Canonical processing listener failed", error: error)
-                    }
-                    return
-                }
-                guard let snapshot, !snapshot.metadata.hasPendingWrites else { return }
-                do {
-                    let states = try snapshot.documents.map { try $0.data(as: SeriesRoundProcessingState.self) }
-                    Task { @MainActor [weak self] in
-                        guard let self, self.realtimeSourceSeriesID == seriesID else { return }
-                        self.canonicalProcessingStates = Dictionary(uniqueKeysWithValues: states.map { ($0.id, $0) })
-                        self.standingsMigrationAssessment = nil
-                        self.standings = self.resolvedStandings(legacyStandings: self.legacyStandings)
-                    }
-                } catch {
-                    Task { @MainActor [weak self] in
-                        self?.addBreadcrumb(level: .error, message: "Canonical processing listener decode failed", error: error)
-                    }
-                }
-            }
-        canonicalResultsSourceListener = seriesDocument
-            .collection(SeriesSubcollection.roundResults.rawValue)
-            .addSnapshotListener(includeMetadataChanges: true) { [weak self] snapshot, error in
-                if let error {
-                    Task { @MainActor [weak self] in
-                        self?.addBreadcrumb(level: .error, message: "Canonical results listener failed", error: error)
-                    }
-                    return
-                }
-                guard let snapshot, !snapshot.metadata.hasPendingWrites else { return }
-                do {
-                    let results = try snapshot.documents.map { try $0.data(as: SeriesRoundResult.self) }
-                    Task { @MainActor [weak self] in
-                        guard let self, self.realtimeSourceSeriesID == seriesID else { return }
-                        self.canonicalRoundResults = Dictionary(uniqueKeysWithValues: results.map { ($0.id, $0) })
-                        self.standingsMigrationAssessment = nil
-                        self.standings = self.resolvedStandings(legacyStandings: self.legacyStandings)
-                    }
-                } catch {
-                    Task { @MainActor [weak self] in
-                        self?.addBreadcrumb(level: .error, message: "Canonical results listener decode failed", error: error)
-                    }
-                }
-            }
-    }
-
-    private func stopCanonicalSourceListeners() {
-        canonicalStatesSourceListener?.remove()
-        canonicalResultsSourceListener?.remove()
-        canonicalStatesSourceListener = nil
-        canonicalResultsSourceListener = nil
     }
 
     private func stopRealtimeSourceListeners() {
-        seriesSourceListener?.remove()
-        seriesRoundsSourceListener?.remove()
-        seriesSourceListener = nil
-        seriesRoundsSourceListener = nil
-        stopCanonicalSourceListeners()
+        realtimeSourceStore.stop()
         stopLinkedRoundListeners()
-        realtimeSourceSeriesID = nil
+    }
+
+    private func applyRealtimeSeries(_ updated: Series) async {
+        let previousSettings = series.settings
+        series = updated
+
+        if previousSettings != updated.settings {
+            standingsMigrationAssessment = nil
+            refreshLinkedConfigurationDivergences()
+            configureCanonicalSourceListeners(for: updated.id)
+            standings = resolvedStandings(legacyStandings: legacyStandings)
+        }
+        if previousSettings.handicapConfig != updated.settings.handicapConfig {
+            recomputeAllHandicaps()
+        }
+        if previousSettings.isAttendanceEnabled != updated.settings.isAttendanceEnabled {
+            await loadAttendanceForRSVPEligibleRounds()
+        }
+    }
+
+    private func applyRealtimeCanonicalStates(_ states: [SeriesRoundProcessingState]) {
+        canonicalProcessingStates = Dictionary(uniqueKeysWithValues: states.map { ($0.id, $0) })
+        standingsMigrationAssessment = nil
+        standings = resolvedStandings(legacyStandings: legacyStandings)
+    }
+
+    private func applyRealtimeCanonicalResults(_ results: [SeriesRoundResult]) {
+        canonicalRoundResults = Dictionary(uniqueKeysWithValues: results.map { ($0.id, $0) })
+        standingsMigrationAssessment = nil
+        standings = resolvedStandings(legacyStandings: legacyStandings)
     }
 
     private func applyRealtimeSeriesRounds(_ updated: [SeriesRound]) async {
+        let startedAt = ContinuousClock.now
+        let plan = SeriesRuntimeSubscriptionPolicy.invalidationPlan(
+            previous: rounds,
+            updated: updated,
+            attendanceEnabled: series.settings.isAttendanceEnabled
+        )
+        defer {
+            SeriesPerformanceRecorder.shared.record(
+                .roundsInvalidation,
+                startedAt: startedAt,
+                activeListenerCount: activeRealtimeListenerCount,
+                itemCount: updated.count,
+                context: plan.hasSemanticChanges ? "changed" : "no_op"
+            )
+        }
+        guard plan.hasSemanticChanges else { return }
+
         standingsMigrationAssessment = nil
         rounds = updated
-        recomputeAllHandicaps()
 
-        let nextLinkedRoundIDs = Set(updated.compactMap(\.roundID).filter(\.isPopulated))
-        let refreshedRoundIDs = await loadLinkedRounds(for: nextLinkedRoundIDs)
-        await syncLinkedRoundState(persistingStatusesFor: refreshedRoundIDs)
-        await loadAttendanceForRSVPEligibleRounds()
+        if plan.addedActiveLinkedRoundIDs.isPopulated || plan.removedActiveLinkedRoundIDs.isPopulated {
+            let refreshedRoundIDs = await loadLinkedRounds(for: plan.activeLinkedRoundIDs)
+            await syncLinkedRoundState(persistingStatusesFor: refreshedRoundIDs)
+        } else if plan.shouldRefreshConfigurationDivergences {
+            refreshLinkedConfigurationDivergences()
+        }
+
+        for roundID in plan.removedAttendanceRoundIDs {
+            attendanceByRound[roundID] = nil
+        }
+        if plan.addedAttendanceRoundIDs.isPopulated {
+            await loadAttendanceForRSVPEligibleRounds(roundIDs: plan.addedAttendanceRoundIDs)
+        }
+        if plan.shouldResolveStandings {
+            standings = resolvedStandings(legacyStandings: legacyStandings)
+        }
     }
 
     private func backfillOfflineMemberUserIDs() async {
@@ -2694,7 +2634,7 @@ final class SeriesViewModel: ObservableObject, Loggable {
 
     @discardableResult
     private func loadLinkedRounds() async -> Set<String> {
-        await loadLinkedRounds(for: Set(rounds.compactMap(\.roundID).filter(\.isPopulated)))
+        await loadLinkedRounds(for: SeriesRuntimeSubscriptionPolicy.activeLinkedRoundIDs(in: rounds))
     }
 
     @discardableResult
@@ -2734,53 +2674,22 @@ final class SeriesViewModel: ObservableObject, Loggable {
     }
 
     private func reconcileLinkedRoundListeners(for roundIDs: Set<String>) {
-        for staleRoundID in linkedRoundListeners.keys where !roundIDs.contains(staleRoundID) {
-            linkedRoundListeners[staleRoundID]?.remove()
-            linkedRoundListeners[staleRoundID] = nil
+        let staleRoundIDs = realtimeSourceStore.reconcileLinkedRoundListeners(roundIDs: roundIDs)
+        for staleRoundID in staleRoundIDs {
             linkedRounds[staleRoundID] = nil
             snapshotRepository.invalidate(roundID: staleRoundID)
-        }
-
-        for roundID in roundIDs where linkedRoundListeners[roundID] == nil {
-            linkedRoundListeners[roundID] = Firestore.firestore()
-                .collection(Collections.rounds.name)
-                .document(roundID)
-                .addSnapshotListener(includeMetadataChanges: true) { [weak self] snapshot, error in
-                    if let error {
-                        Task { @MainActor [weak self] in
-                            self?.addBreadcrumb(level: .error, message: "Linked round listener failed", error: error)
-                        }
-                        return
-                    }
-
-                    guard let snapshot, snapshot.exists, !snapshot.metadata.hasPendingWrites else { return }
-
-                    do {
-                        let linkedRound = try snapshot.data(as: Round.self)
-                        Task { @MainActor [weak self] in
-                            guard let self,
-                                  self.linkedRoundListeners[roundID] != nil,
-                                  self.rounds.contains(where: { $0.roundID == linkedRound.id })
-                            else { return }
-                            await self.applyFreshLinkedRound(linkedRound)
-                        }
-                    } catch {
-                        Task { @MainActor [weak self] in
-                            self?.addBreadcrumb(level: .error, message: "Linked round listener decode failed", error: error)
-                        }
-                    }
-                }
         }
     }
 
     private func stopLinkedRoundListeners() {
-        linkedRoundListeners.values.forEach { $0.remove() }
-        linkedRoundListeners = [:]
+        _ = realtimeSourceStore.reconcileLinkedRoundListeners(roundIDs: [])
+        linkedRounds = [:]
         linkedConfigurationDivergences = [:]
         snapshotRepository.invalidateAll()
     }
 
     private func applyFreshLinkedRound(_ linkedRound: Round) async {
+        guard rounds.contains(where: { $0.roundID == linkedRound.id }) else { return }
         standingsMigrationAssessment = nil
         linkedRounds[linkedRound.id] = linkedRound
         refreshLinkedConfigurationDivergences()
@@ -2792,7 +2701,7 @@ final class SeriesViewModel: ObservableObject, Loggable {
         isRSVPEligible(for: seriesRound)
     }
 
-    func loadAttendanceForRSVPEligibleRounds() async {
+    func loadAttendanceForRSVPEligibleRounds(roundIDs requestedRoundIDs: Set<String>? = nil) async {
         let startedAt = ContinuousClock.now
         guard series.settings.isAttendanceEnabled else {
             attendanceByRound = [:]
@@ -2804,9 +2713,11 @@ final class SeriesViewModel: ObservableObject, Loggable {
             return
         }
 
-        var dictionary = attendanceByRound
         let eligibleRounds = rounds.filter(shouldPreloadAttendance)
-        for round in eligibleRounds {
+        let eligibleRoundIDs = Set(eligibleRounds.map(\.id))
+        let roundsToLoad = eligibleRounds.filter { requestedRoundIDs?.contains($0.id) ?? true }
+        var dictionary = attendanceByRound.filter { eligibleRoundIDs.contains($0.key) }
+        for round in roundsToLoad {
             dictionary[round.id] = await FirebaseService.shared.fetchSeriesRoundAttendance(
                 seriesID: seriesID,
                 seriesRoundID: round.id
@@ -2816,7 +2727,7 @@ final class SeriesViewModel: ObservableObject, Loggable {
         SeriesPerformanceRecorder.shared.record(
             .attendancePreload,
             startedAt: startedAt,
-            logicalReadCount: eligibleRounds.count,
+            logicalReadCount: roundsToLoad.count,
             itemCount: dictionary.values.reduce(0) { $0 + $1.count },
             context: seriesID
         )
@@ -4973,67 +4884,23 @@ final class SeriesViewModel: ObservableObject, Loggable {
     // MARK: - Handicap
 
     func recomputeAllHandicaps() {
-        memberHandicaps = Dictionary(uniqueKeysWithValues: eligibleMembers.map { ($0.id, SeriesMemberHandicap(id: $0.id, memberID: $0.id)) })
-        memberHandicapScoreSelections = [:]
-
-        guard series.handicapConfig.isEnabled else { return }
-        let config = series.handicapConfig.config.toConfig()
-        let overridesByMember = Dictionary(uniqueKeysWithValues: handicapOverrides.map { ($0.memberID, $0) })
-
-        var selections: [String: (poolIDs: Set<String>, countingIDs: Set<String>)] = [:]
-
-        for member in eligibleMembers {
-            let samples: [HandicapScoreSample] = handicapScores
-                .filter { $0.memberID == member.id && $0.countsTowardHandicapIndex }
-                .map {
-                    HandicapScoreSample(
-                        id: $0.id,
-                        gross: handicapGrossForIndex($0, config: config),
-                        recordedAt: $0.recordedAt,
-                        sortOrder: $0.sortOrder
-                    )
-                }
-
-            let result = computeHandicapIndex(samples: samples, config: config)
-            let override = overridesByMember[member.id]
-            memberHandicaps[member.id] = SeriesMemberHandicap(
-                id: member.id,
-                memberID: member.id,
-                computedIndex: result?.handicapIndex,
-                overrideIndex: override?.overrideIndex,
-                isOverridden: override?.isEnabled == true
-            )
-            if let result {
-                selections[member.id] = (result.poolSampleIDs, result.selectedSampleIDs)
-            } else {
-                selections[member.id] = ([], [])
-            }
+        let startedAt = ContinuousClock.now
+        let projection = SeriesHandicapProjectionService.project(
+            members: eligibleMembers,
+            scores: handicapScores,
+            overrides: handicapOverrides,
+            handicapConfig: series.handicapConfig
+        )
+        memberHandicaps = projection.handicapsByMemberID
+        memberHandicapScoreSelections = projection.scoreSelectionsByMemberID.mapValues {
+            (poolIDs: $0.poolIDs, countingIDs: $0.countingIDs)
         }
-
-        memberHandicapScoreSelections = selections
-    }
-
-    private func handicapGrossForIndex(_ score: SeriesHandicapScore, config: HandicapComputationConfig) -> Double {
-        if score.source == .baseline, score.baselineStrokeBasis == .eighteenHole {
-            return normalizedBaselineGrossForHandicapIndex(
-                gross: score.score,
-                par: score.par,
-                defaultParForIndex: config.defaultParForIndex
-            ) ?? score.score
-        }
-
-        guard config.usesCourseRatingSlopeAdjustment, score.source == .round else { return score.score }
-        guard let rating = score.courseRating,
-              let slope = score.courseSlope,
-              let normalized = normalizedGrossForHandicapIndex(
-                gross: score.score,
-                rating: rating,
-                slope: slope,
-                defaultParForIndex: config.defaultParForIndex
-              ) else {
-            return score.score
-        }
-        return normalized
+        SeriesPerformanceRecorder.shared.record(
+            .handicapProjection,
+            startedAt: startedAt,
+            itemCount: handicapScores.count,
+            context: seriesID
+        )
     }
 
     func handicapScoreAdjustmentSubtitle(for score: SeriesHandicapScore) -> String? {

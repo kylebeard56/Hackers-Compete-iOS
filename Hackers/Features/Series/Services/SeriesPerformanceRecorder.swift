@@ -12,6 +12,8 @@ enum SeriesPerformanceOperation: String, Sendable {
     case linkedRoundRootsLoad = "linked_round_roots_load"
     case roundSnapshotLoad = "round_snapshot_load"
     case attendancePreload = "attendance_preload"
+    case handicapProjection = "handicap_projection"
+    case roundsInvalidation = "rounds_invalidation"
     case roundSync = "round_sync"
     case automaticAwardsRefresh = "automatic_awards_refresh"
     case standingsRebuild = "standings_rebuild"
