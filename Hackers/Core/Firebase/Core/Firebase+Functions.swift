@@ -17,8 +17,70 @@ extension FirebaseService {
     fileprivate enum FunctionName: String {
         case deleteFullRound = "deleteFullRound"
         case clearAllPlayerHistory = "clearAllPlayerHistory"
+        case createSeriesV2 = "createSeriesV2"
+        case createSeriesRoundV2 = "createSeriesRoundV2"
+        case transitionRoundV2 = "transitionRoundV2"
+        case applySeriesDefaultsV2 = "applySeriesDefaultsV2"
+        case adoptRoundIntoSeriesV2 = "adoptRoundIntoSeriesV2"
+        case setSeriesMigrationPhaseV2 = "setSeriesMigrationPhaseV2"
 
         var name: String { self.rawValue }
+    }
+}
+
+extension FirebaseService {
+    func createSeriesV2(_ command: CreateSeriesV2Command) async -> Result<V2CommandResponse, Error> {
+        await callV2Command(.createSeriesV2, payload: command)
+    }
+
+    func createSeriesRoundV2(_ command: CreateSeriesRoundV2Command) async -> Result<V2CommandResponse, Error> {
+        await callV2Command(.createSeriesRoundV2, payload: command)
+    }
+
+    func transitionRoundV2(_ command: TransitionRoundV2Command) async -> Result<V2CommandResponse, Error> {
+        await callV2Command(.transitionRoundV2, payload: command)
+    }
+
+    func applySeriesDefaultsV2(_ command: ApplySeriesDefaultsV2Command) async -> Result<V2CommandResponse, Error> {
+        await callV2Command(.applySeriesDefaultsV2, payload: command)
+    }
+
+    func adoptRoundIntoSeriesV2(_ command: AdoptRoundIntoSeriesV2Command) async -> Result<V2CommandResponse, Error> {
+        await callV2Command(.adoptRoundIntoSeriesV2, payload: command)
+    }
+
+    func setSeriesMigrationPhaseV2(
+        _ command: SetSeriesMigrationPhaseV2Command
+    ) async -> Result<V2CommandResponse, Error> {
+        await callV2Command(.setSeriesMigrationPhaseV2, payload: command)
+    }
+
+    private func callV2Command<Payload: Encodable>(
+        _ functionName: FunctionName,
+        payload: Payload
+    ) async -> Result<V2CommandResponse, Error> {
+        addBreadcrumb(message: "\(#function), command: \(functionName.name)")
+        do {
+            let result = try await functions.httpsCallable(functionName.name).call(try payload.toDictionary())
+            guard let value = result.data as? [String: Any],
+                  let ok = value["ok"] as? Bool,
+                  let commandID = value["command_id"] as? String,
+                  let entityID = value["entity_id"] as? String,
+                  let revision = (value["revision"] as? NSNumber)?.intValue,
+                  let replayed = value["replayed"] as? Bool else {
+                throw SeriesRoundV2Error.malformedCommandResponse
+            }
+            return .success(.init(
+                ok: ok,
+                commandID: commandID,
+                entityID: entityID,
+                revision: revision,
+                replayed: replayed
+            ))
+        } catch {
+            addBreadcrumb(level: .error, message: "V2 command failed: \(functionName.name)", error: error)
+            return .failure(error)
+        }
     }
 }
 
@@ -76,4 +138,3 @@ extension FirebaseService {
 
     // Add more sandbox-only, manually-invoked functions below as needed.
 }
-

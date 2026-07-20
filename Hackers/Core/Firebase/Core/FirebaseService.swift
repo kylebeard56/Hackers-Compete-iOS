@@ -23,9 +23,15 @@ enum Collections: String {
     
     /// Round objects
     case rounds = "rounds"
+
+    /// V2 canonical round aggregates. V1 remains in `rounds` until migrated.
+    case roundsV2 = "rounds-v2"
     
     /// Series (leagues / multi-round events)
     case series = "series"
+
+    /// V2 Series roots. V1 remains in `series` until migrated.
+    case seriesV2 = "series-v2"
     
     /// Suggestion-box
     case suggestionBox = "suggestion-box"

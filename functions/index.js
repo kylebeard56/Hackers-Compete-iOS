@@ -14,6 +14,15 @@ const {
   onParticipantUpdatedInLiveRound,
   clearAllPlayerHistory,
 } = require("./history");
+const {
+  createSeriesV2,
+  createSeriesRoundV2,
+  transitionRoundV2,
+  applySeriesDefaultsV2,
+  adoptRoundIntoSeriesV2,
+  setSeriesMigrationPhaseV2,
+  propagateSeriesMemberV2,
+} = require("./series-round-v2");
 
 // Set defaults for all functions
 setGlobalOptions({
@@ -68,3 +77,10 @@ exports.onParticipantAddedToLiveRound = onParticipantAddedToLiveRound;
 exports.onParticipantRemovedFromLiveRound = onParticipantRemovedFromLiveRound;
 exports.onParticipantUpdatedInLiveRound = onParticipantUpdatedInLiveRound;
 exports.clearAllPlayerHistory = clearAllPlayerHistory;
+exports.createSeriesV2 = createSeriesV2;
+exports.createSeriesRoundV2 = createSeriesRoundV2;
+exports.transitionRoundV2 = transitionRoundV2;
+exports.applySeriesDefaultsV2 = applySeriesDefaultsV2;
+exports.adoptRoundIntoSeriesV2 = adoptRoundIntoSeriesV2;
+exports.setSeriesMigrationPhaseV2 = setSeriesMigrationPhaseV2;
+exports.propagateSeriesMemberV2 = propagateSeriesMemberV2;

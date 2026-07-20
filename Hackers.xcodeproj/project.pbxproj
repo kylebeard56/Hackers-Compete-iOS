@@ -388,6 +388,8 @@
 		B4RO000A2F00000A0000000A /* OutcomeSectionViews.swift in Sources */ = {isa = PBXBuildFile; fileRef = B4RO00092F00000900000009 /* OutcomeSectionViews.swift */; };
 		B4SCZM022E9000010048003A /* ScorecardZoomImageView.swift in Sources */ = {isa = PBXBuildFile; fileRef = B4SCZM012E9000010048003A /* ScorecardZoomImageView.swift */; };
 		B4SHRSER312EE5A100007B011E /* ShareSeriesView.swift in Sources */ = {isa = PBXBuildFile; fileRef = B4SHRSER322EE5A100007B011E /* ShareSeriesView.swift */; };
+		B4V200022FBA000100ABCDEF /* SeriesRoundV2.swift in Sources */ = {isa = PBXBuildFile; fileRef = B4V200012FBA000100ABCDEF /* SeriesRoundV2.swift */; };
+		B4V200042FBA000100ABCDEF /* Firebase+SeriesRoundV2.swift in Sources */ = {isa = PBXBuildFile; fileRef = B4V200032FBA000100ABCDEF /* Firebase+SeriesRoundV2.swift */; };
 		C1D2E3422E2D6514007D8845 /* SeriesDashboardTileChip.swift in Sources */ = {isa = PBXBuildFile; fileRef = C1D2E3432E2D6514007D8845 /* SeriesDashboardTileChip.swift */; };
 /* End PBXBuildFile section */
 
@@ -765,6 +767,8 @@
 		B4RO00092F00000900000009 /* OutcomeSectionViews.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OutcomeSectionViews.swift; sourceTree = "<group>"; };
 		B4SCZM012E9000010048003A /* ScorecardZoomImageView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ScorecardZoomImageView.swift; sourceTree = "<group>"; };
 		B4SHRSER322EE5A100007B011E /* ShareSeriesView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ShareSeriesView.swift; sourceTree = "<group>"; };
+		B4V200012FBA000100ABCDEF /* SeriesRoundV2.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SeriesRoundV2.swift; sourceTree = "<group>"; };
+		B4V200032FBA000100ABCDEF /* Firebase+SeriesRoundV2.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "Firebase+SeriesRoundV2.swift"; sourceTree = "<group>"; };
 		C1D2E3432E2D6514007D8845 /* SeriesDashboardTileChip.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SeriesDashboardTileChip.swift; sourceTree = "<group>"; };
 		DC4C9DEFB860A4D1BB558ECB /* InvisibleInkModifier.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = InvisibleInkModifier.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
@@ -1059,6 +1063,7 @@
 			isa = PBXGroup;
 			children = (
 				B458435A2F68234200B96E60 /* Series.swift */,
+				B4V200012FBA000100ABCDEF /* SeriesRoundV2.swift */,
 			);
 			path = Series;
 			sourceTree = "<group>";
@@ -1564,6 +1569,7 @@
 				B463D74B2EBC277B00F361A3 /* Firebase+Player.swift */,
 				B42600272E5889150006C6C2 /* Firebase+Round.swift */,
 				B458435D2F68244D00B96E60 /* Firebase+Series.swift */,
+				B4V200032FBA000100ABCDEF /* Firebase+SeriesRoundV2.swift */,
 				B40BCA872F570B0100E0E5AA /* Firebase+Storage.swift */,
 				B4CA89A52E2012810048003A /* Firebase+User.swift */,
 			);
@@ -2246,6 +2252,7 @@
 				B46C56ED2F4A41B400BF2E2C /* BackgroundTheme.swift in Sources */,
 				B4665CB22F111E690017D87B /* StackedSubtitle.swift in Sources */,
 				B458435E2F68244D00B96E60 /* Firebase+Series.swift in Sources */,
+				B4V200042FBA000100ABCDEF /* Firebase+SeriesRoundV2.swift in Sources */,
 				B42600282E5889180006C6C2 /* Firebase+Round.swift in Sources */,
 				B40BCA862F570B0100E0E5AA /* Firebase+Storage.swift in Sources */,
 				B40BCA912F57100000E0E5AA /* ScorecardCache.swift in Sources */,
@@ -2310,6 +2317,7 @@
 				B4AB58202E47653D007232FB /* ScoringService+Course.swift in Sources */,
 				B47D1ACE2EC6708C00E268F5 /* Async.swift in Sources */,
 				B458435C2F68234200B96E60 /* Series.swift in Sources */,
+				B4V200022FBA000100ABCDEF /* SeriesRoundV2.swift in Sources */,
 				B433DB562F3A0F73006665CC /* FullScorecardView.swift in Sources */,
 				B4AB59982E4A708F007232FB /* MockCourses.swift in Sources */,
 				B4AB58272E49FCE5007232FB /* CourseNameNormalizer.swift in Sources */,
