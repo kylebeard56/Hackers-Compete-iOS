@@ -35,7 +35,7 @@ class Navigator {
         case .lobby:                GameLobby()
         case .liveRound:            LiveRound()
         case .roundOutcome:         RoundOutcomeView()
-        case .series(let id):       SeriesView(seriesID: id)
+        case .series(let id):       SeriesRouterView(seriesID: id)
         #if SANDBOX
         case .designStudio:         DesignStudioRootView()
         #endif

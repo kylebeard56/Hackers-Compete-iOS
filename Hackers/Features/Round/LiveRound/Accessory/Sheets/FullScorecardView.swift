@@ -5,6 +5,7 @@
 //  Created by Kyle Beard on 2/9/26.
 //
 
+import Charts
 import SwiftUI
 
 private extension View {
@@ -1854,6 +1855,621 @@ private let mockTheme: GolfTheme = .purple
     .fullScreenCover(isPresented: .true) {
         FullScorecardViewPreview()
             .presentationBackground(.ultraThinMaterial)
+    }
+}
+
+struct PlayerInsightsView: View {
+    @Environment(\.dismiss) private var dismiss
+    @Environment(\.colorScheme) private var colorScheme
+
+    @ObservedObject var viewModel: LiveRoundViewModel
+    let participant: RoundParticipant
+    let allowsScoreEditing: Bool
+
+    @State private var projection: PlayerFinishProjection?
+    @State private var isLoadingProjection = false
+    @State private var showFullScorecard = false
+
+    private var palette: DesignPalette { .init(theme: .primary, scheme: colorScheme) }
+    private var basis: ScoreBasis { viewModel.scoreBasis }
+    private var canRevealInsights: Bool { viewModel.canRevealInsights(for: participant) }
+    private var actualTrend: [ProjectionTrendPoint] {
+        projection?.actualTrend ?? viewModel.actualScoreTrend(for: participant, basis: basis)
+    }
+    private var holesCompleted: Int { actualTrend.count }
+    private var totalHoleCount: Int { viewModel.holeNumbers.count }
+    private var isPlayerRoundComplete: Bool {
+        totalHoleCount > 0 && holesCompleted == totalHoleCount
+    }
+    private var currentScore: Int { viewModel.scoreToPar(for: participant, basis: basis) }
+    private var averagePaceTrend: [ProjectionTrendPoint]? {
+        viewModel.completedAveragePaceTrend(for: participant, basis: basis)
+    }
+    private var handicapUsage: HandicapStrokeUsage {
+        viewModel.handicapStrokeUsage(for: participant)
+    }
+    private var outcomeCounts: [GrossScoreOutcomeCount] {
+        viewModel.grossScoreOutcomeCounts(for: participant)
+    }
+    private var projectionTaskID: String {
+        viewModel.projectionRevision(scoreBasis: basis)
+    }
+
+    var body: some View {
+        NavigationStack {
+            Group {
+                if canRevealInsights {
+                    ScrollView(.vertical, showsIndicators: false) {
+                        VStack(spacing: 16) {
+                            identityCard
+                            currentRoundCard
+                            trendCard
+                            if holesCompleted > 0 {
+                                scoringMixCard
+                            }
+                            fullScorecardButton
+                        }
+                        .padding(16)
+                        .padding(.bottom, 16)
+                    }
+                } else {
+                    ContentUnavailableView(
+                        "Scores hidden",
+                        systemImage: "eye.slash",
+                        description: Text("This player’s score and projection will appear when secret scoring is revealed.")
+                    )
+                    .padding(24)
+                }
+            }
+            .background(palette.backgroundColor.opacity(0.98))
+            .navigationTitle("Player insights")
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .topBarTrailing) {
+                    Button("Done") { dismiss() }
+                        .fontWeight(.semibold)
+                }
+            }
+        }
+        .task(id: projectionTaskID) {
+            projection = nil
+            guard canRevealInsights,
+                  holesCompleted >= 3,
+                  !isPlayerRoundComplete else { return }
+            isLoadingProjection = true
+            projection = await viewModel.playerProjection(for: participant, scoreBasis: basis)
+            isLoadingProjection = false
+        }
+        .fullScreenCover(isPresented: $showFullScorecard) {
+            FullScorecardView(
+                viewModel: viewModel,
+                participant: participant,
+                allowsScoreEditing: allowsScoreEditing,
+                initialSelectedScoringUnitID: participant.id
+            )
+            .presentationBackground(.ultraThinMaterial)
+        }
+    }
+
+    private var identityCard: some View {
+        HStack(spacing: 14) {
+            PlayerAvatarView(
+                initials: participant.name.initials,
+                size: 54,
+                fillColor: viewModel.teamColor(for: participant)?.opacity(0.24),
+                glassTint: viewModel.theme.color.opacity(0.18)
+            )
+
+            VStack(alignment: .leading, spacing: 4) {
+                Text(participant.name.fullName)
+                    .fontStyle(kFontName, size: 20, weight: .semibold)
+                    .foregroundStyle(palette.foregroundColor)
+
+                Text(participant.lockedHandicapProvenance)
+                    .fontStyle(kFontName, size: 13, weight: .medium)
+                    .foregroundStyle(Color.neutral)
+            }
+            Spacer(minLength: 0)
+        }
+        .padding(16)
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .glassCardEffect(interactive: false, forceMaterial: true)
+        .accessibilityElement(children: .combine)
+    }
+
+    private var currentRoundCard: some View {
+        VStack(spacing: 14) {
+            HStack(spacing: 12) {
+                insightMetric(title: basis == .gross ? "Gross" : "Net", value: scoreLabel(currentScore))
+                Divider().frame(height: 40)
+                insightMetric(title: "Holes", value: "\(holesCompleted)")
+                Divider().frame(height: 40)
+                insightMetric(title: "HCP", value: "\(participant.lockedHandicapAllowance)")
+            }
+
+            if shouldShowHandicapUsage {
+                Divider()
+
+                HStack(spacing: 12) {
+                    VStack(alignment: .leading, spacing: 2) {
+                        Text("HCP strokes")
+                            .fontStyle(kFontName, size: 12, weight: .semibold)
+                            .foregroundStyle(palette.foregroundColor)
+                        Text(upcomingHandicapText)
+                            .fontStyle(kFontName, size: 11, weight: .regular)
+                            .foregroundStyle(Color.neutral)
+                            .lineLimit(2)
+                    }
+
+                    Spacer(minLength: 8)
+                    compactInsightMetric(title: "Used", value: strokeCountLabel(handicapUsage.used))
+                    compactInsightMetric(title: "Left", value: strokeCountLabel(handicapUsage.remaining))
+                }
+            }
+        }
+        .padding(16)
+        .frame(maxWidth: .infinity)
+        .glassCardEffect(interactive: false, forceMaterial: true)
+        .accessibilityElement(children: .combine)
+    }
+
+    private func insightMetric(title: String, value: String) -> some View {
+        VStack(spacing: 4) {
+            Text(value)
+                .fontStyle(kFontName, size: 22, weight: .bold)
+                .foregroundStyle(palette.foregroundColor)
+                .contentTransition(.numericText())
+            Text(title)
+                .fontStyle(kFontName, size: 11, weight: .medium)
+                .foregroundStyle(Color.neutral)
+                .textCase(.uppercase)
+        }
+        .frame(maxWidth: .infinity)
+    }
+
+    private func compactInsightMetric(title: String, value: String) -> some View {
+        VStack(spacing: 2) {
+            Text(value)
+                .fontStyle(kFontName, size: 18, weight: .bold)
+                .foregroundStyle(palette.foregroundColor)
+                .contentTransition(.numericText())
+            Text(title)
+                .fontStyle(kFontName, size: 10, weight: .medium)
+                .foregroundStyle(Color.neutral)
+                .textCase(.uppercase)
+        }
+        .frame(minWidth: 44)
+    }
+
+    private var trendCard: some View {
+        VStack(alignment: .leading, spacing: 12) {
+            HStack(alignment: .firstTextBaseline) {
+                VStack(alignment: .leading, spacing: 2) {
+                    Text("Score trend")
+                        .fontStyle(kFontName, size: 17, weight: .semibold)
+                        .foregroundStyle(palette.foregroundColor)
+                    Text("Cumulative \(basis.rawValue) score to par")
+                        .fontStyle(kFontName, size: 12, weight: .regular)
+                        .foregroundStyle(Color.neutral)
+                }
+                Spacer(minLength: 8)
+                if let projection {
+                    Text("\(projection.confidence.rawValue.capitalized) confidence")
+                        .fontStyle(kFontName, size: 11, weight: .semibold)
+                        .foregroundStyle(viewModel.theme.color)
+                }
+            }
+
+            if actualTrend.isEmpty {
+                emptyTrendState
+            } else {
+                scoreTrendChart
+                    .frame(height: 220)
+
+                projectionSummary
+            }
+        }
+        .padding(16)
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .glassCardEffect(interactive: false, forceMaterial: true)
+        .accessibilityElement(children: .contain)
+        .accessibilityLabel(accessibilitySummary)
+    }
+
+    private var scoreTrendChart: some View {
+        Chart {
+            if let averagePaceTrend {
+                ForEach(averagePaceTrend) { point in
+                    LineMark(
+                        x: .value("Hole", point.holeNumber),
+                        y: .value("Average pace", point.value),
+                        series: .value("Series", "Average pace")
+                    )
+                    .foregroundStyle(Color.neutral2)
+                    .lineStyle(.init(lineWidth: 2, dash: [2, 5]))
+                }
+            }
+
+            if let projection {
+                ForEach(projection.projectedTrend) { point in
+                    AreaMark(
+                        x: .value("Hole", point.holeNumber),
+                        yStart: .value("Low", point.lower),
+                        yEnd: .value("High", point.upper)
+                    )
+                    .foregroundStyle(viewModel.theme.color.opacity(0.16))
+
+                    LineMark(
+                        x: .value("Hole", point.holeNumber),
+                        y: .value("Projected median", point.median)
+                    )
+                    .foregroundStyle(viewModel.theme.color.opacity(0.65))
+                    .lineStyle(.init(lineWidth: 2, dash: [5, 4]))
+                }
+            }
+
+            ForEach(actualChartTrend) { point in
+                LineMark(
+                    x: .value("Hole", point.holeNumber),
+                    y: .value("Actual", point.value),
+                    series: .value("Series", "Actual")
+                )
+                .foregroundStyle(viewModel.theme.color)
+                .lineStyle(.init(lineWidth: 3, lineCap: .round, lineJoin: .round))
+
+                if point.holeNumber != actualChartTrend.first?.holeNumber {
+                    PointMark(
+                        x: .value("Hole", point.holeNumber),
+                        y: .value("Actual", point.value)
+                    )
+                    .foregroundStyle(viewModel.theme.color)
+                }
+            }
+        }
+        .chartXAxis {
+            AxisMarks(values: .automatic(desiredCount: 6)) { value in
+                AxisGridLine().foregroundStyle(Color.neutral5.opacity(0.25))
+                AxisValueLabel {
+                    if let hole = value.as(Int.self) { Text("\(hole)") }
+                }
+            }
+        }
+        .chartYAxis {
+            AxisMarks(position: .leading) { value in
+                AxisGridLine().foregroundStyle(Color.neutral5.opacity(0.25))
+                AxisValueLabel {
+                    if let score = value.as(Int.self) { Text(scoreLabel(score)) }
+                }
+            }
+        }
+    }
+
+    @ViewBuilder
+    private var projectionSummary: some View {
+        if isPlayerRoundComplete, let average = averagePacePerHole {
+            Label(
+                "Average pace \(signedDecimal(average)) per hole · below is hot, above is cold",
+                systemImage: "line.diagonal"
+            )
+            .fontStyle(kFontName, size: 12, weight: .medium)
+            .foregroundStyle(Color.neutral)
+        } else if holesCompleted < 3 {
+            Label("Finish projection unlocks after three recorded holes.", systemImage: "chart.line.uptrend.xyaxis")
+                .fontStyle(kFontName, size: 13, weight: .medium)
+                .foregroundStyle(Color.neutral)
+        } else if isLoadingProjection {
+            HStack(spacing: 8) {
+                ProgressView()
+                Text("Updating finish projection…")
+            }
+            .fontStyle(kFontName, size: 13, weight: .medium)
+            .foregroundStyle(Color.neutral)
+        } else if let projection {
+            VStack(alignment: .leading, spacing: 5) {
+                Text("Projected finish \(scoreLabel(projection.lowerFinish)) to \(scoreLabel(projection.upperFinish))")
+                    .fontStyle(kFontName, size: 15, weight: .semibold)
+                    .foregroundStyle(palette.foregroundColor)
+                Text("Median \(scoreLabel(projection.medianFinish)) · 80% interval · \(projection.sampleCount) historical samples")
+                    .fontStyle(kFontName, size: 12, weight: .regular)
+                    .foregroundStyle(Color.neutral)
+            }
+        } else {
+            Text("A projection isn’t available for this scoring format yet.")
+                .fontStyle(kFontName, size: 13, weight: .medium)
+                .foregroundStyle(Color.neutral)
+        }
+    }
+
+    private var scoringMixCard: some View {
+        VStack(alignment: .leading, spacing: 12) {
+            VStack(alignment: .leading, spacing: 2) {
+                Text("Gross scoring mix")
+                    .fontStyle(kFontName, size: 17, weight: .semibold)
+                    .foregroundStyle(palette.foregroundColor)
+                Text("Hole outcomes this round")
+                    .fontStyle(kFontName, size: 12, weight: .regular)
+                    .foregroundStyle(Color.neutral)
+            }
+
+            GrossScoringRadarChart(
+                outcomes: outcomeCounts,
+                foregroundColor: palette.foregroundColor,
+                accessibilityLabel: scoringMixAccessibilityLabel
+            )
+        }
+        .padding(16)
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .glassCardEffect(interactive: false, forceMaterial: true)
+    }
+
+    private var emptyTrendState: some View {
+        VStack(spacing: 8) {
+            Image(systemName: "chart.line.uptrend.xyaxis")
+                .font(.title2)
+            Text("Record a hole to start the score trend.")
+                .fontStyle(kFontName, size: 13, weight: .medium)
+        }
+        .foregroundStyle(Color.neutral)
+        .frame(maxWidth: .infinity, minHeight: 140)
+    }
+
+    private var fullScorecardButton: some View {
+        Button {
+            showFullScorecard = true
+        } label: {
+            Label("Full scorecard", systemImage: "rectangle.grid.3x2")
+                .fontStyle(kFontName, size: 16, weight: .semibold)
+                .frame(maxWidth: .infinity)
+                .padding(.vertical, 14)
+        }
+        .buttonStyle(.borderedProminent)
+        .tint(viewModel.theme.color)
+        .accessibilityHint("Opens the complete hole-by-hole scorecard")
+    }
+
+    private var accessibilitySummary: String {
+        var summary = "Actual \(basis.rawValue) trend through \(holesCompleted) holes, current score \(scoreLabel(currentScore))."
+        if let projection {
+            summary += " Projected 80 percent finish interval \(scoreLabel(projection.lowerFinish)) to \(scoreLabel(projection.upperFinish)), median \(scoreLabel(projection.medianFinish)), \(projection.confidence.rawValue) confidence."
+        } else if let average = averagePacePerHole {
+            summary += " Completed-round average pace \(signedDecimal(average)) per hole."
+        }
+        return summary
+    }
+
+    private var actualChartTrend: [ProjectionTrendPoint] {
+        guard let first = actualTrend.first else { return [] }
+        let baseline = ProjectionTrendPoint(holeNumber: max(0, first.holeNumber - 1), value: 0)
+        return [baseline] + actualTrend
+    }
+
+    private var averagePacePerHole: Double? {
+        guard isPlayerRoundComplete, let final = actualTrend.last else { return nil }
+        return Double(final.value) / Double(max(1, holesCompleted))
+    }
+
+    private var shouldShowHandicapUsage: Bool {
+        viewModel.handicapsEnabled
+            && holesCompleted > 0
+            && !isPlayerRoundComplete
+            && handicapUsage.total != 0
+    }
+
+    private var upcomingHandicapText: String {
+        let allocations = handicapUsage.remainingAllocations
+        guard allocations.isPopulated else { return "No handicap strokes remaining" }
+        let visible = allocations.prefix(4).map {
+            "H\($0.holeNumber) \(strokeCountLabel($0.strokes))"
+        }
+        let remainder = allocations.count - visible.count
+        return "Upcoming: \(visible.joined(separator: " · "))\(remainder > 0 ? " · +\(remainder) more" : "")"
+    }
+
+    private var scoringMixAccessibilityLabel: String {
+        let values = outcomeCounts.map { "\($0.bucket.label), \($0.count)" }
+        return "Gross scoring mix. \(values.joined(separator: ", "))."
+    }
+
+    private func strokeCountLabel(_ value: Int) -> String {
+        if value > 0 { return "+\(value)" }
+        if value < 0 { return "−\(abs(value))" }
+        return "0"
+    }
+
+    private func signedDecimal(_ value: Double) -> String {
+        let formatted = String(format: "%.2f", abs(value))
+        if value > 0 { return "+\(formatted)" }
+        if value < 0 { return "−\(formatted)" }
+        return "0.00"
+    }
+
+    private func scoreLabel(_ value: Int) -> String {
+        if value == 0 { return "E" }
+        return value > 0 ? "+\(value)" : "\(value)"
+    }
+}
+
+private struct GrossScoringRadarChart: View {
+    let outcomes: [GrossScoreOutcomeCount]
+    let foregroundColor: Color
+    let accessibilityLabel: String
+
+    private var maximumCount: Int {
+        max(1, outcomes.map(\.count).max() ?? 0)
+    }
+
+    private var normalizedValues: [CGFloat] {
+        outcomes.map { CGFloat($0.count) / CGFloat(maximumCount) }
+    }
+
+    private var categoryColors: [Color] {
+        [
+            .accentGreen,
+            .accentPurple,
+            .systemPink.opacity(0.35),
+            .systemPink.opacity(0.5),
+            .systemPink.opacity(0.65),
+            .systemError,
+        ]
+    }
+
+    private var shapeGradient: AngularGradient {
+        AngularGradient(
+            gradient: Gradient(stops: [
+                .init(color: categoryColors[0], location: 0),
+                .init(color: categoryColors[1], location: 1.0 / 6.0),
+                .init(color: categoryColors[2], location: 2.0 / 6.0),
+                .init(color: categoryColors[3], location: 3.0 / 6.0),
+                .init(color: categoryColors[4], location: 4.0 / 6.0),
+                .init(color: categoryColors[5], location: 5.0 / 6.0),
+                .init(color: categoryColors[0], location: 1),
+            ]),
+            center: .center,
+            startAngle: .degrees(-90),
+            endAngle: .degrees(270)
+        )
+    }
+
+    var body: some View {
+        GeometryReader { geometry in
+            let center = CGPoint(x: geometry.size.width / 2, y: geometry.size.height / 2)
+            let radius = max(0, min(geometry.size.width - 122, geometry.size.height - 76) / 2)
+            let outerPoints = points(
+                center: center,
+                radius: radius,
+                values: Array(repeating: 1, count: outcomes.count)
+            )
+            let valuePoints = points(center: center, radius: radius, values: normalizedValues)
+
+            ZStack {
+                ForEach([0.25, 0.5, 0.75, 1.0], id: \.self) { level in
+                    RadarPolygon(
+                        points: points(
+                            center: center,
+                            radius: radius,
+                            values: Array(repeating: CGFloat(level), count: outcomes.count)
+                        )
+                    )
+                    .stroke(
+                        Color.neutral5.opacity(0.65),
+                        lineWidth: level == 1 ? 1.5 : 1
+                    )
+                }
+
+                ForEach(outcomes.indices, id: \.self) { index in
+                    Path { path in
+                        path.move(to: center)
+                        path.addLine(to: outerPoints[index])
+                    }
+                    .stroke(Color.neutral5.opacity(0.55), lineWidth: 1)
+                }
+
+                ForEach([12.0, 9.0, 6.0, 3.0], id: \.self) { depth in
+                    RadarPolygon(points: valuePoints)
+                        .fill(Color.accentPurple.opacity(0.035))
+                        .offset(y: depth)
+                }
+
+                RadarPolygon(points: valuePoints)
+                    .fill(shapeGradient)
+                    .opacity(0.26)
+
+                RadarPolygon(points: valuePoints)
+                    .stroke(shapeGradient, style: .init(lineWidth: 2.5, lineJoin: .round))
+
+                ForEach(Array(outcomes.enumerated()), id: \.element.id) { index, outcome in
+                    if outcome.count > 0 {
+                        Circle()
+                            .fill(categoryColors[index])
+                            .frame(width: 7, height: 7)
+                            .position(valuePoints[index])
+                    }
+
+                    axisLabel(for: outcome, color: categoryColors[index])
+                        .frame(width: 74)
+                        .position(
+                            point(
+                                index: index,
+                                center: center,
+                                radius: radius + 34,
+                                value: 1
+                            )
+                        )
+                }
+            }
+        }
+        .frame(maxWidth: .infinity)
+        .aspectRatio(1.18, contentMode: .fit)
+        .frame(maxHeight: 300)
+        .accessibilityElement(children: .ignore)
+        .accessibilityLabel(accessibilityLabel)
+    }
+
+    private func axisLabel(
+        for outcome: GrossScoreOutcomeCount,
+        color: Color
+    ) -> some View {
+        VStack(spacing: 2) {
+            Text(shortLabel(for: outcome.bucket))
+                .fontStyle(kFontName, size: 10, weight: .medium)
+                .foregroundStyle(Color.neutral)
+                .multilineTextAlignment(.center)
+                .lineLimit(2)
+            Text("\(outcome.count)")
+                .fontStyle(kFontName, size: 14, weight: .semibold)
+                .foregroundStyle(outcome.count > 0 ? color : foregroundColor.opacity(0.5))
+                .contentTransition(.numericText())
+        }
+    }
+
+    private func shortLabel(for bucket: GrossScoreOutcomeBucket) -> String {
+        switch bucket {
+        case .birdieOrBetter: "Birdie+"
+        case .par: "Par"
+        case .bogey: "Bogey"
+        case .doubleBogey: "Double"
+        case .tripleBogey: "Triple"
+        case .fourOrWorse: "Worse"
+        }
+    }
+
+    private func points(
+        center: CGPoint,
+        radius: CGFloat,
+        values: [CGFloat]
+    ) -> [CGPoint] {
+        values.indices.map { index in
+            point(index: index, center: center, radius: radius, value: values[index])
+        }
+    }
+
+    private func point(
+        index: Int,
+        center: CGPoint,
+        radius: CGFloat,
+        value: CGFloat
+    ) -> CGPoint {
+        let angle = (-Double.pi / 2) + (Double(index) * 2 * Double.pi / Double(outcomes.count))
+        let clampedValue = min(1, max(0, value))
+        return CGPoint(
+            x: center.x + CGFloat(cos(angle)) * radius * clampedValue,
+            y: center.y + CGFloat(sin(angle)) * radius * clampedValue
+        )
+    }
+}
+
+private struct RadarPolygon: Shape {
+    let points: [CGPoint]
+
+    func path(in rect: CGRect) -> Path {
+        var path = Path()
+        guard let first = points.first else { return path }
+        path.move(to: first)
+        for point in points.dropFirst() {
+            path.addLine(to: point)
+        }
+        path.closeSubpath()
+        return path
     }
 }
 

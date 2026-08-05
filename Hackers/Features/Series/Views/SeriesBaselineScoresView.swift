@@ -3,6 +3,7 @@
 //  Hackers
 //
 
+import Charts
 import SwiftUI
 
 struct SeriesBaselineScoresView: View {
@@ -545,6 +546,7 @@ struct SeriesMemberHandicapBreakdownView: View {
     @State private var roundUsageByScoreID: [String: SeriesHandicapRoundUsage] = [:]
     @State private var showMissingRoundAlert = false
     @State private var missingRoundAlertMessage = ""
+    @State private var selectedTrendDate: Date?
 
     private var palette: DesignPalette { .init(theme: .primary, scheme: colorScheme) }
 
@@ -631,6 +633,22 @@ struct SeriesMemberHandicapBreakdownView: View {
         return parts.joined(separator: " \(kDot) ")
     }
 
+    private var handicapTrendPoints: [SeriesHandicapTrendPoint] {
+        SeriesHandicapProjectionService.trend(
+            memberID: member.id,
+            scores: viewModel.handicapScores,
+            rounds: viewModel.rounds,
+            handicapConfig: viewModel.series.handicapConfig
+        )
+    }
+
+    private var selectedTrendPoint: SeriesHandicapTrendPoint? {
+        guard let selectedTrendDate else { return handicapTrendPoints.last }
+        return handicapTrendPoints.min {
+            abs($0.date.timeIntervalSince(selectedTrendDate)) < abs($1.date.timeIntervalSince(selectedTrendDate))
+        }
+    }
+
     var body: some View {
         StickyScrollView(
             header: {
@@ -644,6 +662,7 @@ struct SeriesMemberHandicapBreakdownView: View {
             content: {
                 VStack(spacing: 16) {
                     currentHandicapCard
+                    handicapTrendCard
                     scoresListSection
                     Spacer().frame(height: 32)
                 }
@@ -825,6 +844,108 @@ struct SeriesMemberHandicapBreakdownView: View {
             }
             .frame(maxWidth: .infinity, alignment: .leading)
         }
+    }
+
+    private var handicapTrendCard: some View {
+        SeriesSheetCard(palette: palette) {
+            HStack(alignment: .firstTextBaseline) {
+                VStack(alignment: .leading, spacing: 2) {
+                    Text("Handicap trend".uppercased())
+                        .fontStyle(kFontName, size: 14, weight: .semibold)
+                        .foregroundStyle(palette.foregroundColor)
+                    Text("Lower is better")
+                        .fontStyle(kFontName, size: 11, weight: .regular)
+                        .foregroundStyle(Color.neutral)
+                }
+
+                Spacer(minLength: 8)
+
+                if let point = selectedTrendPoint {
+                    VStack(alignment: .trailing, spacing: 2) {
+                        Text(String(format: "%.1f", point.computedIndex))
+                            .fontStyle(kFontName, size: 20, weight: .bold)
+                            .foregroundStyle(Color.accentGreen)
+                        Text(point.roundTitle)
+                            .fontStyle(kFontName, size: 11, weight: .medium)
+                            .foregroundStyle(Color.neutral)
+                            .lineLimit(1)
+                    }
+                }
+            }
+
+            if handicapTrendPoints.isEmpty {
+                VStack(spacing: 8) {
+                    Image(systemName: "chart.xyaxis.line")
+                        .font(.system(size: 24, weight: .medium))
+                        .foregroundStyle(Color.neutral3)
+                    Text("Complete a league round to start your trend.")
+                        .fontStyle(kFontName, size: 13, weight: .regular)
+                        .foregroundStyle(Color.neutral)
+                        .multilineTextAlignment(.center)
+                }
+                .frame(maxWidth: .infinity, minHeight: 120)
+                .accessibilityElement(children: .combine)
+            } else {
+                Chart {
+                    ForEach(handicapTrendPoints) { point in
+                        LineMark(
+                            x: .value("Round date", point.date),
+                            y: .value("Handicap index", point.computedIndex)
+                        )
+                        .foregroundStyle(Color.accentGreen)
+                        .interpolationMethod(.catmullRom)
+
+                        PointMark(
+                            x: .value("Round date", point.date),
+                            y: .value("Handicap index", point.computedIndex)
+                        )
+                        .foregroundStyle(Color.accentGreen)
+                        .symbolSize(handicapTrendPoints.count == 1 ? 70 : 36)
+                    }
+
+                    if let point = selectedTrendPoint, selectedTrendDate != nil {
+                        RuleMark(x: .value("Selected round", point.date))
+                            .foregroundStyle(Color.neutral3.opacity(0.7))
+                            .lineStyle(.init(lineWidth: 1, dash: [3, 3]))
+                    }
+                }
+                .chartXAxis {
+                    AxisMarks(values: .automatic(desiredCount: min(4, handicapTrendPoints.count))) { _ in
+                        AxisGridLine().foregroundStyle(Color.neutral5.opacity(0.35))
+                        AxisValueLabel(format: .dateTime.month(.abbreviated).day())
+                    }
+                }
+                .chartYAxis {
+                    AxisMarks(position: .leading) { _ in
+                        AxisGridLine().foregroundStyle(Color.neutral5.opacity(0.35))
+                        AxisValueLabel()
+                    }
+                }
+                .chartXSelection(value: $selectedTrendDate)
+                .frame(height: 180)
+                .accessibilityElement(children: .ignore)
+                .accessibilityLabel(handicapTrendAccessibilityLabel)
+                .accessibilityHint("Lower handicap index values are better.")
+
+                if let point = selectedTrendPoint {
+                    Text(point.date.formatted(date: .abbreviated, time: .omitted))
+                        .fontStyle(kFontName, size: 11, weight: .regular)
+                        .foregroundStyle(Color.neutral)
+                        .frame(maxWidth: .infinity, alignment: .trailing)
+                }
+            }
+        }
+    }
+
+    private var handicapTrendAccessibilityLabel: String {
+        guard let first = handicapTrendPoints.first, let last = handicapTrendPoints.last else {
+            return "No completed league rounds in handicap trend."
+        }
+        if first.id == last.id {
+            return "One completed league round. \(last.roundTitle), handicap index \(String(format: "%.1f", last.computedIndex))."
+        }
+        let direction = last.computedIndex < first.computedIndex ? "improved" : (last.computedIndex > first.computedIndex ? "increased" : "was unchanged")
+        return "\(handicapTrendPoints.count) completed league rounds. Handicap index \(direction) from \(String(format: "%.1f", first.computedIndex)) to \(String(format: "%.1f", last.computedIndex))."
     }
 
     @ViewBuilder

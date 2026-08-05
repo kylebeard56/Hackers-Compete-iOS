@@ -104,6 +104,7 @@ struct SeriesView: View {
     @State private var isLeagueDescriptionExpanded = false
     @State private var leagueDescriptionCollapsedHeight: CGFloat = 0
     @State private var leagueDescriptionFullHeight: CGFloat = 0
+    @State private var roundCardStates: [String: SeriesRoundCardViewState] = [:]
 
     @Namespace private var seriesShareTransition
 
@@ -1156,109 +1157,14 @@ struct SeriesView: View {
     }
 
     private func seriesRoundRow(_ round: SeriesRound) -> some View {
-        let status     = viewModel.effectiveStatus(for: round)
-        let counts     = viewModel.attendanceCounts(for: round.id)
-        let isScored   = status == .live && viewModel.allScoresComplete(for: round)
-        let courseName = round.resolvedCourse(using: viewModel.series)?.cachedName ?? "Course TBD"
-        let roundTitle = round.title.isEmpty ? "Round \(round.index + 1)" : round.title
+        let status = viewModel.effectiveStatus(for: round)
+        let cardState = roundCardStates[round.id] ?? viewModel.baseRoundCardViewState(for: round)
 
-        return VStack(alignment: .leading, spacing: 10) {
-
-            // TOP: Status chip + Menu
-            HStack(alignment: .center, spacing: 0) {
-                roundStatusChip(for: status, isScored: isScored)
-                Spacer(minLength: 0)
+        return VStack(alignment: .leading, spacing: 12) {
+            SeriesRoundCardSummaryView(state: cardState, palette: palette)
+                .overlay(alignment: .topTrailing) {
                 seriesRoundOverflowMenuButton(round: round, status: status)
-            }
-
-            // TITLE
-            Text(roundTitle)
-                .fontStyle(kFontName, size: 17, weight: .bold)
-                .foregroundStyle(palette.foregroundColor)
-                .lineLimit(2)
-                .alignLeading()
-
-            // SUBTITLE: Course • Date
-            Text(roundSubtitle(for: round, status: status, courseName: courseName, isScored: isScored))
-                .fontStyle(kFontName, size: 12, weight: .medium)
-                .foregroundStyle(Color.neutral)
-                .lineLimit(1)
-                .alignLeading()
-
-            Divider().padding(.vertical, 2)
-
-            // BODY: Score square + format/opponent/tee context
-            HStack(alignment: .top, spacing: 12) {
-                roundScoreSquare(for: round, status: status)
-
-                VStack(alignment: .leading, spacing: 4) {
-                    Text(viewModel.roundTileFormatCaption(for: round))
-                        .fontStyle(kFontName, size: 13, weight: .semibold)
-                        .foregroundStyle(palette.foregroundColor)
-                        .lineLimit(1)
-
-                    if let opp = viewModel.roundTileOpponentSummary(for: round) {
-                        Text("vs. \(opp.primaryLine)")
-                            .fontStyle(kFontName, size: 12, weight: .regular)
-                            .foregroundStyle(Color.neutral)
-                            .lineLimit(1)
-                        if let secondary = opp.secondaryLine {
-                            Text(secondary)
-                                .fontStyle(kFontName, size: 12, weight: .regular)
-                                .foregroundStyle(Color.neutral)
-                                .lineLimit(1)
-                        }
-                    } else if let teeCtx = viewModel.roundTileTeeGroupContext(for: round) {
-                        Text(teeCtx)
-                            .fontStyle(kFontName, size: 12, weight: .regular)
-                            .foregroundStyle(Color.neutral)
-                            .lineLimit(2)
-                    }
                 }
-                .frame(maxWidth: .infinity, alignment: .leading)
-            }
-
-            Divider().padding(.vertical, 2)
-
-            if round.isAdjusted || viewModel.linkedConfigurationDivergence(for: round) != nil {
-                HStack(spacing: 8) {
-                    if round.isAdjusted {
-                        Chip(
-                            text: "Adjusted",
-                            size: .xSmall,
-                            foreground: .orange,
-                            background: Color.orange.opacity(colorScheme.translucent)
-                        )
-                    }
-                    if viewModel.linkedConfigurationDivergence(for: round) != nil {
-                        Chip(
-                            text: "Setup differs",
-                            size: .xSmall,
-                            foreground: .orange,
-                            background: Color.orange.opacity(colorScheme.translucent)
-                        )
-                    }
-                }
-            }
-
-            // Attendance / player counts
-            if (isScored || status == .complete), round.roundID != nil {
-                let playerCount = viewModel.linkedRound(for: round)?.players.count ?? counts.playing
-                HStack(spacing: 10) {
-                    Text("\(playerCount) of \(viewModel.eligibleMembers.count)")
-                        .fontStyle(kFontName, size: 13, weight: .medium)
-                        .foregroundStyle(Color.neutral)
-                    userParticipationBadge(for: round)
-                    Spacer(minLength: 0)
-                }
-            } else if attendanceEnabled && status == .planned {
-                HStack(spacing: 16) {
-                    verticalAttendanceCount(count: counts.playing,    label: "Playing",  color: .accentGreen)
-                    verticalAttendanceCount(count: counts.declined,   label: "Declined", color: .systemError)
-                    verticalAttendanceCount(count: counts.noResponse, label: "Pending",  color: .neutral)
-                    Spacer(minLength: 0)
-                }
-            }
 
             // ACTION BUTTONSUX Re
             if status == .planned {
@@ -1421,8 +1327,13 @@ struct SeriesView: View {
                 )
             }
         }
-        .padding(14)
+        .padding(16)
         .glassCardEffect(cornerRadius: 14, forceMaterial: true, tint: palette.cardColor)
+        .task(id: "\(round.id)_\(round.lastUpdatedAt.unix)") {
+            let enriched = await viewModel.enrichedRoundCardViewState(for: round)
+            guard !Task.isCancelled else { return }
+            roundCardStates[round.id] = enriched
+        }
     }
 
     @ViewBuilder

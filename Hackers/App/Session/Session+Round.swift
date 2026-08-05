@@ -34,6 +34,9 @@ extension AppSession {
         do {
             _ = try await r.put().get()
             rounds.remove(round)
+            if activeRoundID == round.id {
+                clearRoundResume()
+            }
         } catch {
             addBreadcrumb(level: .error, message: "Failed to archive round", error: error)
         }
@@ -58,6 +61,8 @@ extension AppSession {
         let deleted = await FirebaseService.shared.delete(round: round)
         if !deleted {
             rounds.insert(round)
+        } else if activeRoundID == round.id {
+            clearRoundResume()
         }
     }
 

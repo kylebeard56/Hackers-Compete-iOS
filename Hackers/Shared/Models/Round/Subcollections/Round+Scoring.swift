@@ -7,7 +7,7 @@
 
 import Foundation
 
-enum ScoreBasis: String, Codable {
+enum ScoreBasis: String, Codable, Sendable {
     case gross, net
 }
 

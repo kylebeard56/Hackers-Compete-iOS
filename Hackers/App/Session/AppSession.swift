@@ -31,11 +31,16 @@ final class AppSession: ObservableObject, Sendable, Loggable {
     @Published var rounds: Set<Round> = .init()
     @Published var isLoadingRounds = false
     @Published var preQueuedPlayerIDs: [String]? = nil
+    @Published var roundResumeState: RoundResumeState?
     
     @Published var activeSeriesID: String?
+    /// Version-routed records used by dashboard and Series navigation.
+    @Published var seriesRecords: [SeriesRecord] = []
     @Published var seriesList: [Series] = []
     /// Prefetched `SeriesRound` documents keyed by series ID (dashboard home chips).
     @Published var seriesRoundsBySeriesID: [String: [SeriesRound]] = [:]
+    /// Canonical V2 rounds keyed by `series_context.series_id`.
+    @Published var seriesV2RoundsBySeriesID: [String: [RoundV2]] = [:]
     @Published var isLoadingSeries = false
     
     @Published var isUserAuthenticated = false
@@ -50,12 +55,15 @@ final class AppSession: ObservableObject, Sendable, Loggable {
     @Published var isAcceptingTerms = false
     @Published var isSavingProfile = false
     
-    init() {
+    let roundResumeStore: any RoundResumeStoring
+
+    init(roundResumeStore: any RoundResumeStoring = UserDefaultsRoundResumeStore()) {
+        self.roundResumeStore = roundResumeStore
+        self.roundResumeState = roundResumeStore.load()
         print("init AppSession")
         Task {
             if let fullyAuthenticated = try? await self.load(), fullyAuthenticated {
-                /// Route to wherever we want the user to go after auth, which in this instance is the home dashboard.
-                routeTo(.dashboard)
+                await restoreRoundOrRouteToDashboard()
             }
         }
     }
@@ -67,6 +75,7 @@ final class AppSession: ObservableObject, Sendable, Loggable {
         let session = AppSession()
         session.rounds = mockRounds
         session.seriesList = MockDashboardData.previewSeriesList
+        session.seriesRecords = MockDashboardData.previewSeriesList.map(SeriesRecord.v1)
         session.seriesRoundsBySeriesID = MockDashboardData.previewSeriesRoundsByID
         return session
     }
@@ -85,10 +94,13 @@ extension AppSession {
         activeSeriesID = nil
         rounds = []
         seriesList = []
+        seriesRecords = []
         seriesRoundsBySeriesID = [:]
+        seriesV2RoundsBySeriesID = [:]
         preQueuedPlayerIDs = nil
         ephemeralParticipantID = nil
         isSpectating = false
+        clearRoundResume()
         
         // 1. Clear user and sync state to session
         Task {

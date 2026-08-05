@@ -208,6 +208,7 @@ struct LiveRound: View, Loggable {
             }
             print(roundSession.snapshot.round.id)
             viewModel.bind(appSession: appSession, roundSession: roundSession)
+            restoreDurableRoundContextIfNeeded()
             trackLiveRoundViewedIfNeeded(snapshot: roundSession.snapshot)
             await runInitialScoringSkeletonIfNeeded()
             await viewModel.ensureParticipantResolved()
@@ -222,6 +223,12 @@ struct LiveRound: View, Loggable {
             withAnimation(.spring(duration: holeScrollDuration(for: abs(new - old)))) {
                 scoringPageHole = new
             }
+        }
+        .onChange(of: scoringPageHole) { _, hole in
+            persistDurableRoundContext(hole: hole)
+        }
+        .onChange(of: selectedTab) { _, _ in
+            persistDurableRoundContext(hole: scoringPageHole)
         }
         .onChange(of: viewModel.visibleGroupSwitchRequest?.revisionID) { _, _ in
             applyVisibleGroupSwitchIfNeeded()
@@ -244,6 +251,16 @@ struct LiveRound: View, Loggable {
             CompleteRoundSheet(viewModel: viewModel)
                 .environmentObject(appSession)
                 .environmentObject(roundSession)
+        }
+        .sheet(item: $viewModel.presentedParticipant) { participant in
+            PlayerInsightsView(
+                viewModel: viewModel,
+                participant: participant,
+                allowsScoreEditing: viewModel.canEditActualGroupScores
+            )
+            .presentationDetents([.large])
+            .presentationDragIndicator(.visible)
+            .presentationBackground(.ultraThinMaterial)
         }
         .onReceive(roundSession.$snapshot, perform: { _ in
             trackLiveRoundViewedIfNeeded(snapshot: roundSession.snapshot)
@@ -269,6 +286,34 @@ struct LiveRound: View, Loggable {
                 mapInit = true
             }
         })
+        .onReceive(HackersNotification.appSceneDidBecomeActive.publisher()) { _ in
+            guard let id = appSession.activeRoundID else { return }
+            Task { await roundSession.activate(roundID: id, profile: .liveRound) }
+        }
+    }
+
+    private func restoreDurableRoundContextIfNeeded() {
+        guard let state = appSession.roundResumeState,
+              state.roundID == appSession.activeRoundID else {
+            persistDurableRoundContext(hole: viewModel.currentHoleNumber)
+            return
+        }
+
+        if let selectedHole = state.selectedHole, viewModel.holeNumbers.contains(selectedHole) {
+            viewModel.selectHole(selectedHole)
+            scoringPageHole = selectedHole
+        }
+
+        let restoredTab: Tab = state.selectedTab == .matchups ? .matchups : .scoring
+        selectedTab = visibleTabs.contains(restoredTab) ? restoredTab : .scoring
+        persistDurableRoundContext(hole: scoringPageHole ?? viewModel.currentHoleNumber)
+    }
+
+    private func persistDurableRoundContext(hole: Int?) {
+        appSession.updateLiveRoundResume(
+            selectedHole: hole,
+            selectedTab: selectedTab == .matchups ? .matchups : .scoring
+        )
     }
     
     /// Tabs to show: Scoring always; Matchups when scope is matchup and valid matchups exist for the current mode.
@@ -341,11 +386,13 @@ extension LiveRound {
     private var scoringNavHeader: some View {
         HStack(spacing: 12) {
             NavButton(style: .glass, icon: "f00d", color: palette.foregroundColor) {
+                appSession.clearRoundResume()
                 dismiss()
             }
             .highPriorityGesture(
                 TapGesture().onEnded { _ in
                     Haptics.fire(.light)
+                    appSession.clearRoundResume()
                     dismiss()
                 }
             )

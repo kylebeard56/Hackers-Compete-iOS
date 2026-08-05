@@ -57,6 +57,32 @@ enum SeriesDashboardTileChip {
         return .scheduleTBD
     }
 
+    static func chipMode(
+        roundsV2: [RoundV2],
+        now: Date = .init(),
+        calendar: Calendar = .current
+    ) -> SeriesDashboardTileChipMode {
+        let upcoming = roundsV2
+            .filter { round in
+                let state = SeriesRoundPresentationResolverV2.resolve(round: round, now: now)
+                return state == .pending || state == .scheduled || state == .lobby || state == .live
+            }
+            .sorted {
+                let lhs = $0.schedule?.scheduledAt.unix ?? .greatestFiniteMagnitude
+                let rhs = $1.schedule?.scheduledAt.unix ?? .greatestFiniteMagnitude
+                if lhs != rhs { return lhs < rhs }
+                return ($0.seriesContext?.roundIndex ?? .max) < ($1.seriesContext?.roundIndex ?? .max)
+            }
+        guard let first = upcoming.first else { return .none }
+        if first.status == .live { return .live }
+        guard let scheduled = first.schedule?.scheduledAt else { return .scheduleTBD }
+        return .text(formatScheduledChip(
+            date: Date(timeIntervalSince1970: scheduled.unix),
+            now: now,
+            calendar: calendar
+        ))
+    }
+
     static func formatScheduledChip(date: Date, now: Date, calendar: Calendar) -> String {
         let time = date.toTimeFormat
         if calendar.isDateInToday(date) { return "Today \(time)" }

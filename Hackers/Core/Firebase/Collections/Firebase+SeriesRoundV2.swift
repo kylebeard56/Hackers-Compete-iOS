@@ -62,6 +62,20 @@ extension FirebaseService {
         await fetchDocuments(query: SeriesTeamV2.query(parentID: seriesID))
     }
 
+    func fetchSeriesRoundResultStatesV2(seriesID: String) async -> Result<[SeriesRoundResultStateV2], Error> {
+        await fetchDocuments(query: SeriesRoundResultStateV2.query(parentID: seriesID))
+    }
+
+    /// V1 and V2 persist the same additive historical projection wire shape. The
+    /// explicit V2 path avoids teaching the V1 model a second collection authority.
+    func fetchSeriesRoundResultsV2(seriesID: String) async -> Result<[SeriesRoundResult], Error> {
+        let query = Firestore.firestore()
+            .collection(V2Collection.series)
+            .document(seriesID)
+            .collection(SeriesV2Subcollection.roundResults.rawValue)
+        return await fetchDocuments(query: query)
+    }
+
     func fetchRoundSnapshotV2(roundID: String) async -> Result<RoundSnapshotV2, Error> {
         do {
             let round: RoundV2 = try await fetchRoundV2(id: roundID).get()

@@ -77,6 +77,57 @@ struct LiveRoundAdaptiveNameText: View {
     }
 }
 
+struct HandicapStrokeAllocation: Equatable, Sendable {
+    let holeNumber: Int
+    let strokes: Int
+}
+
+struct HandicapStrokeUsage: Equatable, Sendable {
+    let used: Int
+    let remaining: Int
+    let remainingAllocations: [HandicapStrokeAllocation]
+
+    var total: Int { used + remaining }
+}
+
+enum GrossScoreOutcomeBucket: Int, CaseIterable, Hashable, Sendable {
+    case birdieOrBetter
+    case par
+    case bogey
+    case doubleBogey
+    case tripleBogey
+    case fourOrWorse
+
+    var label: String {
+        switch self {
+        case .birdieOrBetter: "Birdie or better"
+        case .par: "Par"
+        case .bogey: "Bogey"
+        case .doubleBogey: "Double"
+        case .tripleBogey: "Triple"
+        case .fourOrWorse: "+4 or worse"
+        }
+    }
+
+    static func resolve(relativeToPar: Int) -> GrossScoreOutcomeBucket {
+        switch relativeToPar {
+        case ...(-1): .birdieOrBetter
+        case 0: .par
+        case 1: .bogey
+        case 2: .doubleBogey
+        case 3: .tripleBogey
+        default: .fourOrWorse
+        }
+    }
+}
+
+struct GrossScoreOutcomeCount: Identifiable, Equatable, Sendable {
+    let bucket: GrossScoreOutcomeBucket
+    let count: Int
+
+    var id: Int { bucket.rawValue }
+}
+
 @MainActor
 final class LiveRoundViewModel: ObservableObject, Loggable {
     struct SeriesAccessOverride {
@@ -99,6 +150,7 @@ final class LiveRoundViewModel: ObservableObject, Loggable {
     @Published private(set) var resolvedSeriesID: String?
     @Published private(set) var isSeriesCommissioner: Bool = false
     @Published private(set) var seriesScoreboardSnapshot: SeriesScoreboardSnapshot?
+    @Published private(set) var matchupProbabilities: [String: MatchupProbability] = [:]
     @Published var selectedTeeID: String?
     @Published var nameDisplayFormat: NameDisplayFormat = .firstNameLastInitial
     @Published var theme: GolfTheme = .purple
@@ -184,6 +236,7 @@ final class LiveRoundViewModel: ObservableObject, Loggable {
     private var cachedEngineResults: [String: ScoringResult] = [:]
     /// Participant-level format results for Solo leaderboard contribution views.
     private var cachedIndividualContributionEngineResults: [String: ScoringResult] = [:]
+    private var cachedPlayerSimulations: [String: PlayerProjectionSimulation] = [:]
     private var hasPerformedInitialHoleNudge = false
     private var hasSelectedInitialVisibleGroupStartingHole = false
     private var loadedSeriesAccessRoundID: String?
@@ -201,6 +254,7 @@ final class LiveRoundViewModel: ObservableObject, Loggable {
         let members: [SeriesMember]
         let currentSeriesRound: SeriesRound?
         let currentRoundMappings: [SeriesRoundMapping]
+        let canonicalResults: [SeriesRoundResult]
     }
     
     func bind(appSession: AppSession, roundSession: RoundSession) {
@@ -1307,6 +1361,7 @@ final class LiveRoundViewModel: ObservableObject, Loggable {
         scoreIndex = index
         cachedEngineResults.removeAll()
         cachedIndividualContributionEngineResults.removeAll()
+        cachedPlayerSimulations.removeAll()
     }
     
     func scoreEntry(for participantID: String, holeNumber: Int) -> ScoreEntry? {
@@ -1512,7 +1567,7 @@ final class LiveRoundViewModel: ObservableObject, Loggable {
     
     func strokesReceivedOnHole(participant: RoundParticipant, holeNumber: Int) -> Int {
         ScoringEngine.strokesReceived(
-            handicap: participant.adjustedHandicap,
+            handicap: participant.lockedHandicapAllowance,
             holeNumber: holeNumber,
             holes: defaultTee?.holes ?? [],
             playedHoleNumbers: snapshot.holeRange?.holeNumbers ?? Array(1...18),
@@ -1793,6 +1848,79 @@ final class LiveRoundViewModel: ObservableObject, Loggable {
         }
         
         return sum
+    }
+
+    func actualScoreTrend(
+        for participant: RoundParticipant,
+        basis: ScoreBasis
+    ) -> [ProjectionTrendPoint] {
+        var cumulative = 0
+        return courseOrderHoleNumbers.compactMap { holeNumber in
+            guard let hole = hole(for: holeNumber, teeID: participant.teeBoxID),
+                  let gross = grossStrokes(for: participant.id, holeNumber: holeNumber) else {
+                return nil
+            }
+            let strokes = basis == .net
+                ? gross - strokesReceivedOnHole(participant: participant, holeNumber: holeNumber)
+                : gross
+            cumulative += strokes - hole.par
+            return ProjectionTrendPoint(holeNumber: holeNumber, value: cumulative)
+        }
+    }
+
+    func completedAveragePaceTrend(
+        for participant: RoundParticipant,
+        basis: ScoreBasis
+    ) -> [ProjectionTrendPoint]? {
+        let trend = actualScoreTrend(for: participant, basis: basis)
+        guard trend.count == courseOrderHoleNumbers.count,
+              let firstHole = courseOrderHoleNumbers.first,
+              let finalPoint = trend.last else { return nil }
+        return [
+            ProjectionTrendPoint(holeNumber: max(0, firstHole - 1), value: 0),
+            ProjectionTrendPoint(holeNumber: finalPoint.holeNumber, value: finalPoint.value),
+        ]
+    }
+
+    func handicapStrokeUsage(for participant: RoundParticipant) -> HandicapStrokeUsage {
+        var used = 0
+        var remaining = 0
+        var remainingAllocations: [HandicapStrokeAllocation] = []
+
+        for holeNumber in courseOrderHoleNumbers {
+            let strokes = strokesReceivedOnHole(participant: participant, holeNumber: holeNumber)
+            guard strokes != 0 else { continue }
+            if grossStrokes(for: participant.id, holeNumber: holeNumber) != nil {
+                used += strokes
+            } else {
+                remaining += strokes
+                remainingAllocations.append(
+                    HandicapStrokeAllocation(holeNumber: holeNumber, strokes: strokes)
+                )
+            }
+        }
+
+        return HandicapStrokeUsage(
+            used: used,
+            remaining: remaining,
+            remainingAllocations: remainingAllocations
+        )
+    }
+
+    func grossScoreOutcomeCounts(for participant: RoundParticipant) -> [GrossScoreOutcomeCount] {
+        var counts = Dictionary(
+            uniqueKeysWithValues: GrossScoreOutcomeBucket.allCases.map { ($0, 0) }
+        )
+        for holeNumber in courseOrderHoleNumbers {
+            guard let relative = grossRelativeToPar(
+                for: participant.id,
+                holeNumber: holeNumber
+            ) else { continue }
+            counts[GrossScoreOutcomeBucket.resolve(relativeToPar: relative), default: 0] += 1
+        }
+        return GrossScoreOutcomeBucket.allCases.map {
+            GrossScoreOutcomeCount(bucket: $0, count: counts[$0, default: 0])
+        }
     }
 
     func matchupParticipantDisplaySort(
@@ -4755,19 +4883,13 @@ final class LiveRoundViewModel: ObservableObject, Loggable {
         } else {
             series = await resolveSeries(seriesID: seriesID)
         }
-        guard let series, series.settings.showScoreboardTile else {
+        guard let series else {
             liveSeriesScoreboardContext = nil
             seriesScoreboardSnapshot = nil
             return
         }
 
         let teams = await FirebaseService.shared.fetchSeriesTeams(seriesID: seriesID)
-        guard SeriesScoreboardEligibility.isEligible(teams: teams) else {
-            liveSeriesScoreboardContext = nil
-            seriesScoreboardSnapshot = nil
-            return
-        }
-
         let rounds = await FirebaseService.shared.fetchSeriesRounds(seriesID: seriesID)
         let scoringProfiles = await FirebaseService.shared.fetchScoringProfiles(seriesID: seriesID)
         let pointAwards = await FirebaseService.shared.fetchPointAwards(seriesID: seriesID)
@@ -4787,6 +4909,24 @@ final class LiveRoundViewModel: ObservableObject, Loggable {
         } else {
             mappings = []
         }
+        let canonicalResults: [SeriesRoundResult]
+        let processingStates: [SeriesRoundProcessingState]
+        switch await FirebaseService.shared.fetchCanonicalRoundResults(seriesID: seriesID) {
+        case .success(let values):
+            canonicalResults = values
+        case .failure:
+            canonicalResults = []
+        }
+        switch await FirebaseService.shared.fetchCanonicalRoundProcessingStates(seriesID: seriesID) {
+        case .success(let values):
+            processingStates = values
+        case .failure:
+            processingStates = []
+        }
+        let latestGenerationIDs = Set(processingStates.compactMap { state in
+            state.status == .completed ? state.latestGenerationID : nil
+        })
+        let verifiedResults = canonicalResults.filter { latestGenerationIDs.contains($0.id) }
 
         liveSeriesScoreboardContext = LiveSeriesScoreboardContext(
             series: series,
@@ -4796,9 +4936,202 @@ final class LiveRoundViewModel: ObservableObject, Loggable {
             teams: teams,
             members: members,
             currentSeriesRound: currentSeriesRound,
-            currentRoundMappings: mappings
+            currentRoundMappings: mappings,
+            canonicalResults: verifiedResults
         )
         refreshSeriesScoreboardProjection()
+    }
+
+    // MARK: - Live analytics
+
+    func canRevealInsights(for participant: RoundParticipant) -> Bool {
+        guard snapshot.isSecretScoring && !snapshot.areScoresRevealed else { return true }
+        guard let currentParticipant else { return false }
+        if currentParticipant.id == participant.id { return true }
+        guard let currentTeamID = currentParticipant.teamID,
+              currentTeamID.isPopulated else { return false }
+        return participant.teamID == currentTeamID
+    }
+
+    var shouldShowMatchupProbabilities: Bool {
+        !(snapshot.isSecretScoring && !snapshot.areScoresRevealed)
+    }
+
+    func projectionRevision(scoreBasis: ScoreBasis) -> String {
+        let scoreRevision = snapshot.scoring
+            .sorted { $0.id < $1.id }
+            .map {
+                [
+                    $0.id,
+                    $0.strokes.map(String.init) ?? "-",
+                    $0.relativeToPar.map(String.init) ?? "-",
+                    $0.pickedUp ? "1" : "0"
+                ].joined(separator: ":")
+            }
+            .joined(separator: "|")
+        return "\(snapshot.round.id)|\(scoreBasis.rawValue)|\(scoreRevision)"
+    }
+
+    func playerProjection(
+        for participant: RoundParticipant,
+        scoreBasis: ScoreBasis
+    ) async -> PlayerFinishProjection? {
+        guard canRevealInsights(for: participant) else { return nil }
+        return await playerSimulation(for: participant, scoreBasis: scoreBasis)?.projection
+    }
+
+    func refreshMatchupProbabilities() async {
+        guard !(snapshot.isSecretScoring && !snapshot.areScoresRevealed) else {
+            matchupProbabilities = [:]
+            return
+        }
+
+        let revision = projectionRevision(scoreBasis: matchupScoreBasis)
+        let template = snapshot.resolvedActiveTemplate
+        guard template.inputMode == .strokes, template.scoreSource == .individual else {
+            matchupProbabilities = Dictionary(uniqueKeysWithValues: orderedMatchupSections.map {
+                ($0.section.matchup.id, .unsupported(
+                    matchupID: $0.section.matchup.id,
+                    reason: "Odds aren’t available for custom or shared-score formats."
+                ))
+            })
+            return
+        }
+
+        var simulations: [String: PlayerProjectionSimulation] = [:]
+        for participant in snapshot.participants where isPresenceActive(participant) {
+            if Task.isCancelled { return }
+            simulations[participant.id] = await playerSimulation(
+                for: participant,
+                scoreBasis: matchupScoreBasis
+            )
+        }
+        guard revision == projectionRevision(scoreBasis: matchupScoreBasis), !Task.isCancelled else { return }
+
+        do {
+            let values = try await MatchupProbabilitySimulator.shared.simulate(
+                snapshot: snapshot,
+                scoreBasis: matchupScoreBasis,
+                playerSimulations: simulations
+            )
+            guard revision == projectionRevision(scoreBasis: matchupScoreBasis), !Task.isCancelled else { return }
+            matchupProbabilities = values
+        } catch {
+            guard !(error is CancellationError) else { return }
+            matchupProbabilities = [:]
+        }
+    }
+
+    private func playerSimulation(
+        for participant: RoundParticipant,
+        scoreBasis: ScoreBasis
+    ) async -> PlayerProjectionSimulation? {
+        let revision = projectionRevision(scoreBasis: scoreBasis)
+        let cacheKey = "\(revision)|\(participant.id)"
+        if let cached = cachedPlayerSimulations[cacheKey] { return cached }
+        guard let input = projectionInput(for: participant, scoreBasis: scoreBasis) else { return nil }
+
+        do {
+            try await Task.sleep(for: .milliseconds(180))
+            let seed = ProjectionSeed.make(cacheKey)
+            let result = try await RoundProjectionSimulator.shared.simulate(input: input, seed: seed)
+            guard revision == projectionRevision(scoreBasis: scoreBasis), !Task.isCancelled else { return nil }
+            cachedPlayerSimulations[cacheKey] = result
+            return result
+        } catch {
+            return nil
+        }
+    }
+
+    private func projectionInput(
+        for participant: RoundParticipant,
+        scoreBasis: ScoreBasis
+    ) -> PlayerProjectionInput? {
+        guard snapshot.resolvedActiveTemplate.inputMode == .strokes,
+              snapshot.resolvedActiveTemplate.scoreSource == .individual else {
+            return nil
+        }
+        let tee = snapshot.tees.first(where: { $0.id == participant.teeBoxID }) ?? snapshot.defaultTee
+        guard let tee else { return nil }
+
+        let memberID = participant.seriesMemberID ?? participant.substituteForSeriesMemberID
+        let courseID = currentPredictionCourseID
+        let playedHoleNumbers = courseOrderHoleNumbers
+        let historicalContexts = liveSeriesScoreboardContext?.canonicalResults
+            .filter { $0.linkedRoundID != snapshot.round.id }
+            .compactMap(\.predictionContext) ?? []
+        let currentRoundSamples = playedHoleNumbers.compactMap { holeNumber -> (par: Int, relative: Int)? in
+            guard let hole = tee.holes.first(where: { $0.number == holeNumber }),
+                  let gross = grossStrokes(for: participant.id, holeNumber: holeNumber) else { return nil }
+            return (hole.par, gross - hole.par)
+        }
+
+        let holes = playedHoleNumbers.compactMap { holeNumber -> ProjectionHoleInput? in
+            guard let hole = tee.holes.first(where: { $0.number == holeNumber }) else { return nil }
+            var samples: [ProjectionHistoricalSample] = []
+            for context in historicalContexts {
+                for sample in context.holeSamples {
+                    let weight: Double
+                    if sample.seriesMemberID == memberID,
+                       context.courseID == courseID,
+                       sample.teeBoxID == tee.id,
+                       sample.holeNumber == holeNumber {
+                        weight = 8
+                    } else if sample.seriesMemberID == memberID,
+                              context.courseID == courseID,
+                              sample.holeNumber == holeNumber {
+                        weight = 5
+                    } else if sample.seriesMemberID == memberID, sample.par == hole.par {
+                        weight = 3
+                    } else if context.courseID == courseID, sample.holeNumber == holeNumber {
+                        weight = 2
+                    } else {
+                        continue
+                    }
+                    samples.append(.init(
+                        grossRelativeToPar: sample.grossStrokes - sample.par,
+                        weight: weight
+                    ))
+                }
+            }
+            samples.append(contentsOf: currentRoundSamples
+                .filter { $0.par == hole.par }
+                .map { .init(grossRelativeToPar: $0.relative, weight: 3) })
+
+            let strokesReceived = ScoringEngine.strokesReceived(
+                handicap: participant.lockedHandicapAllowance,
+                holeNumber: holeNumber,
+                holes: tee.holes,
+                playedHoleNumbers: playedHoleNumbers,
+                useHandicaps: snapshot.configuration.useHandicaps,
+                handicapStrokeBasis: snapshot.handicapStrokeBasis
+            )
+            return ProjectionHoleInput(
+                holeNumber: holeNumber,
+                par: hole.par,
+                strokesReceived: strokesReceived,
+                recordedGross: grossStrokes(for: participant.id, holeNumber: holeNumber),
+                historicalSamples: samples
+            )
+        }
+        guard holes.isPopulated else { return nil }
+        return PlayerProjectionInput(
+            participantID: participant.id,
+            scoreBasis: scoreBasis,
+            handicapAllowance: participant.lockedHandicapAllowance,
+            holes: holes
+        )
+    }
+
+    private var currentPredictionCourseID: String? {
+        guard let course = snapshot.courseInfo else { return nil }
+        if course.id.isPopulated { return course.id }
+        if let externalID = course.golfCourseApiID { return "golf-course-api:\(externalID)" }
+        let normalized = course.name
+            .trimmingCharacters(in: .whitespacesAndNewlines)
+            .lowercased()
+            .replacingOccurrences(of: " ", with: "-")
+        return normalized.isPopulated ? "course-name:\(normalized)" : nil
     }
 
     private func refreshSeriesScoreboardProjection() {

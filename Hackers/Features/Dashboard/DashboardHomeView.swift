@@ -38,7 +38,7 @@ struct DashboardHomeView: View {
     var onSeeMoreActiveRounds: (() -> Void)?
     var onPlayNewRound: (() -> Void)?
     var onCreateSeries: (() -> Void)?
-    var onSeriesTap: ((Series) -> Void)?
+    var onSeriesTap: ((SeriesRecord) -> Void)?
 
     @State private var playersSegment: PlayersSegment = .recent
     @State private var coursesSegment: CoursesSegment = .recent
@@ -393,15 +393,28 @@ struct DashboardHomeView: View {
         .padding(.vertical, 10)
     }
 
-    private func seriesTileRow(for series: Series, linkedRounds: [String: Round]) -> some View {
-        let seriesRounds = appSession.seriesRoundsBySeriesID[series.id] ?? []
-        let chipMode = SeriesDashboardTileChip.chipMode(seriesRounds: seriesRounds, linkedRounds: linkedRounds)
+    private func seriesTileRow(for record: SeriesRecord, linkedRounds: [String: Round]) -> some View {
+        let roundCount: Int
+        let chipMode: SeriesDashboardTileChipMode
+        switch record {
+        case .v1(let series):
+            roundCount = series.roundCount
+            chipMode = SeriesDashboardTileChip.chipMode(
+                seriesRounds: appSession.seriesRoundsBySeriesID[series.id] ?? [],
+                linkedRounds: linkedRounds
+            )
+        case .v2(let series):
+            roundCount = series.roundCount
+            chipMode = SeriesDashboardTileChip.chipMode(
+                roundsV2: appSession.seriesV2RoundsBySeriesID[series.id] ?? []
+            )
+        }
         return HStack(spacing: 12) {
             VStack(alignment: .leading, spacing: 4) {
-                Text(series.name)
+                Text(record.name)
                     .fontStyle(kFontName, size: 15, weight: .semibold)
                     .foregroundStyle(palette.foregroundColor)
-                Text("\(series.roundCount) round\(series.roundCount == 1 ? "" : "s")")
+                Text("\(roundCount) round\(roundCount == 1 ? "" : "s")")
                     .fontStyle(kFontName, size: 12, weight: .regular)
                     .foregroundStyle(Color.neutral)
             }
@@ -413,7 +426,9 @@ struct DashboardHomeView: View {
 
     @ViewBuilder
     private var seriesSection: some View {
-        let userSeries = appSession.seriesList
+        let userSeries = appSession.seriesRecords.isPopulated
+            ? appSession.seriesRecords
+            : appSession.seriesList.map(SeriesRecord.v1)
         let linkedRounds = SeriesDashboardTileChip.linkedRoundsMap(from: appSession.rounds)
         VStack(spacing: 12) {
             HStack {

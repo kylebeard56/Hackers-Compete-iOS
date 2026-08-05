@@ -9,6 +9,7 @@ import SwiftUI
 
 struct LeaderboardRowView: View {
     @CappedScaledMetric(relativeTo: .body) var placeWidth: CGFloat = 38
+    @CappedScaledMetric(relativeTo: .body) var handicapWidth: CGFloat = 42
     @CappedScaledMetric(relativeTo: .caption) var teamDotSize: CGFloat = 8
     @CappedScaledMetric(relativeTo: .body) var scoreWidth: CGFloat = 40
     @CappedScaledMetric(relativeTo: .body) var thruWidth: CGFloat = 40
@@ -23,6 +24,7 @@ struct LeaderboardRowView: View {
     var usesFormatDisplay: Bool = false
     var isHighestWinsFormat: Bool = false
     var isScoreHidden: Bool = false
+    var showsHandicap: Bool = false
     var onHiddenScoreTap: Callback? = nil
     let onTogglePinned: Callback
     let onTap: Callback
@@ -42,40 +44,9 @@ struct LeaderboardRowView: View {
                     onTap()
                 }
             } label: {
-                HStack(spacing: rowSpacing) {
-                    Text(placeLabel)
-                        .fontStyle(kFontName, size: 13, weight: .medium)
-                        .foregroundStyle(Color.neutral2)
-                        .lineLimit(1)
-                        .minimumScaleFactor(0.85)
-                        .frame(width: placeWidth, alignment: .center)
-                        .invisibleInk(active: isScoreHidden)
-
-                    if let teamColor {
-                        RoundedRectangle(cornerRadius: 3)
-                            .fill(showsSubstituteMarker ? Color.clear : teamColor.opacity(0.9))
-                            .overlay(
-                                RoundedRectangle(cornerRadius: 3)
-                                    .stroke(teamColor.opacity(0.9), lineWidth: showsSubstituteMarker ? 1.5 : 0)
-                            )
-                            .frame(width: row.memberNames != nil ? 4 : teamDotSize,
-                                   height: row.memberNames != nil ? accentBarHeight : teamDotSize)
-                    }
-
-                    nameStack
-                    
-                    Spacer(minLength: 0)
-                    
-                    Text(scoreLabel)
-                        .fontStyle(kFontName, size: 15, weight: .semibold)
-                        .foregroundStyle(palette.foregroundColor)
-                        .frame(width: scoreWidth, alignment: .center)
-                        .invisibleInk(active: isScoreHidden)
-                    
-                    Text("\(row.thru)")
-                        .fontStyle(kFontName, size: 15, weight: .medium)
-                        .foregroundStyle(Color.neutral2)
-                        .frame(width: thruWidth, alignment: .center)
+                ViewThatFits(in: .horizontal) {
+                    rowContent(showsHandicapColumn: showsHandicap)
+                    rowContent(showsHandicapColumn: false)
                 }
             }
             
@@ -90,10 +61,57 @@ struct LeaderboardRowView: View {
                 }
             }
         }
+        .accessibilityElement(children: .combine)
+        .accessibilityValue(accessibilityValue)
+    }
+
+    private func rowContent(showsHandicapColumn: Bool) -> some View {
+        HStack(spacing: rowSpacing) {
+            Text(placeLabel)
+                .fontStyle(kFontName, size: 13, weight: .medium)
+                .foregroundStyle(Color.neutral2)
+                .lineLimit(1)
+                .minimumScaleFactor(0.85)
+                .frame(width: placeWidth, alignment: .center)
+                .invisibleInk(active: isScoreHidden)
+
+            if let teamColor {
+                RoundedRectangle(cornerRadius: 3)
+                    .fill(showsSubstituteMarker ? Color.clear : teamColor.opacity(0.9))
+                    .overlay(
+                        RoundedRectangle(cornerRadius: 3)
+                            .stroke(teamColor.opacity(0.9), lineWidth: showsSubstituteMarker ? 1.5 : 0)
+                    )
+                    .frame(width: row.memberNames != nil ? 4 : teamDotSize,
+                           height: row.memberNames != nil ? accentBarHeight : teamDotSize)
+            }
+
+            nameStack(showsCompactHandicap: showsHandicap && !showsHandicapColumn)
+
+            Spacer(minLength: 0)
+
+            if showsHandicapColumn {
+                Text(handicapValue)
+                    .fontStyle(kFontName, size: 14, weight: .medium)
+                    .foregroundStyle(Color.neutral2)
+                    .frame(width: handicapWidth, alignment: .center)
+            }
+
+            Text(scoreLabel)
+                .fontStyle(kFontName, size: 15, weight: .semibold)
+                .foregroundStyle(palette.foregroundColor)
+                .frame(width: scoreWidth, alignment: .center)
+                .invisibleInk(active: isScoreHidden)
+
+            Text("\(row.thru)")
+                .fontStyle(kFontName, size: 15, weight: .medium)
+                .foregroundStyle(Color.neutral2)
+                .frame(width: thruWidth, alignment: .center)
+        }
     }
 
     @ViewBuilder
-    private var nameStack: some View {
+    private func nameStack(showsCompactHandicap: Bool) -> some View {
         if row.isSharedScoreUnit {
             VStack(alignment: .leading, spacing: 2) {
                 ForEach(row.participants) { participant in
@@ -106,8 +124,8 @@ struct LeaderboardRowView: View {
                     )
                 }
 
-                if let label = row.sharedHandicapLabel, label.isPopulated {
-                    Text(label)
+                if showsCompactHandicap {
+                    Text(compactSharedHandicapLabel)
                         .fontStyle(kFontName, size: 12, weight: .regular)
                         .foregroundStyle(Color.neutral)
                         .lineLimit(1)
@@ -143,8 +161,38 @@ struct LeaderboardRowView: View {
                         .foregroundStyle(Color.neutral)
                         .lineLimit(1)
                 }
+
+                if showsCompactHandicap {
+                    Text("HCP \(handicapValue)")
+                        .fontStyle(kFontName, size: 12, weight: .regular)
+                        .foregroundStyle(Color.neutral)
+                        .lineLimit(1)
+                }
             }
         }
+    }
+
+    private var handicapValue: String {
+        if row.isSharedScoreUnit {
+            return row.sharedHandicapLabel?
+                .replacingOccurrences(of: "HCP ", with: "") ?? "—"
+        }
+        return "\(row.participant.lockedHandicapAllowance)"
+    }
+
+    private var compactSharedHandicapLabel: String {
+        guard let label = row.sharedHandicapLabel, label.isPopulated else { return "HCP —" }
+        return label
+    }
+
+    private var accessibilityValue: String {
+        var values = ["Place \(placeLabel)"]
+        if showsHandicap {
+            values.append("handicap \(handicapValue)")
+        }
+        values.append("score \(isScoreHidden ? "hidden" : scoreLabel)")
+        values.append("through \(row.thru)")
+        return values.joined(separator: ", ")
     }
     
     private var scoreLabel: String {

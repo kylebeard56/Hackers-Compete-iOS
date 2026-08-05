@@ -208,6 +208,9 @@ struct GameLobby: View, Loggable {
             currentUserID = await AppData.shared.user?.id
             if let id = appSession.activeRoundID {
                 await roundSession.activate(roundID: id, profile: .lobby)
+                if !isEditMode {
+                    appSession.persistRoundResume(destination: .lobby)
+                }
                 if let preQueued = appSession.preQueuedPlayerIDs, !preQueued.isEmpty {
                     switch await FirebaseService.shared.getPlayersByIDs(preQueued) {
                     case .success(let players):
@@ -218,6 +221,10 @@ struct GameLobby: View, Loggable {
                     appSession.preQueuedPlayerIDs = nil
                 }
             }
+        }
+        .onReceive(HackersNotification.appSceneDidBecomeActive.publisher()) { _ in
+            guard let id = appSession.activeRoundID else { return }
+            Task { await roundSession.activate(roundID: id, profile: .lobby) }
         }
         .resignKeyboardOnTapGesture(exceptWhen: focus != nil)
         .onReceive(roundSession.$snapshot, perform: { s in
@@ -478,7 +485,12 @@ extension GameLobby {
                 style: .glass,
                 icon: "f00d",
                 color: palette.foregroundColor,
-                onTap: { dismiss() }
+                onTap: {
+                    if !isEditMode {
+                        appSession.clearRoundResume()
+                    }
+                    dismiss()
+                }
             )
             
             Spacer(minLength: 0)

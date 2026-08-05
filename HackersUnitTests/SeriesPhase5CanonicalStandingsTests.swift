@@ -188,7 +188,7 @@ final class SeriesPhase5CanonicalStandingsTests: XCTestCase {
             SeriesRoundCanonicalBuilder.generationID(sourceRevision: firstSource, policyFingerprint: "policy"),
             SeriesRoundCanonicalBuilder.generationID(sourceRevision: correctedSource, policyFingerprint: "policy")
         )
-        XCTAssertEqual(SeriesRoundCanonicalBuilder.processorVersion, 2)
+        XCTAssertEqual(SeriesRoundCanonicalBuilder.processorVersion, 3)
     }
 
     func testCanonicalProjectionBenchmarkIsBoundedForLeagueScale() {

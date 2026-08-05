@@ -259,6 +259,22 @@ extension RoundParticipant {
         guard let baseline = leagueHandicapStrokesAtCreation else { return false }
         return adjustedHandicap != baseline
     }
+
+    /// The allowance locked for this round. League handicap updates after activation
+    /// must never alter live or historical scoring context.
+    var lockedHandicapAllowance: Int {
+        handicapSnapshot?.effectiveStrokes
+            ?? leagueHandicapStrokesAtCreation
+            ?? adjustedHandicap
+    }
+
+    var lockedHandicapProvenance: String {
+        let strokes = lockedHandicapAllowance
+        if let index = handicapSnapshot?.handicapIndex ?? handicapIndex {
+            return "Index \(String(format: "%.1f", index)) → Course HCP \(strokes)"
+        }
+        return "Course HCP \(strokes)"
+    }
 }
 
 extension RoundParticipant {

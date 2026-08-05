@@ -3194,6 +3194,38 @@ struct SeriesRoundRuleCompatibilityProjection: Hashable, Codable, Sendable {
     }
 }
 
+struct SeriesRoundPredictionContext: Hashable, Codable, Sendable {
+    let courseID: String
+    let courseName: String
+    let holeSegment: HoleSegment
+    let holeSamples: [SeriesRoundHoleSample]
+
+    enum CodingKeys: String, CodingKey {
+        case courseName = "course_name"
+        case courseID = "course_id"
+        case holeSegment = "hole_segment"
+        case holeSamples = "hole_samples"
+    }
+}
+
+struct SeriesRoundHoleSample: Hashable, Codable, Sendable {
+    let seriesMemberID: String
+    let participantID: String
+    let teeBoxID: String
+    let holeNumber: Int
+    let par: Int
+    let grossStrokes: Int
+
+    enum CodingKeys: String, CodingKey {
+        case par
+        case seriesMemberID = "series_member_id"
+        case participantID = "participant_id"
+        case teeBoxID = "tee_box_id"
+        case holeNumber = "hole_number"
+        case grossStrokes = "gross_strokes"
+    }
+}
+
 struct SeriesRoundResult: FirebaseSubcollectable {
     var id: String
     var seriesRoundID: String
@@ -3208,6 +3240,9 @@ struct SeriesRoundResult: FirebaseSubcollectable {
     var performanceMetrics: [SeriesRoundPerformanceMetric]
     var pointAwards: [SeriesRoundPointAwardProjection]
     var handicapSamples: [SeriesRoundHandicapSampleProjection]
+    /// Versioned, derived list-card facts. Round configuration remains authoritative.
+    var cardProjection: SeriesRoundCardProjection?
+    var predictionContext: SeriesRoundPredictionContext?
     var processingInputs: SeriesRoundProcessingInputManifest?
     var generatedAt: Time
     var createdAt: Time
@@ -3232,6 +3267,8 @@ struct SeriesRoundResult: FirebaseSubcollectable {
         performanceMetrics: [SeriesRoundPerformanceMetric],
         pointAwards: [SeriesRoundPointAwardProjection],
         handicapSamples: [SeriesRoundHandicapSampleProjection],
+        cardProjection: SeriesRoundCardProjection? = nil,
+        predictionContext: SeriesRoundPredictionContext? = nil,
         processingInputs: SeriesRoundProcessingInputManifest? = nil,
         generatedAt: Time = .init(),
         createdAt: Time = .init(),
@@ -3251,6 +3288,8 @@ struct SeriesRoundResult: FirebaseSubcollectable {
         self.performanceMetrics = performanceMetrics
         self.pointAwards = pointAwards
         self.handicapSamples = handicapSamples
+        self.cardProjection = cardProjection
+        self.predictionContext = predictionContext
         self.processingInputs = processingInputs
         self.generatedAt = generatedAt
         self.createdAt = createdAt
@@ -3271,6 +3310,8 @@ struct SeriesRoundResult: FirebaseSubcollectable {
         case performanceMetrics = "performance_metrics"
         case pointAwards = "point_awards"
         case handicapSamples = "handicap_samples"
+        case cardProjection = "card_projection"
+        case predictionContext = "prediction_context"
         case processingInputs = "processing_inputs"
         case generatedAt = "generated_at"
         case createdAt = "created_at"

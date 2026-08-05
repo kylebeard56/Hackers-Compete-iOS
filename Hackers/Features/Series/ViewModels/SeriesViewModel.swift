@@ -1631,7 +1631,7 @@ final class SeriesViewModel: ObservableObject, Loggable {
     private let snapshotRepository: SeriesRoundSnapshotRepository
     private let standingsPublicationService: SeriesStandingsPublicationService
     private var canonicalProcessingStates: [String: SeriesRoundProcessingState] = [:]
-    private var canonicalRoundResults: [String: SeriesRoundResult] = [:]
+    private(set) var canonicalRoundResults: [String: SeriesRoundResult] = [:]
     private var legacyStandings: [SeriesStanding] = []
     private var canonicalRetryRoundIDs = Set<String>()
     @Published var isLoading = true

@@ -86,6 +86,9 @@ struct HackersApp: App, Loggable {
                     appSession.pendingJoinLink = .round(token: value)
                     appSession.shareCode = value
                 }
+                if appSession.isUserAuthenticated {
+                    appSession.routeTo(.dashboard)
+                }
                 HackersNotification.joinFromDeepLink.send()
             })
         }

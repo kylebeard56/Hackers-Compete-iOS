@@ -42,14 +42,6 @@ extension LiveRound {
                 //.presentationBackground(.ultraThinMaterial)
                 .interactiveDismissDisabled(true)
             }
-            .fullScreenCover(item: $viewModel.presentedParticipant) { participant in
-                FullScorecardView(
-                    viewModel: viewModel,
-                    participant: participant,
-                    allowsScoreEditing: viewModel.canEditActualGroupScores
-                )
-                    .presentationBackground(.ultraThinMaterial)
-            }
             .alert("Scores Hidden", isPresented: $showSecretScoreAlert) {
                 Button("OK", role: .cancel) { }
             } message: {
@@ -652,6 +644,8 @@ extension LiveRound {
                     .foregroundStyle(Color.neutral)
                     .alignCenter()
             } else {
+                leaderboardColumnHeaders
+
                 switch viewModel.leaderboardMode {
                 case .individual:
                     individualLeaderboardList
@@ -843,6 +837,41 @@ extension LiveRound {
     }
     
     // MARK: - Individual List
+
+    private var leaderboardColumnHeaders: some View {
+        ViewThatFits(in: .horizontal) {
+            leaderboardColumnHeaderRow(showsHandicapColumn: viewModel.handicapsEnabled)
+            leaderboardColumnHeaderRow(showsHandicapColumn: false)
+        }
+        .accessibilityHidden(true)
+    }
+
+    private func leaderboardColumnHeaderRow(showsHandicapColumn: Bool) -> some View {
+        HStack(spacing: 8) {
+            Text("#")
+                .frame(width: 38, alignment: .center)
+
+            Text("Player")
+                .frame(maxWidth: .infinity, alignment: .leading)
+
+            if showsHandicapColumn {
+                Text("HCP")
+                    .frame(width: 42, alignment: .center)
+            }
+
+            Text(viewModel.scoreBasis == .gross ? "Gross" : "Net")
+                .frame(width: 40, alignment: .center)
+
+            Text("Thru")
+                .frame(width: 40, alignment: .center)
+
+            Color.clear
+                .frame(width: 20, height: 1)
+        }
+        .fontStyle(kFontName, size: 10, weight: .semibold)
+        .foregroundStyle(Color.neutral3)
+        .textCase(.uppercase)
+    }
     
     private var individualLeaderboardList: some View {
         let rows = viewModel.displayLeaderboardRows
@@ -883,6 +912,7 @@ extension LiveRound {
                     usesFormatDisplay: row.totalPoints != nil,
                     isHighestWinsFormat: viewModel.snapshot.resolvedActiveTemplate.leaderboardSort == .highestWins,
                     isScoreHidden: hideScore,
+                    showsHandicap: viewModel.handicapsEnabled,
                     onHiddenScoreTap: {
                         if viewModel.isCurrentUserHost {
                             showRevealConfirmation = true
@@ -936,6 +966,7 @@ extension LiveRound {
                             usesFormatDisplay: row.totalPoints != nil,
                             isHighestWinsFormat: viewModel.snapshot.resolvedActiveTemplate.leaderboardSort == .highestWins,
                             isScoreHidden: hideScore,
+                            showsHandicap: viewModel.handicapsEnabled,
                             onHiddenScoreTap: {
                                 if viewModel.isCurrentUserHost {
                                     showRevealConfirmation = true

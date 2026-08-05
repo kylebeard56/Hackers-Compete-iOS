@@ -213,6 +213,11 @@
 		B4C28ED92E2D6C7100F32AF6 /* ScrollGeometry.swift in Sources */ = {isa = PBXBuildFile; fileRef = B4C28ED82E2D6C7100F32AF6 /* ScrollGeometry.swift */; };
 		B4C28EDC2E2D6CAA00F32AF6 /* NavButton.swift in Sources */ = {isa = PBXBuildFile; fileRef = B4C28EDB2E2D6CAA00F32AF6 /* NavButton.swift */; };
 		B4C28EDE2E2D6D5500F32AF6 /* Line.swift in Sources */ = {isa = PBXBuildFile; fileRef = B4C28EDD2E2D6D5500F32AF6 /* Line.swift */; };
+		B4C4D00130B0000100ABCDEF /* SeriesRoundCardPresentation.swift in Sources */ = {isa = PBXBuildFile; fileRef = B4C4D00230B0000100ABCDEF /* SeriesRoundCardPresentation.swift */; };
+		B4C4D00330B0000100ABCDEF /* SeriesViewModel+RoundCard.swift in Sources */ = {isa = PBXBuildFile; fileRef = B4C4D00430B0000100ABCDEF /* SeriesViewModel+RoundCard.swift */; };
+		B4C4D00530B0000100ABCDEF /* SeriesRoundCardSummaryView.swift in Sources */ = {isa = PBXBuildFile; fileRef = B4C4D00630B0000100ABCDEF /* SeriesRoundCardSummaryView.swift */; };
+		B4C4D00730B0000100ABCDEF /* SeriesRoundCardStateBuilder.swift in Sources */ = {isa = PBXBuildFile; fileRef = B4C4D00830B0000100ABCDEF /* SeriesRoundCardStateBuilder.swift */; };
+		B4C4D00930B0000100ABCDEF /* SeriesRouterView.swift in Sources */ = {isa = PBXBuildFile; fileRef = B4C4D00A30B0000100ABCDEF /* SeriesRouterView.swift */; };
 		B4C50C012F6B0001007D8846 /* CourseScorecardDTO.swift in Sources */ = {isa = PBXBuildFile; fileRef = B4C50C022F6B0001007D8846 /* CourseScorecardDTO.swift */; };
 		B4C50C032F6B0002007D8846 /* CourseScorecardOCRService.swift in Sources */ = {isa = PBXBuildFile; fileRef = B4C50C042F6B0002007D8846 /* CourseScorecardOCRService.swift */; };
 		B4C50C072F6B0004007D8846 /* CourseScorecardSchema.swift in Sources */ = {isa = PBXBuildFile; fileRef = B4C50C082F6B0004007D8846 /* CourseScorecardSchema.swift */; };
@@ -602,6 +607,11 @@
 		B4C28ED82E2D6C7100F32AF6 /* ScrollGeometry.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ScrollGeometry.swift; sourceTree = "<group>"; };
 		B4C28EDB2E2D6CAA00F32AF6 /* NavButton.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NavButton.swift; sourceTree = "<group>"; };
 		B4C28EDD2E2D6D5500F32AF6 /* Line.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Line.swift; sourceTree = "<group>"; };
+		B4C4D00230B0000100ABCDEF /* SeriesRoundCardPresentation.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SeriesRoundCardPresentation.swift; sourceTree = "<group>"; };
+		B4C4D00430B0000100ABCDEF /* SeriesViewModel+RoundCard.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "SeriesViewModel+RoundCard.swift"; sourceTree = "<group>"; };
+		B4C4D00630B0000100ABCDEF /* SeriesRoundCardSummaryView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SeriesRoundCardSummaryView.swift; sourceTree = "<group>"; };
+		B4C4D00830B0000100ABCDEF /* SeriesRoundCardStateBuilder.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SeriesRoundCardStateBuilder.swift; sourceTree = "<group>"; };
+		B4C4D00A30B0000100ABCDEF /* SeriesRouterView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SeriesRouterView.swift; sourceTree = "<group>"; };
 		B4C50C022F6B0001007D8846 /* CourseScorecardDTO.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CourseScorecardDTO.swift; sourceTree = "<group>"; };
 		B4C50C042F6B0002007D8846 /* CourseScorecardOCRService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CourseScorecardOCRService.swift; sourceTree = "<group>"; };
 		B4C50C082F6B0004007D8846 /* CourseScorecardSchema.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CourseScorecardSchema.swift; sourceTree = "<group>"; };
@@ -1093,6 +1103,8 @@
 				B4A0F01230A0000100ABCDEF /* SeriesStandingsSettingsView.swift */,
 				B45843482F68231500B96E60 /* SeriesRosterView.swift */,
 				B45843662F68238000B96E60 /* SeriesRoundAttendanceView.swift */,
+				B4C4D00630B0000100ABCDEF /* SeriesRoundCardSummaryView.swift */,
+				B4C4D00A30B0000100ABCDEF /* SeriesRouterView.swift */,
 				B458434A2F68231500B96E60 /* SeriesView.swift */,
 				B4SHRSER322EE5A100007B011E /* ShareSeriesView.swift */,
 			);
@@ -1137,6 +1149,8 @@
 				B4A0F01030A0000100ABCDEF /* SeriesStandingsRollout.swift */,
 				B4A0F01430A0000100ABCDEF /* SeriesStandingsMigration.swift */,
 				B4A0F01630A0000100ABCDEF /* SeriesRuntimeStore.swift */,
+				B4C4D00230B0000100ABCDEF /* SeriesRoundCardPresentation.swift */,
+				B4C4D00830B0000100ABCDEF /* SeriesRoundCardStateBuilder.swift */,
 				B470A0012F68231500B96E60 /* SeriesRoundCreationMapping.swift */,
 				B45843492F68231500B96E60 /* SeriesRoundCreationService.swift */,
 				B40A1A3F2F851B2300C0FF09 /* SeriesRoundSyncPlanning.swift */,
@@ -1151,6 +1165,7 @@
 			isa = PBXGroup;
 			children = (
 				B458434B2F68231500B96E60 /* SeriesViewModel.swift */,
+				B4C4D00430B0000100ABCDEF /* SeriesViewModel+RoundCard.swift */,
 			);
 			path = ViewModels;
 			sourceTree = "<group>";
@@ -2300,6 +2315,11 @@
 				B45207A32F5C682900E6495F /* FormatTemplateRegistry.swift in Sources */,
 				B45207A42F5C682900E6495F /* SegmentResolver.swift in Sources */,
 				B458434D2F68231500B96E60 /* SeriesViewModel.swift in Sources */,
+				B4C4D00330B0000100ABCDEF /* SeriesViewModel+RoundCard.swift in Sources */,
+				B4C4D00130B0000100ABCDEF /* SeriesRoundCardPresentation.swift in Sources */,
+				B4C4D00730B0000100ABCDEF /* SeriesRoundCardStateBuilder.swift in Sources */,
+				B4C4D00530B0000100ABCDEF /* SeriesRoundCardSummaryView.swift in Sources */,
+				B4C4D00930B0000100ABCDEF /* SeriesRouterView.swift in Sources */,
 				B4COMMG0012F90000700ABCDEF /* CommissionerGrossScoreDistributer.swift in Sources */,
 				B4ABCD012FA000100ABCDEF /* SeriesTeamInsightBuilder.swift in Sources */,
 				B4HSED0012F90000700ABCDEF /* SeriesHandicapScoreEditorSheet.swift in Sources */,

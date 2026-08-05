@@ -13,43 +13,59 @@ extension AppSession {
         defer { isLoadingSeries = false }
 
         guard let player = await AppData.shared.getPrimaryPlayer() else {
+            seriesRecords = []
             seriesList = []
             seriesRoundsBySeriesID = [:]
+            seriesV2RoundsBySeriesID = [:]
             return
         }
-        let fetched = await FirebaseService.shared.fetchUserSeries(playerID: player.id)
-        let sorted = fetched
-            .filter { $0.status != .archived }
-            .sorted { $0.lastUpdatedAt.unix > $1.lastUpdatedAt.unix }
+        let records = await FirebaseService.shared.fetchUserSeriesRecords(playerID: player.id)
+        let sorted = records.sorted { $0.lastUpdatedAt.unix > $1.lastUpdatedAt.unix }
+        let v1Values = sorted.compactMap { record -> Series? in
+            guard case .v1(let value) = record else { return nil }
+            return value
+        }
 
         let maxConcurrentRoundLoads = 4
-        let seriesIDs = sorted.map(\.id)
+        let queuedRecords = sorted
         var roundsBySeriesID: [String: [SeriesRound]] = [:]
-        await withTaskGroup(of: (String, [SeriesRound]).self) { group in
+        var roundsV2BySeriesID: [String: [RoundV2]] = [:]
+        await withTaskGroup(of: SeriesRoundLoadResult.self) { group in
             var nextIndex = 0
 
             func enqueueNext() {
-                guard nextIndex < seriesIDs.count else { return }
-                let seriesID = seriesIDs[nextIndex]
+                guard nextIndex < queuedRecords.count else { return }
+                let record = queuedRecords[nextIndex]
                 nextIndex += 1
                 group.addTask {
-                    let rounds = await FirebaseService.shared.fetchSeriesRounds(seriesID: seriesID)
-                    return (seriesID, rounds)
+                    switch record {
+                    case .v1(let series):
+                        return .v1(series.id, await FirebaseService.shared.fetchSeriesRounds(seriesID: series.id))
+                    case .v2(let series):
+                        let rounds = (try? await FirebaseService.shared.fetchSeriesRoundsV2(seriesID: series.id).get()) ?? []
+                        return .v2(series.id, rounds)
+                    }
                 }
             }
 
-            for _ in 0..<min(maxConcurrentRoundLoads, seriesIDs.count) {
+            for _ in 0..<min(maxConcurrentRoundLoads, queuedRecords.count) {
                 enqueueNext()
             }
 
-            for await (seriesID, rounds) in group {
-                roundsBySeriesID[seriesID] = rounds
+            for await result in group {
+                switch result {
+                case .v1(let seriesID, let rounds): roundsBySeriesID[seriesID] = rounds
+                case .v2(let seriesID, let rounds): roundsV2BySeriesID[seriesID] = rounds
+                }
                 enqueueNext()
             }
         }
 
         self.seriesRoundsBySeriesID = roundsBySeriesID
-        self.seriesList = sorted
+        self.seriesV2RoundsBySeriesID = roundsV2BySeriesID
+        self.seriesRecords = sorted
+        // Retained for V1-only consumers such as linked live-round context.
+        self.seriesList = v1Values
     }
 
     func createSeries(name: String, preset: SeriesExperiencePreset) async -> String? {
@@ -89,6 +105,7 @@ extension AppSession {
             )
             _ = await FirebaseService.shared.addSeriesMember(commissioner)
             seriesRoundsBySeriesID[created.id] = []
+            seriesRecords.insert(.v1(created), at: 0)
             seriesList.insert(created, at: 0)
             addEvent(
                 "series.created",
@@ -110,4 +127,9 @@ extension AppSession {
             return nil
         }
     }
+}
+
+private enum SeriesRoundLoadResult {
+    case v1(String, [SeriesRound])
+    case v2(String, [RoundV2])
 }

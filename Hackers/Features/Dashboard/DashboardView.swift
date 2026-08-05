@@ -129,6 +129,11 @@ struct DashboardView: View, Loggable {
         .onReceive(HackersNotification.joinFromDeepLink.publisher()) { _ in
             showFindRound = true
         }
+        .onAppear {
+            if appSession.pendingJoinLink != nil {
+                showFindRound = true
+            }
+        }
     }
     
     // MARK: - Paged Content

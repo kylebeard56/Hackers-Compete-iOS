@@ -153,7 +153,7 @@ enum SeriesRoundShadowValidator {
 }
 
 enum SeriesRoundCanonicalBuilder {
-    static let processorVersion = 2
+    static let processorVersion = 3
 
     static func generationID(
         sourceRevision: String,
@@ -369,6 +369,69 @@ enum SeriesRoundCanonicalBuilder {
         .sorted { $0.id < $1.id }
     }
 
+    static func predictionContext(snapshot: RoundSnapshot) -> SeriesRoundPredictionContext? {
+        guard snapshot.resolvedActiveTemplate.supportsLeagueHandicapAccrual,
+              let courseInfo = snapshot.courseInfo else {
+            return nil
+        }
+
+        let courseID: String
+        if courseInfo.id.isPopulated {
+            courseID = courseInfo.id
+        } else if let externalID = courseInfo.golfCourseApiID {
+            courseID = "golf-course-api:\(externalID)"
+        } else {
+            let normalizedName = courseInfo.name
+                .trimmingCharacters(in: .whitespacesAndNewlines)
+                .lowercased()
+                .replacingOccurrences(of: " ", with: "-")
+            guard normalizedName.isPopulated else { return nil }
+            courseID = "course-name:\(normalizedName)"
+        }
+
+        let participantMap = Dictionary(uniqueKeysWithValues: snapshot.participants.map { ($0.id, $0) })
+        let teeMap = courseInfo.teeMap
+        let samples = snapshot.scoring.flatMap { entry -> [SeriesRoundHoleSample] in
+            guard entry.hasRecordedScore,
+                  !entry.pickedUp else { return [] }
+
+            let participantIDs = entry.participantIDs.isPopulated
+                ? entry.participantIDs
+                : [entry.scoringUnitID]
+            return participantIDs.compactMap { participantID in
+                guard let participant = participantMap[participantID],
+                      let memberID = participant.seriesMemberID,
+                      memberID.isPopulated,
+                      entry.scoringUnitID == participantID,
+                      let tee = teeMap[participant.teeBoxID] ?? snapshot.defaultTee,
+                      let hole = tee.holes.first(where: { $0.number == entry.holeNumber }),
+                      let gross = RoundScoreCompleteness.validGrossStrokes(entry: entry, par: hole.par) else {
+                    return nil
+                }
+                return SeriesRoundHoleSample(
+                    seriesMemberID: memberID,
+                    participantID: participantID,
+                    teeBoxID: tee.id,
+                    holeNumber: entry.holeNumber,
+                    par: hole.par,
+                    grossStrokes: gross
+                )
+            }
+        }
+        .sorted {
+            if $0.seriesMemberID != $1.seriesMemberID { return $0.seriesMemberID < $1.seriesMemberID }
+            if $0.holeNumber != $1.holeNumber { return $0.holeNumber < $1.holeNumber }
+            return $0.teeBoxID < $1.teeBoxID
+        }
+
+        return SeriesRoundPredictionContext(
+            courseID: courseID,
+            courseName: courseInfo.name,
+            holeSegment: snapshot.holeSegment,
+            holeSamples: samples
+        )
+    }
+
     static func compatibilityProjections(
         _ values: [SeriesStandingsRuleCompatibility]
     ) -> [SeriesRoundRuleCompatibilityProjection] {
@@ -434,6 +497,7 @@ enum SeriesRoundCanonicalBuilder {
             snapshot: snapshot
         )
         let compatibilityValues = compatibilityProjections(compatibility)
+        let predictionContext = predictionContext(snapshot: snapshot)
         let semanticHash = hash(SemanticResult(
             compatibility: compatibilityValues,
             performanceMetrics: metrics,
@@ -467,6 +531,12 @@ enum SeriesRoundCanonicalBuilder {
             performanceMetrics: metrics,
             pointAwards: awardValues,
             handicapSamples: handicapValues,
+            cardProjection: SeriesRoundCardStateBuilder.projection(
+                seriesRound: seriesRound,
+                snapshot: snapshot,
+                generatedAt: generatedAt
+            ),
+            predictionContext: predictionContext,
             processingInputs: processingInputs,
             generatedAt: generatedAt,
             createdAt: generatedAt,

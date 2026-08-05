@@ -360,6 +360,7 @@ struct CompleteRoundSheet: View, Loggable {
                     ]
                 )
             )
+            appSession.clearRoundResume()
             dismiss()
             appSession.routeTo(.dashboard)
         } catch {

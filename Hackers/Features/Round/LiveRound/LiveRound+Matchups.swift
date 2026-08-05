@@ -38,6 +38,13 @@ extension LiveRound {
             .padding(.bottom, 100)
         }
         .frame(maxHeight: .infinity)
+        .task(id: matchupProjectionTaskID) {
+            await viewModel.refreshMatchupProbabilities()
+        }
+    }
+
+    private var matchupProjectionTaskID: String {
+        viewModel.projectionRevision(scoreBasis: viewModel.matchupScoreBasis)
     }
 
     @ViewBuilder
@@ -61,6 +68,7 @@ extension LiveRound {
 
 private struct MatchupTileView: View {
     @CappedScaledMetric(relativeTo: .body) var pillSize: CGFloat = 44
+    @Environment(\.accessibilityReduceMotion) private var accessibilityReduceMotion
 
     let section: MatchupLeaderboardSection
     let matchIndex: Int
@@ -130,6 +138,10 @@ private struct MatchupTileView: View {
         !snapshot.configuration.substitutesScore && matchupParticipants.contains(where: \.isSubstitute)
     }
 
+    private var probability: MatchupProbability? {
+        viewModel.matchupProbabilities[section.matchup.id]
+    }
+
     var body: some View {
         ZStack(alignment: .bottomTrailing) {
             VStack(spacing: 0) {
@@ -143,6 +155,8 @@ private struct MatchupTileView: View {
                     matchupRangeMismatchView(rangeMismatch)
                 } else {
                     matchupHeaderRow
+
+                    matchupProbabilityView
 
                     if showsExpandedMembers && isExpanded {
                         expandedPlayerList
@@ -177,6 +191,101 @@ private struct MatchupTileView: View {
             strokeOpacity: 0.38,
             shadowOpacity: 0.16
         )
+    }
+
+    @ViewBuilder
+    private var matchupProbabilityView: some View {
+        if viewModel.shouldShowMatchupProbabilities {
+            if let probability, probability.isSupported {
+                VStack(alignment: .leading, spacing: 7) {
+                    HStack {
+                        Text("Win probability")
+                        Spacer(minLength: 8)
+                        Text(probability.confidence.rawValue.capitalized)
+                    }
+                    .fontStyle(kFontName, size: 11, weight: .semibold)
+                    .foregroundStyle(Color.neutral)
+
+                    GeometryReader { geometry in
+                        HStack(spacing: 1) {
+                            Rectangle()
+                                .fill(leftProbabilityColor)
+                                .frame(width: probabilityWidth(
+                                    probability.leftWin,
+                                    totalWidth: geometry.size.width
+                                ))
+                            Rectangle()
+                                .fill(Color.neutral4)
+                                .frame(width: probabilityWidth(
+                                    probability.tie,
+                                    totalWidth: geometry.size.width
+                                ))
+                            Rectangle()
+                                .fill(rightProbabilityColor)
+                        }
+                        .clipShape(Capsule())
+                    }
+                    .frame(height: 8)
+
+                    HStack {
+                        Text("\(probability.leftWin)%")
+                            .foregroundStyle(leftProbabilityColor)
+                        Spacer(minLength: 6)
+                        Text("Tie \(probability.tie)%")
+                            .foregroundStyle(Color.neutral)
+                        Spacer(minLength: 6)
+                        Text("\(probability.rightWin)%")
+                            .foregroundStyle(rightProbabilityColor)
+                    }
+                    .fontStyle(kFontName, size: 12, weight: .semibold)
+                    .contentTransition(.numericText())
+                }
+                .padding(.top, 14)
+                .animation(accessibilityReduceMotion ? nil : .easeInOut(duration: 0.25), value: probability)
+                .accessibilityElement(children: .ignore)
+                .accessibilityLabel(
+                    "Win probability: left side \(probability.leftWin) percent, tie \(probability.tie) percent, right side \(probability.rightWin) percent, \(probability.confidence.rawValue) confidence"
+                )
+            } else if let reason = probability?.unsupportedReason {
+                Label(reason, systemImage: "chart.bar.xaxis")
+                    .fontStyle(kFontName, size: 11, weight: .medium)
+                    .foregroundStyle(Color.neutral)
+                    .padding(.top, 12)
+                    .fixedSize(horizontal: false, vertical: true)
+            } else {
+                HStack(spacing: 8) {
+                    ProgressView().controlSize(.small)
+                    Text("Estimating matchup")
+                }
+                .fontStyle(kFontName, size: 11, weight: .medium)
+                .foregroundStyle(Color.neutral)
+                .padding(.top, 12)
+                .accessibilityLabel("Estimating matchup win probability")
+            }
+        }
+    }
+
+    private var leftProbabilityColor: Color {
+        probabilityColor(for: section.matchup.pairingIDs().first)
+    }
+
+    private var rightProbabilityColor: Color {
+        probabilityColor(for: section.matchup.pairingIDs().dropFirst().first)
+    }
+
+    private func probabilityColor(for sideID: String?) -> Color {
+        guard let sideID else { return viewModel.theme.color }
+        if let team = teamMap[sideID] { return team.displaySwatchColor ?? viewModel.theme.color }
+        if let participant = participantMap[sideID] {
+            return viewModel.teamColor(for: participant) ?? viewModel.theme.color
+        }
+        return viewModel.matchupSideParticipants(scoringUnitID: sideID, matchup: section.matchup)
+            .compactMap { viewModel.teamColor(for: $0) }
+            .first ?? viewModel.theme.color
+    }
+
+    private func probabilityWidth(_ percentage: Int, totalWidth: CGFloat) -> CGFloat {
+        totalWidth * CGFloat(max(0, min(100, percentage))) / 100
     }
 
     private func matchupRangeMismatchView(_ mismatch: RoundSegmentHoleRangeMismatch) -> some View {
