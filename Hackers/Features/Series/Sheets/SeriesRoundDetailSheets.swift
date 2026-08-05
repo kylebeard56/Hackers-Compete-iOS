@@ -875,22 +875,37 @@ enum ScoreCorrectionEditorMode: String, CaseIterable {
     case totalGross = "Total gross"
 }
 
+enum SeriesRoundHandicapRepairMethod: String, CaseIterable {
+    case courseHandicapOverride = "Course HCP"
+    case calculateFromIndex = "Index + tee"
+}
+
+struct SeriesRoundHandicapRepairDraft: Hashable {
+    var method: SeriesRoundHandicapRepairMethod
+    var handicapIndexText: String
+    var teeBoxID: String
+    var courseHandicapText: String
+}
+
 struct SeriesRoundScoreCorrectionSheet: View {
     @Environment(\.colorScheme) private var colorScheme
     @Environment(\.dismiss) private var dismiss
 
     @ObservedObject var viewModel: SeriesViewModel
     let seriesRound: SeriesRound
-    /// When set (e.g. from handicap history), selects that series member’s participant row after load.
     let initialSeriesMemberID: String?
     let initialParticipantID: String?
+    let initialEditorMode: ScoreCorrectionEditorMode
 
     @State private var context: SeriesRoundCorrectionContext?
-    @State private var selectedParticipantID: String = ""
+    @State private var searchText = ""
+    @State private var selectedParticipant: RoundParticipant?
     @State private var draftScores: [String: Int] = [:]
-    @State private var reason: String = ""
-    @State private var editorMode: ScoreCorrectionEditorMode = .holeByHole
-    @State private var grossTargetText: String = ""
+    @State private var grossTargets: [String: String] = [:]
+    @State private var editorModes: [String: ScoreCorrectionEditorMode] = [:]
+    @State private var handicapDrafts: [String: SeriesRoundHandicapRepairDraft] = [:]
+    @State private var reason = ""
+    @State private var showDiscardConfirmation = false
 
     private var palette: DesignPalette { .init(theme: .primary, scheme: colorScheme) }
 
@@ -905,42 +920,31 @@ struct SeriesRoundScoreCorrectionSheet: View {
         self.seriesRound = seriesRound
         self.initialSeriesMemberID = initialSeriesMemberID
         self.initialParticipantID = initialParticipantID
-        _editorMode = State(initialValue: initialEditorMode)
+        self.initialEditorMode = initialEditorMode
     }
 
     var body: some View {
         VStack(spacing: 0) {
             SeriesSheetHeader(
                 palette: palette,
-                title: "Correct Scores",
-                subtitle: "Commissioner adjustments keep the round signed and complete.",
-                onClose: { dismiss() }
+                title: "Repair Round",
+                subtitle: "Review players, collect changes, then save once.",
+                onClose: requestDismiss
             )
 
             ScrollView(showsIndicators: false) {
-                VStack(spacing: 16) {
+                LazyVStack(spacing: 16) {
                     if let context {
-                        overviewSection(context: context)
-                        participantSelector(context: context)
-                        Picker("Editor", selection: $editorMode) {
-                            ForEach(ScoreCorrectionEditorMode.allCases, id: \.self) { mode in
-                                Text(mode.rawValue).tag(mode)
-                            }
-                        }
-                        .pickerStyle(.segmented)
-                        if editorMode == .holeByHole {
-                            scoreEditorSection(context: context)
-                        } else {
-                            grossEditorSection(context: context)
-                        }
-                        reasonSection
-                        actionSection
+                        overview(context)
+                        searchField
+                        playersCard(context)
+                        reasonCard
                     } else if viewModel.correctingRoundID == seriesRound.id {
                         ProgressView()
                             .tint(Color.accentGreen)
                             .frame(maxWidth: .infinity, minHeight: 260)
                     } else {
-                        unavailableSection
+                        unavailableCard
                     }
                 }
                 .padding(16)
@@ -948,92 +952,89 @@ struct SeriesRoundScoreCorrectionSheet: View {
             .background(palette.backgroundColor)
         }
         .background(palette.backgroundColor.ignoresSafeArea())
+        .safeAreaInset(edge: .bottom, spacing: 0) {
+            if let context {
+                saveBar(context)
+            }
+        }
         .task {
             guard context == nil else { return }
-            context = await viewModel.loadCorrectionContext(for: seriesRound)
-            if let ctx = context, let initialParticipantID,
-               ctx.snapshot.participants.contains(where: { $0.id == initialParticipantID }) {
-                selectedParticipantID = initialParticipantID
-            } else if let ctx = context, let mid = initialSeriesMemberID,
-               let pid = viewModel.preferredRoundParticipantID(seriesMemberID: mid, snapshot: ctx.snapshot) {
-                selectedParticipantID = pid
-            } else {
-                selectedParticipantID = context?.snapshot.participants.first?.id ?? ""
+            guard let loaded = await viewModel.loadCorrectionContext(for: seriesRound) else {
+                return
             }
-            if let ctx = context {
-                grossTargetText = String(currentParticipantGrossTotal(context: ctx))
+            context = loaded
+            grossTargets = Dictionary(uniqueKeysWithValues: loaded.snapshot.participants.map {
+                ($0.id, String(originalGross($0, context: loaded)))
+            })
+            handicapDrafts = Dictionary(uniqueKeysWithValues: loaded.snapshot.participants.map {
+                (
+                    $0.id,
+                    SeriesRoundHandicapRepairDraft(
+                        method: .courseHandicapOverride,
+                        handicapIndexText: $0.handicapIndex.map { String(format: "%.1f", $0) } ?? "",
+                        teeBoxID: $0.teeBoxID,
+                        courseHandicapText: String($0.adjustedHandicap)
+                    )
+                )
+            })
+            if let initialParticipantID {
+                editorModes[initialParticipantID] = initialEditorMode
+                selectedParticipant = loaded.snapshot.participants.first { $0.id == initialParticipantID }
+            } else if let initialSeriesMemberID,
+                      let participantID = viewModel.preferredRoundParticipantID(
+                        seriesMemberID: initialSeriesMemberID,
+                        snapshot: loaded.snapshot
+                      ) {
+                editorModes[participantID] = initialEditorMode
+                selectedParticipant = loaded.snapshot.participants.first { $0.id == participantID }
             }
         }
-        .onChange(of: selectedParticipantID) { _, _ in
-            guard let ctx = context else { return }
-            grossTargetText = String(currentParticipantGrossTotal(context: ctx))
+        .sheet(item: $selectedParticipant) { participant in
+            if let context {
+                SeriesRoundPlayerRepairSheet(
+                    participant: participant,
+                    context: context,
+                    draftScores: $draftScores,
+                    grossTargets: $grossTargets,
+                    editorModes: $editorModes,
+                    handicapDrafts: $handicapDrafts
+                )
+                .presentationDetents([.large])
+                .presentationDragIndicator(.hidden)
+            }
         }
-    }
-
-    private func grossEditorSection(context: SeriesRoundCorrectionContext) -> some View {
-        VStack(alignment: .leading, spacing: 12) {
-            Text("Total gross".uppercased())
-                .fontStyle(kFontName, size: 13, weight: .semibold)
-                .foregroundStyle(palette.foregroundColor)
-
-            Text("Adjusts hole scores to match the total (unscored holes start at par). Uses the same save path as hole-by-hole edits.")
-                .fontStyle(kFontName, size: 12, weight: .regular)
-                .foregroundStyle(Color.neutral)
-
-            let current = currentParticipantGrossTotal(context: context)
-            Text("Current gross: \(current)")
-                .fontStyle(kFontName, size: 14, weight: .semibold)
-                .foregroundStyle(palette.foregroundColor)
-
-            TextField("Target gross", text: $grossTargetText)
-                .fontStyle(kFontName, size: 15, weight: .regular)
-                .foregroundStyle(palette.foregroundColor)
-                .keyboardType(.numberPad)
-                .padding(14)
-                .background(palette.cardEmbeddedRowBackground)
-                .clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
-        }
-        .padding(16)
-        .frame(maxWidth: .infinity, alignment: .leading)
-        .background(palette.cardColor)
-        .cornerRadius(20)
-    }
-
-    private func currentParticipantGrossTotal(context: SeriesRoundCorrectionContext) -> Int {
-        context.holes.reduce(0) { partial, hole in
-            let v = displayedScore(
-                participantID: selectedParticipantID,
-                holeNumber: hole.number,
-                context: context
+        .alert(
+            "Correction not published",
+            isPresented: Binding(
+                get: { viewModel.scoreCorrectionErrorMessage != nil },
+                set: { if !$0 { viewModel.scoreCorrectionErrorMessage = nil } }
             )
-            return partial + (v ?? hole.par)
+        ) {
+            Button("OK", role: .cancel) {
+                viewModel.scoreCorrectionErrorMessage = nil
+            }
+        } message: {
+            Text(viewModel.scoreCorrectionErrorMessage ?? "")
+        }
+        .confirmationDialog(
+            "Discard unsaved round repairs?",
+            isPresented: $showDiscardConfirmation,
+            titleVisibility: .visible
+        ) {
+            Button("Discard Changes", role: .destructive) { dismiss() }
+            Button("Keep Editing", role: .cancel) {}
+        } message: {
+            Text("Score, handicap, and tee drafts have not been applied.")
         }
     }
 
-    private func canSaveCorrection(context: SeriesRoundCorrectionContext?) -> Bool {
-        guard let context else { return false }
-        let trimmedReason = reason.trimmingCharacters(in: .whitespacesAndNewlines)
-        guard trimmedReason.isPopulated else { return false }
-        if editorMode == .totalGross {
-            guard let target = Int(grossTargetText.trimmingCharacters(in: .whitespacesAndNewlines)) else { return false }
-            let changes = viewModel.commissionerGrossCorrectionChanges(
-                context: context,
-                participantID: selectedParticipantID,
-                targetGross: target,
-                draftScores: draftScores
-            ) ?? []
-            return !changes.isEmpty
-        }
-        return !pendingChanges(context: context).isEmpty
-    }
-
-    private func overviewSection(context: SeriesRoundCorrectionContext) -> some View {
+    private func overview(_ context: SeriesRoundCorrectionContext) -> some View {
         VStack(alignment: .leading, spacing: 10) {
             HStack(spacing: 8) {
                 Chip(
                     text: "Signed round stays complete",
                     size: .xSmall,
-                    foreground: Color.accentGreen,
+                    foreground: .accentGreen,
                     background: Color.accentGreen.opacity(colorScheme.translucent)
                 )
                 if seriesRound.isAdjusted {
@@ -1045,11 +1046,9 @@ struct SeriesRoundScoreCorrectionSheet: View {
                     )
                 }
             }
-
-            Text("Commissioner corrections update the linked round’s scores, then rebuild league awards, standings, handicaps, and CSV exports.")
+            Text("Score, tee, and frozen Course HCP repairs stay in draft until Save & Recompute.")
                 .fontStyle(kFontName, size: 14, weight: .regular)
                 .foregroundStyle(Color.neutral)
-
             Text(seriesRound.title.isEmpty ? "Round \(seriesRound.index + 1)" : seriesRound.title)
                 .fontStyle(kFontName, size: 18, weight: .semibold)
                 .foregroundStyle(palette.foregroundColor)
@@ -1060,140 +1059,137 @@ struct SeriesRoundScoreCorrectionSheet: View {
         .cornerRadius(20)
     }
 
-    private func participantSelector(context: SeriesRoundCorrectionContext) -> some View {
-        VStack(alignment: .leading, spacing: 12) {
-            Text("Player".uppercased())
-                .fontStyle(kFontName, size: 13, weight: .semibold)
+    private var searchField: some View {
+        HStack(spacing: 10) {
+            Image(systemName: "magnifyingglass")
+                .foregroundStyle(Color.neutral)
+            TextField("Search players", text: $searchText)
+                .textInputAutocapitalization(.words)
+                .autocorrectionDisabled()
+                .fontStyle(kFontName, size: 15, weight: .regular)
                 .foregroundStyle(palette.foregroundColor)
-
-            ScrollView(.horizontal, showsIndicators: false) {
-                HStack(spacing: 8) {
-                    ForEach(context.snapshot.participants, id: \.id) { participant in
-                        Button {
-                            Haptics.fire(.light)
-                            selectedParticipantID = participant.id
-                        } label: {
-                            Chip(
-                                text: participant.name.fullName,
-                                size: .xSmall,
-                                foreground: selectedParticipantID == participant.id ? .white : palette.foregroundColor,
-                                background: selectedParticipantID == participant.id ? .accentGreen : palette.cardEmbeddedRowBackground
-                            )
-                        }
-                        .buttonStyle(.plain)
-                    }
+            if searchText.isPopulated {
+                Button {
+                    searchText = ""
+                } label: {
+                    Image(systemName: "xmark.circle.fill")
+                        .foregroundStyle(Color.neutral)
                 }
+                .buttonStyle(.plain)
+                .accessibilityLabel("Clear player search")
             }
         }
-        .padding(16)
-        .frame(maxWidth: .infinity, alignment: .leading)
+        .padding(14)
         .background(palette.cardColor)
-        .cornerRadius(20)
+        .clipShape(RoundedRectangle(cornerRadius: 18, style: .continuous))
     }
 
-    private func scoreEditorSection(context: SeriesRoundCorrectionContext) -> some View {
-        VStack(alignment: .leading, spacing: 12) {
-            Text("Hole-By-Hole".uppercased())
-                .fontStyle(kFontName, size: 13, weight: .semibold)
-                .foregroundStyle(palette.foregroundColor)
-
-            if let participant = context.snapshot.participants.first(where: { $0.id == selectedParticipantID }) {
-                Text(participant.name.fullName)
-                    .fontStyle(kFontName, size: 16, weight: .semibold)
+    private func playersCard(_ context: SeriesRoundCorrectionContext) -> some View {
+        let players = filteredParticipants(context)
+        return VStack(alignment: .leading, spacing: 12) {
+            HStack {
+                Text("Players".uppercased())
+                    .fontStyle(kFontName, size: 13, weight: .semibold)
                     .foregroundStyle(palette.foregroundColor)
-
-                VStack(spacing: 10) {
-                    ForEach(context.holes, id: \.number) { hole in
-                        scoreRow(participant: participant, hole: hole, context: context)
-                    }
-                }
-            } else {
-                Text("Choose a player to edit.")
-                    .fontStyle(kFontName, size: 14, weight: .regular)
-                    .foregroundStyle(Color.neutral)
-            }
-        }
-        .padding(16)
-        .frame(maxWidth: .infinity, alignment: .leading)
-        .background(palette.cardColor)
-        .cornerRadius(20)
-    }
-
-    private func scoreRow(
-        participant: RoundParticipant,
-        hole: Hole,
-        context: SeriesRoundCorrectionContext
-    ) -> some View {
-        let score = displayedScore(
-            participantID: participant.id,
-            holeNumber: hole.number,
-            context: context
-        )
-        let original = context.entriesByParticipantID[participant.id]?[hole.number]?.strokes
-
-        return HStack(alignment: .top, spacing: 12) {
-            VStack(alignment: .leading, spacing: 2) {
-                Text("Hole \(hole.number)")
-                    .fontStyle(kFontName, size: 15, weight: .semibold)
-                    .foregroundStyle(palette.foregroundColor)
-                Text("Par \(hole.par)")
+                Spacer()
+                Text("\(players.count) of \(context.snapshot.participants.count)")
                     .fontStyle(kFontName, size: 12, weight: .regular)
                     .foregroundStyle(Color.neutral)
             }
 
-            Spacer(minLength: 0)
-
-            HStack(spacing: 8) {
-                scoreActionChip(title: "-", tint: Color.neutral3) {
-                    adjustScore(participantID: participant.id, hole: hole, delta: -1, context: context)
+            if players.isEmpty {
+                Text("No players match “\(searchText)”.")
+                    .fontStyle(kFontName, size: 14, weight: .regular)
+                    .foregroundStyle(Color.neutral)
+                    .frame(maxWidth: .infinity, minHeight: 100)
+            } else {
+                ForEach(players, id: \.id) { participant in
+                    playerRow(participant, context: context)
                 }
-
-                Text(score.map(String.init) ?? "—")
-                    .fontStyle(.system, size: 17, weight: .semibold, design: .rounded)
-                    .foregroundStyle(palette.foregroundColor)
-                    .frame(width: 42)
-
-                scoreActionChip(title: "+", tint: Color.accentGreen) {
-                    adjustScore(participantID: participant.id, hole: hole, delta: 1, context: context)
-                }
-
-                scoreActionChip(title: "Clear", tint: Color.systemError) {
-                    setDraftScore(nil, participantID: participant.id, holeNumber: hole.number)
-                }
-            }
-            .fixedSize(horizontal: true, vertical: false)
-
-            if score != original {
-                Chip(
-                    text: "Edited",
-                    size: .tiny,
-                    foreground: .orange,
-                    background: Color.orange.opacity(colorScheme.translucent)
-                )
-                .padding(.top, 2)
             }
         }
-        .padding(14)
+        .padding(16)
         .frame(maxWidth: .infinity, alignment: .leading)
-        .background(palette.cardEmbeddedRowBackground)
-        .cornerRadius(16)
+        .background(palette.cardColor)
+        .cornerRadius(20)
     }
 
-    private var reasonSection: some View {
-        VStack(alignment: .leading, spacing: 12) {
+    private func playerRow(
+        _ participant: RoundParticipant,
+        context: SeriesRoundCorrectionContext
+    ) -> some View {
+        Button {
+            Haptics.fire(.light)
+            selectedParticipant = participant
+        } label: {
+            VStack(alignment: .leading, spacing: 12) {
+                HStack(alignment: .firstTextBaseline, spacing: 10) {
+                    Text(participant.name.fullName)
+                        .fontStyle(kFontName, size: 16, weight: .semibold)
+                        .foregroundStyle(palette.foregroundColor)
+                        .multilineTextAlignment(.leading)
+                    Spacer(minLength: 8)
+                    if changedParticipantIDs(context).contains(participant.id) {
+                        Chip(
+                            text: "Unsaved",
+                            size: .tiny,
+                            foreground: .orange,
+                            background: Color.orange.opacity(colorScheme.translucent)
+                        )
+                    }
+                    Image(systemName: "chevron.right")
+                        .font(.system(size: 12, weight: .semibold))
+                        .foregroundStyle(Color.neutral)
+                }
+                HStack(spacing: 8) {
+                    metric("Gross", "\(displayedGross(participant, context: context))")
+                    metric("Course HCP", "\(displayedCourseHandicap(participant, context: context))")
+                    metric(
+                        "Holes",
+                        "\(displayedHolesScored(participant, context: context))/\(context.holes.count)"
+                    )
+                }
+                Text(teeLabel(participant, context: context))
+                    .fontStyle(kFontName, size: 12, weight: .regular)
+                    .foregroundStyle(Color.neutral)
+            }
+            .padding(14)
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .background(palette.cardEmbeddedRowBackground)
+            .clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
+        }
+        .buttonStyle(.plain)
+        .accessibilityLabel(
+            "\(participant.name.fullName), gross \(displayedGross(participant, context: context)), "
+                + "Course handicap \(displayedCourseHandicap(participant, context: context)), "
+                + "\(displayedHolesScored(participant, context: context)) of \(context.holes.count) holes scored"
+        )
+    }
+
+    private func metric(_ title: String, _ value: String) -> some View {
+        VStack(alignment: .leading, spacing: 1) {
+            Text(title)
+                .fontStyle(kFontName, size: 10, weight: .regular)
+                .foregroundStyle(Color.neutral)
+            Text(value)
+                .fontStyle(.system, size: 14, weight: .semibold, design: .rounded)
+                .foregroundStyle(palette.foregroundColor)
+        }
+        .padding(.horizontal, 9)
+        .padding(.vertical, 7)
+        .background(palette.cardColor.opacity(0.85))
+        .clipShape(RoundedRectangle(cornerRadius: 10, style: .continuous))
+    }
+
+    private var reasonCard: some View {
+        VStack(alignment: .leading, spacing: 10) {
             Text("Adjustment Note".uppercased())
                 .fontStyle(kFontName, size: 13, weight: .semibold)
                 .foregroundStyle(palette.foregroundColor)
-
-            Text("Add a short note so the correction is visible in league history.")
-                .fontStyle(kFontName, size: 13, weight: .regular)
-                .foregroundStyle(Color.neutral)
-
-            TextField("Example: Hole 7 was entered as 6 instead of 5.", text: $reason, axis: .vertical)
+            TextField("Why is this round being repaired?", text: $reason, axis: .vertical)
                 .fontStyle(kFontName, size: 15, weight: .regular)
                 .foregroundStyle(palette.foregroundColor)
                 .padding(14)
-                .frame(maxWidth: .infinity, alignment: .leading)
                 .background(palette.cardEmbeddedRowBackground)
                 .cornerRadius(16)
                 .lineLimit(2...4)
@@ -1204,74 +1200,60 @@ struct SeriesRoundScoreCorrectionSheet: View {
         .cornerRadius(20)
     }
 
-    private var actionSection: some View {
-        HStack(spacing: 12) {
-            Button {
-                dismiss()
-            } label: {
-                Chip(
-                    text: "Cancel",
-                    size: .small,
-                    foreground: palette.foregroundColor,
-                    background: palette.cardEmbeddedRowBackground
-                )
-                .frame(maxWidth: .infinity)
+    private func saveBar(_ context: SeriesRoundCorrectionContext) -> some View {
+        let changedCount = changedParticipantIDs(context).count
+        return VStack(spacing: 8) {
+            HStack {
+                Text(changedCount == 1 ? "1 player changed" : "\(changedCount) players changed")
+                    .fontStyle(kFontName, size: 12, weight: .semibold)
+                    .foregroundStyle(changedCount > 0 ? Color.orange : Color.neutral)
+                Spacer()
+                if hasInvalidHandicapDraft(context) {
+                    Text("Finish handicap inputs")
+                        .fontStyle(kFontName, size: 12, weight: .semibold)
+                        .foregroundStyle(Color.systemError)
+                }
             }
-            .buttonStyle(.plain)
-
             Button {
                 Task {
-                    guard let context else { return }
-                    let changes: [SeriesScoreCorrectionChange] = {
-                        if editorMode == .totalGross {
-                            guard let target = Int(grossTargetText.trimmingCharacters(in: .whitespacesAndNewlines)) else { return [] }
-                            return viewModel.commissionerGrossCorrectionChanges(
-                                context: context,
-                                participantID: selectedParticipantID,
-                                targetGross: target,
-                                draftScores: draftScores
-                            ) ?? []
-                        }
-                        return pendingChanges(context: context)
-                    }()
-                    let didSave = await viewModel.applyScoreCorrections(
+                    let saved = await viewModel.applyScoreCorrections(
                         for: context.seriesRound,
-                        changes: changes,
+                        changes: pendingScoreChanges(context),
+                        participantChanges: pendingHandicapChanges(context),
                         reason: reason
                     )
-                    if didSave {
-                        dismiss()
-                    }
+                    if saved { dismiss() }
                 }
             } label: {
                 Group {
                     if viewModel.correctingRoundID == seriesRound.id {
-                        ProgressView()
-                            .tint(.white)
-                            .frame(maxWidth: .infinity)
-                            .padding(.vertical, 10)
+                        ProgressView().tint(.white)
                     } else {
                         Text("Save & Recompute")
                             .fontStyle(kFontName, size: 15, weight: .semibold)
                             .foregroundStyle(.white)
-                            .frame(maxWidth: .infinity)
-                            .padding(.vertical, 10)
                     }
                 }
-                .background(canSaveCorrection(context: context) ? Color.accentGreen : Color.neutral3)
+                .frame(maxWidth: .infinity)
+                .padding(.vertical, 12)
+                .background(canSave(context) ? Color.accentGreen : Color.neutral3)
                 .clipShape(Capsule())
             }
-            .disabled(!canSaveCorrection(context: context) || viewModel.correctingRoundID == seriesRound.id)
+            .disabled(!canSave(context) || viewModel.correctingRoundID == seriesRound.id)
             .buttonStyle(.plain)
         }
+        .padding(.horizontal, 16)
+        .padding(.top, 10)
+        .padding(.bottom, 8)
+        .background(.ultraThinMaterial)
+        .overlay(alignment: .top) { Divider().opacity(0.5) }
     }
 
-    private var unavailableSection: some View {
+    private var unavailableCard: some View {
         VStack(alignment: .leading, spacing: 12) {
-            Text("Scores unavailable")
+            Text("Round data unavailable")
                 .fontStyle(kFontName, size: 18, weight: .semibold)
-                .foregroundStyle(palette.foregroundColor)
-            Text("We couldn’t load the linked round scores for this league round.")
+            Text("We couldn’t load the linked round’s players and scores.")
                 .fontStyle(kFontName, size: 14, weight: .regular)
                 .foregroundStyle(Color.neutral)
         }
@@ -1281,77 +1263,667 @@ struct SeriesRoundScoreCorrectionSheet: View {
         .cornerRadius(20)
     }
 
-    private var emptyContext: SeriesRoundCorrectionContext {
-        .init(seriesRound: seriesRound, snapshot: .init(), holes: [], entriesByParticipantID: [:])
+    private func canSave(_ context: SeriesRoundCorrectionContext) -> Bool {
+        reason.trimmingCharacters(in: .whitespacesAndNewlines).isPopulated
+            && !hasInvalidHandicapDraft(context)
+            && changedParticipantIDs(context).isPopulated
     }
 
-    private func scoreActionChip(title: String, tint: Color, action: @escaping () -> Void) -> some View {
-        Button(action: action) {
-            Chip(
-                text: title,
-                size: .xSmall,
-                foreground: title == "Clear" ? tint : palette.foregroundColor,
-                background: title == "Clear" ? tint.opacity(colorScheme.translucent) : Color.neutral6
-            )
-            .frame(minHeight: 32)
-        }
-        .buttonStyle(.plain)
-        .fixedSize(horizontal: true, vertical: true)
+    private func filteredParticipants(_ context: SeriesRoundCorrectionContext) -> [RoundParticipant] {
+        let query = searchText.trimmingCharacters(in: .whitespacesAndNewlines)
+        return context.snapshot.participants
+            .filter { query.isEmpty || $0.name.fullName.localizedCaseInsensitiveContains(query) }
+            .sorted {
+                $0.name.fullName.localizedCaseInsensitiveCompare($1.name.fullName) == .orderedAscending
+            }
     }
 
-    private func draftKey(participantID: String, holeNumber: Int) -> String {
+    private func draftKey(_ participantID: String, _ holeNumber: Int) -> String {
         "\(participantID)_\(holeNumber)"
     }
 
     private func displayedScore(
-        participantID: String,
+        _ participantID: String,
         holeNumber: Int,
         context: SeriesRoundCorrectionContext
     ) -> Int? {
-        let key = draftKey(participantID: participantID, holeNumber: holeNumber)
-        if let draftValue = draftScores[key] {
-            return draftValue == 0 ? nil : draftValue
+        if let value = draftScores[draftKey(participantID, holeNumber)] {
+            return value == 0 ? nil : value
         }
         return context.entriesByParticipantID[participantID]?[holeNumber]?.strokes
     }
 
-    private func setDraftScore(_ strokes: Int?, participantID: String, holeNumber: Int) {
-        let key = draftKey(participantID: participantID, holeNumber: holeNumber)
-        draftScores[key] = strokes ?? 0
-    }
-
-    private func adjustScore(
-        participantID: String,
-        hole: Hole,
-        delta: Int,
+    private func originalGross(
+        _ participant: RoundParticipant,
         context: SeriesRoundCorrectionContext
-    ) {
-        let current = displayedScore(
-            participantID: participantID,
-            holeNumber: hole.number,
-            context: context
-        ) ?? hole.par
-        let nextValue = max(1, min(15, current + delta))
-        setDraftScore(nextValue, participantID: participantID, holeNumber: hole.number)
+    ) -> Int {
+        context.holes.reduce(0) {
+            $0 + (context.entriesByParticipantID[participant.id]?[$1.number]?.strokes ?? $1.par)
+        }
     }
 
-    private func pendingChanges(context: SeriesRoundCorrectionContext) -> [SeriesScoreCorrectionChange] {
-        context.snapshot.participants.flatMap { participant in
-            context.holes.compactMap { hole in
+    private func displayedGross(
+        _ participant: RoundParticipant,
+        context: SeriesRoundCorrectionContext
+    ) -> Int {
+        if editorModes[participant.id] == .totalGross,
+           let target = grossTargets[participant.id].flatMap(Int.init) {
+            return target
+        }
+        return context.holes.reduce(0) {
+            $0 + (displayedScore(participant.id, holeNumber: $1.number, context: context) ?? 0)
+        }
+    }
+
+    private func displayedHolesScored(
+        _ participant: RoundParticipant,
+        context: SeriesRoundCorrectionContext
+    ) -> Int {
+        if editorModes[participant.id] == .totalGross,
+           pendingScoreChanges(context).contains(where: { $0.participantID == participant.id }) {
+            return context.holes.count
+        }
+        return context.holes.filter {
+            displayedScore(participant.id, holeNumber: $0.number, context: context) != nil
+        }.count
+    }
+
+    private func pendingScoreChanges(
+        _ context: SeriesRoundCorrectionContext
+    ) -> [SeriesScoreCorrectionChange] {
+        context.snapshot.participants.flatMap { participant -> [SeriesScoreCorrectionChange] in
+            if editorModes[participant.id] == .totalGross {
+                guard context.supportsTotalGrossCorrection,
+                      let target = grossTargets[participant.id].flatMap(Int.init) else {
+                    return []
+                }
+                return viewModel.commissionerGrossCorrectionChanges(
+                    context: context,
+                    participantID: participant.id,
+                    targetGross: target,
+                    draftScores: draftScores
+                ) ?? []
+            }
+            return context.holes.compactMap { hole in
                 let original = context.entriesByParticipantID[participant.id]?[hole.number]?.strokes
-                let updated = displayedScore(
-                    participantID: participant.id,
-                    holeNumber: hole.number,
-                    context: context
-                )
-                guard updated != original else { return nil }
-                return SeriesScoreCorrectionChange(
-                    participantID: participant.id,
-                    holeNumber: hole.number,
-                    strokes: updated
-                )
+                let updated = displayedScore(participant.id, holeNumber: hole.number, context: context)
+                guard original != updated else { return nil }
+                return .init(participantID: participant.id, holeNumber: hole.number, strokes: updated)
             }
         }
+    }
+
+    private func pendingHandicapChanges(
+        _ context: SeriesRoundCorrectionContext
+    ) -> [SeriesParticipantHandicapCorrectionChange] {
+        context.snapshot.participants.compactMap {
+            handicapChange($0, draft: handicapDrafts[$0.id], context: context)
+        }
+    }
+
+    private func handicapChange(
+        _ participant: RoundParticipant,
+        draft: SeriesRoundHandicapRepairDraft?,
+        context: SeriesRoundCorrectionContext
+    ) -> SeriesParticipantHandicapCorrectionChange? {
+        guard let draft else { return nil }
+        switch draft.method {
+        case .calculateFromIndex:
+            guard let index = Double(draft.handicapIndexText),
+                  let resolution = calculatedResolution(
+                    participant,
+                    draft: draft,
+                    context: context
+                  ),
+                  let tee = resolution.tee else { return nil }
+            guard resolution.validationIssue == nil,
+                  let courseHandicap = resolution.effectiveStrokes,
+                  let frozenSnapshot = resolution.snapshot(
+                    selectedHandicapScoreIDs: Set(
+                        participant.handicapSnapshot?.selectedHandicapScoreIDs ?? []
+                    ),
+                    source: .commissionerRepair
+                  ),
+                  participant.teeBoxID != tee.id
+                    || participant.handicapIndex != index
+                    || participant.adjustedHandicap != courseHandicap
+                    || participant.leagueHandicapStrokesAtCreation != courseHandicap else {
+                return nil
+            }
+            return .init(
+                participantID: participant.id,
+                teeBoxID: tee.id,
+                handicapIndex: index,
+                courseHandicap: courseHandicap,
+                snapshot: frozenSnapshot
+            )
+        case .courseHandicapOverride:
+            guard let courseHandicap = Int(draft.courseHandicapText), courseHandicap >= 0,
+                  participant.teeBoxID != draft.teeBoxID
+                    || participant.adjustedHandicap != courseHandicap
+                    || participant.leagueHandicapStrokesAtCreation != courseHandicap else {
+                return nil
+            }
+            let tee = context.snapshot.tees.first { $0.id == draft.teeBoxID }
+            let old = participant.handicapSnapshot
+            let segment = context.snapshot.holeSegment
+            let frozenSnapshot = RoundParticipantHandicapSnapshot(
+                authoritativeCourseHandicap: courseHandicap,
+                handicapIndex: participant.handicapIndex,
+                effectiveStrokes: courseHandicap,
+                courseID: context.snapshot.courseInfo?.id ?? old?.courseID ?? "",
+                courseName: context.snapshot.courseInfo?.name ?? old?.courseName ?? "",
+                teeBoxID: draft.teeBoxID,
+                teeName: tee?.name ?? old?.teeName ?? draft.teeBoxID,
+                teeGender: tee?.gender ?? old?.teeGender ?? "",
+                holeSegment: segment,
+                courseRating: tee?.rating(for: segment) ?? old?.courseRating,
+                courseSlope: tee?.slope(for: segment) ?? old?.courseSlope,
+                par: tee?.par(for: segment) ?? old?.par
+                    ?? context.holes.reduce(0) { $0 + $1.par },
+                handicapStrokeBasis: context.snapshot.handicapStrokeBasis,
+                maximumHandicap: context.snapshot.configuration.leagueHandicapMaximum,
+                entryFormat: .courseHandicap,
+                calculatorFingerprint: "commissioner-course-hcp-override-v1|\(courseHandicap)|\(draft.teeBoxID)",
+                selectedHandicapScoreIDs: old?.selectedHandicapScoreIDs ?? [],
+                calculatedAt: .init(),
+                source: .commissionerRepair
+            )
+            return .init(
+                participantID: participant.id,
+                teeBoxID: draft.teeBoxID,
+                handicapIndex: participant.handicapIndex,
+                courseHandicap: courseHandicap,
+                snapshot: frozenSnapshot
+            )
+        }
+    }
+
+    private func hasInvalidHandicapDraft(_ context: SeriesRoundCorrectionContext) -> Bool {
+        context.snapshot.participants.contains { participant in
+            guard let draft = handicapDrafts[participant.id] else { return false }
+            switch draft.method {
+            case .courseHandicapOverride:
+                let changed = participant.teeBoxID != draft.teeBoxID
+                    || draft.courseHandicapText != String(participant.adjustedHandicap)
+                return changed && (Int(draft.courseHandicapText).map { $0 >= 0 } != true)
+            case .calculateFromIndex:
+                return calculatedResolution(participant, draft: draft, context: context)?
+                    .effectiveStrokes == nil
+            }
+        }
+    }
+
+    private func displayedCourseHandicap(
+        _ participant: RoundParticipant,
+        context: SeriesRoundCorrectionContext
+    ) -> Int {
+        guard let draft = handicapDrafts[participant.id] else { return participant.adjustedHandicap }
+        if draft.method == .courseHandicapOverride {
+            return Int(draft.courseHandicapText) ?? participant.adjustedHandicap
+        }
+        return calculatedResolution(participant, draft: draft, context: context)?
+            .effectiveStrokes ?? participant.adjustedHandicap
+    }
+
+    private func calculatedResolution(
+        _ participant: RoundParticipant,
+        draft: SeriesRoundHandicapRepairDraft,
+        context: SeriesRoundCorrectionContext
+    ) -> SeriesCourseHandicapResolution? {
+        guard let index = Double(draft.handicapIndexText),
+              let course = context.snapshot.courseSegment,
+              let tee = course.tee(from: draft.teeBoxID) else {
+            return nil
+        }
+        return SeriesCourseHandicapResolver.resolve(
+            effectiveIndex: index,
+            memberID: participant.seriesMemberID ?? participant.id,
+            memberName: participant.name.fullName,
+            requestedTeeID: tee.id,
+            tee: tee,
+            courseID: course.courseInfo.id,
+            courseName: course.courseInfo.name,
+            holeSegment: course.holeSegment,
+            entryFormat: .courseHandicap,
+            handicapStrokeBasis: context.snapshot.handicapStrokeBasis,
+            maximumHandicap: context.snapshot.configuration.leagueHandicapMaximum
+        )
+    }
+
+    private func teeLabel(
+        _ participant: RoundParticipant,
+        context: SeriesRoundCorrectionContext
+    ) -> String {
+        let teeID = handicapDrafts[participant.id]?.teeBoxID ?? participant.teeBoxID
+        guard let tee = context.snapshot.tees.first(where: { $0.id == teeID }) else {
+            return "Tee: \(teeID.isPopulated ? teeID : "Unavailable")"
+        }
+        return "Tee: \(tee.name) · \(tee.gender.capitalized)"
+    }
+
+    private func changedParticipantIDs(_ context: SeriesRoundCorrectionContext) -> Set<String> {
+        Set(pendingScoreChanges(context).map(\.participantID))
+            .union(pendingHandicapChanges(context).map(\.participantID))
+    }
+
+    private func requestDismiss() {
+        guard let context, changedParticipantIDs(context).isPopulated else {
+            dismiss()
+            return
+        }
+        showDiscardConfirmation = true
+    }
+}
+
+struct SeriesRoundPlayerRepairSheet: View {
+    @Environment(\.colorScheme) private var colorScheme
+    @Environment(\.dismiss) private var dismiss
+
+    let participant: RoundParticipant
+    let context: SeriesRoundCorrectionContext
+    @Binding var draftScores: [String: Int]
+    @Binding var grossTargets: [String: String]
+    @Binding var editorModes: [String: ScoreCorrectionEditorMode]
+    @Binding var handicapDrafts: [String: SeriesRoundHandicapRepairDraft]
+
+    private var palette: DesignPalette { .init(theme: .primary, scheme: colorScheme) }
+    private var mode: ScoreCorrectionEditorMode {
+        editorModes[participant.id] ?? .holeByHole
+    }
+    private var handicapDraft: SeriesRoundHandicapRepairDraft {
+        handicapDrafts[participant.id] ?? .init(
+            method: .courseHandicapOverride,
+            handicapIndexText: participant.handicapIndex.map { String(format: "%.1f", $0) } ?? "",
+            teeBoxID: participant.teeBoxID,
+            courseHandicapText: String(participant.adjustedHandicap)
+        )
+    }
+
+    var body: some View {
+        VStack(spacing: 0) {
+            SeriesSheetHeader(
+                palette: palette,
+                title: participant.name.fullName,
+                subtitle: "Changes stay in the repair batch until you save.",
+                onClose: { dismiss() }
+            )
+
+            ScrollView(showsIndicators: false) {
+                VStack(spacing: 16) {
+                    summaryCard
+                    scoreCard
+                    handicapCard
+                }
+                .padding(16)
+            }
+            .background(palette.backgroundColor)
+        }
+        .background(palette.backgroundColor.ignoresSafeArea())
+        .safeAreaInset(edge: .bottom, spacing: 0) {
+            Button("Done") { dismiss() }
+                .fontStyle(kFontName, size: 15, weight: .semibold)
+                .foregroundStyle(.white)
+                .frame(maxWidth: .infinity)
+                .padding(.vertical, 12)
+                .background(Color.accentGreen)
+                .clipShape(Capsule())
+                .buttonStyle(.plain)
+                .padding(16)
+                .background(.ultraThinMaterial)
+        }
+    }
+
+    private var summaryCard: some View {
+        HStack(spacing: 10) {
+            summaryMetric("Gross", "\(currentGross)")
+            summaryMetric("Course HCP", "\(displayedCourseHandicap)")
+            summaryMetric("Holes scored", "\(holesScored)/\(context.holes.count)")
+        }
+        .padding(16)
+        .background(palette.cardColor)
+        .clipShape(RoundedRectangle(cornerRadius: 20, style: .continuous))
+    }
+
+    private func summaryMetric(_ title: String, _ value: String) -> some View {
+        VStack(alignment: .leading, spacing: 3) {
+            Text(title)
+                .fontStyle(kFontName, size: 10, weight: .regular)
+                .foregroundStyle(Color.neutral)
+            Text(value)
+                .fontStyle(.system, size: 17, weight: .semibold, design: .rounded)
+                .foregroundStyle(palette.foregroundColor)
+        }
+        .frame(maxWidth: .infinity, alignment: .leading)
+    }
+
+    private var scoreCard: some View {
+        VStack(alignment: .leading, spacing: 12) {
+            Text("Score".uppercased())
+                .fontStyle(kFontName, size: 13, weight: .semibold)
+                .foregroundStyle(palette.foregroundColor)
+
+            Picker(
+                "Score correction method",
+                selection: Binding(
+                    get: { mode },
+                    set: { editorModes[participant.id] = $0 }
+                )
+            ) {
+                ForEach(ScoreCorrectionEditorMode.allCases, id: \.self) { option in
+                    Text(option.rawValue)
+                        .tag(option)
+                        .disabled(option == .totalGross && !context.supportsTotalGrossCorrection)
+                }
+            }
+            .pickerStyle(.segmented)
+
+            if mode == .totalGross {
+                totalGrossEditor
+            } else {
+                VStack(spacing: 10) {
+                    ForEach(context.holes, id: \.number) { hole in
+                        holeScoreRow(hole)
+                    }
+                }
+            }
+        }
+        .padding(16)
+        .background(palette.cardColor)
+        .clipShape(RoundedRectangle(cornerRadius: 20, style: .continuous))
+    }
+
+    private var totalGrossEditor: some View {
+        VStack(alignment: .leading, spacing: 10) {
+            if context.supportsTotalGrossCorrection {
+                Text("The total is distributed deterministically across the round. Use hole-by-hole when individual holes matter.")
+                    .fontStyle(kFontName, size: 12, weight: .regular)
+                    .foregroundStyle(Color.neutral)
+                TextField(
+                    "Gross score",
+                    text: Binding(
+                        get: { grossTargets[participant.id] ?? "" },
+                        set: { grossTargets[participant.id] = $0 }
+                    )
+                )
+                .keyboardType(.numberPad)
+                .fontStyle(.system, size: 24, weight: .semibold, design: .rounded)
+                .foregroundStyle(palette.foregroundColor)
+                .padding(14)
+                .background(palette.cardEmbeddedRowBackground)
+                .clipShape(RoundedRectangle(cornerRadius: 14, style: .continuous))
+            } else {
+                Text("This scoring format requires physical hole-by-hole scores.")
+                    .fontStyle(kFontName, size: 13, weight: .semibold)
+                    .foregroundStyle(Color.systemError)
+            }
+        }
+    }
+
+    private func holeScoreRow(_ hole: Hole) -> some View {
+        let score = displayedScore(hole.number)
+        let original = context.entriesByParticipantID[participant.id]?[hole.number]?.strokes
+        return HStack(spacing: 8) {
+            VStack(alignment: .leading, spacing: 2) {
+                Text("Hole \(hole.number)")
+                    .fontStyle(kFontName, size: 15, weight: .semibold)
+                    .foregroundStyle(palette.foregroundColor)
+                Text("Par \(hole.par)")
+                    .fontStyle(kFontName, size: 11, weight: .regular)
+                    .foregroundStyle(Color.neutral)
+            }
+            Spacer(minLength: 2)
+            scoreButton("minus") { adjustScore(hole, by: -1) }
+            Text(score.map(String.init) ?? "—")
+                .fontStyle(.system, size: 17, weight: .semibold, design: .rounded)
+                .foregroundStyle(palette.foregroundColor)
+                .frame(width: 30)
+            scoreButton("plus") { adjustScore(hole, by: 1) }
+            Button("Clear") { setDraftScore(nil, hole: hole.number) }
+                .fontStyle(kFontName, size: 12, weight: .semibold)
+                .foregroundStyle(Color.systemError)
+                .frame(minWidth: 44, minHeight: 44)
+                .buttonStyle(.plain)
+            if score != original {
+                Image(systemName: "pencil.circle.fill")
+                    .foregroundStyle(Color.orange)
+                    .accessibilityLabel("Edited")
+            }
+        }
+        .padding(12)
+        .background(palette.cardEmbeddedRowBackground)
+        .clipShape(RoundedRectangle(cornerRadius: 15, style: .continuous))
+    }
+
+    private func scoreButton(
+        _ systemName: String,
+        action: @escaping () -> Void
+    ) -> some View {
+        Button(action: action) {
+            Image(systemName: systemName)
+                .font(.system(size: 14, weight: .semibold))
+                .foregroundStyle(palette.foregroundColor)
+                .frame(width: 44, height: 44)
+                .background(Color.neutral6)
+                .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
+        }
+        .buttonStyle(.plain)
+    }
+
+    private var handicapCard: some View {
+        VStack(alignment: .leading, spacing: 12) {
+            Text("Round Handicap".uppercased())
+                .fontStyle(kFontName, size: 13, weight: .semibold)
+                .foregroundStyle(palette.foregroundColor)
+            Text("This changes only the handicap and tee frozen for this historical round.")
+                .fontStyle(kFontName, size: 12, weight: .regular)
+                .foregroundStyle(Color.neutral)
+
+            Picker(
+                "Handicap correction method",
+                selection: Binding(
+                    get: { handicapDraft.method },
+                    set: { value in updateHandicapDraft { $0.method = value } }
+                )
+            ) {
+                ForEach(SeriesRoundHandicapRepairMethod.allCases, id: \.self) {
+                    Text($0.rawValue).tag($0)
+                }
+            }
+            .pickerStyle(.segmented)
+
+            teePicker
+
+            if handicapDraft.method == .courseHandicapOverride {
+                directHandicapEditor
+            } else {
+                indexHandicapEditor
+            }
+        }
+        .padding(16)
+        .background(palette.cardColor)
+        .clipShape(RoundedRectangle(cornerRadius: 20, style: .continuous))
+    }
+
+    private var teePicker: some View {
+        VStack(alignment: .leading, spacing: 6) {
+            Text("Tee used")
+                .fontStyle(kFontName, size: 12, weight: .semibold)
+                .foregroundStyle(Color.neutral)
+            Picker(
+                "Tee used",
+                selection: Binding(
+                    get: { handicapDraft.teeBoxID },
+                    set: { value in updateHandicapDraft { $0.teeBoxID = value } }
+                )
+            ) {
+                if !context.snapshot.tees.contains(where: { $0.id == handicapDraft.teeBoxID }) {
+                    Text("Unknown tee · \(handicapDraft.teeBoxID)")
+                        .tag(handicapDraft.teeBoxID)
+                }
+                ForEach(
+                    context.snapshot.tees.sortedByDifficulty(for: context.snapshot.holeSegment),
+                    id: \.id
+                ) { tee in
+                    Text("\(tee.name) · \(tee.gender.capitalized)")
+                        .tag(tee.id)
+                }
+            }
+            .pickerStyle(.menu)
+            .tint(Color.accentGreen)
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .padding(12)
+            .background(palette.cardEmbeddedRowBackground)
+            .clipShape(RoundedRectangle(cornerRadius: 14, style: .continuous))
+        }
+    }
+
+    private var directHandicapEditor: some View {
+        VStack(alignment: .leading, spacing: 6) {
+            Text("Course HCP used")
+                .fontStyle(kFontName, size: 12, weight: .semibold)
+                .foregroundStyle(Color.neutral)
+            TextField(
+                "Course HCP",
+                text: Binding(
+                    get: { handicapDraft.courseHandicapText },
+                    set: { value in updateHandicapDraft { $0.courseHandicapText = value } }
+                )
+            )
+            .keyboardType(.numberPad)
+            .fontStyle(.system, size: 22, weight: .semibold, design: .rounded)
+            .foregroundStyle(palette.foregroundColor)
+            .padding(14)
+            .background(palette.cardEmbeddedRowBackground)
+            .clipShape(RoundedRectangle(cornerRadius: 14, style: .continuous))
+            Text("The entered Course HCP is authoritative. Changing the tee does not silently recalculate it.")
+                .fontStyle(kFontName, size: 11, weight: .regular)
+                .foregroundStyle(Color.neutral)
+        }
+    }
+
+    private var indexHandicapEditor: some View {
+        VStack(alignment: .leading, spacing: 8) {
+            Text("Handicap Index before this round")
+                .fontStyle(kFontName, size: 12, weight: .semibold)
+                .foregroundStyle(Color.neutral)
+            TextField(
+                "Handicap Index",
+                text: Binding(
+                    get: { handicapDraft.handicapIndexText },
+                    set: { value in updateHandicapDraft { $0.handicapIndexText = value } }
+                )
+            )
+            .keyboardType(.decimalPad)
+            .fontStyle(.system, size: 22, weight: .semibold, design: .rounded)
+            .foregroundStyle(palette.foregroundColor)
+            .padding(14)
+            .background(palette.cardEmbeddedRowBackground)
+            .clipShape(RoundedRectangle(cornerRadius: 14, style: .continuous))
+
+            if let tee = selectedTee,
+               let courseHandicap = calculatedResolution?.effectiveStrokes {
+                VStack(alignment: .leading, spacing: 3) {
+                    Text("Calculated Course HCP \(courseHandicap)")
+                        .fontStyle(kFontName, size: 16, weight: .semibold)
+                        .foregroundStyle(Color.accentGreen)
+                    Text(calculationMetadata(tee))
+                        .fontStyle(kFontName, size: 11, weight: .regular)
+                        .foregroundStyle(Color.neutral)
+                }
+                .padding(12)
+                .frame(maxWidth: .infinity, alignment: .leading)
+                .background(Color.accentGreen.opacity(colorScheme.translucent))
+                .clipShape(RoundedRectangle(cornerRadius: 14, style: .continuous))
+            } else {
+                Text("A valid index and tee rating, slope, and par are required.")
+                    .fontStyle(kFontName, size: 12, weight: .semibold)
+                    .foregroundStyle(Color.systemError)
+            }
+        }
+    }
+
+    private var selectedTee: Tee? {
+        context.snapshot.tees.first { $0.id == handicapDraft.teeBoxID }
+    }
+
+    private var currentGross: Int {
+        if mode == .totalGross,
+           let value = grossTargets[participant.id].flatMap(Int.init) {
+            return value
+        }
+        return context.holes.reduce(0) {
+            $0 + (displayedScore($1.number) ?? 0)
+        }
+    }
+
+    private var holesScored: Int {
+        mode == .totalGross
+            ? context.holes.count
+            : context.holes.filter { displayedScore($0.number) != nil }.count
+    }
+
+    private var displayedCourseHandicap: Int {
+        if handicapDraft.method == .courseHandicapOverride {
+            return Int(handicapDraft.courseHandicapText) ?? participant.adjustedHandicap
+        }
+        return calculatedResolution?.effectiveStrokes ?? participant.adjustedHandicap
+    }
+
+    private var calculatedResolution: SeriesCourseHandicapResolution? {
+        guard let index = Double(handicapDraft.handicapIndexText),
+              let course = context.snapshot.courseSegment,
+              let tee = course.tee(from: handicapDraft.teeBoxID) else {
+            return nil
+        }
+        return SeriesCourseHandicapResolver.resolve(
+            effectiveIndex: index,
+            memberID: participant.seriesMemberID ?? participant.id,
+            memberName: participant.name.fullName,
+            requestedTeeID: tee.id,
+            tee: tee,
+            courseID: course.courseInfo.id,
+            courseName: course.courseInfo.name,
+            holeSegment: course.holeSegment,
+            entryFormat: .courseHandicap,
+            handicapStrokeBasis: context.snapshot.handicapStrokeBasis,
+            maximumHandicap: context.snapshot.configuration.leagueHandicapMaximum
+        )
+    }
+
+    private func calculationMetadata(_ tee: Tee) -> String {
+        let segment = context.snapshot.holeSegment
+        let rating = tee.prettyRating(for: segment) ?? "missing rating"
+        let slope = tee.slope(for: segment).map(String.init) ?? "missing slope"
+        return "\(tee.name) · \(segment.title) · rating \(rating) · slope \(slope) · par \(tee.par(for: segment))"
+    }
+
+    private func updateHandicapDraft(
+        _ mutation: (inout SeriesRoundHandicapRepairDraft) -> Void
+    ) {
+        var draft = handicapDraft
+        mutation(&draft)
+        handicapDrafts[participant.id] = draft
+    }
+
+    private func scoreKey(_ hole: Int) -> String {
+        "\(participant.id)_\(hole)"
+    }
+
+    private func displayedScore(_ hole: Int) -> Int? {
+        if let value = draftScores[scoreKey(hole)] {
+            return value == 0 ? nil : value
+        }
+        return context.entriesByParticipantID[participant.id]?[hole]?.strokes
+    }
+
+    private func setDraftScore(_ score: Int?, hole: Int) {
+        draftScores[scoreKey(hole)] = score ?? 0
+    }
+
+    private func adjustScore(_ hole: Hole, by delta: Int) {
+        let current = displayedScore(hole.number) ?? hole.par
+        setDraftScore(max(1, min(15, current + delta)), hole: hole.number)
     }
 }
 

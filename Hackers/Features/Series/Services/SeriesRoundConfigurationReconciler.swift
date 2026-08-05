@@ -83,12 +83,8 @@ enum SeriesRoundConfigurationReconciler {
             fields.insert(.matchupScoring)
         }
 
-        let expectedEntryFormat: HandicapEntryFormat = desired.handicapEntryFormat == .courseHandicap
-            && !linked.courses.contains(where: { HandicapCalculator.hasCourseHandicapData(courseSegment: $0) })
-            ? .strokes
-            : desired.handicapEntryFormat
         if desired.handicapStrokeBasis != linked.handicapStrokeBasis
-            || expectedEntryFormat != linked.handicapEntryFormat
+            || desired.handicapEntryFormat != linked.handicapEntryFormat
             || desired.handicapNormalizationMode != linked.handicapNormalizationMode
             || desired.sharedScoreHandicapConfig != linked.sharedScoreHandicapConfig {
             fields.insert(.handicap)
@@ -143,10 +139,13 @@ enum SeriesRoundConfigurationReconciler {
 
     static func courseSelection(from segment: CourseSegment?) -> SeriesCourseSelection? {
         guard let segment else { return nil }
+        let defaultTee = segment.defaultTee.flatMap { segment.tee(from: $0) }
         return SeriesCourseSelection(
             courseID: segment.courseInfo.golfCourseApiID.map(String.init) ?? segment.courseInfo.id,
             cachedName: segment.courseInfo.name,
             defaultTeeBoxID: segment.defaultTee ?? "",
+            defaultTeeName: defaultTee?.name,
+            defaultTeeGender: defaultTee?.gender,
             holeSegment: segment.holeSegment
         )
     }

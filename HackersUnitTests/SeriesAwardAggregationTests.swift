@@ -592,4 +592,103 @@ final class SeriesAwardAggregationTests: XCTestCase {
         XCTAssertTrue(resolved.isMinimumCountTie)
         XCTAssertEqual(resolved.rows.map(\.scoringUnitID), ["team1", "team2"])
     }
+
+    func testCanonicalSeriesTeamIDRecoversMissingMappingFromSeriesRoster() {
+        let members = [
+            makeMember(id: "m1", teamID: "series_team_1", name: "Alice"),
+            makeMember(id: "m2", teamID: "series_team_1", name: "Bailey"),
+        ]
+        let participants = [
+            makeParticipant(id: "round_p1", memberID: "m1", teamID: "round_team_1", name: "Alice"),
+            makeParticipant(id: "round_p2", memberID: "m2", teamID: "round_team_1", name: "Bailey"),
+        ]
+        let snapshot = RoundSnapshot(
+            round: Round(id: "round1"),
+            participants: participants,
+            teams: [
+                RoundTeam(
+                    id: "round_team_1",
+                    name: "Team 1",
+                    color: "red",
+                    index: 0,
+                    createdAt: .init(),
+                    parentID: "round1"
+                ),
+            ]
+        )
+
+        let resolved = SeriesViewModel.canonicalSeriesTeamID(
+            roundTeamID: "round_team_1",
+            roundTeamName: "Team 1",
+            participantIDs: participants.map(\.id),
+            snapshot: snapshot,
+            mappings: [],
+            members: members,
+            teams: [makeTeam(id: "series_team_1", name: "Team 1", index: 0)]
+        )
+
+        XCTAssertEqual(resolved, "series_team_1")
+        XCTAssertNotEqual(resolved, "round_team_1")
+    }
+
+    func testCanonicalSeriesTeamIDRejectsAmbiguousRosterInsteadOfPublishingGhostTeam() {
+        let members = [
+            makeMember(id: "m1", teamID: "series_team_1", name: "Alice"),
+            makeMember(id: "m2", teamID: "series_team_2", name: "Bailey"),
+        ]
+        let participants = [
+            makeParticipant(id: "round_p1", memberID: "m1", teamID: "round_team_1", name: "Alice"),
+            makeParticipant(id: "round_p2", memberID: "m2", teamID: "round_team_1", name: "Bailey"),
+        ]
+        let snapshot = RoundSnapshot(
+            round: Round(id: "round1"),
+            participants: participants
+        )
+
+        let resolved = SeriesViewModel.canonicalSeriesTeamID(
+            roundTeamID: "round_team_1",
+            roundTeamName: "Duplicate Name",
+            participantIDs: participants.map(\.id),
+            snapshot: snapshot,
+            mappings: [],
+            members: members,
+            teams: [
+                makeTeam(id: "series_team_1", name: "Duplicate Name", index: 0),
+                makeTeam(id: "series_team_2", name: "Duplicate Name", index: 1),
+            ]
+        )
+
+        XCTAssertNil(resolved)
+    }
+
+    func testTeamStandingsExcludePersistedRoundTeamIDs() {
+        let viewModel = SeriesViewModel()
+        viewModel.teams = [
+            makeTeam(id: "series_team_1", name: "Team 1", index: 0),
+        ]
+        viewModel.standings = [
+            SeriesStanding(
+                id: "team_series_team_1",
+                awardTrack: .team,
+                competitorType: .team,
+                competitorID: "series_team_1",
+                competitorName: "Team 1",
+                totalPoints: 6,
+                roundsCounted: 6,
+                parentID: "series1"
+            ),
+            SeriesStanding(
+                id: "team_round_team_1",
+                awardTrack: .team,
+                competitorType: .team,
+                competitorID: "round_team_1",
+                competitorName: "Team 1",
+                totalPoints: 0.5,
+                roundsCounted: 1,
+                parentID: "series1"
+            ),
+        ]
+
+        XCTAssertEqual(viewModel.teamStandings.map(\.competitorID), ["series_team_1"])
+    }
 }

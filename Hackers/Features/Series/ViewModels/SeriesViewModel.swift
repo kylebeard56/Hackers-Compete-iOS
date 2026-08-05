@@ -13,11 +13,56 @@ struct SeriesScoreCorrectionChange: Identifiable, Hashable {
     var id: String { "\(participantID)_\(holeNumber)" }
 }
 
+struct SeriesParticipantHandicapCorrectionChange: Identifiable, Hashable {
+    let participantID: String
+    let teeBoxID: String
+    let handicapIndex: Double?
+    let courseHandicap: Int
+    let snapshot: RoundParticipantHandicapSnapshot
+
+    var id: String { participantID }
+}
+
+struct SeriesScoreCorrectionBatch: Hashable {
+    let seriesRoundID: String
+    let changes: [SeriesScoreCorrectionChange]
+    let participantChanges: [SeriesParticipantHandicapCorrectionChange]
+    let reason: String
+    let expectedRoundRevision: Double
+}
+
+enum SeriesScoreCorrectionBatchFailure: Error, LocalizedError {
+    case staleRound
+    case noChanges
+    case tooManyChanges(Int)
+    case sourceWriteFailed
+    case derivedPublicationFailed
+
+    var errorDescription: String? {
+        switch self {
+        case .staleRound:
+            return "This round changed after the correction sheet opened. Reload it and review the scores before retrying."
+        case .noChanges:
+            return "No score changes were found."
+        case .tooManyChanges(let count):
+            return "A correction batch supports at most 499 score documents plus its audit update; received \(count) score changes."
+        case .sourceWriteFailed:
+            return "The score batch was not written. No derived results were published."
+        case .derivedPublicationFailed:
+            return "The scores were saved, but handicap, award, or canonical publication failed. The previous leaderboard remains published and reconciliation will retry."
+        }
+    }
+}
+
 struct SeriesRoundCorrectionContext {
     let seriesRound: SeriesRound
     let snapshot: RoundSnapshot
     let holes: [Hole]
     let entriesByParticipantID: [String: [Int: ScoreEntry]]
+
+    var supportsTotalGrossCorrection: Bool {
+        snapshot.resolvedActiveTemplate.supportsTotalGrossCorrection
+    }
 }
 
 enum SeriesCSVExportSection: String, CaseIterable, Identifiable {
@@ -1561,7 +1606,7 @@ struct SeriesHandicapRoundUsage: Hashable {
 
 @MainActor
 final class SeriesViewModel: ObservableObject, Loggable {
-    nonisolated static let currentAutomaticAwardsEngineVersion = 3
+    nonisolated static let currentAutomaticAwardsEngineVersion = 4
 
     @Published var series: Series = .init()
     @Published var members: [SeriesMember] = []
@@ -1593,7 +1638,9 @@ final class SeriesViewModel: ObservableObject, Loggable {
     @Published var isEnriching = false
     @Published var isSaving = false
     @Published var creatingRoundID: String?
+    @Published var roundCreationErrorMessage: String?
     @Published var correctingRoundID: String?
+    @Published var scoreCorrectionErrorMessage: String?
     @Published var exportingRoundID: String?
     @Published var exportedCSVURL: URL?
     @Published var skippedCSVExportRoundTitles: [String] = []
@@ -1739,8 +1786,12 @@ final class SeriesViewModel: ObservableObject, Loggable {
     }
 
     var teamStandings: [SeriesStanding] {
-        standings
-            .filter { $0.awardTrack == .team }
+        let canonicalTeamIDs = Set(teams.map(\.id))
+        return standings
+            .filter {
+                $0.awardTrack == .team
+                    && canonicalTeamIDs.contains($0.competitorID)
+            }
             .sorted(by: Self.standingsSort)
     }
 
@@ -2288,7 +2339,7 @@ final class SeriesViewModel: ObservableObject, Loggable {
     func suggestedIndividualMatchupPlans(
         preserving existingPlans: [SeriesRoundMatchupPlan] = []
     ) -> [SeriesRoundMatchupPlan] {
-        let orderedMembers = eligibleMembers
+        let orderedMembers = eligibleMembers.filter(SeriesRoundParticipationPolicy.isAutomaticPlayer)
         guard usesTeams else {
             return sequentialIndividualMatchupPlans(
                 orderedMembers: orderedMembers,
@@ -2955,6 +3006,7 @@ final class SeriesViewModel: ObservableObject, Loggable {
             totalCount: plan.items.count
         )
         var awardsChanged = false
+        var awardsStatusesToPublish: [String: SeriesAwardsStatus] = [:]
 
         for (offset, item) in batch.enumerated() {
             if Task.isCancelled { return .failure(CancellationError()) }
@@ -2988,16 +3040,21 @@ final class SeriesViewModel: ObservableObject, Loggable {
                 existingAwards: initialContext.awardsByRound[preparedRound.id] ?? [],
                 mappings: initialContext.mappingsByRound[preparedRound.id] ?? []
             )
-            guard !processing.awardWriteFailed, !processing.canonicalWriteFailed else {
+            guard processing.derivedPublicationSucceeded,
+                  let proposedAwardsStatus = processing.proposedAwardsStatus else {
                 return .failure(SeriesStandingsRolloutOperationError.roundProcessingFailed(item.title))
             }
             awardsChanged = awardsChanged || processing.awardsChanged
+            awardsStatusesToPublish[preparedRound.id] = proposedAwardsStatus
             standingsRolloutProgress = .init(
                 completedCount: min(plan.items.count, plan.readyItems.count + offset + 1),
                 totalCount: plan.items.count
             )
         }
         if awardsChanged, !(await rebuildStandings()) {
+            return .failure(SeriesStandingsRolloutOperationError.seriesWriteFailed)
+        }
+        guard await persistAwardsStatuses(awardsStatusesToPublish) else {
             return .failure(SeriesStandingsRolloutOperationError.seriesWriteFailed)
         }
 
@@ -3364,10 +3421,15 @@ final class SeriesViewModel: ObservableObject, Loggable {
             return holeSegment
         }()
 
+        let resolvedDefaultTee = defaultTeeID.flatMap { defaultTeeID in
+            seriesCourseTeesByCourseID[courseID]?.first { $0.id == defaultTeeID }
+        }
         series.settings.defaultCourse = SeriesCourseSelection(
             courseID: courseID,
             cachedName: cachedName,
             defaultTeeBoxID: defaultTeeID ?? "",
+            defaultTeeName: resolvedDefaultTee?.name,
+            defaultTeeGender: resolvedDefaultTee?.gender,
             holeSegment: resolvedHoleSegment
         )
         series.lastUpdatedAt = .init()
@@ -4200,8 +4262,15 @@ final class SeriesViewModel: ObservableObject, Loggable {
                 snapshot: snapshot,
                 overwriteDerivedData: true
             )
-            if processingResult.awardsChanged, !processingResult.awardWriteFailed {
-                _ = await rebuildStandings(only: nil)
+            guard processingResult.derivedPublicationSucceeded,
+                  let proposedAwardsStatus = processingResult.proposedAwardsStatus else {
+                return false
+            }
+            if processingResult.awardsChanged, !(await rebuildStandings(only: nil)) {
+                return false
+            }
+            guard await persistAwardsStatuses([updatedRound.id: proposedAwardsStatus]) else {
+                return false
             }
             if handicapSettingsChanged {
                 handicapScores = await FirebaseService.shared.fetchHandicapScores(seriesID: seriesID)
@@ -4470,27 +4539,14 @@ final class SeriesViewModel: ObservableObject, Loggable {
         }
 
         let attendance = attendanceByRound[seriesRoundID] ?? []
-        let attendanceByMemberID = Dictionary(uniqueKeysWithValues: attendance.map { ($0.memberID, $0) })
-        let participatingMembers = eligibleMembers.filter { member in
-            guard let attendance = attendanceByMemberID[member.id],
-                  let resolved = SeriesRoundAttendanceStatus(rawValue: attendance.status) else {
-                return series.settings.attendanceDefault != .no
-            }
-            return resolved == .accepted || resolved == .pending
-        }
-        let presenceStatusByMemberID = Dictionary(uniqueKeysWithValues: participatingMembers.map { member in
-            let resolvedStatus: RoundParticipantPresenceStatus
-            if let attendance = attendanceByMemberID[member.id],
-               attendance.status == SeriesRoundAttendanceStatus.pending.rawValue {
-                resolvedStatus = .unconfirmed
-            } else if attendanceByMemberID[member.id] == nil,
-                      series.settings.attendanceDefault == .pending {
-                resolvedStatus = .unconfirmed
-            } else {
-                resolvedStatus = .active
-            }
-            return (member.id, resolvedStatus)
-        })
+        let attendancePlan = SeriesRoundCreationMapping.participatingMembersAndPresenceStatuses(
+            series: series,
+            eligibleMembers: eligibleMembers,
+            attendance: attendance,
+            plannedTeeGroups: seriesRound.plannedTeeGroups
+        )
+        let participatingMembers = attendancePlan.members
+        let presenceStatusByMemberID = attendancePlan.presenceStatusByMemberID
 
         let mappings: [SeriesRoundMapping]
         switch await FirebaseService.shared.fetchSeriesRoundMappingsResult(
@@ -4548,6 +4604,100 @@ final class SeriesViewModel: ObservableObject, Loggable {
         try await putSubcollectionItems(plan.scoringGroupsToPut)
         try await putSubcollectionItems(plan.mappingsToPut)
         _ = try await plan.segment.put().get()
+    }
+
+    /// Lazily heals substitute-related roster drift before a commissioner opens an unscored lobby.
+    /// Non-Series participants are intentionally preserved by the attendance reconciliation plan.
+    func repairLinkedLobbyRosterIfNeeded(seriesRoundID: String) async {
+        guard isCommissioner,
+              var seriesRound = rounds.first(where: { $0.id == seriesRoundID }),
+              seriesRound.status == .planned || seriesRound.status == .lobby,
+              let roundID = seriesRound.roundID,
+              let linked = linkedRounds[roundID],
+              linked.status == .lobby,
+              let snapshot = await loadRoundSnapshot(roundID: roundID),
+              !snapshot.scoring.contains(where: \.hasRecordedScore) else {
+            return
+        }
+
+        let hasSubstitutionContext = seriesRound.plannedTeeGroups
+            .flatMap(\.seats)
+            .contains { $0.isSubstitute || $0.substituteForSeriesMemberID?.isPopulated == true }
+            || snapshot.participants.contains(where: \.isSubstitute)
+            || snapshot.participants.contains { participant in
+                guard let memberID = participant.seriesMemberID else { return false }
+                return members.first(where: { $0.id == memberID })?.role == .substitute
+            }
+        guard hasSubstitutionContext else { return }
+
+        let repairedStructure = SeriesRoundPlanningService.resolvedPlannedStructure(
+            series: series,
+            seriesRound: seriesRound,
+            members: eligibleMembers,
+            teams: teams,
+            pods: pods,
+            courseSelection: seriesRound.resolvedCourse(using: series)
+        )
+        let previousPlannedMatchups = seriesRound.plannedMatchups
+        let previousPlannedTeeGroups = seriesRound.plannedTeeGroups
+        seriesRound.plannedMatchups = repairedStructure.matchups
+        seriesRound.plannedTeeGroups = repairedStructure.teeGroups
+        let repairedPartnershipPlans = SeriesRoundCreationMapping.resolvedPartnershipPlans(
+            seriesRound: seriesRound,
+            teams: teams,
+            pods: pods,
+            members: eligibleMembers
+        )
+        if previousPlannedMatchups != repairedStructure.matchups
+            || previousPlannedTeeGroups != repairedStructure.teeGroups
+            || seriesRound.partnershipPlans != repairedPartnershipPlans {
+            seriesRound.partnershipPlans = repairedPartnershipPlans
+            seriesRound.lastUpdatedAt = .init()
+            if case .success(let saved) = await FirebaseService.shared.updateSeriesRound(seriesRound) {
+                seriesRound = saved
+                if let index = rounds.firstIndex(where: { $0.id == saved.id }) {
+                    rounds[index] = saved
+                }
+            }
+        }
+
+        let attendancePlan = SeriesRoundCreationMapping.participatingMembersAndPresenceStatuses(
+            series: series,
+            eligibleMembers: eligibleMembers,
+            attendance: attendanceByRound[seriesRoundID] ?? [],
+            plannedTeeGroups: seriesRound.plannedTeeGroups
+        )
+        let mappings: [SeriesRoundMapping]
+        switch await FirebaseService.shared.fetchSeriesRoundMappingsResult(
+            seriesID: seriesID,
+            seriesRoundID: seriesRoundID
+        ) {
+        case .success(let fetched):
+            mappings = fetched
+        case .failure(let error):
+            addBreadcrumb(level: .error, message: "Lobby substitution repair mappings read failed", error: error)
+            return
+        }
+
+        do {
+            let plan = try SeriesRoundSyncPlanning.buildLobbyAttendancePlan(
+                series: series,
+                seriesRound: seriesRound,
+                participatingMembers: attendancePlan.members,
+                teams: teams,
+                pods: pods,
+                handicaps: memberHandicaps,
+                seriesMappings: mappings,
+                snapshot: snapshot,
+                hostPlayerID: await AppData.shared.getPrimaryPlayer()?.id,
+                presenceStatusByMemberID: attendancePlan.presenceStatusByMemberID,
+                pruneNonSeriesParticipants: false
+            )
+            try await applyLobbyAttendancePlan(plan)
+            await refreshLinkedRoundState()
+        } catch {
+            addBreadcrumb(level: .error, message: "Failed to lazily repair lobby substitutions", error: error)
+        }
     }
 
     private func putSubcollectionItems<T: FirebaseSubcollectable>(_ items: [T]) async throws {
@@ -5184,29 +5334,58 @@ final class SeriesViewModel: ObservableObject, Loggable {
 
     func createLiveRound(from seriesRound: SeriesRound, courseSegment: CourseSegment? = nil) async -> String? {
         guard var workingRound = rounds.first(where: { $0.id == seriesRound.id }) else { return nil }
+        roundCreationErrorMessage = nil
         creatingRoundID = seriesRound.id
         defer { creatingRoundID = nil }
 
-        let attendancePlan = SeriesRoundCreationMapping.participatingMembersAndPresenceStatuses(
-            series: series,
-            eligibleMembers: eligibleMembers,
-            attendance: attendanceByRound[seriesRound.id] ?? []
-        )
-        let seatedMemberIDs = Set(workingRound.plannedTeeGroups.flatMap(\.memberIDs))
-        let participants = attendancePlan.members.filter { member in
-            member.role != .substitute || seatedMemberIDs.contains(member.id)
-        }
-        let presenceStatusByMemberID = attendancePlan.presenceStatusByMemberID
-
         if let courseSegment {
+            let defaultTee = courseSegment.defaultTee.flatMap { courseSegment.tee(from: $0) }
             workingRound.courseOverride = SeriesCourseSelection(
                 courseID: courseSegment.courseInfo.golfCourseApiID.map(String.init) ?? courseSegment.courseInfo.id,
                 cachedName: courseSegment.courseInfo.name,
                 defaultTeeBoxID: courseSegment.defaultTee ?? "",
+                defaultTeeName: defaultTee?.name,
+                defaultTeeGender: defaultTee?.gender,
                 holeSegment: courseSegment.holeSegment
             )
         }
         workingRound = seriesRoundForSyncPreservingAuthoredConfiguration(workingRound)
+        let repairedPlanningStructure = SeriesRoundPlanningService.resolvedPlannedStructure(
+            series: series,
+            seriesRound: workingRound,
+            members: eligibleMembers,
+            teams: teams,
+            pods: pods,
+            courseSelection: workingRound.resolvedCourse(using: series)
+        )
+        workingRound.plannedMatchups = repairedPlanningStructure.matchups
+        workingRound.plannedTeeGroups = repairedPlanningStructure.teeGroups
+        workingRound.partnershipPlans = SeriesRoundCreationMapping.resolvedPartnershipPlans(
+            seriesRound: workingRound,
+            teams: teams,
+            pods: pods,
+            members: eligibleMembers
+        )
+        workingRound.lastUpdatedAt = .init()
+        switch await FirebaseService.shared.updateSeriesRound(workingRound) {
+        case .success(let saved):
+            workingRound = saved
+            if let currentIndex = rounds.firstIndex(where: { $0.id == saved.id }) {
+                rounds[currentIndex] = saved
+            }
+        case .failure(let error):
+            addBreadcrumb(level: .error, message: "Failed to persist repaired Series round plan", error: error)
+            return nil
+        }
+
+        let attendancePlan = SeriesRoundCreationMapping.participatingMembersAndPresenceStatuses(
+            series: series,
+            eligibleMembers: eligibleMembers,
+            attendance: attendanceByRound[seriesRound.id] ?? [],
+            plannedTeeGroups: workingRound.plannedTeeGroups
+        )
+        let participants = attendancePlan.members
+        let presenceStatusByMemberID = attendancePlan.presenceStatusByMemberID
 
         let policyCompatibility = standingsPolicyCompatibility(for: workingRound)
         let hasInvalidPolicyContract = policyCompatibility.contains { result in
@@ -5225,16 +5404,23 @@ final class SeriesViewModel: ObservableObject, Loggable {
             return nil
         }
 
-        guard let roundID = await SeriesRoundCreationService().createRoundFromSeries(
+        let creationResult = await SeriesRoundCreationService().createRoundFromSeries(
             series: series,
             seriesRound: workingRound,
             members: participants,
             teams: teams,
             pods: pods,
             handicaps: memberHandicaps,
+            selectedHandicapScoreIDsByMemberID: memberHandicapScoreSelections.mapValues { $0.countingIDs },
             presenceStatusByMemberID: presenceStatusByMemberID,
             courseSegment: courseSegment
-        ) else {
+        )
+        let roundID: String
+        switch creationResult {
+        case .success(let createdRoundID):
+            roundID = createdRoundID
+        case .failure(let failure):
+            roundCreationErrorMessage = failure.message
             return nil
         }
 
@@ -5516,6 +5702,7 @@ final class SeriesViewModel: ObservableObject, Loggable {
         var proposedRoundChanges: [(original: SeriesRound, proposed: SeriesRound)] = []
         var awardsChanged = false
         var hadAwardWriteFailure = false
+        var awardsStatusesToPublish: [String: SeriesAwardsStatus] = [:]
 
         for context in contexts {
             let originalRound = context.seriesRound
@@ -5598,7 +5785,11 @@ final class SeriesViewModel: ObservableObject, Loggable {
                         mappings: mappingsByRound[updatedRound.id] ?? []
                     )
                     awardsChanged = awardsChanged || processingResult.awardsChanged
-                    hadAwardWriteFailure = hadAwardWriteFailure || processingResult.awardWriteFailed
+                    hadAwardWriteFailure = hadAwardWriteFailure
+                        || !processingResult.derivedPublicationSucceeded
+                    if let proposedAwardsStatus = processingResult.proposedAwardsStatus {
+                        awardsStatusesToPublish[updatedRound.id] = proposedAwardsStatus
+                    }
                 } else if context.shouldProcessCompletedRound, !mappingsAvailable || !awardsAvailable {
                     hadAwardWriteFailure = true
                 }
@@ -5626,8 +5817,18 @@ final class SeriesViewModel: ObservableObject, Loggable {
             _ = await changedRounds.batchPut()
         }
 
-        if awardsChanged, !hadAwardWriteFailure {
-            _ = await rebuildStandings(only: nil)
+        if !hadAwardWriteFailure {
+            let standingsPublished: Bool
+            if awardsChanged {
+                standingsPublished = await rebuildStandings(only: nil)
+            } else {
+                standingsPublished = true
+            }
+            if standingsPublished {
+                hadAwardWriteFailure = !(await persistAwardsStatuses(awardsStatusesToPublish))
+            } else {
+                hadAwardWriteFailure = true
+            }
         }
         if series.settings.standingsReadAuthority == .canonicalWhenReady {
             standings = resolvedStandings(legacyStandings: legacyStandings)
@@ -5773,8 +5974,14 @@ final class SeriesViewModel: ObservableObject, Loggable {
     private struct CompletedRoundProcessingResult {
         var changed = false
         var awardsChanged = false
+        var handicapWriteFailed = false
         var awardWriteFailed = false
         var canonicalWriteFailed = false
+        var proposedAwardsStatus: SeriesAwardsStatus?
+
+        var derivedPublicationSucceeded: Bool {
+            !handicapWriteFailed && !awardWriteFailed && !canonicalWriteFailed
+        }
     }
 
     private enum AwardsFinalizationResult {
@@ -5837,6 +6044,11 @@ final class SeriesViewModel: ObservableObject, Loggable {
             replacingExisting: overwriteDerivedData
         )
         result.changed = handicapSync.changed
+        guard !handicapSync.writeFailed else {
+            result.handicapWriteFailed = true
+            canonicalRetryRoundIDs.insert(seriesRound.id)
+            return result
+        }
 
         guard let segment = snapshot.roundSegment ?? snapshot.segments.first else {
             return result
@@ -5856,56 +6068,53 @@ final class SeriesViewModel: ObservableObject, Loggable {
         }
         result.awardsChanged = awardsChanged
         result.changed = result.changed || awardsChanged
+        result.proposedAwardsStatus = awardsState
 
-        let canonicalPublished: Bool
-        if !handicapSync.writeFailed {
-            canonicalPublished = await publishCanonicalRoundResult(
-                seriesRound: seriesRound,
-                snapshot: snapshot,
-                scoringResult: canonicalScoringResult,
-                awards: publishedAwards,
-                handicapScores: handicapSync.projectedScores,
-                providedMappings: mappings
-            )
-        } else {
-            canonicalPublished = false
-        }
+        let canonicalPublished = await publishCanonicalRoundResult(
+            seriesRound: seriesRound,
+            snapshot: snapshot,
+            scoringResult: canonicalScoringResult,
+            awards: publishedAwards,
+            handicapScores: handicapSync.projectedScores,
+            providedMappings: mappings
+        )
         guard canonicalPublished else {
             result.canonicalWriteFailed = true
             canonicalRetryRoundIDs.insert(seriesRound.id)
             return result
         }
         canonicalRetryRoundIDs.remove(seriesRound.id)
-
-        guard var currentRound = rounds.first(where: { $0.id == seriesRound.id }) else {
-            return result
-        }
-        let shouldRefreshFinalizedAt = overwriteDerivedData && awardsState == .finalized && awardsChanged
-        let shouldUpdateAutomaticAwardsEngineVersion = awardsState == .finalized
-            && hasAutomaticAwardProfile(for: currentRound)
-            && currentRound.automaticAwardsEngineVersion != Self.currentAutomaticAwardsEngineVersion
-        guard currentRound.awardsStatus != awardsState
-                || shouldRefreshFinalizedAt
-                || shouldUpdateAutomaticAwardsEngineVersion else {
-            return result
-        }
-
-        currentRound.awardsStatus = awardsState
-        currentRound.awardsFinalizedAt = awardsState == .finalized ? .init() : nil
-        if shouldUpdateAutomaticAwardsEngineVersion {
-            currentRound.automaticAwardsEngineVersion = Self.currentAutomaticAwardsEngineVersion
-        }
-        currentRound.lastUpdatedAt = .init()
-        switch await FirebaseService.shared.updateSeriesRound(currentRound) {
-        case .success(let saved):
-            if let currentIndex = rounds.firstIndex(where: { $0.id == saved.id }) {
-                rounds[currentIndex] = saved
-            }
-            result.changed = true
-        case .failure(let error):
-            addBreadcrumb(level: .error, message: "Failed to persist finalized Series round", error: error)
-        }
         return result
+    }
+
+    /// Awards remain pending until their canonical result and the standings that
+    /// consume them are both safely published.
+    private func persistAwardsStatuses(
+        _ statusesBySeriesRoundID: [String: SeriesAwardsStatus]
+    ) async -> Bool {
+        guard statusesBySeriesRoundID.isPopulated else { return true }
+        let timestamp = Time()
+        let updates = statusesBySeriesRoundID.compactMap { seriesRoundID, status -> SeriesRound? in
+            guard var round = rounds.first(where: { $0.id == seriesRoundID }) else { return nil }
+            round.awardsStatus = status
+            round.awardsFinalizedAt = status == .finalized ? timestamp : nil
+            if status == .finalized, hasAutomaticAwardProfile(for: round) {
+                round.automaticAwardsEngineVersion = Self.currentAutomaticAwardsEngineVersion
+            }
+            round.lastUpdatedAt = timestamp
+            return round
+        }
+        guard updates.count == statusesBySeriesRoundID.count else { return false }
+
+        switch await updates.batchPut() {
+        case .success(let saved):
+            let savedByID = Dictionary(uniqueKeysWithValues: saved.map { ($0.id, $0) })
+            rounds = rounds.map { savedByID[$0.id] ?? $0 }
+            return true
+        case .failure(let error):
+            addBreadcrumb(level: .error, message: "Failed to persist post-standings award status", error: error)
+            return false
+        }
     }
 
     private func publishCanonicalRoundResult(
@@ -6382,6 +6591,7 @@ final class SeriesViewModel: ObservableObject, Loggable {
         var awardsChanged = false
         var hadAwardWriteFailure = false
         var processedRoundCount = 0
+        var awardsStatusesToPublish: [String: SeriesAwardsStatus] = [:]
         for seriesRound in targetRounds {
             guard let roundID = seriesRound.roundID,
                   let snapshotResult = snapshotResults[roundID],
@@ -6397,14 +6607,27 @@ final class SeriesViewModel: ObservableObject, Loggable {
             )
             didChange = didChange || processingResult.changed
             awardsChanged = awardsChanged || processingResult.awardsChanged
-            hadAwardWriteFailure = hadAwardWriteFailure || processingResult.awardWriteFailed
+            hadAwardWriteFailure = hadAwardWriteFailure
+                || !processingResult.derivedPublicationSucceeded
+            if let proposedAwardsStatus = processingResult.proposedAwardsStatus {
+                awardsStatusesToPublish[seriesRound.id] = proposedAwardsStatus
+            }
             processedRoundCount += 1
         }
 
-        if awardsChanged, !hadAwardWriteFailure {
-            let standingsPublished = await rebuildStandings(only: nil)
-            didChange = didChange || standingsPublished
-            hadAwardWriteFailure = !standingsPublished
+        if !hadAwardWriteFailure {
+            let standingsPublished: Bool
+            if awardsChanged {
+                standingsPublished = await rebuildStandings(only: nil)
+            } else {
+                standingsPublished = true
+            }
+            didChange = didChange || (awardsChanged && standingsPublished)
+            if standingsPublished {
+                hadAwardWriteFailure = !(await persistAwardsStatuses(awardsStatusesToPublish))
+            } else {
+                hadAwardWriteFailure = true
+            }
         }
         handicapScores = await FirebaseService.shared.fetchHandicapScores(seriesID: seriesID)
         recomputeAllHandicaps()
@@ -6470,14 +6693,24 @@ final class SeriesViewModel: ObservableObject, Loggable {
         case .roundIndividualLeaderboard:
             competitors = []
         case .roundTeamLeaderboard:
-            competitors = buildTeamCompetitors(result: scoringResult, snapshot: snapshot, mappings: mappings)
+            guard let resolvedCompetitors = buildTeamCompetitors(
+                result: scoringResult,
+                snapshot: snapshot,
+                mappings: mappings
+            ) else {
+                return .needsReview
+            }
+            competitors = resolvedCompetitors
         case .roundMatchResult:
-            competitors = buildMatchupCompetitors(
+            guard let resolvedCompetitors = buildMatchupCompetitors(
                 result: scoringResult,
                 snapshot: snapshot,
                 awardTrack: awardTrack,
                 mappings: mappings
-            )
+            ) else {
+                return .needsReview
+            }
+            competitors = resolvedCompetitors
         case .individualAwardsAggregateToTeam:
             return .needsReview
         case .manual:
@@ -6803,10 +7036,11 @@ final class SeriesViewModel: ObservableObject, Loggable {
 
         let scoreEntriesByParticipant = Dictionary(grouping: snapshot.scoring, by: \.scoringUnitID)
         var inserted = false
-        let deleted = replacingExisting ? await deleteRoundHandicapScores(sourceRoundID: roundID) : false
-        let existingRoundScores = replacingExisting
-            ? []
-            : await FirebaseService.shared.fetchHandicapScores(seriesID: seriesID, sourceRoundID: roundID)
+        let existingRoundScores = await FirebaseService.shared.fetchHandicapScores(
+            seriesID: seriesID,
+            sourceRoundID: roundID
+        )
+        let scoresToReplace = replacingExisting ? existingRoundScores : []
 
         var pendingHandicapScores: [SeriesHandicapScore] = []
         var projectedScores: [SeriesHandicapScore] = []
@@ -6871,11 +7105,26 @@ final class SeriesViewModel: ObservableObject, Loggable {
             projectedScores.append(score)
         }
 
-        if pendingHandicapScores.isPopulated {
-            switch await pendingHandicapScores.batchPut() {
+        if pendingHandicapScores.isPopulated || scoresToReplace.isPopulated {
+            let writeResult: Result<[SeriesHandicapScore], Error>
+            if replacingExisting {
+                writeResult = await FirebaseService.shared.batchReplaceHandicapScores(
+                    deleting: scoresToReplace,
+                    upserting: pendingHandicapScores
+                )
+            } else {
+                writeResult = await pendingHandicapScores.batchPut()
+            }
+
+            switch writeResult {
             case .success(let saved):
+                let replacedIDs = Set(scoresToReplace.map(\.id))
+                handicapScores.removeAll { replacedIDs.contains($0.id) }
+                let savedIDs = Set(saved.map(\.id))
+                handicapScores.removeAll { savedIDs.contains($0.id) }
                 handicapScores.append(contentsOf: saved)
-                inserted = true
+                projectedScores = saved.sorted { $0.id < $1.id }
+                inserted = saved.isPopulated
                 addEvent(
                     "series.handicap_scores_ingested_from_round",
                     eventProps: seriesTelemetryProps([
@@ -6889,6 +7138,7 @@ final class SeriesViewModel: ObservableObject, Loggable {
             }
         }
 
+        let deleted = !writeFailed && replacingExisting && scoresToReplace.isPopulated
         if inserted || deleted {
             recomputeAllHandicaps()
         }
@@ -7018,17 +7268,19 @@ final class SeriesViewModel: ObservableObject, Loggable {
         }
         let existingRoundScores = Array(existingRoundScoresByID.values)
 
-        var deleted = false
-        for existing in existingRoundScores {
-            switch await FirebaseService.shared.deleteHandicapScore(existing) {
-            case .success:
-                handicapScores.removeAll { $0.id == existing.id }
-                deleted = true
-            case .failure(let error):
-                addBreadcrumb(level: .error, message: "Failed to delete existing handicap score for correction", error: error)
-            }
+        guard existingRoundScores.isPopulated else { return false }
+        switch await FirebaseService.shared.batchReplaceHandicapScores(
+            deleting: existingRoundScores,
+            upserting: []
+        ) {
+        case .success:
+            let deletedIDs = Set(existingRoundScores.map(\.id))
+            handicapScores.removeAll { deletedIDs.contains($0.id) }
+            return true
+        case .failure(let error):
+            addBreadcrumb(level: .error, message: "Failed to atomically delete existing handicap scores", error: error)
+            return false
         }
-        return deleted
     }
 
     nonisolated static func roundHandicapScoreID(roundID: String, memberID: String) -> String {
@@ -7326,8 +7578,7 @@ final class SeriesViewModel: ObservableObject, Loggable {
 
         if let apiID = Int(courseID) {
             do {
-                let apiCourse = try await GolfCourseAPI.shared.getCourse(by: apiID)
-                let built = Course(from: apiCourse, with: courseID, useStableTeeIDs: true)
+                let built = try await GolfCourseRepository.shared.course(by: apiID)
                 seriesCourseTeesByCourseID[courseID] = built.tees
             } catch {
                 switch await FirebaseService.shared.getCourseByID(courseID) {
@@ -7377,14 +7628,50 @@ final class SeriesViewModel: ObservableObject, Loggable {
     func applyScoreCorrections(
         for seriesRound: SeriesRound,
         changes: [SeriesScoreCorrectionChange],
+        participantChanges: [SeriesParticipantHandicapCorrectionChange] = [],
         reason: String
     ) async -> Bool {
+        let batch = SeriesScoreCorrectionBatch(
+            seriesRoundID: seriesRound.id,
+            changes: changes,
+            participantChanges: participantChanges,
+            reason: reason,
+            expectedRoundRevision: seriesRound.lastUpdatedAt.unix
+        )
+        switch await applyScoreCorrectionBatch(batch, seriesRound: seriesRound) {
+        case .success:
+            scoreCorrectionErrorMessage = nil
+            return true
+        case .failure(let failure):
+            scoreCorrectionErrorMessage = failure.localizedDescription
+            return false
+        }
+    }
+
+    func applyScoreCorrectionBatch(
+        _ batch: SeriesScoreCorrectionBatch,
+        seriesRound: SeriesRound
+    ) async -> Result<Void, SeriesScoreCorrectionBatchFailure> {
         guard isCommissioner,
               let roundID = seriesRound.roundID,
-              let currentMemberID else { return false }
+              let currentMemberID else { return .failure(.sourceWriteFailed) }
+        guard batch.seriesRoundID == seriesRound.id,
+              batch.expectedRoundRevision == seriesRound.lastUpdatedAt.unix,
+              rounds.first(where: { $0.id == seriesRound.id })?.lastUpdatedAt.unix
+                == batch.expectedRoundRevision else {
+            return .failure(.staleRound)
+        }
+        guard batch.changes.isPopulated || batch.participantChanges.isPopulated else {
+            return .failure(.noChanges)
+        }
+        guard batch.changes.count + batch.participantChanges.count <= 498 else {
+            return .failure(.tooManyChanges(batch.changes.count + batch.participantChanges.count))
+        }
 
-        let trimmedReason = reason.trimmingCharacters(in: .whitespacesAndNewlines)
-        guard let snapshot = await loadRoundSnapshot(roundID: roundID) else { return false }
+        let trimmedReason = batch.reason.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard let snapshot = await loadRoundSnapshot(roundID: roundID) else {
+            return .failure(.sourceWriteFailed)
+        }
 
         correctingRoundID = seriesRound.id
         defer { correctingRoundID = nil }
@@ -7395,9 +7682,8 @@ final class SeriesViewModel: ObservableObject, Loggable {
             by: { "\($0.scoringUnitID)_\($0.holeNumber)" }
         )
 
-        var didWrite = false
-        var successfulHoleWrites = 0
-        for change in changes {
+        var entriesToWrite: [ScoreEntry] = []
+        for change in batch.changes {
             guard let participant = participantsByID[change.participantID] else { continue }
             let key = "\(participant.id)_\(change.holeNumber)"
             let previousEntry = existingEntries[key]?.first
@@ -7456,49 +7742,102 @@ final class SeriesViewModel: ObservableObject, Loggable {
             entry.strokes = change.strokes
             entry.lastUpdatedAt = .init()
 
-            do {
-                _ = try await entry.put().get()
-                didWrite = true
-                successfulHoleWrites += 1
-            } catch {
-                addBreadcrumb(level: .error, message: "Failed to save commissioner score correction", error: error)
-            }
+            entriesToWrite.append(entry)
         }
 
-        guard didWrite,
+        var participantsToWrite: [RoundParticipant] = []
+        var updatedParticipantsByID = participantsByID
+        for change in batch.participantChanges {
+            guard var participant = participantsByID[change.participantID] else { continue }
+            let isUnchanged = participant.teeBoxID == change.teeBoxID
+                && participant.handicapIndex == change.handicapIndex
+                && participant.adjustedHandicap == change.courseHandicap
+                && participant.leagueHandicapStrokesAtCreation == change.courseHandicap
+                && participant.handicapSnapshot == change.snapshot
+            guard !isUnchanged else { continue }
+
+            participant.teeBoxID = change.teeBoxID
+            participant.handicapIndex = change.handicapIndex
+            participant.originalHandicap = change.handicapIndex
+                .map { max(0, Int($0.rounded())) }
+                ?? participant.originalHandicap
+            participant.adjustedHandicap = change.courseHandicap
+            participant.leagueHandicapStrokesAtCreation = change.courseHandicap
+            participant.handicapSnapshot = change.snapshot
+            participant.lastUpdatedAt = .init()
+            participantsToWrite.append(participant)
+            updatedParticipantsByID[participant.id] = participant
+        }
+
+        let updatedParticipants = snapshot.participants.map {
+            updatedParticipantsByID[$0.id] ?? $0
+        }
+        let segmentsToWrite: [RoundSegment] = participantsToWrite.isPopulated
+            ? snapshot.segments.compactMap { segment in
+                let refreshedUnits = SeriesRoundCreationMapping.refreshingHandicapAllowances(
+                    in: segment.scoringUnits,
+                    participants: updatedParticipants
+                )
+                guard refreshedUnits != segment.scoringUnits else { return nil }
+                var updated = segment
+                updated.scoringUnits = refreshedUnits
+                updated.lastUpdatedAt = .init()
+                return updated
+            }
+            : []
+
+        guard entriesToWrite.isPopulated || participantsToWrite.isPopulated,
               var updatedSeriesRound = rounds.first(where: { $0.id == seriesRound.id }) else {
-            return false
+            return .failure(.noChanges)
         }
 
         updatedSeriesRound.lastScoreAdjustmentAt = .init()
         updatedSeriesRound.lastScoreAdjustmentByMemberID = currentMemberID
         updatedSeriesRound.lastScoreAdjustmentReason = trimmedReason.isPopulated ? trimmedReason : "Commissioner score correction"
         updatedSeriesRound.scoreAdjustmentCount += 1
+        updatedSeriesRound.awardsStatus = .pending
+        updatedSeriesRound.awardsFinalizedAt = nil
         updatedSeriesRound.lastUpdatedAt = .init()
-        switch await FirebaseService.shared.updateSeriesRound(updatedSeriesRound) {
+        switch await FirebaseService.shared.batchApplySeriesScoreCorrection(
+            entries: entriesToWrite,
+            participants: participantsToWrite,
+            segments: segmentsToWrite,
+            seriesRound: updatedSeriesRound
+        ) {
         case .success(let saved):
-            updatedSeriesRound = saved
-            if let currentIndex = rounds.firstIndex(where: { $0.id == saved.id }) {
-                rounds[currentIndex] = saved
+            updatedSeriesRound = saved.seriesRound
+            if let currentIndex = rounds.firstIndex(where: { $0.id == saved.seriesRound.id }) {
+                rounds[currentIndex] = saved.seriesRound
             }
         case .failure(let error):
-            addBreadcrumb(level: .error, message: "Failed to persist score-correction metadata", error: error)
-            return false
+            addBreadcrumb(level: .error, message: "Failed to persist atomic score-correction source batch", error: error)
+            return .failure(.sourceWriteFailed)
         }
 
         if case .success(let linkedRound) = await FirebaseService.shared.getRoundByID(roundID) {
             linkedRounds[roundID] = linkedRound
         }
 
-        guard let refreshedSnapshot = await loadRoundSnapshot(roundID: roundID) else { return false }
+        guard let refreshedSnapshot = await loadRoundSnapshot(roundID: roundID) else {
+            return .failure(.derivedPublicationFailed)
+        }
         handicapScores = await FirebaseService.shared.fetchHandicapScores(seriesID: seriesID)
         let processingResult = await processCompletedRound(
             seriesRound: updatedSeriesRound,
             snapshot: refreshedSnapshot,
             overwriteDerivedData: true
         )
-        if processingResult.awardsChanged, !processingResult.awardWriteFailed {
-            _ = await rebuildStandings(only: nil)
+        guard processingResult.derivedPublicationSucceeded else {
+            return .failure(.derivedPublicationFailed)
+        }
+        if processingResult.awardsChanged {
+            guard await rebuildStandings(only: nil) else {
+                return .failure(.derivedPublicationFailed)
+            }
+        }
+        guard let proposedAwardsStatus = processingResult.proposedAwardsStatus,
+              await persistAwardsStatuses([seriesRound.id: proposedAwardsStatus]) else {
+            return .failure(.derivedPublicationFailed)
         }
         handicapScores = await FirebaseService.shared.fetchHandicapScores(seriesID: seriesID)
         recomputeAllHandicaps()
@@ -7507,10 +7846,11 @@ final class SeriesViewModel: ObservableObject, Loggable {
             eventProps: seriesTelemetryProps([
                 "series_round_id": seriesRound.id,
                 "round_id": roundID,
-                "score_cells_written": successfulHoleWrites
+                "score_cells_written": entriesToWrite.count,
+                "participants_repaired": participantsToWrite.count
             ])
         )
-        return true
+        return .success(())
     }
 
     // MARK: - Helpers
@@ -8442,7 +8782,7 @@ final class SeriesViewModel: ObservableObject, Loggable {
         result: ScoringResult,
         snapshot: RoundSnapshot,
         mappings: [SeriesRoundMapping]
-    ) -> [AwardCompetitor] {
+    ) -> [AwardCompetitor]? {
         if result.rows.contains(where: { $0.owner == .scoreOwner }) {
             let ownerRows = result.rows.filter { $0.owner == .team || $0.owner == .scoreOwner }.map { row in
                 OwnerPlacementRow(
@@ -8458,30 +8798,43 @@ final class SeriesViewModel: ObservableObject, Loggable {
                 for: ownerRows,
                 highestWins: result.template.leaderboardSort == .highestWins
             )
-            return ownerPlacements.flatMap { placement in
-                expandAwardCompetitors(
+            var competitors: [AwardCompetitor] = []
+            for placement in ownerPlacements {
+                let resolved = expandAwardCompetitors(
                     placement,
                     competitorType: .team,
                     snapshot: snapshot,
                     mappings: mappings
                 )
+                guard resolved.isPopulated else { return nil }
+                competitors.append(contentsOf: resolved)
             }
+            return competitors
         }
 
         let sections = LeaderboardBuilder.buildTeamSections(result: result, participants: snapshot.participants, teams: snapshot.teams)
-        let mappingByTeamID = Dictionary(uniqueKeysWithValues: mappings.compactMap { mapping -> (String, String)? in
-            guard mapping.roundOwnerType == .team, mapping.competitorType == .team else { return nil }
-            return (mapping.roundOwnerID, mapping.competitorID)
-        })
-        let rows = sections.compactMap { section -> AwardPlacementRow? in
-            guard section.id != LeaderboardBuilder.unassignedTeamSectionID else { return nil }
-            return AwardPlacementRow(
+        var rows: [AwardPlacementRow] = []
+        for section in sections where section.id != LeaderboardBuilder.unassignedTeamSectionID {
+            guard let competitorID = Self.canonicalSeriesTeamID(
+                roundTeamID: section.id,
+                roundTeamName: section.name,
+                participantIDs: snapshot.participants
+                    .filter { $0.teamID == section.id }
+                    .map(\.id),
+                snapshot: snapshot,
+                mappings: mappings,
+                members: members,
+                teams: teams
+            ) else {
+                return nil
+            }
+            rows.append(AwardPlacementRow(
                 roundOwnerID: section.id,
                 competitorType: .team,
-                competitorID: mappingByTeamID[section.id] ?? section.id,
-                competitorName: section.name,
+                competitorID: competitorID,
+                competitorName: teams.first(where: { $0.id == competitorID })?.name ?? section.name,
                 score: section.sectionTotal
-            )
+            ))
         }
         return Self.buildPlacementGroups(for: rows, highestWins: result.template.leaderboardSort == .highestWins)
     }
@@ -8491,7 +8844,7 @@ final class SeriesViewModel: ObservableObject, Loggable {
         snapshot: RoundSnapshot,
         awardTrack: SeriesAwardTrack,
         mappings: [SeriesRoundMapping]
-    ) -> [AwardCompetitor] {
+    ) -> [AwardCompetitor]? {
         var competitors: [AwardCompetitor] = []
         for matchupResult in result.matchupResults {
             let highestWins = matchupResult.isPointsFormat ?? (result.template.leaderboardSort == .highestWins)
@@ -8526,12 +8879,16 @@ final class SeriesViewModel: ObservableObject, Loggable {
                     tieGroupSize: isTie ? sortedRows.count : nil,
                     reason: nil
                 )
-                competitors.append(contentsOf: expandAwardCompetitors(
+                let resolved = expandAwardCompetitors(
                     ownerPlacement,
                     competitorType: competitorType,
                     snapshot: snapshot,
                     mappings: mappings
-                ))
+                )
+                if competitorType == .team, resolved.isEmpty {
+                    return nil
+                }
+                competitors.append(contentsOf: resolved)
             }
         }
         return competitors
@@ -8783,8 +9140,12 @@ final class SeriesViewModel: ObservableObject, Loggable {
 
         let resolvedMappings: [(id: String, name: String)] = {
             if mapped.isPopulated {
-                return mapped.map { mapping in
-                    (
+                return mapped.compactMap { mapping in
+                    if competitorType == .team,
+                       !teams.contains(where: { $0.id == mapping.competitorID }) {
+                        return nil
+                    }
+                    return (
                         id: mapping.competitorID,
                         name: competitorName(
                             for: mapping.competitorID,
@@ -8798,7 +9159,24 @@ final class SeriesViewModel: ObservableObject, Loggable {
             switch competitorType {
             case .team:
                 guard let teamID = ownerPlacement.fallbackTeamID else { return [] }
-                return [(id: teamID, name: competitorName(for: teamID, type: .team, snapshot: snapshot))]
+                let participantIDs = ownerPlacement.fallbackParticipantIDs.isPopulated
+                    ? ownerPlacement.fallbackParticipantIDs
+                    : snapshot.participants.filter { $0.teamID == teamID }.map(\.id)
+                guard let canonicalTeamID = Self.canonicalSeriesTeamID(
+                    roundTeamID: teamID,
+                    roundTeamName: snapshot.teams.first(where: { $0.id == teamID })?.name,
+                    participantIDs: participantIDs,
+                    snapshot: snapshot,
+                    mappings: mappings,
+                    members: members,
+                    teams: teams
+                ) else {
+                    return []
+                }
+                return [(
+                    id: canonicalTeamID,
+                    name: competitorName(for: canonicalTeamID, type: .team, snapshot: snapshot)
+                )]
             case .member:
                 return ownerPlacement.fallbackParticipantIDs.compactMap { participantID in
                     guard let participant = snapshot.participants.first(where: { $0.id == participantID }) else { return nil }
@@ -8825,6 +9203,74 @@ final class SeriesViewModel: ObservableObject, Loggable {
                 rawScore: ownerPlacement.rawScore
             )
         }
+    }
+
+    nonisolated static func canonicalSeriesTeamID(
+        roundTeamID: String,
+        roundTeamName: String?,
+        participantIDs: [String],
+        snapshot: RoundSnapshot,
+        mappings: [SeriesRoundMapping],
+        members: [SeriesMember],
+        teams: [SeriesTeam]
+    ) -> String? {
+        let canonicalTeamIDs = Set(teams.map(\.id))
+
+        if let mappedTeamID = mappings.first(where: {
+            $0.roundOwnerType == .team
+                && $0.roundOwnerID == roundTeamID
+                && $0.competitorType == .team
+                && canonicalTeamIDs.contains($0.competitorID)
+        })?.competitorID {
+            return mappedTeamID
+        }
+
+        if canonicalTeamIDs.contains(roundTeamID) {
+            return roundTeamID
+        }
+
+        if let deterministicTeamID = teams.first(where: {
+            roundTeamID == "\(snapshot.round.id)_series_team_\($0.id)"
+        })?.id {
+            return deterministicTeamID
+        }
+
+        let participantIDSet = Set(participantIDs)
+        let memberByID = Dictionary(uniqueKeysWithValues: members.map { ($0.id, $0) })
+        let memberByPlayerID = Dictionary(
+            members.compactMap { member in
+                member.playerID.map { ($0, member) }
+            },
+            uniquingKeysWith: { first, _ in first }
+        )
+        let rosterTeamIDs = Set(snapshot.participants.compactMap { participant -> String? in
+            guard participantIDSet.contains(participant.id) || participant.teamID == roundTeamID else {
+                return nil
+            }
+            let member = participant.seriesMemberID.flatMap { memberByID[$0] }
+                ?? participant.playerID.flatMap { memberByPlayerID[$0] }
+            guard let teamID = member?.teamID, canonicalTeamIDs.contains(teamID) else {
+                return nil
+            }
+            return teamID
+        })
+        if rosterTeamIDs.count == 1 {
+            return rosterTeamIDs.first
+        }
+        if rosterTeamIDs.count > 1 {
+            return nil
+        }
+
+        guard let normalizedName = roundTeamName?
+            .trimmingCharacters(in: .whitespacesAndNewlines)
+            .lowercased(),
+              normalizedName.isPopulated else {
+            return nil
+        }
+        let nameMatches = teams.filter {
+            $0.name.trimmingCharacters(in: .whitespacesAndNewlines).lowercased() == normalizedName
+        }
+        return nameMatches.count == 1 ? nameMatches[0].id : nil
     }
 
     private func competitorName(

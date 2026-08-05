@@ -13,6 +13,56 @@ enum RoundParticipantPresenceStatus: String, Codable, CaseIterable {
     case noShow = "no_show"
 }
 
+enum RoundParticipantHandicapSnapshotSource: String, Codable {
+    case league
+    case commissionerRepair = "commissioner_repair"
+}
+
+/// Immutable inputs used to seed a participant's handicap for one round.
+/// Later score ingestion may change the member's projected handicap, but never this snapshot.
+struct RoundParticipantHandicapSnapshot: Hashable, Codable {
+    var authoritativeCourseHandicap: Int
+    var handicapIndex: Double?
+    var effectiveStrokes: Int
+    var courseID: String
+    var courseName: String
+    var teeBoxID: String
+    var teeName: String
+    var teeGender: String
+    var holeSegment: HoleSegment
+    var courseRating: Double?
+    var courseSlope: Int?
+    var par: Int
+    var handicapStrokeBasis: SeriesHandicapStrokeBasis
+    var maximumHandicap: Int?
+    var entryFormat: HandicapEntryFormat
+    var calculatorFingerprint: String
+    var selectedHandicapScoreIDs: [String]
+    var calculatedAt: Time
+    var source: RoundParticipantHandicapSnapshotSource
+
+    enum CodingKeys: String, CodingKey {
+        case par, source
+        case authoritativeCourseHandicap = "authoritative_course_handicap"
+        case handicapIndex = "handicap_index"
+        case effectiveStrokes = "effective_strokes"
+        case courseID = "course_id"
+        case courseName = "course_name"
+        case teeBoxID = "tee_box_id"
+        case teeName = "tee_name"
+        case teeGender = "tee_gender"
+        case holeSegment = "hole_segment"
+        case courseRating = "course_rating"
+        case courseSlope = "course_slope"
+        case handicapStrokeBasis = "handicap_stroke_basis"
+        case maximumHandicap = "maximum_handicap"
+        case entryFormat = "entry_format"
+        case calculatorFingerprint = "calculator_fingerprint"
+        case selectedHandicapScoreIDs = "selected_handicap_score_ids"
+        case calculatedAt = "calculated_at"
+    }
+}
+
 // MARK: - RoundParticipant
 struct RoundParticipant: FirebaseSubcollectable, Playable {
     var id: String              // unique participant ID for subcollection
@@ -24,8 +74,10 @@ struct RoundParticipant: FirebaseSubcollectable, Playable {
     var originalHandicap: Int   // Starting, inputted handicap from user
     var adjustedHandicap: Int   // Handicap adjustment based on course and slope adjustment
     var handicapIndex: Double?  // Optional decimal index used to compute adjustedHandicap
-    /// Strokes seeded from the series league handicap when the participant was created from a series round; immutable for commissioner override UI.
+    /// Frozen scoring allowance for this historical round. Commissioner repair
+    /// may replace it together with an auditable handicap snapshot.
     var leagueHandicapStrokesAtCreation: Int?
+    var handicapSnapshot: RoundParticipantHandicapSnapshot?
 
     var seriesMemberID: String?
     var teamID: String?
@@ -55,6 +107,7 @@ struct RoundParticipant: FirebaseSubcollectable, Playable {
         adjustedHandicap: Int = 0,
         handicapIndex: Double? = nil,
         leagueHandicapStrokesAtCreation: Int? = nil,
+        handicapSnapshot: RoundParticipantHandicapSnapshot? = nil,
         seriesMemberID: String? = nil,
         teamID: String? = nil,
         groupID: String? = nil,
@@ -77,6 +130,7 @@ struct RoundParticipant: FirebaseSubcollectable, Playable {
         self.adjustedHandicap = adjustedHandicap
         self.handicapIndex = handicapIndex
         self.leagueHandicapStrokesAtCreation = leagueHandicapStrokesAtCreation
+        self.handicapSnapshot = handicapSnapshot
         self.seriesMemberID = seriesMemberID
         self.teamID = teamID
         self.groupID = groupID
@@ -118,6 +172,7 @@ struct RoundParticipant: FirebaseSubcollectable, Playable {
         self.adjustedHandicap = handicap
         self.handicapIndex = nil
         self.leagueHandicapStrokesAtCreation = nil
+        self.handicapSnapshot = nil
         self.seriesMemberID = nil
         self.teamID = teamID
         self.groupID = groupID
@@ -143,6 +198,7 @@ struct RoundParticipant: FirebaseSubcollectable, Playable {
         case adjustedHandicap = "adjusted_handicap"
         case handicapIndex = "handicap_index"
         case leagueHandicapStrokesAtCreation = "league_handicap_strokes_at_creation"
+        case handicapSnapshot = "handicap_snapshot"
 
         case seriesMemberID = "series_member_id"
         case teamID = "team_id"
@@ -173,6 +229,7 @@ struct RoundParticipant: FirebaseSubcollectable, Playable {
         adjustedHandicap = try c.decodeIfPresent(Int.self, forKey: .adjustedHandicap) ?? 0
         handicapIndex = try c.decodeIfPresent(Double.self, forKey: .handicapIndex)
         leagueHandicapStrokesAtCreation = try c.decodeIfPresent(Int.self, forKey: .leagueHandicapStrokesAtCreation)
+        handicapSnapshot = try c.decodeIfPresent(RoundParticipantHandicapSnapshot.self, forKey: .handicapSnapshot)
 
         seriesMemberID = try c.decodeIfPresent(String.self, forKey: .seriesMemberID)
         teamID = try c.decodeIfPresent(String.self, forKey: .teamID)

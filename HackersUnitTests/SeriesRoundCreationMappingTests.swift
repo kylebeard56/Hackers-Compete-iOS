@@ -299,7 +299,7 @@ final class SeriesRoundCreationMappingTests: XCTestCase {
         XCTAssertEqual(roundConfig.leagueHandicapMaximum, 18)
     }
 
-    func testRoundConfigurationForcesCourseHandicapOffWithoutDefaultTee() {
+    func testRoundConfigurationPreservesCourseHandicapWithoutDefaultTeeForPreflightToReject() {
         var cfg = SeriesRoundConfiguration()
         cfg.handicapEntryFormat = .courseHandicap
         let tee = Tee(
@@ -328,7 +328,7 @@ final class SeriesRoundCreationMappingTests: XCTestCase {
             competitionScope: .field
         )
 
-        XCTAssertEqual(roundConfig.handicapEntryFormat, .strokes)
+        XCTAssertEqual(roundConfig.handicapEntryFormat, .courseHandicap)
     }
 
     func testTeeGroupPlansWithAdjacentPartnershipsKeepsPairsTogether() {
@@ -483,6 +483,188 @@ final class SeriesRoundCreationMappingTests: XCTestCase {
         )
 
         XCTAssertEqual(normalized.map(\.startingHole), [1])
+    }
+
+    func testNormalizePlannedTeeGroups_omitsStandaloneSubstitutesAndIsIdempotent() {
+        let members = [
+            makeMember(id: "commissioner", name: "Commissioner", role: .commissioner),
+            makeMember(id: "captain", name: "Captain", role: .captain),
+            makeMember(id: "member", name: "Member"),
+            makeMember(id: "sub", name: "Unused Sub", role: .substitute),
+            makeMember(id: "spectator", name: "Spectator", role: .spectator),
+        ]
+        let corrupted = [
+            SeriesRoundPlannedTeeGroup(
+                id: "regulars",
+                index: 0,
+                seats: [
+                    SeriesRoundPlannedSeat(memberID: "commissioner", teeOrder: 1),
+                    SeriesRoundPlannedSeat(memberID: "captain", teeOrder: 2),
+                    SeriesRoundPlannedSeat(memberID: "member", teeOrder: 3),
+                ]
+            ),
+            SeriesRoundPlannedTeeGroup(
+                id: "buggy_final_sub_group",
+                index: 1,
+                seats: [SeriesRoundPlannedSeat(memberID: "sub", teeOrder: 1)]
+            ),
+            SeriesRoundPlannedTeeGroup(
+                id: "intentional_empty",
+                index: 2,
+                seats: [],
+                source: .manualOverride
+            ),
+        ]
+
+        let normalized = SeriesRoundPlanningService.normalizePlannedTeeGroups(
+            corrupted,
+            fallback: [],
+            allMembers: members,
+            holeRange: HoleRange(startHole: 1, endHole: 18)
+        )
+        let normalizedAgain = SeriesRoundPlanningService.normalizePlannedTeeGroups(
+            normalized,
+            fallback: [],
+            allMembers: members,
+            holeRange: HoleRange(startHole: 1, endHole: 18)
+        )
+
+        XCTAssertEqual(normalized.flatMap(\.memberIDs), ["commissioner", "captain", "member"])
+        XCTAssertEqual(normalized.map(\.id), ["regulars", "intentional_empty"])
+        XCTAssertEqual(normalized, normalizedAgain)
+    }
+
+    func testNormalizePlannedTeeGroups_explicitReplacementIsOneForOne() {
+        let members = [
+            makeMember(id: "original", name: "Original", teamID: "red"),
+            makeMember(id: "other", name: "Other", role: .captain),
+            makeMember(id: "sub", name: "Replacement", role: .substitute),
+            makeMember(id: "unused_sub", name: "Unused", role: .substitute),
+        ]
+        let corrupted = [
+            SeriesRoundPlannedTeeGroup(
+                id: "g1",
+                index: 0,
+                seats: [
+                    SeriesRoundPlannedSeat(memberID: "original", teeOrder: 1),
+                    SeriesRoundPlannedSeat(
+                        memberID: "sub",
+                        teeOrder: 2,
+                        source: .manualOverride,
+                        isSubstitute: true,
+                        substituteForSeriesMemberID: "original",
+                        representedTeamID: "red"
+                    ),
+                    SeriesRoundPlannedSeat(memberID: "other", teeOrder: 3),
+                ],
+                source: .manualOverride
+            ),
+            SeriesRoundPlannedTeeGroup(
+                id: "bad_sub_group",
+                index: 1,
+                seats: [SeriesRoundPlannedSeat(memberID: "unused_sub", teeOrder: 1)]
+            ),
+        ]
+
+        let normalized = SeriesRoundPlanningService.normalizePlannedTeeGroups(
+            corrupted,
+            fallback: [],
+            allMembers: members,
+            holeRange: HoleRange(startHole: 1, endHole: 18)
+        )
+        let seats = normalized.flatMap(\.seats)
+
+        XCTAssertEqual(seats.map(\.memberID), ["sub", "other"])
+        XCTAssertEqual(seats.count, 2)
+        XCTAssertEqual(seats.first?.substituteForSeriesMemberID, "original")
+        XCTAssertEqual(seats.first?.representedTeamID, "red")
+        XCTAssertEqual(
+            normalized,
+            SeriesRoundPlanningService.normalizePlannedTeeGroups(
+                normalized,
+                fallback: [],
+                allMembers: members,
+                holeRange: HoleRange(startHole: 1, endHole: 18)
+            )
+        )
+    }
+
+    func testNormalizePlannedTeeGroups_conflictingSubstitutionsRestoreOriginal() {
+        let members = [
+            makeMember(id: "original", name: "Original"),
+            makeMember(id: "sub1", name: "Sub One", role: .substitute),
+            makeMember(id: "sub2", name: "Sub Two", role: .substitute),
+        ]
+        let corrupted = [
+            SeriesRoundPlannedTeeGroup(
+                id: "g1",
+                index: 0,
+                seats: [
+                    SeriesRoundPlannedSeat(memberID: "sub1", teeOrder: 1, isSubstitute: true, substituteForSeriesMemberID: "original"),
+                    SeriesRoundPlannedSeat(memberID: "sub2", teeOrder: 2, isSubstitute: true, substituteForSeriesMemberID: "original"),
+                ]
+            ),
+        ]
+
+        let normalized = SeriesRoundPlanningService.normalizePlannedTeeGroups(
+            corrupted,
+            fallback: [],
+            allMembers: members,
+            holeRange: HoleRange(startHole: 1, endHole: 18)
+        )
+
+        XCTAssertEqual(normalized.flatMap(\.memberIDs), ["original"])
+    }
+
+    func testNormalizePlannedTeeGroups_invalidAndDuplicateSubstitutionsRestoreOriginal() {
+        let members = [
+            makeMember(id: "original", name: "Original"),
+            makeMember(id: "sub", name: "Sub", role: .substitute),
+        ]
+        let invalid = [
+            SeriesRoundPlannedTeeGroup(
+                id: "invalid",
+                index: 0,
+                seats: [
+                    SeriesRoundPlannedSeat(
+                        memberID: "sub",
+                        teeOrder: 1,
+                        isSubstitute: true,
+                        substituteForSeriesMemberID: nil
+                    ),
+                ]
+            ),
+        ]
+        let duplicate = [
+            SeriesRoundPlannedTeeGroup(
+                id: "duplicate",
+                index: 0,
+                seats: [
+                    SeriesRoundPlannedSeat(memberID: "sub", teeOrder: 1, isSubstitute: true, substituteForSeriesMemberID: "original"),
+                    SeriesRoundPlannedSeat(memberID: "sub", teeOrder: 2, isSubstitute: true, substituteForSeriesMemberID: "original"),
+                ]
+            ),
+        ]
+
+        for corrupted in [invalid, duplicate] {
+            let normalized = SeriesRoundPlanningService.normalizePlannedTeeGroups(
+                corrupted,
+                fallback: [],
+                allMembers: members,
+                holeRange: HoleRange(startHole: 1, endHole: 18)
+            )
+
+            XCTAssertEqual(normalized.flatMap(\.memberIDs), ["original"])
+            XCTAssertEqual(
+                normalized,
+                SeriesRoundPlanningService.normalizePlannedTeeGroups(
+                    normalized,
+                    fallback: [],
+                    allMembers: members,
+                    holeRange: HoleRange(startHole: 1, endHole: 18)
+                )
+            )
+        }
     }
 
     func testRoundDraft_leagueHandicapsOn_defaultsPrimaryFormatToNet() {
@@ -1235,6 +1417,7 @@ final class SeriesRoundCreationMappingTests: XCTestCase {
         )
 
         let substitute = payloads.first { $0.seriesMemberID == "sub" }
+        XCTAssertEqual(payloads.map(\.seriesMemberID), ["sub"])
         XCTAssertNil(members.first { $0.id == "sub" }?.teamID)
         XCTAssertTrue(substitute?.isSubstitute == true)
         XCTAssertEqual(substitute?.teamID, "round_red")
@@ -1305,6 +1488,91 @@ final class SeriesRoundCreationMappingTests: XCTestCase {
         XCTAssertEqual(result.presenceStatusByMemberID["m3"], .unconfirmed)
     }
 
+    func testParticipatingMembersAndPresenceStatuses_explicitSubstituteUsesOwnRSVP() {
+        var series = makeSeries(attendanceEnabled: true)
+        series.settings.attendanceDefault = .pending
+        let members = [
+            makeMember(id: "original", name: "Original", playerID: "p_original"),
+            makeMember(id: "other", name: "Other", playerID: "p_other"),
+            makeMember(id: "sub", name: "Sub", playerID: "p_sub", role: .substitute),
+            makeMember(id: "unused", name: "Unused", playerID: "p_unused", role: .substitute),
+        ]
+        let teeGroups = [
+            SeriesRoundPlannedTeeGroup(
+                id: "g1",
+                seats: [
+                    SeriesRoundPlannedSeat(memberID: "sub", teeOrder: 1, isSubstitute: true, substituteForSeriesMemberID: "original"),
+                    SeriesRoundPlannedSeat(memberID: "other", teeOrder: 2),
+                ]
+            ),
+        ]
+
+        for (status, expectedPresence) in [
+            (SeriesRoundAttendanceStatus.accepted, RoundParticipantPresenceStatus.active),
+            (.pending, .unconfirmed),
+            (.no, .noShow),
+        ] {
+            let result = SeriesRoundCreationMapping.participatingMembersAndPresenceStatuses(
+                series: series,
+                eligibleMembers: members,
+                attendance: [
+                    SeriesRoundAttendance(
+                        id: "sub_rsvp",
+                        seriesRoundID: "sr",
+                        memberID: "sub",
+                        status: status.rawValue,
+                        parentID: series.id
+                    ),
+                    SeriesRoundAttendance(
+                        id: "other_rsvp",
+                        seriesRoundID: "sr",
+                        memberID: "other",
+                        status: SeriesRoundAttendanceStatus.accepted.rawValue,
+                        parentID: series.id
+                    ),
+                ],
+                plannedTeeGroups: teeGroups
+            )
+
+            XCTAssertEqual(result.members.map(\.id), ["sub", "other"])
+            XCTAssertEqual(result.presenceStatusByMemberID["sub"], expectedPresence)
+        }
+    }
+
+    func testParticipatingMembersAndPresenceStatuses_missingSubstituteRSVPInheritsOriginalDeclineAsActive() {
+        var series = makeSeries(attendanceEnabled: true)
+        series.settings.attendanceDefault = .pending
+        let members = [
+            makeMember(id: "original", name: "Original"),
+            makeMember(id: "sub", name: "Sub", role: .substitute),
+        ]
+        let teeGroups = [
+            SeriesRoundPlannedTeeGroup(
+                id: "g1",
+                seats: [
+                    SeriesRoundPlannedSeat(memberID: "sub", teeOrder: 1, isSubstitute: true, substituteForSeriesMemberID: "original"),
+                ]
+            ),
+        ]
+        let result = SeriesRoundCreationMapping.participatingMembersAndPresenceStatuses(
+            series: series,
+            eligibleMembers: members,
+            attendance: [
+                SeriesRoundAttendance(
+                    id: "original_rsvp",
+                    seriesRoundID: "sr",
+                    memberID: "original",
+                    status: SeriesRoundAttendanceStatus.no.rawValue,
+                    parentID: series.id
+                ),
+            ],
+            plannedTeeGroups: teeGroups
+        )
+
+        XCTAssertEqual(result.members.map(\.id), ["sub"])
+        XCTAssertEqual(result.presenceStatusByMemberID["sub"], .active)
+    }
+
     // MARK: - Segment matchups + Firestore mapping ids
 
     func testBuildRoundMatchups_teamAndIndividual() {
@@ -1347,6 +1615,60 @@ final class SeriesRoundCreationMappingTests: XCTestCase {
         XCTAssertEqual(indMatchups.count, 1)
         XCTAssertEqual(indMatchups[0].mode, MatchupMode.individual)
         XCTAssertEqual(indMatchups[0].participantIDs, ["pa", "pb"])
+    }
+
+    func testReplacementPlanPreservesMatchupAndPartnershipIdentity() {
+        let replacement = SeriesRoundReplacementPlan(originalToSubstitute: ["original": "sub"])
+        let matchup = SeriesRoundMatchupPlan(id: "match_1", memberAID: "original", memberBID: "opponent")
+        let partnership = SeriesRoundPartnershipPlan(
+            id: "pair_1",
+            teamID: "red",
+            memberIDs: ["original", "partner"],
+            label: "Red Pair"
+        )
+
+        let replacedMatchup = replacement.applying(to: [matchup]).first
+        let replacedPartnership = replacement.applying(to: [partnership]).first
+        XCTAssertEqual(replacedMatchup?.id, "match_1")
+        XCTAssertEqual(replacedMatchup?.memberAID, "sub")
+        XCTAssertEqual(replacedMatchup?.memberBID, "opponent")
+        XCTAssertEqual(replacedPartnership?.id, "pair_1")
+        XCTAssertEqual(replacedPartnership?.memberIDs, ["partner", "sub"])
+        XCTAssertEqual(replacedPartnership?.label, "Red Pair")
+
+        let restoration = SeriesRoundReplacementPlan(originalToSubstitute: ["sub": "original"])
+        XCTAssertEqual(restoration.applying(to: [replacedMatchup!]).first?.memberAID, "original")
+        XCTAssertEqual(restoration.applying(to: [replacedPartnership!]).first?.memberIDs, ["original", "partner"])
+    }
+
+    func testBuildRoundMatchups_aliasesOriginalSlotToSubstituteParticipant() {
+        var config = SeriesRoundConfiguration()
+        config.matchupMode = .individualVsIndividual
+        let seriesRound = SeriesRound(id: "sr", roundConfig: config, parentID: "series")
+        let participants = [
+            RoundParticipant(
+                id: "participant_sub",
+                seriesMemberID: "sub",
+                isSubstitute: true,
+                substituteForSeriesMemberID: "original"
+            ),
+            RoundParticipant(id: "participant_opponent", seriesMemberID: "opponent"),
+        ]
+
+        let matchups = SeriesRoundCreationMapping.buildRoundMatchups(
+            seriesRound: seriesRound,
+            matchupPlans: [SeriesRoundMatchupPlan(id: "match", memberAID: "original", memberBID: "opponent")],
+            teamMappings: [:],
+            participantIDsBySeriesMemberID: [
+                "sub": "participant_sub",
+                "opponent": "participant_opponent",
+            ],
+            scoringGroups: [],
+            participants: participants
+        )
+
+        XCTAssertEqual(matchups.first?.id, "match")
+        XCTAssertEqual(matchups.first?.participantIDs, ["participant_sub", "participant_opponent"])
     }
 
     func testBuildRoundMatchups_mirroredTeeGroupPartnershipsCreateScoreOwnerMatchup() {
@@ -2111,13 +2433,133 @@ final class SeriesRoundCreationMappingTests: XCTestCase {
             maximumHandicap: nil,
             courseSegment: segment,
             handicapEntryFormat: .courseHandicap,
+            selectedHandicapScoreIDsByMemberID: ["m1": ["score-b", "score-a"]],
             hostPlayerID: nil
         )
 
+        let resolution = SeriesCourseHandicapResolver.resolve(
+            effectiveIndex: 12.9,
+            member: member,
+            courseSegment: segment,
+            entryFormat: .courseHandicap,
+            handicapStrokeBasis: .eighteenHole,
+            maximumHandicap: nil
+        )
         XCTAssertEqual(payloads.first?.handicapIndex, 12.9)
         XCTAssertEqual(payloads.first?.originalHandicap, 13)
         XCTAssertEqual(payloads.first?.adjustedHandicap, 17)
         XCTAssertEqual(payloads.first?.leagueHandicapStrokesAtCreation, 17)
+        XCTAssertEqual(payloads.first?.adjustedHandicap, resolution.effectiveStrokes)
+        XCTAssertEqual(payloads.first?.handicapSnapshot?.authoritativeCourseHandicap, 17)
+        XCTAssertEqual(payloads.first?.handicapSnapshot?.teeBoxID, "blue")
+        XCTAssertEqual(payloads.first?.handicapSnapshot?.courseID, "course1")
+        XCTAssertEqual(payloads.first?.handicapSnapshot?.courseRating, 74.0)
+        XCTAssertEqual(payloads.first?.handicapSnapshot?.courseSlope, 130)
+        XCTAssertEqual(
+            payloads.first?.handicapSnapshot?.selectedHandicapScoreIDs,
+            ["score-a", "score-b"]
+        )
+        XCTAssertEqual(payloads.first?.handicapSnapshot?.source, .league)
+    }
+
+    func testCourseHandicapResolverFallsBackToFullTeeDataWhenFrontNineMetadataIsMissing() {
+        let tee = Tee(
+            id: "red_female",
+            name: "Red",
+            gender: "female",
+            totalHoles: 18,
+            holes: (1...18).map { makeHole($0) },
+            ratingFull: 70.0,
+            slopeFull: 120,
+            ratingFront: nil,
+            slopeFront: nil,
+            ratingBack: 35.0,
+            slopeBack: 120
+        )
+        let segment = CourseSegment(
+            courseInfo: CourseInfo(
+                id: "course1",
+                name: "Test Course",
+                totalHoles: 18,
+                tees: [tee]
+            ),
+            holeRange: HoleRange(startHole: 1, endHole: 9),
+            defaultTee: "red_female"
+        )
+        let member = makeMember(
+            id: "karis",
+            name: "Karis",
+            defaultTeeBoxID: "red_female"
+        )
+
+        let resolution = SeriesCourseHandicapResolver.resolve(
+            effectiveIndex: 14,
+            member: member,
+            courseSegment: segment,
+            entryFormat: .courseHandicap,
+            handicapStrokeBasis: .nineHole,
+            maximumHandicap: nil
+        )
+
+        XCTAssertEqual(resolution.effectiveStrokes, 14)
+        XCTAssertEqual(resolution.courseRating, 35.0)
+        XCTAssertEqual(resolution.courseSlope, 120)
+        XCTAssertNil(resolution.validationIssue)
+    }
+
+    func testRoundParticipantHandicapSnapshotRoundTripsAndLegacyParticipantDecodesWithoutIt() throws {
+        let snapshot = RoundParticipantHandicapSnapshot(
+            authoritativeCourseHandicap: 14,
+            handicapIndex: 12.4,
+            effectiveStrokes: 14,
+            courseID: "course1",
+            courseName: "Test Course",
+            teeBoxID: "red_female",
+            teeName: "Red",
+            teeGender: "female",
+            holeSegment: .front9,
+            courseRating: 35.1,
+            courseSlope: 120,
+            par: 36,
+            handicapStrokeBasis: .nineHole,
+            maximumHandicap: 18,
+            entryFormat: .courseHandicap,
+            calculatorFingerprint: "test-fingerprint",
+            selectedHandicapScoreIDs: ["score-a"],
+            calculatedAt: t0,
+            source: .league
+        )
+        let participant = RoundParticipant(
+            id: "p1",
+            name: Name("Karis", "Linnet"),
+            teeBoxID: "red_female",
+            originalHandicap: 12,
+            adjustedHandicap: 14,
+            handicapIndex: 12.4,
+            leagueHandicapStrokesAtCreation: 14,
+            handicapSnapshot: snapshot,
+            seriesMemberID: "m1",
+            parentID: "round1"
+        )
+
+        let encoded = try JSONEncoder().encode(participant)
+        let decoded = try JSONDecoder().decode(RoundParticipant.self, from: encoded)
+        XCTAssertEqual(decoded.handicapSnapshot, snapshot)
+        XCTAssertEqual(decoded.leagueHandicapStrokesAtCreation, 14)
+
+        let legacyParticipant = RoundParticipant(
+            id: "legacy",
+            name: Name("Legacy", "Player"),
+            teeBoxID: "white",
+            originalHandicap: 9,
+            adjustedHandicap: 9,
+            leagueHandicapStrokesAtCreation: 9,
+            parentID: "round1"
+        )
+        let legacyData = try JSONEncoder().encode(legacyParticipant)
+        let decodedLegacy = try JSONDecoder().decode(RoundParticipant.self, from: legacyData)
+        XCTAssertNil(decodedLegacy.handicapSnapshot)
+        XCTAssertEqual(decodedLegacy.leagueHandicapStrokesAtCreation, 9)
     }
 
     func testBuildParticipantPayloadsCapsCourseHandicapFromMemberIndex() {
@@ -2164,5 +2606,64 @@ final class SeriesRoundCreationMappingTests: XCTestCase {
         XCTAssertEqual(payloads.first?.originalHandicap, 28)
         XCTAssertEqual(payloads.first?.adjustedHandicap, 18)
         XCTAssertEqual(payloads.first?.leagueHandicapStrokesAtCreation, 18)
+    }
+
+    func testRefreshingHandicapAllowancesPreservesScoringUnitShape() {
+        let first = RoundParticipant(
+            id: "p1",
+            name: Name("First", "Player"),
+            adjustedHandicap: 8,
+            teamID: "team1"
+        )
+        let second = RoundParticipant(
+            id: "p2",
+            name: Name("Second", "Player"),
+            adjustedHandicap: 12,
+            teamID: "team1"
+        )
+        let originalAllowance = ScoringUnitHandicapAllowance(
+            unitStrokes: 99,
+            memberStrokes: ["p1": 49, "p2": 50],
+            sourceConfig: .scramble2Player
+        )
+        let original = ScoringUnit(
+            id: "team1",
+            owner: .team,
+            ownerIDs: ["team1"],
+            scoringMethod: .aggregate,
+            aggregation: .init(mode: .sumAll, scope: .perHole),
+            handicapAdjustments: originalAllowance.memberStrokes,
+            handicapAllowance: originalAllowance
+        )
+
+        let refreshed = SeriesRoundCreationMapping.refreshingHandicapAllowances(
+            in: [original],
+            participants: [first, second]
+        )
+
+        XCTAssertEqual(refreshed.first?.id, original.id)
+        XCTAssertEqual(refreshed.first?.owner, original.owner)
+        XCTAssertEqual(refreshed.first?.ownerIDs, original.ownerIDs)
+        XCTAssertEqual(refreshed.first?.scoringMethod, original.scoringMethod)
+        XCTAssertEqual(refreshed.first?.aggregation, original.aggregation)
+        XCTAssertEqual(
+            refreshed.first?.handicapAllowance?.memberStrokes["p1"] ?? 0,
+            2.8,
+            accuracy: 0.0001
+        )
+        XCTAssertEqual(
+            refreshed.first?.handicapAllowance?.memberStrokes["p2"] ?? 0,
+            1.8,
+            accuracy: 0.0001
+        )
+        XCTAssertEqual(
+            refreshed.first?.handicapAllowance?.unitStrokes ?? 0,
+            4.6,
+            accuracy: 0.0001
+        )
+        XCTAssertEqual(
+            refreshed.first?.handicapAdjustments,
+            refreshed.first?.handicapAllowance?.memberStrokes
+        )
     }
 }

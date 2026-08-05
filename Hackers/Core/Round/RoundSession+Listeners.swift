@@ -36,8 +36,15 @@ extension RoundRegistrationType {
 }
 
 extension RoundSession {
-    private nonisolated static func shouldApplyListenerSnapshot(_ metadata: SnapshotMetadata) -> Bool {
-        metadata.hasPendingWrites == false && metadata.isFromCache == false
+    nonisolated static func shouldApplyListenerSnapshot(
+        hasPendingWrites: Bool,
+        isFromCache: Bool
+    ) -> Bool {
+        // Pending writes are Firestore's latency-compensated local updates, and cached
+        // snapshots may contain newer data than the currently rendered snapshot.
+        // The listeners exclude metadata-only changes, so applying every delivered
+        // snapshot does not publish again when a write is merely acknowledged.
+        true
     }
 
     private func applyListenerSnapshot(
@@ -151,7 +158,7 @@ extension RoundSession {
         
         roundListener = reference
             .document(roundID)
-            .addSnapshotListener({ [weak self] snapshot, error in
+            .addSnapshotListener(includeMetadataChanges: false, listener: { [weak self] snapshot, error in
                 guard let snapshot else {
                     Task { @MainActor [weak self] in
                         self?.emitMissingSnapshotError(
@@ -164,7 +171,10 @@ extension RoundSession {
                     return
                 }
                 
-                guard Self.shouldApplyListenerSnapshot(snapshot.metadata) else { return }
+                guard Self.shouldApplyListenerSnapshot(
+                    hasPendingWrites: snapshot.metadata.hasPendingWrites,
+                    isFromCache: snapshot.metadata.isFromCache
+                ) else { return }
                 
                 do {
                     let round = try snapshot.data(as: Round.self)
@@ -196,7 +206,7 @@ extension RoundSession {
         participantListener = reference
             .document(roundID)
             .collection(RoundSubcollection.participants.rawValue)
-            .addSnapshotListener({ [weak self] snapshot, error in
+            .addSnapshotListener(includeMetadataChanges: false, listener: { [weak self] snapshot, error in
                 guard let snapshot else {
                     Task { @MainActor [weak self] in
                         self?.emitMissingSnapshotError(
@@ -209,7 +219,10 @@ extension RoundSession {
                     return
                 }
                 
-                guard Self.shouldApplyListenerSnapshot(snapshot.metadata) else { return }
+                guard Self.shouldApplyListenerSnapshot(
+                    hasPendingWrites: snapshot.metadata.hasPendingWrites,
+                    isFromCache: snapshot.metadata.isFromCache
+                ) else { return }
                 
                 do {
                     let participants = try snapshot.documents.compactMap({ try $0.data(as: RoundParticipant.self) })
@@ -246,7 +259,7 @@ extension RoundSession {
         segmentListener = reference
             .document(roundID)
             .collection(RoundSubcollection.segments.rawValue)
-            .addSnapshotListener({ [weak self] snapshot, error in
+            .addSnapshotListener(includeMetadataChanges: false, listener: { [weak self] snapshot, error in
                 guard let snapshot else {
                     Task { @MainActor [weak self] in
                         self?.emitMissingSnapshotError(
@@ -259,7 +272,10 @@ extension RoundSession {
                     return
                 }
                 
-                guard Self.shouldApplyListenerSnapshot(snapshot.metadata) else { return }
+                guard Self.shouldApplyListenerSnapshot(
+                    hasPendingWrites: snapshot.metadata.hasPendingWrites,
+                    isFromCache: snapshot.metadata.isFromCache
+                ) else { return }
                 
                 do {
                     let segments = try snapshot.documents.compactMap({ try $0.data(as: RoundSegment.self) })
@@ -291,7 +307,7 @@ extension RoundSession {
         scoringListener = reference
             .document(roundID)
             .collection(RoundSubcollection.scores.rawValue)
-            .addSnapshotListener({ [weak self] snapshot, error in
+            .addSnapshotListener(includeMetadataChanges: false, listener: { [weak self] snapshot, error in
                 guard let snapshot else {
                     Task { @MainActor [weak self] in
                         self?.emitMissingSnapshotError(
@@ -304,7 +320,10 @@ extension RoundSession {
                     return
                 }
                 
-                guard Self.shouldApplyListenerSnapshot(snapshot.metadata) else { return }
+                guard Self.shouldApplyListenerSnapshot(
+                    hasPendingWrites: snapshot.metadata.hasPendingWrites,
+                    isFromCache: snapshot.metadata.isFromCache
+                ) else { return }
                 
                 do {
                     let scoring = try snapshot.documents.compactMap({ try $0.data(as: ScoreEntry.self) })
@@ -336,7 +355,7 @@ extension RoundSession {
         scoringGroupListener = reference
             .document(roundID)
             .collection(RoundSubcollection.scoringGroups.rawValue)
-            .addSnapshotListener({ [weak self] snapshot, error in
+            .addSnapshotListener(includeMetadataChanges: false, listener: { [weak self] snapshot, error in
                 guard let snapshot else {
                     Task { @MainActor [weak self] in
                         self?.emitMissingSnapshotError(
@@ -349,7 +368,10 @@ extension RoundSession {
                     return
                 }
 
-                guard Self.shouldApplyListenerSnapshot(snapshot.metadata) else { return }
+                guard Self.shouldApplyListenerSnapshot(
+                    hasPendingWrites: snapshot.metadata.hasPendingWrites,
+                    isFromCache: snapshot.metadata.isFromCache
+                ) else { return }
 
                 do {
                     let groups = try snapshot.documents.compactMap({ try $0.data(as: RoundScoringGroup.self) })
@@ -381,7 +403,7 @@ extension RoundSession {
         teamListener = reference
             .document(roundID)
             .collection(RoundSubcollection.teams.rawValue)
-            .addSnapshotListener({ [weak self] snapshot, error in
+            .addSnapshotListener(includeMetadataChanges: false, listener: { [weak self] snapshot, error in
                 guard let snapshot else {
                     Task { @MainActor [weak self] in
                         self?.emitMissingSnapshotError(
@@ -394,7 +416,10 @@ extension RoundSession {
                     return
                 }
                 
-                guard Self.shouldApplyListenerSnapshot(snapshot.metadata) else { return }
+                guard Self.shouldApplyListenerSnapshot(
+                    hasPendingWrites: snapshot.metadata.hasPendingWrites,
+                    isFromCache: snapshot.metadata.isFromCache
+                ) else { return }
                 
                 do {
                     let teams = try snapshot.documents.compactMap({ try $0.data(as: RoundTeam.self) })
@@ -426,7 +451,7 @@ extension RoundSession {
         teeGroupListener = reference
             .document(roundID)
             .collection(RoundSubcollection.teeGroups.rawValue)
-            .addSnapshotListener({ [weak self] snapshot, error in
+            .addSnapshotListener(includeMetadataChanges: false, listener: { [weak self] snapshot, error in
                 guard let snapshot else {
                     Task { @MainActor [weak self] in
                         self?.emitMissingSnapshotError(
@@ -439,7 +464,10 @@ extension RoundSession {
                     return
                 }
                 
-                guard Self.shouldApplyListenerSnapshot(snapshot.metadata) else { return }
+                guard Self.shouldApplyListenerSnapshot(
+                    hasPendingWrites: snapshot.metadata.hasPendingWrites,
+                    isFromCache: snapshot.metadata.isFromCache
+                ) else { return }
                 
                 do {
                     let groups = try snapshot.documents.compactMap({ try $0.data(as: TeeTimeGroup.self) })

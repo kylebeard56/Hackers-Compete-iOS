@@ -1094,7 +1094,7 @@ struct EditSeriesRoundSheet: View {
     }
 
     private var resolvedHandicapEntryFormat: HandicapEntryFormat {
-        courseHandicapAvailable ? handicapEntryFormat : .strokes
+        handicapEntryFormat
     }
 
     private func normalizedHandicapNormalizationMode(_ mode: HandicapNormalizationMode, for competitionScope: CompetitionScope) -> HandicapNormalizationMode {
@@ -1106,9 +1106,6 @@ struct EditSeriesRoundSheet: View {
     private func refreshCourseHandicapAvailability() async {
         let available = await SeriesRoundCourseHandicapAvailability.isAvailable(for: planningCourseSelection)
         courseHandicapAvailable = available
-        if !available, handicapEntryFormat == .courseHandicap {
-            handicapEntryFormat = .strokes
-        }
     }
 
     private func sectionTitle(_ title: String) -> some View {
@@ -1152,6 +1149,10 @@ struct EditSeriesRoundSheet: View {
 
     private var planningMembers: [SeriesMember] {
         viewModel.eligibleMembers
+    }
+
+    private var automaticPlanningMembers: [SeriesMember] {
+        planningMembers.filter(SeriesRoundParticipationPolicy.isAutomaticPlayer)
     }
 
     private var planningTeamsByID: [String: SeriesTeam] {
@@ -1323,11 +1324,15 @@ struct EditSeriesRoundSheet: View {
     }
 
     private func normalizedPartnershipPlans() -> [SeriesRoundPartnershipPlan] {
-        let teamEntries: [(String, String)] = planningMembers.compactMap { member in
-            guard let teamID = member.teamID, teamID.isPopulated else { return nil }
-            return (member.id, teamID)
+        var teamIDByMemberID: [String: String] = planningMembers.reduce(into: [:]) { partial, member in
+            guard let teamID = member.teamID, teamID.isPopulated else { return }
+            partial[member.id] = teamID
         }
-        let teamIDByMemberID = Dictionary(uniqueKeysWithValues: teamEntries)
+        for seat in plannedTeeGroups.flatMap(\.seats) {
+            guard let representedTeamID = seat.representedTeamID,
+                  representedTeamID.isPopulated else { continue }
+            teamIDByMemberID[seat.memberID] = representedTeamID
+        }
         var usedMemberIDs: Set<String> = []
 
         return partnershipPlans.compactMap { plan -> SeriesRoundPartnershipPlan? in
@@ -1593,11 +1598,11 @@ struct EditSeriesRoundSheet: View {
     }
 
     private func autofillIndividualMatchupsRandom() -> [SeriesRoundMatchupPlan] {
-        buildMemberMatchupPlans(from: teamAwareOrderedMemberPairings(from: planningMembers.map(\.id).shuffled()))
+        buildMemberMatchupPlans(from: teamAwareOrderedMemberPairings(from: automaticPlanningMembers.map(\.id).shuffled()))
     }
 
     private func autofillIndividualMatchupsByHandicap() -> [SeriesRoundMatchupPlan] {
-        let orderedMemberIDs = SeriesRoundMatchupMemberOptionBuilder.sortedMembers(planningMembers) { memberID in
+        let orderedMemberIDs = SeriesRoundMatchupMemberOptionBuilder.sortedMembers(automaticPlanningMembers) { memberID in
             viewModel.effectiveHandicap(for: memberID)
         }
         .map(\.id)
@@ -1758,6 +1763,7 @@ struct EditSeriesRoundSheet: View {
             handicapsEnabled: viewModel.series.handicapConfig.isEnabled,
             effectiveHandicapText: handicapValueText(for:),
             plannedTeeGroups: $draft.plannedTeeGroups,
+            matchupPlans: $draft.matchupPlans,
             partnershipPlans: $draft.partnershipPlans,
             showPairStatus: matchupSource == .byPair,
             onRegenerate: { refreshPlanningStructure(forceRegenerate: true) },
@@ -2012,7 +2018,7 @@ struct EditSeriesRoundSheet: View {
     private func availableMembers(for plan: SeriesRoundMatchupPlan, currentMemberID: String?) -> [SeriesMember] {
         let siblingMemberID = siblingMemberID(for: plan, currentMemberID: currentMemberID)
         let siblingTeamID = siblingMemberID.flatMap { planningMembersByID[$0]?.teamID }
-        return viewModel.eligibleMembers.filter { member in
+        return automaticPlanningMembers.filter { member in
             if member.id == siblingMemberID { return false }
             if viewModel.usesTeams,
                let siblingTeamID,
@@ -2682,10 +2688,13 @@ struct SeriesRoundCoursePickerSheet: View {
         .environmentObject(roundSession)
         .task {
             courseViewModel.onSetSeriesRoundCourse = { segment in
+                let defaultTee = segment.defaultTee.flatMap { segment.tee(from: $0) }
                 let selection = SeriesCourseSelection(
                     courseID: segment.courseInfo.golfCourseApiID.map(String.init) ?? segment.courseInfo.id,
                     cachedName: segment.courseInfo.name,
                     defaultTeeBoxID: segment.defaultTee ?? "",
+                    defaultTeeName: defaultTee?.name,
+                    defaultTeeGender: defaultTee?.gender,
                     holeSegment: segment.holeSegment
                 )
                 onSelected(selection)
@@ -2703,8 +2712,7 @@ struct SeriesRoundCoursePickerSheet: View {
         let course: Course?
         if let apiID = Int(initialSelection.courseID) {
             do {
-                let apiCourse = try await GolfCourseAPI.shared.getCourse(by: apiID)
-                course = Course(from: apiCourse, with: String(apiID), useStableTeeIDs: true)
+                course = try await GolfCourseRepository.shared.course(by: apiID)
             } catch {
                 course = nil
             }

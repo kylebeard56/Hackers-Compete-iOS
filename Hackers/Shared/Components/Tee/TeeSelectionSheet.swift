@@ -96,7 +96,7 @@ struct TeeSelectionSheet: View {
             Haptics.fire(.light)
             onChange?(tee)
         }) {
-            TeeRow(tee: tee, showDifficulty: true, segment: segment)
+            TeeRow(tee: tee, showGender: true, showDifficulty: true, segment: segment)
         }
         .padding(.horizontal, 16)
         .padding(.vertical, 16)

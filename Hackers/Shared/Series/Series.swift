@@ -540,17 +540,23 @@ struct SeriesCourseSelection: Hashable, Codable {
     var courseID: String
     var cachedName: String
     var defaultTeeBoxID: String
+    var defaultTeeName: String?
+    var defaultTeeGender: String?
     var holeSegment: HoleSegment
 
     init(
         courseID: String = "",
         cachedName: String = "",
         defaultTeeBoxID: String = "",
+        defaultTeeName: String? = nil,
+        defaultTeeGender: String? = nil,
         holeSegment: HoleSegment = .full18
     ) {
         self.courseID = courseID
         self.cachedName = cachedName
         self.defaultTeeBoxID = defaultTeeBoxID
+        self.defaultTeeName = defaultTeeName
+        self.defaultTeeGender = defaultTeeGender
         self.holeSegment = holeSegment
     }
 
@@ -558,6 +564,8 @@ struct SeriesCourseSelection: Hashable, Codable {
         case courseID = "course_id"
         case cachedName = "cached_name"
         case defaultTeeBoxID = "default_tee_box_id"
+        case defaultTeeName = "default_tee_name"
+        case defaultTeeGender = "default_tee_gender"
         case holeSegment = "hole_segment"
     }
 

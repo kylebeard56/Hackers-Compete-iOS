@@ -2651,6 +2651,57 @@ final class ScoringEngineTests: XCTestCase {
         )
     }
 
+    func testCourseHandicapFallsBackToFullTeeDataForNineHoleSegments() {
+        let tee = Tee(
+            id: "red_male",
+            name: "Red",
+            gender: "male",
+            totalHoles: 18,
+            holes: makeHoles(),
+            ratingFull: 64.0,
+            slopeFull: 115,
+            ratingFront: nil,
+            slopeFront: nil,
+            ratingBack: nil,
+            slopeBack: nil
+        )
+
+        XCTAssertEqual(tee.rating(for: .front9), 32.0)
+        XCTAssertEqual(tee.rating(for: .back9), 32.0)
+        XCTAssertEqual(tee.slope(for: .front9), 115)
+        XCTAssertEqual(tee.slope(for: .back9), 115)
+        XCTAssertEqual(
+            HandicapCalculator.courseHandicap(
+                index: 15.5,
+                tee: tee,
+                segment: .front9,
+                handicapStrokeBasis: .nineHole
+            ),
+            12
+        )
+    }
+
+    func testNineHoleCourseFallbackDoesNotHalveItsNativeRating() {
+        let tee = Tee(
+            id: "nine_hole",
+            name: "Nine Hole",
+            gender: "male",
+            totalHoles: 9,
+            holes: makeHoles(count: 9),
+            ratingFull: 35.4,
+            slopeFull: 121,
+            ratingFront: nil,
+            slopeFront: nil,
+            ratingBack: nil,
+            slopeBack: nil
+        )
+
+        XCTAssertEqual(tee.rating(for: .front9), 35.4)
+        XCTAssertEqual(tee.slope(for: .front9), 121)
+        XCTAssertNil(tee.rating(for: .back9))
+        XCTAssertNil(tee.slope(for: .back9))
+    }
+
     func testCourseHandicapDoublesNineHoleInputForFullRound() {
         let tee = Tee(
             id: "white",

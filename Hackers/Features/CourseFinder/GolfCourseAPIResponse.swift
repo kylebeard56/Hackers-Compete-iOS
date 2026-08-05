@@ -22,11 +22,20 @@ struct GolfCourseAPIResponse: Decodable {
     let course: GolfCourseAPIModel?
 
     init(from decoder: Decoder) throws {
+        // The provider has returned both a top-level course and `{ "course": ... }` over time.
+        // Support both shapes so cache misses can still be populated across response variants.
+        if let topLevelCourse = try? GolfCourseAPIModel(from: decoder) {
+            self.courses = []
+            self.course = topLevelCourse
+            return
+        }
+
         let c = try decoder.container(keyedBy: CodingKeys.self)
         self.courses = try c.decodeLossyArray(GolfCourseAPIModel.self, forKey: .courses)
         // The /search endpoint only returns `courses`; `course` (singular) is only present
-        // on the by-id endpoint. decodeIfPresent keeps the decode silent in both cases.
-        self.course = try? c.decodeIfPresent(GolfCourseAPIModel.self, forKey: .course)
+        // on the by-id endpoint. Do not suppress a malformed `course` value: surfacing its
+        // decoding error makes provider schema changes diagnosable instead of looking empty.
+        self.course = try c.decodeIfPresent(GolfCourseAPIModel.self, forKey: .course)
     }
     
     enum CodingKeys: String, CodingKey {
@@ -113,6 +122,45 @@ struct GolfCourseAPILocation: Codable {
     let country: String?
     let latitude: Double
     let longitude: Double
+
+    enum CodingKeys: String, CodingKey {
+        case address, city, state, country, latitude, longitude
+    }
+
+    init(
+        address: String?,
+        city: String?,
+        state: String?,
+        country: String?,
+        latitude: Double = 0,
+        longitude: Double = 0
+    ) {
+        self.address = address
+        self.city = city
+        self.state = state
+        self.country = country
+        self.latitude = latitude
+        self.longitude = longitude
+    }
+
+    init(from decoder: Decoder) throws {
+        let c = try decoder.container(keyedBy: CodingKeys.self)
+        address = try c.decodeIfPresent(String.self, forKey: .address)
+        city = try c.decodeIfPresent(String.self, forKey: .city)
+        state = try c.decodeIfPresent(String.self, forKey: .state)
+        country = try c.decodeIfPresent(String.self, forKey: .country)
+        latitude = try c.decodeIfPresent(Double.self, forKey: .latitude) ?? 0
+        longitude = try c.decodeIfPresent(Double.self, forKey: .longitude) ?? 0
+    }
+
+    var coordinate: CLLocationCoordinate2D? {
+        let coordinate = CLLocationCoordinate2D(latitude: latitude, longitude: longitude)
+        guard (latitude != 0 || longitude != 0),
+              CLLocationCoordinate2DIsValid(coordinate) else {
+            return nil
+        }
+        return coordinate
+    }
 }
 
 struct GolfCourseAPITees: Codable {
@@ -135,7 +183,7 @@ struct GolfCourseAPITee: Codable, Identifiable {
     let teeName: String
     let courseRating: Double
     let slopeRating: Int
-    let bogeyRating: Double
+    let bogeyRating: Double?
     let totalYards: Int
     let totalMeters: Int
     let numberOfHoles: Int
@@ -179,6 +227,68 @@ struct GolfCourseAPIHole: Codable, Identifiable {
     
     enum CodingKeys: String, CodingKey {
         case par, yardage, handicap
+    }
+}
+
+// MARK: - Cached Course Reconstruction
+
+extension GolfCourseAPIModel {
+    /// Reconstructs the API-shaped model required by existing search consumers from our canonical
+    /// cached `Course`. Some provider-only aggregate tee fields are not retained by `Course`, so
+    /// they are derived from the saved holes and are not used for scoring.
+    init?(cachedCourse course: Course) {
+        guard course.hasCanonicalGolfCourseAPIIdentity,
+              let apiID = course.golfCourseApiID,
+              let location = course.location else {
+            return nil
+        }
+
+        self.init(
+            id: apiID,
+            clubName: course.clubName,
+            courseName: course.courseName,
+            location: GolfCourseAPILocation(
+                address: location.address,
+                city: location.city,
+                state: location.state,
+                country: location.country,
+                latitude: location.latitude,
+                longitude: location.longitude
+            ),
+            websiteURL: course.venueDetails?.websiteURL,
+            phoneNumber: course.venueDetails?.phoneNumber,
+            tees: GolfCourseAPITees(
+                female: course.tees.female.map(GolfCourseAPITee.init(cachedTee:)),
+                male: course.tees.male.map(GolfCourseAPITee.init(cachedTee:))
+            )
+        )
+    }
+}
+
+extension GolfCourseAPITee {
+    init(cachedTee tee: Tee) {
+        let holes = tee.holes
+            .sorted { $0.number < $1.number }
+            .map { GolfCourseAPIHole(par: $0.par, yardage: $0.yardage, handicap: $0.handicap) }
+        let totalYards = holes.reduce(0) { $0 + $1.yardage }
+
+        self.init(
+            teeName: tee.name,
+            courseRating: tee.ratingFull,
+            slopeRating: tee.slopeFull,
+            bogeyRating: nil,
+            totalYards: totalYards,
+            totalMeters: Int((Double(totalYards) * 0.9144).rounded()),
+            numberOfHoles: holes.count,
+            parTotal: holes.reduce(0) { $0 + $1.par },
+            frontCourseRating: tee.ratingFront,
+            frontSlopeRating: tee.slopeFront,
+            frontBogeyRating: nil,
+            backCourseRating: tee.ratingBack,
+            backSlopeRating: tee.slopeBack,
+            backBogeyRating: nil,
+            holes: holes
+        )
     }
 }
 

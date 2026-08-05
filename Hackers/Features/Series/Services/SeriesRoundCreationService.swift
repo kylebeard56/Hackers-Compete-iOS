@@ -8,6 +8,28 @@
 
 import Foundation
 
+enum SeriesRoundCreationFailure: Error {
+    case missingSession
+    case missingCourse
+    case invalidCourseHandicaps([SeriesCourseHandicapValidationIssue])
+    case writeFailed(String)
+
+    var message: String {
+        switch self {
+        case .missingSession:
+            return "Your player session could not be loaded. Reopen the series and try again."
+        case .missingCourse:
+            return "Select a course and tee before starting this round."
+        case .invalidCourseHandicaps(let issues):
+            let details = issues.prefix(8).map(\.message).joined(separator: "\n")
+            let remaining = max(0, issues.count - 8)
+            return remaining > 0 ? "\(details)\n…and \(remaining) more." : details
+        case .writeFailed:
+            return "The round could not be created. No handicap snapshot was published."
+        }
+    }
+}
+
 @MainActor
 struct SeriesRoundCreationService: Loggable {
 
@@ -18,11 +40,14 @@ struct SeriesRoundCreationService: Loggable {
         teams: [SeriesTeam],
         pods: [SeriesTeamPod],
         handicaps: [String: SeriesMemberHandicap],
+        selectedHandicapScoreIDsByMemberID: [String: Set<String>] = [:],
         presenceStatusByMemberID: [String: RoundParticipantPresenceStatus] = [:],
         courseSegment overrideCourseSegment: CourseSegment? = nil
-    ) async -> String? {
+    ) async -> Result<String, SeriesRoundCreationFailure> {
         guard let user = await AppData.shared.user,
-              let player = await AppData.shared.getPrimaryPlayer() else { return nil }
+              let player = await AppData.shared.getPrimaryPlayer() else {
+            return .failure(.missingSession)
+        }
 
         guard let courseSegment = await resolveCourseSegment(
             override: overrideCourseSegment,
@@ -37,7 +62,41 @@ struct SeriesRoundCreationService: Loggable {
                     "reason": "no_course"
                 ]
             )
-            return nil
+            return .failure(.missingCourse)
+        }
+
+        let effectiveMembers = SeriesRoundParticipationPolicy.effectiveMembers(
+            members: members,
+            plannedTeeGroups: seriesRound.plannedTeeGroups
+        )
+
+        if seriesRound.roundConfig.handicapEntryFormat == .courseHandicap {
+            let resolvedHandicapStrokeBasis = seriesRound.roundConfig.handicapStrokeBasis
+                ?? SeriesHandicapStrokeBasis.defaultBasis(
+                    holeCount: courseSegment.holeSegment.holeCount
+                )
+            let issues = SeriesCourseHandicapResolver.validationIssues(
+                members: effectiveMembers,
+                handicaps: handicaps,
+                courseSegment: courseSegment,
+                entryFormat: .courseHandicap,
+                handicapStrokeBasis: resolvedHandicapStrokeBasis,
+                maximumHandicap: series.handicapConfig.isEnabled
+                    ? series.handicapConfig.config.maximumHandicap
+                    : nil
+            )
+            guard issues.isEmpty else {
+                addBreadcrumb(
+                    level: .warning,
+                    message: "Series round creation blocked by participant Course HCP preflight",
+                    parameters: [
+                        "Series ID": series.id,
+                        "Series Round ID": seriesRound.id,
+                        "Issue Count": "\(issues.count)"
+                    ]
+                )
+                return .failure(.invalidCourseHandicaps(issues))
+            }
         }
 
         let shareCode = await FirebaseService.shared.getUniqueShareCode()
@@ -45,7 +104,7 @@ struct SeriesRoundCreationService: Loggable {
         let resolvedPlan = SeriesRoundResolvedPlan(
             series: series,
             seriesRound: seriesRound,
-            members: members,
+            members: effectiveMembers,
             teams: teams,
             pods: pods,
             courseSegment: courseSegment
@@ -55,7 +114,7 @@ struct SeriesRoundCreationService: Loggable {
             shareCode: shareCode,
             createdBy: user.id,
             series: series,
-            members: members,
+            members: effectiveMembers,
             seriesRound: seriesRound,
             courseSegment: courseSegment
         )
@@ -93,7 +152,7 @@ struct SeriesRoundCreationService: Loggable {
 
             if series.handicapConfig.isEnabled {
                 let missingHandicapMemberIDs = SeriesRoundCreationMapping.membersMissingEffectiveHandicap(
-                    members: members,
+                    members: effectiveMembers,
                     handicaps: handicaps
                 )
                 if missingHandicapMemberIDs.isPopulated {
@@ -118,7 +177,7 @@ struct SeriesRoundCreationService: Loggable {
             }
 
             let participantsPayload = SeriesRoundCreationMapping.buildParticipantPayloads(
-                members: members,
+                members: effectiveMembers,
                 roundID: roundID,
                 teamMappings: teamMappings,
                 memberAssignments: memberAssignments,
@@ -127,6 +186,7 @@ struct SeriesRoundCreationService: Loggable {
                 courseSegment: courseSegment,
                 handicapEntryFormat: seriesRound.roundConfig.handicapEntryFormat,
                 handicapStrokeBasis: seriesRound.roundConfig.handicapStrokeBasis,
+                selectedHandicapScoreIDsByMemberID: selectedHandicapScoreIDsByMemberID,
                 hostPlayerID: player.id,
                 presenceStatusByMemberID: presenceStatusByMemberID,
                 plannedSeatsByMemberID: plannedSeatsByMemberID
@@ -150,13 +210,14 @@ struct SeriesRoundCreationService: Loggable {
 
             var participantIDsBySeriesMemberID: [String: String] = [:]
             var createdMappings: [SeriesRoundMapping] = []
-            for (member, created) in zip(members, createdParticipants) {
-                participantIDsBySeriesMemberID[member.id] = created.id
+            for created in createdParticipants {
+                guard let memberID = created.seriesMemberID else { continue }
+                participantIDsBySeriesMemberID[memberID] = created.id
                 createdMappings.append(
                     SeriesRoundCreationMapping.seriesRoundParticipantMapping(
                         seriesRoundID: seriesRound.id,
                         seriesID: series.id,
-                        memberID: member.id,
+                        memberID: memberID,
                         participantID: created.id
                     )
                 )
@@ -233,7 +294,7 @@ struct SeriesRoundCreationService: Loggable {
                     "team_count": teamMappings.count
                 ]
             )
-            return roundID
+            return .success(roundID)
         } catch {
             addBreadcrumb(level: .error, message: "Failed to create live round from series", error: error)
             addEvent(
@@ -244,7 +305,7 @@ struct SeriesRoundCreationService: Loggable {
                     "reason": "write_failed"
                 ]
             )
-            return nil
+            return .failure(.writeFailed(error.localizedDescription))
         }
     }
 
@@ -268,8 +329,7 @@ struct SeriesRoundCreationService: Loggable {
         let course: Course?
         if let apiID = Int(selection.courseID) {
             do {
-                let apiCourse = try await GolfCourseAPI.shared.getCourse(by: apiID)
-                course = Course(from: apiCourse, with: selection.courseID, useStableTeeIDs: true)
+                course = try await GolfCourseRepository.shared.course(by: apiID)
             } catch {
                 switch await FirebaseService.shared.getCourseByID(selection.courseID) {
                 case .success(let fetched): course = fetched

@@ -198,20 +198,11 @@ enum SeriesRoundSyncPlanning {
         snapshot: RoundSnapshot,
         membersByID: [String: SeriesMember]
     ) -> [SeriesMember] {
-        let plannedMemberIDs = seriesRound.plannedTeeGroups
-            .sorted { $0.index < $1.index }
-            .flatMap { group in
-                group.seats
-                    .sorted { lhs, rhs in
-                        if lhs.teeOrder != rhs.teeOrder { return lhs.teeOrder < rhs.teeOrder }
-                        return lhs.memberID < rhs.memberID
-                    }
-                    .map(\.memberID)
-            }
-            .filter(\.isPopulated)
-
-        if plannedMemberIDs.isPopulated {
-            return plannedMemberIDs.compactMap { membersByID[$0] }
+        if seriesRound.plannedTeeGroups.flatMap(\.seats).isPopulated {
+            return SeriesRoundParticipationPolicy.effectiveMembers(
+                members: Array(membersByID.values),
+                plannedTeeGroups: seriesRound.plannedTeeGroups
+            )
         }
 
         return participatingMembers(snapshot: snapshot, membersByID: membersByID)
@@ -540,7 +531,12 @@ enum SeriesRoundSyncPlanning {
             hostPlayerID: hostPlayerID,
             plannedSeatsByMemberID: plannedSeatsByMemberID
         )
-        let templateByMemberID = Dictionary(uniqueKeysWithValues: zip(participatingMembers.map(\.id), templates))
+        let templateByMemberID = Dictionary(
+            uniqueKeysWithValues: templates.compactMap { template -> (String, RoundParticipant)? in
+                guard let memberID = template.seriesMemberID else { return nil }
+                return (memberID, template)
+            }
+        )
 
         return participants.map { existing in
             guard let memberID = existing.seriesMemberID,
@@ -565,6 +561,7 @@ enum SeriesRoundSyncPlanning {
                 next.adjustedHandicap = existing.adjustedHandicap
                 next.handicapIndex = existing.handicapIndex ?? next.handicapIndex
                 next.leagueHandicapStrokesAtCreation = existing.leagueHandicapStrokesAtCreation
+                next.handicapSnapshot = existing.handicapSnapshot
             }
 
             next.lastUpdatedAt = .init()
@@ -631,10 +628,15 @@ enum SeriesRoundSyncPlanning {
             throw SeriesRoundSyncError.missingCourseSegment
         }
 
+        let effectiveParticipatingMembers = SeriesRoundParticipationPolicy.effectiveMembers(
+            members: participatingMembers,
+            plannedTeeGroups: seriesRound.plannedTeeGroups
+        )
+
         let resolvedPlan = SeriesRoundResolvedPlan(
             series: series,
             seriesRound: seriesRound,
-            members: participatingMembers,
+            members: effectiveParticipatingMembers,
             teams: teams,
             pods: pods,
             courseSegment: courseSegment
@@ -686,7 +688,7 @@ enum SeriesRoundSyncPlanning {
             group.lastUpdatedAt = .init()
             return group
         }
-        let teeGroupsToDelete = Array(existingGroups.dropFirst(teeGroupsToPut.count))
+        let candidateTeeGroupsToDelete = Array(existingGroups.dropFirst(teeGroupsToPut.count))
         let groupIDsByPlanID = Dictionary(
             uniqueKeysWithValues: zip(resolvedPlan.teeGroupPlans.map(\.id), teeGroupsToPut.map(\.id))
         )
@@ -699,7 +701,7 @@ enum SeriesRoundSyncPlanning {
         )
 
         let templates = SeriesRoundCreationMapping.buildParticipantPayloads(
-            members: participatingMembers,
+            members: effectiveParticipatingMembers,
             roundID: snapshot.round.id,
             teamMappings: teamLinksBySeriesID,
             memberAssignments: memberAssignments,
@@ -718,12 +720,13 @@ enum SeriesRoundSyncPlanning {
                 return (memberID, participant)
             }
         )
-        let participatingMemberIDs = Set(participatingMembers.map(\.id))
+        let participatingMemberIDs = Set(templates.compactMap(\.seriesMemberID))
         let nonSeriesParticipants = pruneNonSeriesParticipants
             ? []
             : snapshot.participants.filter { $0.seriesMemberID == nil }
-        let participantsToPut = zip(participatingMembers, templates).map { member, template -> RoundParticipant in
-            guard let existing = existingParticipantByMemberID[member.id] else { return template }
+        let participantsToPut = templates.map { template -> RoundParticipant in
+            guard let memberID = template.seriesMemberID,
+                  let existing = existingParticipantByMemberID[memberID] else { return template }
             var next = template
             next.id = existing.id
             next.createdAt = existing.createdAt
@@ -739,6 +742,10 @@ enum SeriesRoundSyncPlanning {
             return !participatingMemberIDs.contains(memberID)
         }
         let workingParticipants = nonSeriesParticipants + participantsToPut
+        let protectedManualGroupIDs = Set(nonSeriesParticipants.compactMap(\.groupID).filter(\.isPopulated))
+        let teeGroupsToDelete = candidateTeeGroupsToDelete.filter {
+            !protectedManualGroupIDs.contains($0.id)
+        }
 
         let populatedTeeGroupIDs = Set(workingParticipants.compactMap(\.groupID).filter(\.isPopulated))
         let retainedTeeGroups = teeGroupsToPut.filter { populatedTeeGroupIDs.contains($0.id) }
@@ -765,13 +772,21 @@ enum SeriesRoundSyncPlanning {
             existingSegment: existingSegment,
             teams: teams,
             pods: pods,
-            participatingMembers: participatingMembers,
+            participatingMembers: effectiveParticipatingMembers,
             teamLinks: teamLinksBySeriesID
         )
 
         var round = snapshot.round
         round.name = Round.normalizedName(seriesRound.title)
-        round.players = workingParticipants.compactMap(\.playerID)
+        let suppliedMemberOrder = Dictionary(
+            uniqueKeysWithValues: participatingMembers.enumerated().map { ($0.element.id, $0.offset) }
+        )
+        let orderedSeriesParticipants = participantsToPut.sorted { lhs, rhs in
+            let lhsIndex = lhs.seriesMemberID.flatMap { suppliedMemberOrder[$0] } ?? .max
+            let rhsIndex = rhs.seriesMemberID.flatMap { suppliedMemberOrder[$0] } ?? .max
+            return lhsIndex < rhsIndex
+        }
+        round.players = (orderedSeriesParticipants + nonSeriesParticipants).compactMap(\.playerID)
         round.teeGroupDisplayNamesByPlayerID = Round.teeGroupDisplayNamesByPlayerID(from: workingParticipants)
         if updateFormat {
             round.configuration = resolvedPlan.roundConfiguration
@@ -792,7 +807,7 @@ enum SeriesRoundSyncPlanning {
             seriesID: series.id,
             seriesRoundID: seriesRound.id,
             teamLinks: teamLinksBySeriesID,
-            participatingMembers: participatingMembers,
+            participatingMembers: effectiveParticipatingMembers,
             participants: workingParticipants,
             scoringGroups: scoringGroupsToPut
         )

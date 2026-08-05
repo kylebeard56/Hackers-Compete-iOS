@@ -49,6 +49,30 @@ struct SeriesRoundSyncService: Loggable {
            participatingMembers.isEmpty {
             return .failure(.noParticipants)
         }
+        if seriesRound.roundConfig.handicapEntryFormat == .courseHandicap,
+           options.syncPlayerData || options.syncFormat || options.syncHandicapSettings {
+            let resolvedHandicapStrokeBasis = seriesRound.roundConfig.handicapStrokeBasis
+                ?? SeriesHandicapStrokeBasis.defaultBasis(
+                    holeCount: courseSegment.holeSegment.holeCount
+                )
+            let issues = SeriesCourseHandicapResolver.validationIssues(
+                members: participatingMembers,
+                handicaps: handicaps,
+                courseSegment: courseSegment,
+                entryFormat: .courseHandicap,
+                handicapStrokeBasis: resolvedHandicapStrokeBasis,
+                maximumHandicap: series.handicapConfig.isEnabled
+                    ? series.handicapConfig.config.maximumHandicap
+                    : nil
+            )
+            if issues.isPopulated {
+                return .failure(
+                    .preflightFailed(
+                        issues.map { $0.message }.joined(separator: "\n")
+                    )
+                )
+            }
+        }
 
         let teamLinks = SeriesRoundSyncPlanning.teamLinks(
             mappings: seriesMappings,
@@ -183,12 +207,8 @@ struct SeriesRoundSyncService: Loggable {
         }
 
         if options.syncHandicapSettings {
-            let resolvedHandicapEntryFormat: HandicapEntryFormat = seriesRound.roundConfig.handicapEntryFormat == .courseHandicap
-                && !HandicapCalculator.hasCourseHandicapData(courseSegment: courseSegment)
-                ? .strokes
-                : seriesRound.roundConfig.handicapEntryFormat
             workingRound.configuration.handicapsEnabled = resolvedPlan.roundConfiguration.useHandicaps
-            workingRound.configuration.handicapEntryFormat = resolvedHandicapEntryFormat
+            workingRound.configuration.handicapEntryFormat = seriesRound.roundConfig.handicapEntryFormat
             workingRound.configuration.handicapNormalizationMode = seriesRound.roundConfig.handicapNormalizationMode
             workingRound.configuration.handicapStrokeBasis = seriesRound.roundConfig.handicapStrokeBasis
             workingRound.configuration.leagueHandicapMaximum = series.handicapConfig.isEnabled
@@ -452,8 +472,12 @@ struct SeriesRoundSyncService: Loggable {
         }
 
         if options.syncHandicapSettings && !options.syncPlayerData {
+            let participatingMembersByID = Dictionary(uniqueKeysWithValues: participatingMembers.map { ($0.id, $0) })
             workingParticipants = workingParticipants.map { existing in
-                guard let memberID = existing.seriesMemberID else { return existing }
+                guard let memberID = existing.seriesMemberID,
+                      let member = participatingMembersByID[memberID] else {
+                    return existing
+                }
                 if options.preserveManualHandicapEdits, existing.isLeagueHandicapModifiedFromCreation {
                     guard workingRound.configuration.handicapEntryFormat == .courseHandicap,
                           existing.handicapIndex == nil,
@@ -465,20 +489,35 @@ struct SeriesRoundSyncService: Loggable {
                     preserved.lastUpdatedAt = .init()
                     return preserved
                 }
-                let input = handicaps[memberID]?.effectiveIndex
+                let effectiveIndex = handicaps[memberID]?.effectiveIndex
                     ?? existing.handicapIndex
                     ?? Double(existing.originalHandicap)
-                var next = HandicapCalculator.participant(
-                    existing,
-                    applying: input,
-                    format: workingRound.configuration.handicapEntryFormat,
-                    courseSegment: courseSegment,
-                    maximumHandicap: series.handicapConfig.isEnabled ? series.handicapConfig.config.maximumHandicap : nil,
-                    handicapStrokeBasis: workingRound.configuration.resolvedHandicapStrokeBasis(
-                        holeCount: courseSegment.holeSegment.holeCount
-                    )
+                let resolvedBasis = workingRound.configuration.resolvedHandicapStrokeBasis(
+                    holeCount: courseSegment.holeSegment.holeCount
                 )
+                let maximumHandicap = series.handicapConfig.isEnabled
+                    ? series.handicapConfig.config.maximumHandicap
+                    : nil
+                let resolution = SeriesCourseHandicapResolver.resolve(
+                    effectiveIndex: effectiveIndex,
+                    member: member,
+                    courseSegment: courseSegment,
+                    entryFormat: workingRound.configuration.handicapEntryFormat,
+                    handicapStrokeBasis: resolvedBasis,
+                    maximumHandicap: maximumHandicap
+                )
+                guard let effectiveStrokes = resolution.effectiveStrokes else { return existing }
+                var next = existing
+                next.teeBoxID = resolution.tee?.id ?? existing.teeBoxID
+                next.originalHandicap = workingRound.configuration.handicapEntryFormat == .courseHandicap
+                    ? max(0, Int(effectiveIndex.rounded()))
+                    : effectiveStrokes
+                next.adjustedHandicap = effectiveStrokes
+                next.handicapIndex = workingRound.configuration.handicapEntryFormat == .courseHandicap
+                    ? effectiveIndex
+                    : nil
                 next.leagueHandicapStrokesAtCreation = next.adjustedHandicap
+                next.handicapSnapshot = resolution.snapshot()
                 next.lastUpdatedAt = .init()
                 return next
             }

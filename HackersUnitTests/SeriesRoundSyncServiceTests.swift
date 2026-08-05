@@ -1468,6 +1468,79 @@ final class SeriesRoundSyncServiceTests: XCTestCase {
         )
     }
 
+    func testLobbyAttendancePlan_repairsSubstitutionOneForOneAndPreservesManualParticipant() throws {
+        let series = Series(id: "series1")
+        let original = testMember(id: "original", playerID: "player_original", teamID: "red")
+        let other = testMember(id: "other", playerID: "player_other", teamID: "red")
+        let substitute = testMember(id: "sub", playerID: "player_sub", role: .substitute)
+        let unusedSubstitute = testMember(id: "unused_sub", playerID: "player_unused", role: .substitute)
+        let plannedGroups = [
+            SeriesRoundPlannedTeeGroup(
+                id: "planned_1",
+                index: 0,
+                seats: [
+                    SeriesRoundPlannedSeat(
+                        memberID: "sub",
+                        teeOrder: 1,
+                        source: .manualOverride,
+                        isSubstitute: true,
+                        substituteForSeriesMemberID: "original",
+                        substituteForName: "ORIGINAL Player",
+                        representedTeamID: "red"
+                    ),
+                    SeriesRoundPlannedSeat(memberID: "other", teeOrder: 2),
+                ],
+                source: .manualOverride
+            ),
+        ]
+        let seriesRound = SeriesRound(
+            id: "sr1",
+            roundID: "round1",
+            plannedTeeGroups: plannedGroups,
+            parentID: "series1"
+        )
+        let snapshot = RoundSnapshot(
+            round: Round(
+                id: "round1",
+                status: .lobby,
+                players: ["player_original", "player_other", "player_unused", "walk_on"],
+                configuration: RoundConfiguration(courses: [testCourseSegment()])
+            ),
+            participants: [
+                RoundParticipant(id: "part_original", playerID: "player_original", seriesMemberID: "original", groupID: "g1", teeOrder: 1, createdAt: t0, parentID: "round1"),
+                RoundParticipant(id: "part_other", playerID: "player_other", seriesMemberID: "other", groupID: "g1", teeOrder: 2, createdAt: t0, parentID: "round1"),
+                RoundParticipant(id: "part_unused", playerID: "player_unused", seriesMemberID: "unused_sub", groupID: "g1", teeOrder: 3, createdAt: t0, parentID: "round1"),
+                RoundParticipant(id: "walk_on", playerID: "walk_on", name: Name("Walk", "On"), groupID: "manual_group", teeOrder: 1, createdAt: t0, parentID: "round1"),
+            ],
+            teeGroups: [
+                TeeTimeGroup(id: "g1", index: 0, startingHole: 1, createdAt: t0, parentID: "round1"),
+                TeeTimeGroup(id: "manual_group", index: 1, startingHole: 10, createdAt: t0, parentID: "round1"),
+            ],
+            segments: [RoundSegment(id: "seg1", parentID: "round1")]
+        )
+
+        let plan = try SeriesRoundSyncPlanning.buildLobbyAttendancePlan(
+            series: series,
+            seriesRound: seriesRound,
+            participatingMembers: [original, other, substitute, unusedSubstitute],
+            teams: [],
+            pods: [],
+            handicaps: [:],
+            seriesMappings: [],
+            snapshot: snapshot,
+            hostPlayerID: nil,
+            presenceStatusByMemberID: ["sub": .active, "other": .active],
+            pruneNonSeriesParticipants: false
+        )
+
+        XCTAssertEqual(Set(plan.participantsToPut.compactMap(\.seriesMemberID)), ["sub", "other"])
+        XCTAssertEqual(Set(plan.participantsToDelete.map(\.id)), ["part_original", "part_unused"])
+        XCTAssertTrue(plan.participantsToPut.contains { $0.seriesMemberID == "sub" && $0.substituteForSeriesMemberID == "original" })
+        XCTAssertFalse(plan.participantsToDelete.contains { $0.id == "walk_on" })
+        XCTAssertFalse(plan.teeGroupsToDelete.contains { $0.id == "manual_group" })
+        XCTAssertEqual(Set(plan.round.players), ["player_sub", "player_other", "walk_on"])
+    }
+
     func testLobbyAttendancePlan_usesSavedPlannedStartingHoleWhenSeriesHasTeePlan() throws {
         var settings = SeriesSettings()
         settings.useTeams = false
@@ -2134,12 +2207,18 @@ final class SeriesRoundSyncServiceTests: XCTestCase {
         return (series, seriesRound, members, teams, participants, teamLinks)
     }
 
-    private func testMember(id: String, playerID: String, teamID: String? = nil) -> SeriesMember {
+    private func testMember(
+        id: String,
+        playerID: String,
+        teamID: String? = nil,
+        role: SeriesMemberRole = .member
+    ) -> SeriesMember {
         SeriesMember(
             id: id,
             userID: "u_\(id)",
             playerID: playerID,
             name: Name(id.uppercased(), "Player"),
+            role: role,
             teamID: teamID,
             createdAt: t0,
             lastUpdatedAt: t0,

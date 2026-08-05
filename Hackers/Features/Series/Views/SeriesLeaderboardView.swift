@@ -243,8 +243,8 @@ struct SeriesLeaderboardView: View {
             }
         }
 
-        if !isTeam, shouldShowRefreshAwardsButton(isTeam: false) {
-            refreshAwardsButton(isTeam: false)
+        if shouldShowRefreshAwardsButton(isTeam: isTeam) {
+            refreshAwardsButton(isTeam: isTeam)
         }
     }
 

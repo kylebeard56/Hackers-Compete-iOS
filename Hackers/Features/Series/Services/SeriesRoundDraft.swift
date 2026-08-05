@@ -47,6 +47,7 @@ enum SeriesRoundMatchupSource: String, CaseIterable, Hashable, Sendable {
 enum SeriesRoundDraftValidationError: Error, Equatable, LocalizedError {
     case invalidSharedScoreAllowance(String)
     case invalidTeamScoringCount
+    case unavailableCourseHandicap
 
     var errorDescription: String? {
         switch self {
@@ -54,6 +55,8 @@ enum SeriesRoundDraftValidationError: Error, Equatable, LocalizedError {
             return "\"\(value)\" is not a valid handicap allowance. Enter comma-separated percentages from 0 to 100."
         case .invalidTeamScoringCount:
             return "Team scoring must count at least one score."
+        case .unavailableCourseHandicap:
+            return "Course Handicap is selected, but the chosen tee is missing rating or slope data for this hole segment. Repair the course data or explicitly select Strokes."
         }
     }
 }
@@ -256,6 +259,9 @@ struct SeriesRoundDraft: Equatable {
         if teamScoring.mode != .all, teamScoring.count < 1 {
             throw SeriesRoundDraftValidationError.invalidTeamScoringCount
         }
+        if handicapEntryFormat == .courseHandicap, !courseHandicapAvailable {
+            throw SeriesRoundDraftValidationError.unavailableCourseHandicap
+        }
 
         var config = sourceConfiguration
         let template = FormatTemplateRegistry.template(for: selectedTemplateID)
@@ -278,7 +284,7 @@ struct SeriesRoundDraft: Equatable {
             : originalSharedScoreHandicapConfig
         config.maxScoreOverPar = maxScoreOverPar
         config.handicapStrokeBasis = handicapStrokeBasis
-        config.handicapEntryFormat = courseHandicapAvailable ? handicapEntryFormat : .strokes
+        config.handicapEntryFormat = handicapEntryFormat
         config.handicapNormalizationMode = Self.normalizedHandicapMode(
             handicapNormalizationMode,
             scope: competitionScope

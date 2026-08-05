@@ -258,6 +258,18 @@ struct DashboardView: View, Loggable {
     
     private var plusMenuButton: some View {
         Menu {
+            #if SANDBOX
+            Button {
+                Haptics.fire(.light)
+                appSession.routeTo(.designStudio)
+            } label: {
+                Label("Open Design Studio", systemImage: "paintpalette.fill")
+                Text("Local interactive prototypes")
+            }
+
+            Divider()
+            #endif
+
             Button {
                 Haptics.fire(.light)
                 showFindRound = true

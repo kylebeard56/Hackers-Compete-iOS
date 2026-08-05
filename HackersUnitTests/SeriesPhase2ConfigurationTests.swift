@@ -355,6 +355,45 @@ final class SeriesPhase2ConfigurationTests: XCTestCase {
         XCTAssertEqual(adopted.notes, "Series-only note")
     }
 
+#if SANDBOX
+    @MainActor
+    func testDesignStudioMatchupScopeRevealsDependentSection() {
+        let store = DesignStudioSeriesRoundStore()
+
+        XCTAssertEqual(store.applicableSections.count, 6)
+        XCTAssertTrue(store.applicableSections.contains(.matchups))
+        XCTAssertEqual(store.readyCount, 3)
+        XCTAssertEqual(store.nextSection, .matchups)
+        XCTAssertTrue(store.validationIssues.contains { $0.hasPrefix("Matchups:") })
+    }
+
+    @MainActor
+    func testDesignStudioFieldScopeRemovesMatchupsAndRecalculatesProgress() {
+        let store = DesignStudioSeriesRoundStore()
+
+        store.setCompetitionScope(.field)
+
+        XCTAssertEqual(store.applicableSections.count, 5)
+        XCTAssertFalse(store.applicableSections.contains(.matchups))
+        XCTAssertEqual(store.readyCount, 3)
+        XCTAssertEqual(store.nextSection, .handicapEligibility)
+        XCTAssertFalse(store.validationIssues.contains { $0.hasPrefix("Matchups:") })
+    }
+
+    @MainActor
+    func testDesignStudioAutoFillAndTeeGenerationAdvanceRecommendedWork() {
+        let store = DesignStudioSeriesRoundStore()
+
+        store.autoFillMatchups()
+        XCTAssertEqual(store.status(for: .matchups), .ready)
+        XCTAssertEqual(store.nextSection, .teeSheet)
+
+        store.generateTeeSheet()
+        XCTAssertEqual(store.status(for: .teeSheet), .ready)
+        XCTAssertEqual(store.nextSection, .handicapEligibility)
+    }
+#endif
+
     private func matchingLinkedRound(series: Series, seriesRound: SeriesRound) -> Round {
         let desired = seriesRound.roundConfig
         let template = desired.template

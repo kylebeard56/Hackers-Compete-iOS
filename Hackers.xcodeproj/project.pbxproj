@@ -391,6 +391,11 @@
 		B4V200022FBA000100ABCDEF /* SeriesRoundV2.swift in Sources */ = {isa = PBXBuildFile; fileRef = B4V200012FBA000100ABCDEF /* SeriesRoundV2.swift */; };
 		B4V200042FBA000100ABCDEF /* Firebase+SeriesRoundV2.swift in Sources */ = {isa = PBXBuildFile; fileRef = B4V200032FBA000100ABCDEF /* Firebase+SeriesRoundV2.swift */; };
 		C1D2E3422E2D6514007D8845 /* SeriesDashboardTileChip.swift in Sources */ = {isa = PBXBuildFile; fileRef = C1D2E3432E2D6514007D8845 /* SeriesDashboardTileChip.swift */; };
+		D51000212F00000100000021 /* DesignStudioTheme.swift in Sources */ = {isa = PBXBuildFile; fileRef = D51000112F00000100000011 /* DesignStudioTheme.swift */; };
+		D51000222F00000100000022 /* DesignStudioStores.swift in Sources */ = {isa = PBXBuildFile; fileRef = D51000122F00000100000012 /* DesignStudioStores.swift */; };
+		D51000232F00000100000023 /* DesignStudioRootView.swift in Sources */ = {isa = PBXBuildFile; fileRef = D51000132F00000100000013 /* DesignStudioRootView.swift */; };
+		D51000242F00000100000024 /* DesignStudioRoundViews.swift in Sources */ = {isa = PBXBuildFile; fileRef = D51000142F00000100000014 /* DesignStudioRoundViews.swift */; };
+		D51000252F00000100000025 /* DesignStudioSeriesRoundView.swift in Sources */ = {isa = PBXBuildFile; fileRef = D51000152F00000100000015 /* DesignStudioSeriesRoundView.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -770,6 +775,11 @@
 		B4V200012FBA000100ABCDEF /* SeriesRoundV2.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SeriesRoundV2.swift; sourceTree = "<group>"; };
 		B4V200032FBA000100ABCDEF /* Firebase+SeriesRoundV2.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "Firebase+SeriesRoundV2.swift"; sourceTree = "<group>"; };
 		C1D2E3432E2D6514007D8845 /* SeriesDashboardTileChip.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SeriesDashboardTileChip.swift; sourceTree = "<group>"; };
+		D51000112F00000100000011 /* DesignStudioTheme.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DesignStudioTheme.swift; sourceTree = "<group>"; };
+		D51000122F00000100000012 /* DesignStudioStores.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DesignStudioStores.swift; sourceTree = "<group>"; };
+		D51000132F00000100000013 /* DesignStudioRootView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DesignStudioRootView.swift; sourceTree = "<group>"; };
+		D51000142F00000100000014 /* DesignStudioRoundViews.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DesignStudioRoundViews.swift; sourceTree = "<group>"; };
+		D51000152F00000100000015 /* DesignStudioSeriesRoundView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DesignStudioSeriesRoundView.swift; sourceTree = "<group>"; };
 		DC4C9DEFB860A4D1BB558ECB /* InvisibleInkModifier.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = InvisibleInkModifier.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
@@ -1384,6 +1394,7 @@
 		B4CA881D2E19A87E0048003A /* Features */ = {
 			isa = PBXGroup;
 			children = (
+				D51000002F00000100000000 /* DesignStudio */,
 				B4CA88232E19ACBE0048003A /* CourseFinder */,
 				B4BD77A42E2C0B2200249E19 /* Dashboard */,
 				B4BD77AD2E2D63A100249E19 /* Onboard */,
@@ -1864,6 +1875,18 @@
 			path = Components;
 			sourceTree = "<group>";
 		};
+		D51000002F00000100000000 /* DesignStudio */ = {
+			isa = PBXGroup;
+			children = (
+				D51000112F00000100000011 /* DesignStudioTheme.swift */,
+				D51000122F00000100000012 /* DesignStudioStores.swift */,
+				D51000132F00000100000013 /* DesignStudioRootView.swift */,
+				D51000142F00000100000014 /* DesignStudioRoundViews.swift */,
+				D51000152F00000100000015 /* DesignStudioSeriesRoundView.swift */,
+			);
+			path = DesignStudio;
+			sourceTree = "<group>";
+		};
 /* End PBXGroup section */
 
 /* Begin PBXNativeTarget section */
@@ -2049,6 +2072,11 @@
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				D51000212F00000100000021 /* DesignStudioTheme.swift in Sources */,
+				D51000222F00000100000022 /* DesignStudioStores.swift in Sources */,
+				D51000232F00000100000023 /* DesignStudioRootView.swift in Sources */,
+				D51000242F00000100000024 /* DesignStudioRoundViews.swift in Sources */,
+				D51000252F00000100000025 /* DesignStudioSeriesRoundView.swift in Sources */,
 				B4F9771E2E8BEA520007868E /* SecondaryButton.swift in Sources */,
 				B4B3F5332E789EF2007AE830 /* Session+Nav.swift in Sources */,
 				B4CA89B72E2016920048003A /* String.swift in Sources */,
@@ -2523,7 +2551,7 @@
 				CODE_SIGN_ENTITLEMENTS = Hackers/Hackers.entitlements;
 				CODE_SIGN_IDENTITY = "Apple Development";
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 2026.06.30.1;
+				CURRENT_PROJECT_VERSION = 2026.08.03.1;
 				DEAD_CODE_STRIPPING = YES;
 				DEEP_LINK_URL_SCHEME = hackersgolfsandbox;
 				DEVELOPMENT_ASSET_PATHS = "";
@@ -2583,7 +2611,7 @@
 				CODE_SIGN_ENTITLEMENTS = Hackers/Hackers.entitlements;
 				CODE_SIGN_IDENTITY = "Apple Development";
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 2026.06.30.1;
+				CURRENT_PROJECT_VERSION = 2026.08.03.1;
 				DEAD_CODE_STRIPPING = YES;
 				DEEP_LINK_URL_SCHEME = hackersgolf;
 				DEVELOPMENT_ASSET_PATHS = "";

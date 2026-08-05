@@ -486,6 +486,197 @@ extension FirebaseService {
     }
 }
 
+// MARK: - Handicap Scores
+
+extension FirebaseService {
+
+    /// Atomically writes commissioner score rows, historical participant
+    /// handicap/tee repairs, refreshed scoring-unit allowances, and the
+    /// series-round audit metadata.
+    func batchApplySeriesScoreCorrection(
+        entries: [ScoreEntry],
+        participants: [RoundParticipant] = [],
+        segments: [RoundSegment] = [],
+        seriesRound: SeriesRound
+    ) async -> Result<
+        (
+            entries: [ScoreEntry],
+            participants: [RoundParticipant],
+            segments: [RoundSegment],
+            seriesRound: SeriesRound
+        ),
+        Error
+    > {
+        let totalOps = entries.count + participants.count + segments.count + 1
+        guard entries.isPopulated || participants.isPopulated else {
+            return .failure(
+                NSError(
+                    domain: "SeriesScoreCorrectionBatch",
+                    code: 1,
+                    userInfo: [NSLocalizedDescriptionKey: "No score or participant corrections were supplied."]
+                )
+            )
+        }
+        guard totalOps <= 500 else {
+            return .failure(
+                SeriesDerivedBatchWriteError.operationLimitExceeded(
+                    entity: "score correction",
+                    count: totalOps
+                )
+            )
+        }
+
+        let timestamp = Time()
+        var preparedEntries: [(entry: ScoreEntry, data: [String: Any])] = []
+        for var entry in entries {
+            entry.lastUpdatedAt = timestamp
+            do {
+                preparedEntries.append((entry, try entry.toDictionary()))
+            } catch {
+                return .failure(error)
+            }
+        }
+        var preparedParticipants: [(participant: RoundParticipant, data: [String: Any])] = []
+        for var participant in participants {
+            participant.lastUpdatedAt = timestamp
+            do {
+                preparedParticipants.append((participant, try participant.toDictionary()))
+            } catch {
+                return .failure(error)
+            }
+        }
+        var preparedSegments: [(segment: RoundSegment, data: [String: Any])] = []
+        for var segment in segments {
+            segment.lastUpdatedAt = timestamp
+            do {
+                preparedSegments.append((segment, try segment.toDictionary()))
+            } catch {
+                return .failure(error)
+            }
+        }
+        var preparedRound = seriesRound
+        preparedRound.lastUpdatedAt = timestamp
+        let roundData: [String: Any]
+        do {
+            roundData = try preparedRound.toDictionary()
+        } catch {
+            return .failure(error)
+        }
+
+        let batch = Firestore.firestore().batch()
+        for prepared in preparedEntries {
+            let ref = ScoreEntry.documentReference(
+                id: prepared.entry.id,
+                parentID: prepared.entry.parentID
+            )
+            batch.setData(prepared.data, forDocument: ref)
+        }
+        for prepared in preparedParticipants {
+            let ref = RoundParticipant.documentReference(
+                id: prepared.participant.id,
+                parentID: prepared.participant.parentID
+            )
+            batch.setData(prepared.data, forDocument: ref)
+        }
+        for prepared in preparedSegments {
+            let ref = RoundSegment.documentReference(
+                id: prepared.segment.id,
+                parentID: prepared.segment.parentID
+            )
+            batch.setData(prepared.data, forDocument: ref)
+        }
+        let roundRef = SeriesRound.documentReference(
+            id: preparedRound.id,
+            parentID: preparedRound.parentID
+        )
+        batch.setData(roundData, forDocument: roundRef)
+
+        do {
+            try await batch.commit()
+            return .success(
+                (
+                    preparedEntries.map(\.entry),
+                    preparedParticipants.map(\.participant),
+                    preparedSegments.map(\.segment),
+                    preparedRound
+                )
+            )
+        } catch {
+            addBreadcrumb(level: .error, message: "\(#function) commit failed", error: error)
+            return .failure(error)
+        }
+    }
+
+    /// Atomically replaces one round's handicap-history projection.
+    ///
+    /// All values are encoded before commit and the Firestore operation limit is
+    /// checked before any mutation, so callers retain the previous valid
+    /// generation if preflight or commit fails.
+    func batchReplaceHandicapScores(
+        deleting: [SeriesHandicapScore],
+        upserting: [SeriesHandicapScore]
+    ) async -> Result<[SeriesHandicapScore], Error> {
+        let totalOps = deleting.count + upserting.count
+        guard totalOps > 0 else { return .success([]) }
+        guard totalOps <= 500 else {
+            return .failure(
+                SeriesDerivedBatchWriteError.operationLimitExceeded(
+                    entity: "handicap score",
+                    count: totalOps
+                )
+            )
+        }
+
+        let parentIDs = Set((deleting + upserting).map(\.parentID))
+        guard parentIDs.count <= 1 else {
+            return .failure(
+                NSError(
+                    domain: "SeriesHandicapScoreReplacement",
+                    code: 1,
+                    userInfo: [
+                        NSLocalizedDescriptionKey:
+                            "Atomic handicap replacement cannot span multiple series."
+                    ]
+                )
+            )
+        }
+
+        let timestamp = Time()
+        var preparedUpserts: [(score: SeriesHandicapScore, data: [String: Any])] = []
+        for var score in upserting {
+            score.lastUpdatedAt = timestamp
+            do {
+                preparedUpserts.append((score, try score.toDictionary()))
+            } catch {
+                addBreadcrumb(level: .error, message: "\(#function) encode failed", error: error)
+                return .failure(error)
+            }
+        }
+
+        addBreadcrumb(message: "\(#function), delete: \(deleting.count), upsert: \(upserting.count)")
+        let batch = Firestore.firestore().batch()
+        for score in deleting {
+            let ref = SeriesHandicapScore.documentReference(id: score.id, parentID: score.parentID)
+            batch.deleteDocument(ref)
+        }
+        for prepared in preparedUpserts {
+            let ref = SeriesHandicapScore.documentReference(
+                id: prepared.score.id,
+                parentID: prepared.score.parentID
+            )
+            batch.setData(prepared.data, forDocument: ref)
+        }
+
+        do {
+            try await batch.commit()
+            return .success(preparedUpserts.map(\.score))
+        } catch {
+            addBreadcrumb(level: .error, message: "\(#function) commit failed", error: error)
+            return .failure(error)
+        }
+    }
+}
+
 // MARK: - Point Awards
 
 extension FirebaseService {

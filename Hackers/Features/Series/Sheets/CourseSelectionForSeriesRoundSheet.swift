@@ -18,6 +18,7 @@ struct CourseSelectionForSeriesRoundSheet: View {
     var onRoundCreated: (String) -> Void
 
     @StateObject private var courseViewModel: CourseSelectionViewModel
+    @State private var teeIdentityWarning: String?
 
     init(viewModel: SeriesViewModel, seriesRound: SeriesRound, onRoundCreated: @escaping (String) -> Void) {
         self.viewModel = viewModel
@@ -56,6 +57,21 @@ struct CourseSelectionForSeriesRoundSheet: View {
         .task {
             await prefillFromDefaultCourse()
         }
+        .alert(
+            "Saved tee changed",
+            isPresented: Binding(
+                get: { teeIdentityWarning != nil },
+                set: { if !$0 { teeIdentityWarning = nil } }
+            )
+        ) {
+            Button("Review Tee", role: .cancel) {
+                teeIdentityWarning = nil
+            }
+        } message: {
+            if let warning = teeIdentityWarning {
+                Text(warning)
+            }
+        }
     }
 
     private func prefillFromDefaultCourse() async {
@@ -64,8 +80,7 @@ struct CourseSelectionForSeriesRoundSheet: View {
         let course: Course?
         if let apiID = Int(selection.courseID) {
             do {
-                let apiCourse = try await GolfCourseAPI.shared.getCourse(by: apiID)
-                course = Course(from: apiCourse, with: String(apiID), useStableTeeIDs: true)
+                course = try await GolfCourseRepository.shared.course(by: apiID)
             } catch {
                 course = nil
             }
@@ -82,6 +97,17 @@ struct CourseSelectionForSeriesRoundSheet: View {
                 if !selection.defaultTeeBoxID.isEmpty,
                    let tee = course.tees.first(where: { $0.id == selection.defaultTeeBoxID }) {
                     courseViewModel.selectedTee = tee
+                    let savedIdentity = [
+                        selection.defaultTeeName,
+                        selection.defaultTeeGender
+                    ]
+                    .compactMap { $0 }
+                    .joined(separator: " / ")
+                    let refreshedIdentity = "\(tee.name) / \(tee.gender)"
+                    if savedIdentity.isPopulated,
+                       savedIdentity.caseInsensitiveCompare(refreshedIdentity) != .orderedSame {
+                        teeIdentityWarning = "The saved tee ID now resolves to \(refreshedIdentity), previously \(savedIdentity). Review the tee before starting this round."
+                    }
                 }
             }
         }

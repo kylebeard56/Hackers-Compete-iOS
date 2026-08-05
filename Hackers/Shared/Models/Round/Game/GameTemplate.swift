@@ -138,6 +138,28 @@ extension GameTemplate {
         }
     }
 
+    /// Total-only corrections are safe when every participant's result begins
+    /// with a per-round sum of their own strokes. A terminal stroke-difference
+    /// comparison is also total-only; hole selection, transforms, match play,
+    /// and shared-score formats still require real hole-by-hole values.
+    var supportsTotalGrossCorrection: Bool {
+        guard inputMode == .strokes,
+              subject == .participant,
+              scoreSource == .individual,
+              let firstStage = pipeline.first,
+              case .reduce(let reduction) = firstStage,
+              reduction.mode == .sum,
+              reduction.scope == .perRound else {
+            return false
+        }
+
+        let remainingStages = pipeline.dropFirst()
+        guard remainingStages.count <= 1 else { return false }
+        guard let finalStage = remainingStages.first else { return true }
+        guard case .compare(let comparison) = finalStage else { return false }
+        return comparison.mode == .strokeDifference
+    }
+
     func validate() -> [TemplateValidationError] {
         var errors: [TemplateValidationError] = []
 

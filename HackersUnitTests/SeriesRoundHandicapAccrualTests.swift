@@ -116,6 +116,15 @@ final class SeriesRoundHandicapAccrualTests: XCTestCase {
         XCTAssertFalse(FormatTemplateRegistry.captainsChoice.supportsLeagueHandicapAccrual)
     }
 
+    func testTotalGrossCorrectionCapabilityOnlyAllowsPureStrokeTotals() {
+        XCTAssertTrue(FormatTemplateRegistry.strokePlay.supportsTotalGrossCorrection)
+        XCTAssertFalse(FormatTemplateRegistry.stableford.supportsTotalGrossCorrection)
+        XCTAssertFalse(FormatTemplateRegistry.bestBall.supportsTotalGrossCorrection)
+        XCTAssertFalse(FormatTemplateRegistry.matchPlayIndividual.supportsTotalGrossCorrection)
+        XCTAssertTrue(FormatTemplateRegistry.strokePlayMatchupIndividual.supportsTotalGrossCorrection)
+        XCTAssertFalse(FormatTemplateRegistry.captainsChoice.supportsTotalGrossCorrection)
+    }
+
     func testRoundHandicapScoreIDIsStablePerRoundAndMember() {
         let first = SeriesViewModel.roundHandicapScoreID(roundID: "round/1", memberID: "member 1")
         let second = SeriesViewModel.roundHandicapScoreID(roundID: "round/1", memberID: "member 1")

@@ -97,8 +97,12 @@ extension Tee {
     func rating(for segment: HoleSegment) -> Double? {
         switch segment {
         case .full18: return ratingFull
-        case .front9: return ratingFront
-        case .back9:  return ratingBack
+        case .front9:
+            if let ratingFront { return ratingFront }
+            return resolvedHoleCount <= 9 ? ratingFull : ratingFull / 2.0
+        case .back9:
+            if let ratingBack { return ratingBack }
+            return resolvedHoleCount >= 18 ? ratingFull / 2.0 : nil
         case .custom: return nil
         }
     }
@@ -111,10 +115,16 @@ extension Tee {
     func slope(for segment: HoleSegment) -> Int? {
         switch segment {
         case .full18: return slopeFull
-        case .front9: return slopeFront
-        case .back9:  return slopeBack
+        case .front9:
+            return slopeFront ?? slopeFull
+        case .back9:
+            return slopeBack ?? (resolvedHoleCount >= 18 ? slopeFull : nil)
         case .custom: return nil
         }
+    }
+
+    private var resolvedHoleCount: Int {
+        max(totalHoles, holes.count)
     }
     
     func difficultyScore(for segment: HoleSegment) -> Int {

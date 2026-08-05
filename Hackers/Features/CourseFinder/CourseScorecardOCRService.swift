@@ -78,7 +78,7 @@ protocol CourseScorecardVenueLookupProviding {
 @MainActor
 private struct LiveCourseScorecardSearchProvider: CourseScorecardSearchProviding {
     func searchCourses(query: String) async throws -> [GolfCourseAPIModel] {
-        try await GolfCourseAPI.shared.searchCourses(with: query)
+        try await GolfCourseRepository.shared.searchCourseModels(with: query)
     }
 }
 
@@ -486,7 +486,7 @@ final class CourseScorecardEnrichmentService: Loggable {
         for matchedCourse: GolfCourseAPIModel,
         venueDetails: CourseVenueDetails?
     ) -> Course {
-        let canonicalCourse = Course(from: matchedCourse, with: String(matchedCourse.id), useStableTeeIDs: true)
+        let canonicalCourse = Course(canonicalGolfCourseAPI: matchedCourse)
         let mergedVenueDetails = CourseVenueDetails(
             websiteURL: venueDetails?.websiteURL ?? canonicalCourse.venueDetails?.websiteURL,
             phoneNumber: venueDetails?.phoneNumber ?? canonicalCourse.venueDetails?.phoneNumber

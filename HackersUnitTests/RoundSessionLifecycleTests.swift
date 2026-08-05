@@ -21,6 +21,30 @@ final class RoundSubscriptionProfileTests: XCTestCase {
         XCTAssertFalse(RoundSubscriptionProfile.roundOutcome.usesLiveListeners)
         XCTAssertTrue(RoundSubscriptionProfile.roundOutcome.listenerTypes.isEmpty)
     }
+
+    func testListenerPolicyAppliesLatencyCompensatedLocalWrites() {
+        XCTAssertTrue(
+            RoundSession.shouldApplyListenerSnapshot(
+                hasPendingWrites: true,
+                isFromCache: true
+            )
+        )
+    }
+
+    func testListenerPolicyAppliesServerAndCacheSnapshots() {
+        XCTAssertTrue(
+            RoundSession.shouldApplyListenerSnapshot(
+                hasPendingWrites: false,
+                isFromCache: false
+            )
+        )
+        XCTAssertTrue(
+            RoundSession.shouldApplyListenerSnapshot(
+                hasPendingWrites: false,
+                isFromCache: true
+            )
+        )
+    }
 }
 
 @MainActor

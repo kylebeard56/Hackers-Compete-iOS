@@ -8,6 +8,347 @@
 
 import Foundation
 
+struct SeriesCourseHandicapValidationIssue: Hashable {
+    let memberID: String
+    let memberName: String
+    let teeBoxID: String
+    let teeName: String?
+    let missingFields: [String]
+
+    var message: String {
+        let teeLabel = teeName?.isPopulated == true ? "\(teeName!) (\(teeBoxID))" : teeBoxID
+        return "\(memberName): \(teeLabel) is missing \(missingFields.joined(separator: ", "))."
+    }
+}
+
+struct SeriesCourseHandicapResolution: Hashable {
+    let effectiveStrokes: Int?
+    let handicapIndex: Double?
+    let tee: Tee?
+    let courseID: String
+    let courseName: String
+    let holeSegment: HoleSegment
+    let courseRating: Double?
+    let courseSlope: Int?
+    let par: Int
+    let entryFormat: HandicapEntryFormat
+    let handicapStrokeBasis: SeriesHandicapStrokeBasis
+    let maximumHandicap: Int?
+    let calculatorFingerprint: String
+    let validationIssue: SeriesCourseHandicapValidationIssue?
+
+    func snapshot(
+        selectedHandicapScoreIDs: Set<String> = [],
+        source: RoundParticipantHandicapSnapshotSource = .league,
+        calculatedAt: Time = .init()
+    ) -> RoundParticipantHandicapSnapshot? {
+        guard let effectiveStrokes, let tee else { return nil }
+        return RoundParticipantHandicapSnapshot(
+            authoritativeCourseHandicap: effectiveStrokes,
+            handicapIndex: handicapIndex,
+            effectiveStrokes: effectiveStrokes,
+            courseID: courseID,
+            courseName: courseName,
+            teeBoxID: tee.id,
+            teeName: tee.name,
+            teeGender: tee.gender,
+            holeSegment: holeSegment,
+            courseRating: courseRating,
+            courseSlope: courseSlope,
+            par: par,
+            handicapStrokeBasis: handicapStrokeBasis,
+            maximumHandicap: maximumHandicap,
+            entryFormat: entryFormat,
+            calculatorFingerprint: calculatorFingerprint,
+            selectedHandicapScoreIDs: selectedHandicapScoreIDs.sorted(),
+            calculatedAt: calculatedAt,
+            source: source
+        )
+    }
+}
+
+/// Single source of truth for the roster Course HCP display and series-round participant seeding.
+enum SeriesCourseHandicapResolver {
+    static let calculatorVersion = 1
+
+    static func resolve(
+        effectiveIndex: Double?,
+        member: SeriesMember,
+        courseSegment: CourseSegment,
+        entryFormat: HandicapEntryFormat,
+        handicapStrokeBasis: SeriesHandicapStrokeBasis,
+        maximumHandicap: Int?
+    ) -> SeriesCourseHandicapResolution {
+        let requestedTeeID = SeriesRoundCreationMapping.resolvedTeeBoxID(
+            for: member,
+            courseSegment: courseSegment
+        )
+        let tee = courseSegment.tee(from: requestedTeeID)
+        return resolve(
+            effectiveIndex: effectiveIndex,
+            memberID: member.id,
+            memberName: member.name.fullName,
+            requestedTeeID: requestedTeeID,
+            tee: tee,
+            courseID: courseSegment.courseInfo.id,
+            courseName: courseSegment.courseInfo.name,
+            holeSegment: courseSegment.holeSegment,
+            entryFormat: entryFormat,
+            handicapStrokeBasis: handicapStrokeBasis,
+            maximumHandicap: maximumHandicap
+        )
+    }
+
+    static func resolve(
+        effectiveIndex: Double?,
+        memberID: String,
+        memberName: String,
+        requestedTeeID: String,
+        tee: Tee?,
+        courseID: String,
+        courseName: String,
+        holeSegment: HoleSegment,
+        entryFormat: HandicapEntryFormat,
+        handicapStrokeBasis: SeriesHandicapStrokeBasis,
+        maximumHandicap: Int?
+    ) -> SeriesCourseHandicapResolution {
+        var missingFields: [String] = []
+        if effectiveIndex == nil { missingFields.append("handicap index") }
+        if tee == nil { missingFields.append("selected tee") }
+
+        let rating = tee?.rating(for: holeSegment)
+        let slope = tee?.slope(for: holeSegment)
+        let par = tee?.par(for: holeSegment) ?? 0
+        if entryFormat == .courseHandicap {
+            if rating == nil { missingFields.append("course rating") }
+            if slope == nil { missingFields.append("slope rating") }
+            if par <= 0 { missingFields.append("par") }
+        }
+
+        let issue: SeriesCourseHandicapValidationIssue? = missingFields.isEmpty
+            ? nil
+            : SeriesCourseHandicapValidationIssue(
+                memberID: memberID,
+                memberName: memberName,
+                teeBoxID: requestedTeeID,
+                teeName: tee?.name,
+                missingFields: missingFields
+            )
+
+        let effectiveStrokes: Int? = {
+            guard let effectiveIndex else { return nil }
+            switch entryFormat {
+            case .strokes:
+                return capped(Int(effectiveIndex.rounded()), maximumHandicap: maximumHandicap)
+            case .courseHandicap:
+                guard let tee,
+                      let courseHandicap = HandicapCalculator.courseHandicap(
+                        index: effectiveIndex,
+                        tee: tee,
+                        segment: holeSegment,
+                        handicapStrokeBasis: handicapStrokeBasis
+                      ) else {
+                    return nil
+                }
+                return capped(courseHandicap, maximumHandicap: maximumHandicap)
+            }
+        }()
+
+        let formattedIndex = effectiveIndex.map { String(format: "%.4f", $0) } ?? "nil"
+        let formattedRating = rating.map { String(format: "%.4f", $0) } ?? "nil"
+        let formattedSlope = slope.map { String($0) } ?? "nil"
+        let formattedMaximum = maximumHandicap.map { String($0) } ?? "nil"
+        let fingerprintParts: [String] = [
+            "series-course-hcp-v\(calculatorVersion)",
+            entryFormat.rawValue,
+            handicapStrokeBasis.rawValue,
+            holeSegment.title,
+            formattedIndex,
+            requestedTeeID,
+            formattedRating,
+            formattedSlope,
+            "\(par)",
+            formattedMaximum
+        ]
+
+        return SeriesCourseHandicapResolution(
+            effectiveStrokes: effectiveStrokes,
+            handicapIndex: effectiveIndex,
+            tee: tee,
+            courseID: courseID,
+            courseName: courseName,
+            holeSegment: holeSegment,
+            courseRating: rating,
+            courseSlope: slope,
+            par: par,
+            entryFormat: entryFormat,
+            handicapStrokeBasis: handicapStrokeBasis,
+            maximumHandicap: maximumHandicap,
+            calculatorFingerprint: fingerprintParts.joined(separator: "|"),
+            validationIssue: issue
+        )
+    }
+
+    static func validationIssues(
+        members: [SeriesMember],
+        handicaps: [String: SeriesMemberHandicap],
+        courseSegment: CourseSegment,
+        entryFormat: HandicapEntryFormat,
+        handicapStrokeBasis: SeriesHandicapStrokeBasis,
+        maximumHandicap: Int?
+    ) -> [SeriesCourseHandicapValidationIssue] {
+        members.compactMap { member in
+            resolve(
+                effectiveIndex: handicaps[member.id]?.effectiveIndex,
+                member: member,
+                courseSegment: courseSegment,
+                entryFormat: entryFormat,
+                handicapStrokeBasis: handicapStrokeBasis,
+                maximumHandicap: maximumHandicap
+            ).validationIssue
+        }
+    }
+
+    private static func capped(_ value: Int, maximumHandicap: Int?) -> Int {
+        let nonNegative = max(0, value)
+        guard let maximumHandicap else { return nonNegative }
+        return min(nonNegative, maximumHandicap)
+    }
+}
+
+struct SeriesRoundReplacementPlan: Equatable {
+    let originalToSubstitute: [String: String]
+
+    var substituteToOriginal: [String: String] {
+        Dictionary(uniqueKeysWithValues: originalToSubstitute.map { ($0.value, $0.key) })
+    }
+
+    var replacedMemberIDs: Set<String> {
+        Set(originalToSubstitute.keys)
+    }
+
+    var substituteMemberIDs: Set<String> {
+        Set(originalToSubstitute.values)
+    }
+
+    func resolvedMemberID(_ memberID: String) -> String {
+        originalToSubstitute[memberID] ?? memberID
+    }
+
+    func applying(to matchupPlans: [SeriesRoundMatchupPlan]) -> [SeriesRoundMatchupPlan] {
+        matchupPlans.map { plan in
+            var updated = plan
+            updated.memberAID = plan.memberAID.map(resolvedMemberID)
+            updated.memberBID = plan.memberBID.map(resolvedMemberID)
+            if updated.memberAID != plan.memberAID || updated.memberBID != plan.memberBID {
+                updated.lastUpdatedAt = .init()
+            }
+            return updated
+        }
+    }
+
+    func applying(to partnershipPlans: [SeriesRoundPartnershipPlan]) -> [SeriesRoundPartnershipPlan] {
+        partnershipPlans.map { plan in
+            let resolvedMemberIDs = Array(Set(plan.memberIDs.map(resolvedMemberID))).sorted()
+            guard resolvedMemberIDs != plan.memberIDs else { return plan }
+            var updated = plan
+            updated.memberIDs = resolvedMemberIDs
+            updated.lastUpdatedAt = .init()
+            return updated
+        }
+    }
+}
+
+/// Shared roster policy for Series-authored tee sheets, round creation, and lobby reconciliation.
+enum SeriesRoundParticipationPolicy {
+    static func isAutomaticPlayer(_ member: SeriesMember) -> Bool {
+        guard member.isActive else { return false }
+        switch member.role {
+        case .commissioner, .captain, .member:
+            return true
+        case .substitute, .spectator:
+            return false
+        }
+    }
+
+    static func replacementPlan(
+        plannedTeeGroups: [SeriesRoundPlannedTeeGroup],
+        membersByID: [String: SeriesMember]
+    ) -> SeriesRoundReplacementPlan {
+        var candidates: [(originalID: String, substituteID: String)] = []
+
+        for seat in orderedSeats(from: plannedTeeGroups) {
+            guard seat.isSubstitute,
+                  let originalID = seat.substituteForSeriesMemberID?.trimmingCharacters(in: .whitespacesAndNewlines),
+                  originalID.isPopulated,
+                  originalID != seat.memberID,
+                  let substitute = membersByID[seat.memberID],
+                  substitute.isActive,
+                  substitute.role == .substitute else {
+                continue
+            }
+
+            if let original = membersByID[originalID], !isAutomaticPlayer(original) {
+                continue
+            }
+
+            candidates.append((originalID, substitute.id))
+        }
+
+        let originalCounts = Dictionary(grouping: candidates) { $0.originalID }.mapValues(\.count)
+        let substituteCounts = Dictionary(grouping: candidates) { $0.substituteID }.mapValues(\.count)
+        let validMappings: [(String, String)] = candidates.compactMap { candidate -> (String, String)? in
+            guard originalCounts[candidate.originalID] == 1,
+                  substituteCounts[candidate.substituteID] == 1 else { return nil }
+            return (candidate.originalID, candidate.substituteID)
+        }
+        let originalToSubstitute = Dictionary(uniqueKeysWithValues: validMappings)
+
+        return SeriesRoundReplacementPlan(originalToSubstitute: originalToSubstitute)
+    }
+
+    static func effectiveMembers(
+        members: [SeriesMember],
+        plannedTeeGroups: [SeriesRoundPlannedTeeGroup]
+    ) -> [SeriesMember] {
+        let membersByID = Dictionary(uniqueKeysWithValues: members.map { ($0.id, $0) })
+        let replacements = replacementPlan(
+            plannedTeeGroups: plannedTeeGroups,
+            membersByID: membersByID
+        )
+        let plannedMemberIDs = orderedSeats(from: plannedTeeGroups).map(\.memberID)
+        let plannedMemberIDSet = Set(plannedMemberIDs)
+        let orderedIDs = plannedMemberIDs + members.compactMap { member in
+            guard isAutomaticPlayer(member), !plannedMemberIDSet.contains(member.id) else { return nil }
+            return member.id
+        }
+        var seen = Set<String>()
+
+        return orderedIDs.compactMap { memberID in
+            guard seen.insert(memberID).inserted,
+                  !replacements.replacedMemberIDs.contains(memberID),
+                  let member = membersByID[memberID] else { return nil }
+            if isAutomaticPlayer(member) { return member }
+            guard member.role == .substitute,
+                  replacements.substituteMemberIDs.contains(memberID) else { return nil }
+            return member
+        }
+    }
+
+    static func orderedSeats(
+        from groups: [SeriesRoundPlannedTeeGroup]
+    ) -> [SeriesRoundPlannedSeat] {
+        groups
+            .sorted { $0.index < $1.index }
+            .flatMap { group in
+                group.seats.sorted { lhs, rhs in
+                    if lhs.teeOrder != rhs.teeOrder { return lhs.teeOrder < rhs.teeOrder }
+                    return lhs.memberID < rhs.memberID
+                }
+            }
+    }
+}
+
 enum SeriesRoundCreationMapping {
 
     /// Links a series team id to the corresponding `RoundTeam` document id after create.
@@ -102,10 +443,6 @@ enum SeriesRoundCreationMapping {
     ) -> RoundConfiguration {
         let template = seriesRound.roundConfig.template
         let primaryFormat = primaryGameFormat(series: series, seriesRound: seriesRound)
-        let handicapEntryFormat = seriesRound.roundConfig.handicapEntryFormat == .courseHandicap
-            && !HandicapCalculator.hasCourseHandicapData(courseSegment: courseSegment)
-            ? .strokes
-            : seriesRound.roundConfig.handicapEntryFormat
         let scoreOwnerScope: RoundScoreOwnerScope = template.scoreSource == .shared
             ? seriesRound.roundConfig.scoreOwnerScope
             : .individual
@@ -126,7 +463,7 @@ enum SeriesRoundCreationMapping {
             handicapStrokeBasis: seriesRound.roundConfig.handicapStrokeBasis,
             handicapsEnabled: primaryFormat.configuration.basis == .net,
             sharedScoreHandicapConfig: seriesRound.roundConfig.sharedScoreHandicapConfig,
-            handicapEntryFormat: handicapEntryFormat,
+            handicapEntryFormat: seriesRound.roundConfig.handicapEntryFormat,
             handicapNormalizationMode: seriesRound.roundConfig.handicapNormalizationMode,
             leagueHandicapMaximum: series.handicapConfig.isEnabled ? series.handicapConfig.config.maximumHandicap : nil,
             attendanceConfirmationEnabled: series.settings.isAttendanceEnabled,
@@ -138,35 +475,69 @@ enum SeriesRoundCreationMapping {
     static func participatingMembersAndPresenceStatuses(
         series: Series,
         eligibleMembers: [SeriesMember],
-        attendance: [SeriesRoundAttendance]
+        attendance: [SeriesRoundAttendance],
+        plannedTeeGroups: [SeriesRoundPlannedTeeGroup] = []
     ) -> (members: [SeriesMember], presenceStatusByMemberID: [String: RoundParticipantPresenceStatus]) {
-        guard series.settings.isAttendanceEnabled else {
-            return (eligibleMembers, [:])
-        }
-
         let attendanceByMemberID = Dictionary(uniqueKeysWithValues: attendance.map { ($0.memberID, $0) })
-        let members = eligibleMembers.filter { member in
-            guard let attendance = attendanceByMemberID[member.id] else {
-                return series.settings.attendanceDefault != .no
-            }
-            return attendance.status == SeriesRoundAttendanceStatus.pending.rawValue
-                || attendance.status == SeriesRoundAttendanceStatus.accepted.rawValue
-        }
-        let presenceStatusByMemberID = Dictionary(uniqueKeysWithValues: members.map { member in
-            let resolvedStatus: RoundParticipantPresenceStatus
-            if let attendance = attendanceByMemberID[member.id],
-               attendance.status == SeriesRoundAttendanceStatus.pending.rawValue {
-                resolvedStatus = .unconfirmed
-            } else if attendanceByMemberID[member.id] == nil,
-                      series.settings.attendanceDefault == .pending {
-                resolvedStatus = .unconfirmed
-            } else {
-                resolvedStatus = .active
-            }
-            return (member.id, resolvedStatus)
-        })
+        let membersByID = Dictionary(uniqueKeysWithValues: eligibleMembers.map { ($0.id, $0) })
+        let replacements = SeriesRoundParticipationPolicy.replacementPlan(
+            plannedTeeGroups: plannedTeeGroups,
+            membersByID: membersByID
+        )
+        let effectiveMembers = SeriesRoundParticipationPolicy.effectiveMembers(
+            members: eligibleMembers,
+            plannedTeeGroups: plannedTeeGroups
+        )
 
-        return (members, presenceStatusByMemberID)
+        func attendanceStatus(for memberID: String) -> SeriesRoundAttendanceStatus? {
+            guard series.settings.isAttendanceEnabled else { return .accepted }
+            if let rawValue = attendanceByMemberID[memberID]?.status,
+               let status = SeriesRoundAttendanceStatus(rawValue: rawValue) {
+                return status
+            }
+            return series.settings.attendanceDefault
+        }
+
+        let participatingMembers = effectiveMembers.filter { member in
+            if replacements.substituteMemberIDs.contains(member.id) {
+                return true
+            }
+            guard series.settings.isAttendanceEnabled else { return true }
+            let status = attendanceStatus(for: member.id)
+            return status == .accepted || status == .pending
+        }
+
+        let presenceStatusByMemberID: [String: RoundParticipantPresenceStatus]
+        if series.settings.isAttendanceEnabled {
+            presenceStatusByMemberID = Dictionary(uniqueKeysWithValues: participatingMembers.map { member in
+                let status: SeriesRoundAttendanceStatus?
+                if let originalID = replacements.substituteToOriginal[member.id] {
+                    if attendanceByMemberID[member.id] != nil {
+                        status = attendanceStatus(for: member.id)
+                    } else {
+                        let inherited = attendanceStatus(for: originalID)
+                        status = inherited == .no ? .accepted : inherited
+                    }
+                } else {
+                    status = attendanceStatus(for: member.id)
+                }
+
+                let presence: RoundParticipantPresenceStatus
+                switch status {
+                case .pending:
+                    presence = .unconfirmed
+                case .no:
+                    presence = .noShow
+                case .accepted, .none:
+                    presence = .active
+                }
+                return (member.id, presence)
+            })
+        } else {
+            presenceStatusByMemberID = [:]
+        }
+
+        return (participatingMembers, presenceStatusByMemberID)
     }
 
     /// Values used when creating the root `Round` before Firestore post (share code and timestamps filled by caller).
@@ -551,8 +922,12 @@ enum SeriesRoundCreationMapping {
         pods: [SeriesTeamPod],
         members: [SeriesMember]
     ) -> [SeriesRoundPartnershipPlan] {
+        let replacements = SeriesRoundParticipationPolicy.replacementPlan(
+            plannedTeeGroups: seriesRound.plannedTeeGroups,
+            membersByID: Dictionary(uniqueKeysWithValues: members.map { ($0.id, $0) })
+        )
         if seriesRound.partnershipPlans.isPopulated {
-            return seriesRound.partnershipPlans
+            return replacements.applying(to: seriesRound.partnershipPlans)
                 .filter(\.isValid)
                 .sorted { lhs, rhs in
                     if lhs.teamID != rhs.teamID { return lhs.teamID < rhs.teamID }
@@ -568,7 +943,7 @@ enum SeriesRoundCreationMapping {
 
         let activeMemberIDs = Set(members.map(\.id))
         let teamOrder = Dictionary(uniqueKeysWithValues: teams.map { ($0.id, $0.index) })
-        return pods
+        let generatedPlans = pods
             .filter { $0.isSchedulable && Set($0.memberIDs).isSubset(of: activeMemberIDs) }
             .sorted { lhs, rhs in
                 let lhsTeam = teamOrder[lhs.teamID] ?? .max
@@ -587,6 +962,7 @@ enum SeriesRoundCreationMapping {
                     lastUpdatedAt: pod.lastUpdatedAt
                 )
             }
+        return replacements.applying(to: generatedPlans).filter(\.isValid)
     }
 
     // MARK: - Participants + segment + Firestore mappings
@@ -611,15 +987,29 @@ enum SeriesRoundCreationMapping {
         courseSegment: CourseSegment,
         handicapEntryFormat: HandicapEntryFormat = .strokes,
         handicapStrokeBasis: SeriesHandicapStrokeBasis? = nil,
+        selectedHandicapScoreIDsByMemberID: [String: Set<String>] = [:],
         hostPlayerID: String?,
         presenceStatusByMemberID: [String: RoundParticipantPresenceStatus] = [:],
         plannedSeatsByMemberID: [String: SeriesRoundPlannedSeat] = [:]
     ) -> [RoundParticipant] {
-        let resolvedHandicapEntryFormat: HandicapEntryFormat = handicapEntryFormat == .courseHandicap
-            && !HandicapCalculator.hasCourseHandicapData(courseSegment: courseSegment)
-            ? .strokes
-            : handicapEntryFormat
-        return members.map { member in
+        let resolvedHandicapStrokeBasis = handicapStrokeBasis
+            ?? SeriesHandicapStrokeBasis.defaultBasis(holeCount: courseSegment.holeSegment.holeCount)
+        let explicitSubstituteSeats = plannedSeatsByMemberID.values.filter { seat in
+            seat.isSubstitute
+                && seat.substituteForSeriesMemberID?.isPopulated == true
+                && seat.substituteForSeriesMemberID != seat.memberID
+        }
+        let explicitSubstituteIDs = Set(explicitSubstituteSeats.map(\.memberID))
+        let replacedMemberIDs = Set(explicitSubstituteSeats.compactMap(\.substituteForSeriesMemberID))
+
+        return members.compactMap { member in
+            guard !replacedMemberIDs.contains(member.id) else { return nil }
+            if !SeriesRoundParticipationPolicy.isAutomaticPlayer(member) {
+                guard member.isActive,
+                      member.role == .substitute,
+                      explicitSubstituteIDs.contains(member.id) else { return nil }
+            }
+
             let assignment = memberAssignments[member.id]
             let effectiveIndex = handicaps[member.id]?.effectiveIndex
             let effectiveHandicap = handicaps[member.id]?.effectiveStrokes(maximumHandicap: maximumHandicap) ?? 0
@@ -629,22 +1019,16 @@ enum SeriesRoundCreationMapping {
                 : member.teamID
             let teamMapping = representedTeamID.flatMap { teamMappings[$0] }
             let teeBoxID = resolvedTeeBoxID(for: member, courseSegment: courseSegment)
-            let template = RoundParticipant(
-                teeBoxID: teeBoxID,
-                originalHandicap: effectiveHandicap,
-                adjustedHandicap: effectiveHandicap
+            let resolution = SeriesCourseHandicapResolver.resolve(
+                effectiveIndex: effectiveIndex,
+                member: member,
+                courseSegment: courseSegment,
+                entryFormat: handicapEntryFormat,
+                handicapStrokeBasis: resolvedHandicapStrokeBasis,
+                maximumHandicap: maximumHandicap
             )
-            let computedHandicap = effectiveIndex.map {
-                HandicapCalculator.strokes(
-                    for: $0,
-                    format: resolvedHandicapEntryFormat,
-                    participant: template,
-                    courseSegment: courseSegment,
-                    maximumHandicap: maximumHandicap,
-                    handicapStrokeBasis: handicapStrokeBasis ?? SeriesHandicapStrokeBasis.defaultBasis(holeCount: courseSegment.holeSegment.holeCount)
-                )
-            } ?? effectiveHandicap
-            let originalHandicap = resolvedHandicapEntryFormat == .courseHandicap
+            let computedHandicap = resolution.effectiveStrokes ?? (handicapEntryFormat == .strokes ? effectiveHandicap : 0)
+            let originalHandicap = handicapEntryFormat == .courseHandicap
                 ? max(0, Int((effectiveIndex ?? 0).rounded()))
                 : effectiveHandicap
             return RoundParticipant(
@@ -655,8 +1039,11 @@ enum SeriesRoundCreationMapping {
                 teeBoxID: teeBoxID,
                 originalHandicap: originalHandicap,
                 adjustedHandicap: computedHandicap,
-                handicapIndex: resolvedHandicapEntryFormat == .courseHandicap ? effectiveIndex : nil,
+                handicapIndex: handicapEntryFormat == .courseHandicap ? effectiveIndex : nil,
                 leagueHandicapStrokesAtCreation: computedHandicap,
+                handicapSnapshot: resolution.snapshot(
+                    selectedHandicapScoreIDs: selectedHandicapScoreIDsByMemberID[member.id] ?? []
+                ),
                 seriesMemberID: member.id,
                 teamID: teamMapping?.roundTeamID,
                 groupID: assignment?.groupID,
@@ -690,6 +1077,23 @@ enum SeriesRoundCreationMapping {
         scoringGroups: [RoundScoringGroup],
         participants: [RoundParticipant]
     ) -> [TeamMatchup] {
+        let participantReplacements = SeriesRoundReplacementPlan(
+            originalToSubstitute: participants.reduce(into: [:]) { replacements, participant in
+                guard let originalID = participant.substituteForSeriesMemberID,
+                      originalID.isPopulated,
+                      let substituteMemberID = participant.seriesMemberID,
+                      substituteMemberID.isPopulated else { return }
+                replacements[originalID] = substituteMemberID
+            }
+        )
+        var resolvedParticipantIDs = participantIDsBySeriesMemberID
+        for originalID in participantReplacements.replacedMemberIDs {
+            let substituteMemberID = participantReplacements.resolvedMemberID(originalID)
+            if let participantID = participantIDsBySeriesMemberID[substituteMemberID] {
+                resolvedParticipantIDs[originalID] = participantID
+            }
+        }
+
         if (seriesRound.roundConfig.selectionDomain == .partnership
             || seriesRound.roundConfig.scoreOwnerScope == .partnership
             || seriesRound.roundConfig.matchupMode == .teeGroupPartnerships),
@@ -713,7 +1117,7 @@ enum SeriesRoundCreationMapping {
 
                     guard let partnershipPlan = partnershipPlansByID[pairID] else { return nil }
                     let participantIDs = partnershipPlan.memberIDs.compactMap { seriesMemberID in
-                        participantIDsBySeriesMemberID[seriesMemberID] ?? participantsBySeriesMemberID[seriesMemberID]?.id
+                        resolvedParticipantIDs[seriesMemberID] ?? participantsBySeriesMemberID[seriesMemberID]?.id
                     }
                     guard participantIDs.count == partnershipPlan.memberIDs.count else { return nil }
 
@@ -790,8 +1194,8 @@ enum SeriesRoundCreationMapping {
             case .individualVsIndividual:
                 guard let memberAID = plan.memberAID,
                       let memberBID = plan.memberBID,
-                      let participantAID = participantIDsBySeriesMemberID[memberAID],
-                      let participantBID = participantIDsBySeriesMemberID[memberBID] else {
+                      let participantAID = resolvedParticipantIDs[memberAID],
+                      let participantBID = resolvedParticipantIDs[memberBID] else {
                     return nil
                 }
                 return TeamMatchup(
@@ -1016,6 +1420,52 @@ enum SeriesRoundCreationMapping {
         )
     }
 
+    /// Recalculates only the persisted handicap allowance for existing scoring
+    /// units. Ownership and aggregation stay untouched, which makes this safe
+    /// for historical commissioner repairs across individual, partnership,
+    /// tee-group, and team scoring vectors.
+    static func refreshingHandicapAllowances(
+        in scoringUnits: [ScoringUnit],
+        participants: [RoundParticipant]
+    ) -> [ScoringUnit] {
+        let participantsByID = Dictionary(uniqueKeysWithValues: participants.map { ($0.id, $0) })
+
+        return scoringUnits.map { unit in
+            let participantIDs: [String] = {
+                let recordedIDs = Set(
+                    (unit.handicapAllowance.map { Array($0.memberStrokes.keys) } ?? [])
+                        + (unit.handicapAdjustments.map { Array($0.keys) } ?? [])
+                )
+                if recordedIDs.isPopulated {
+                    return recordedIDs.sorted()
+                }
+                switch unit.owner {
+                case .participant, .scoreOwner:
+                    return unit.ownerIDs.filter { participantsByID[$0] != nil }
+                case .team:
+                    let teamIDs = Set(unit.ownerIDs)
+                    return participants
+                        .filter { participant in
+                            participant.teamID.map(teamIDs.contains) == true
+                        }
+                        .map(\.id)
+                }
+            }()
+
+            let members = participantIDs.compactMap { participantsByID[$0] }
+            guard members.isPopulated else { return unit }
+
+            let sourceConfig = unit.handicapAllowance?.sourceConfig ?? .individualStrokePlay
+            let allowance = handicapAllowance(participants: members, config: sourceConfig)
+            var updated = unit
+            updated.handicapAllowance = allowance
+            if unit.handicapAdjustments != nil {
+                updated.handicapAdjustments = allowance?.memberStrokes
+            }
+            return updated
+        }
+    }
+
     static func buildRoundSegment(
         roundID: String,
         series: Series,
@@ -1174,10 +1624,13 @@ struct SeriesRoundResolvedPlan: Equatable {
     }
 
     private static func courseSelection(from segment: CourseSegment) -> SeriesCourseSelection {
-        SeriesCourseSelection(
+        let defaultTee = segment.defaultTee.flatMap { segment.tee(from: $0) }
+        return SeriesCourseSelection(
             courseID: segment.courseInfo.golfCourseApiID.map(String.init) ?? segment.courseInfo.id,
             cachedName: segment.courseInfo.name,
             defaultTeeBoxID: segment.defaultTee ?? "",
+            defaultTeeName: defaultTee?.name,
+            defaultTeeGender: defaultTee?.gender,
             holeSegment: segment.holeSegment
         )
     }
@@ -1214,7 +1667,7 @@ enum SeriesRoundPlanningService {
             effectiveMatchupPlans = autoMatchupPlans
         }
 
-        let plannedMatchups = normalizePlannedMatchups(
+        let basePlannedMatchups = normalizePlannedMatchups(
             seriesRound.plannedMatchups,
             fallback: effectiveMatchupPlans
         )
@@ -1234,6 +1687,19 @@ enum SeriesRoundPlanningService {
             allMembers: eligibleMembers,
             holeRange: courseSelection?.holeSegment.holeRange ?? .init(startHole: 1, endHole: 18)
         )
+
+        let replacements = SeriesRoundParticipationPolicy.replacementPlan(
+            plannedTeeGroups: plannedTeeGroups,
+            membersByID: Dictionary(uniqueKeysWithValues: eligibleMembers.map { ($0.id, $0) })
+        )
+        let plannedMatchups = replacements.applying(to: basePlannedMatchups.map(\.matchupPlan))
+            .enumerated()
+            .map { index, matchupPlan in
+                var item = basePlannedMatchups[index]
+                item.plan = matchupPlan
+                item.id = matchupPlan.id
+                return item
+            }
 
         return .init(matchups: plannedMatchups, teeGroups: plannedTeeGroups)
     }
@@ -1320,7 +1786,12 @@ enum SeriesRoundPlanningService {
     ) -> [SeriesRoundPlannedTeeGroup] {
         guard existing.isPopulated else { return fallback }
 
-        let validMemberIDs = Set(allMembers.map(\.id))
+        let membersByID = Dictionary(uniqueKeysWithValues: allMembers.map { ($0.id, $0) })
+        let replacements = SeriesRoundParticipationPolicy.replacementPlan(
+            plannedTeeGroups: existing,
+            membersByID: membersByID
+        )
+        let substituteToOriginal = replacements.substituteToOriginal
         var seenMemberIDs = Set<String>()
 
         var groups = existing
@@ -1339,18 +1810,37 @@ enum SeriesRoundPlanningService {
                     }
                     .compactMap { seat -> SeriesRoundPlannedSeat? in
                         guard seat.memberID.isPopulated,
-                              validMemberIDs.contains(seat.memberID),
+                              let member = membersByID[seat.memberID],
                               !seenMemberIDs.contains(seat.memberID) else { return nil }
+
+                        if SeriesRoundParticipationPolicy.isAutomaticPlayer(member) {
+                            guard !replacements.replacedMemberIDs.contains(member.id) else { return nil }
+                        } else {
+                            guard member.isActive,
+                                  member.role == .substitute,
+                                  seat.isSubstitute,
+                                  let originalID = substituteToOriginal[member.id],
+                                  seat.substituteForSeriesMemberID == originalID else {
+                                return nil
+                            }
+                        }
+
                         seenMemberIDs.insert(seat.memberID)
                         return SeriesRoundPlannedSeat(
                             id: seat.id,
                             memberID: seat.memberID,
                             teeOrder: max(1, seat.teeOrder),
                             source: seat.source,
-                            isSubstitute: seat.isSubstitute,
-                            substituteForSeriesMemberID: seat.substituteForSeriesMemberID,
-                            substituteForName: seat.substituteForName,
-                            representedTeamID: seat.representedTeamID
+                            isSubstitute: member.role == .substitute,
+                            substituteForSeriesMemberID: member.role == .substitute
+                                ? seat.substituteForSeriesMemberID
+                                : nil,
+                            substituteForName: member.role == .substitute
+                                ? seat.substituteForName
+                                : nil,
+                            representedTeamID: member.role == .substitute
+                                ? seat.representedTeamID
+                                : nil
                         )
                     }
                 updated.seats = seats.enumerated().map { offset, seat in
@@ -1360,8 +1850,19 @@ enum SeriesRoundPlanningService {
                 }
                 return updated
             }
+            .filter { $0.seats.isPopulated || $0.source == .manualOverride }
 
-        let leftovers = allMembers.filter { !seenMemberIDs.contains($0.id) }
+        groups = groups.enumerated().map { index, group in
+            var updated = group
+            updated.index = index
+            return updated
+        }
+
+        let leftovers = allMembers.filter { member in
+            SeriesRoundParticipationPolicy.isAutomaticPlayer(member)
+                && !replacements.replacedMemberIDs.contains(member.id)
+                && !seenMemberIDs.contains(member.id)
+        }
         guard leftovers.isPopulated else { return groups }
 
         let baseIndex = groups.count

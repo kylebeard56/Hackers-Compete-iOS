@@ -114,7 +114,7 @@ struct Course: FirebaseIdentifiable {
                 websiteURL: model.websiteURL,
                 phoneNumber: model.phoneNumber
             ),
-            locationGeohash: loc.geohash,
+            locationGeohash: loc?.geohash,
             tees: female + male,
             createdAt: Time(),
             lastUpdatedAt: Time()
@@ -162,6 +162,24 @@ extension Course {
         clubName != courseName ? clubName.normalizedForSearch : searchKey
     }
 
+    /// Matches the normalized prefix/token search used by the Firebase course cache.
+    /// The first token must start either the course or club name; remaining tokens can appear in
+    /// either name. This keeps cached search focused while accepting common queries such as
+    /// "Pinehurst 2" for "Pinehurst No. 2".
+    func matchesCachedSearch(query: String) -> Bool {
+        let tokens = query.normalizedForSearch
+            .split(separator: " ")
+            .map(String.init)
+        guard let first = tokens.first else { return false }
+
+        let keys = [searchKey, searchKeyReverse]
+        guard keys.contains(where: { $0.hasPrefix(first) }) else { return false }
+
+        return tokens.dropFirst().allSatisfy { token in
+            keys.contains(where: { $0.contains(token) })
+        }
+    }
+
     init(from decoder: Decoder) throws {
         let c = try decoder.container(keyedBy: CodingKeys.self)
         id = try c.decode(String.self, forKey: .id)
@@ -200,6 +218,30 @@ extension Course {
 }
 
 extension Course {
+    /// Canonical Firestore document ID for a GolfCourseAPI-backed course.
+    ///
+    /// Keeping the provider ID deterministic gives cache lookups a direct document read and
+    /// prevents concurrent clients from creating duplicate UUID-backed copies of the same course.
+    static func golfCourseAPIDocumentID(for apiID: Int) -> String {
+        String(apiID)
+    }
+
+    /// Builds the one canonical `Course` representation used for GolfCourseAPI cache documents.
+    init(canonicalGolfCourseAPI model: GolfCourseAPIModel) {
+        self.init(
+            from: model,
+            with: Self.golfCourseAPIDocumentID(for: model.id),
+            useStableTeeIDs: true
+        )
+    }
+
+    var hasCanonicalGolfCourseAPIIdentity: Bool {
+        guard origin == CourseOrigin.golfCourseAPI.rawValue,
+              let apiID = golfCourseApiID,
+              apiID > 0 else { return false }
+        return id == Self.golfCourseAPIDocumentID(for: apiID)
+    }
+
     var isSimpleRoundCourse: Bool {
         origin == CourseOrigin.simple.rawValue
     }
@@ -251,15 +293,16 @@ struct CourseLocation: Hashable, Codable {
         self.pinpoint = Geohash.encode(latitude: latitude, longitude: longitude, precision: 8)
     }
     
-    init(from location: GolfCourseAPILocation) {
+    init?(from location: GolfCourseAPILocation) {
+        guard let coordinate = location.coordinate else { return nil }
         self.address = location.address
         self.city = location.city
         self.state = location.state
         self.country = location.country
-        self.latitude = location.latitude
-        self.longitude = location.longitude
-        self.geohash = Geohash.encode(latitude: location.latitude, longitude: location.longitude)
-        self.pinpoint = Geohash.encode(latitude: location.latitude, longitude: location.longitude, precision: 8)
+        self.latitude = coordinate.latitude
+        self.longitude = coordinate.longitude
+        self.geohash = Geohash.encode(latitude: coordinate.latitude, longitude: coordinate.longitude)
+        self.pinpoint = Geohash.encode(latitude: coordinate.latitude, longitude: coordinate.longitude, precision: 8)
     }
     
     enum CodingKeys: String, CodingKey {

@@ -132,6 +132,21 @@ struct SeriesView: View {
         }
         .navigationBarBackButtonHidden()
         .captureScreen("series")
+        .alert(
+            "Cannot start round",
+            isPresented: Binding(
+                get: { viewModel.roundCreationErrorMessage != nil },
+                set: { if !$0 { viewModel.roundCreationErrorMessage = nil } }
+            )
+        ) {
+            Button("OK", role: .cancel) {
+                viewModel.roundCreationErrorMessage = nil
+            }
+        } message: {
+            if let message = viewModel.roundCreationErrorMessage {
+                Text(message)
+            }
+        }
         .task {
             appSession.activeSeriesID = seriesID
             TelemetryService.shared.setContext(seriesID: seriesID)
@@ -1701,15 +1716,21 @@ struct SeriesView: View {
     private func openRound(_ round: SeriesRound) {
         guard let roundID = round.roundID else { return }
         Haptics.fire(.light)
-        appSession.activeRoundID = roundID
-        switch viewModel.linkedRoundNavigationTarget(for: round) {
-        case .lobby:
-            appSession.routeTo(.lobby)
-        case .liveRound:
-            appSession.routeTo(.liveRound)
-        case .roundOutcome:
-            appSession.roundOutcomeAllowsEditing = viewModel.isCommissioner
-            appSession.routeTo(.roundOutcome)
+        let target = viewModel.linkedRoundNavigationTarget(for: round)
+        Task {
+            if target == .lobby {
+                await viewModel.repairLinkedLobbyRosterIfNeeded(seriesRoundID: round.id)
+            }
+            appSession.activeRoundID = roundID
+            switch target {
+            case .lobby:
+                appSession.routeTo(.lobby)
+            case .liveRound:
+                appSession.routeTo(.liveRound)
+            case .roundOutcome:
+                appSession.roundOutcomeAllowsEditing = viewModel.isCommissioner
+                appSession.routeTo(.roundOutcome)
+            }
         }
     }
 

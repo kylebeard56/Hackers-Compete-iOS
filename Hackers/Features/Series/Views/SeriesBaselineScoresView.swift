@@ -598,16 +598,22 @@ struct SeriesMemberHandicapBreakdownView: View {
     private var currentCourseHandicap: Int? {
         guard let index = viewModel.effectiveHandicap(for: member.id),
               let tee = defaultCourseTee,
-              let segment = defaultCourse?.holeSegment,
-              let handicap = HandicapCalculator.courseHandicap(
-                index: index,
-                tee: tee,
-                segment: segment,
-                handicapStrokeBasis: viewModel.series.handicapConfig.strokeBasis
-              ) else {
+              let course = defaultCourse else {
             return nil
         }
-        return min(handicap, handicapConfig.maximumHandicap)
+        return SeriesCourseHandicapResolver.resolve(
+            effectiveIndex: index,
+            memberID: member.id,
+            memberName: member.name.fullName,
+            requestedTeeID: tee.id,
+            tee: tee,
+            courseID: course.courseID,
+            courseName: course.cachedName,
+            holeSegment: course.holeSegment,
+            entryFormat: .courseHandicap,
+            handicapStrokeBasis: viewModel.series.handicapConfig.strokeBasis,
+            maximumHandicap: handicapConfig.maximumHandicap
+        ).effectiveStrokes
     }
 
     private var defaultCourseContextText: String? {

@@ -41,6 +41,12 @@ extension AppSession {
             }
         case .minimumAppVersion:
             break
+#if SANDBOX
+        case .designStudio:
+            // The studio is intentionally local-only: no analytics context or
+            // production session state changes are made when it is opened.
+            break
+#endif
         }
         
         for p in prequeue {

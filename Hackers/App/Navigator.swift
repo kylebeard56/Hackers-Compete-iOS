@@ -16,6 +16,9 @@ enum Destination: Hashable {
     case liveRound
     case roundOutcome
     case series(id: String)
+    #if SANDBOX
+    case designStudio
+    #endif
 }
 
 enum OnboardingStep: Hashable {
@@ -33,6 +36,9 @@ class Navigator {
         case .liveRound:            LiveRound()
         case .roundOutcome:         RoundOutcomeView()
         case .series(let id):       SeriesView(seriesID: id)
+        #if SANDBOX
+        case .designStudio:         DesignStudioRootView()
+        #endif
         }
     }
 }
