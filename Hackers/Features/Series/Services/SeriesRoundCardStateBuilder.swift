@@ -60,7 +60,10 @@ enum SeriesRoundCardStateBuilder {
             sides = []
         }
 
-        let participantCount = snapshot.participants.filter { $0.presenceStatus != .noShow }.count
+        let activeParticipants = snapshot.participants.filter { $0.presenceStatus != .noShow }
+        let participantCount = activeParticipants.count
+        let totalParticipantCount = snapshot.participants.count
+        let substituteCount = activeParticipants.filter(\.isSubstitute).count
         return SeriesRoundCardViewState(
             id: context.id,
             canonicalRoundID: context.canonicalRoundID,
@@ -79,9 +82,12 @@ enum SeriesRoundCardStateBuilder {
             }) == true,
             sides: sides,
             viewer: viewerState(viewer: viewer, snapshot: snapshot, context: context),
-            participantCountLabel: participantCount > 0
-                ? "\(participantCount) player\(participantCount == 1 ? "" : "s")"
-                : nil,
+            participantCountLabel: SeriesRoundCardFormatting.participantCountLabel(
+                playing: participantCount,
+                total: totalParticipantCount,
+                lifecycle: context.lifecycle
+            ),
+            substituteCountLabel: SeriesRoundCardFormatting.substituteCountLabel(substituteCount),
             primaryAction: context.primaryAction,
             isAdjusted: context.isAdjusted,
             setupDiffers: context.setupDiffers
@@ -183,14 +189,7 @@ enum SeriesRoundCardStateBuilder {
         viewerParticipantID: String?
     ) -> [SeriesRoundCardSide] {
         presentation.sides.map { side in
-            let candidates: [RoundParticipant]
-            if context.configuration.defaultContributorRole == .selectedForRound {
-                let selected = side.participants.filter(side.isParticipantActive)
-                candidates = selected.isPopulated ? selected : side.participants
-            } else {
-                candidates = side.participants
-            }
-            let sorted = candidates.sorted {
+            let sorted = side.participants.sorted {
                 compareParticipants($0, $1, snapshot: snapshot, configuration: context.configuration)
             }
             let result: SeriesRoundCardResult
@@ -206,10 +205,10 @@ enum SeriesRoundCardStateBuilder {
             return SeriesRoundCardSide(
                 id: side.id,
                 title: side.title,
-                subtitle: side.subtitle,
+                subtitle: nil,
                 scoreLabel: side.scoreLabel,
                 result: result,
-                contributors: sorted.prefix(2).map {
+                contributors: sorted.map {
                     contributor(
                         participant: $0,
                         snapshot: snapshot,
@@ -217,10 +216,11 @@ enum SeriesRoundCardStateBuilder {
                         role: context.configuration.scoreOwnerScope == .individual
                             ? context.configuration.defaultContributorRole
                             : .sharedScoreMember,
-                        isViewer: $0.id == viewerParticipantID
+                        isViewer: $0.id == viewerParticipantID,
+                        countsTowardScore: side.isParticipantActive($0)
                     )
                 },
-                hiddenContributorCount: max(0, sorted.count - 2)
+                hiddenContributorCount: 0
             )
         }
     }
@@ -244,16 +244,16 @@ enum SeriesRoundCardStateBuilder {
                 snapshot.participants.first(where: { $0.id == id })
             }
             let selectedIDs = Set(row.countingParticipantIDs)
-            let candidates = participants
-                .filter { context.configuration.defaultContributorRole != .selectedForRound || selectedIDs.isEmpty || selectedIDs.contains($0.id) }
-                .sorted { compareParticipants($0, $1, snapshot: snapshot, configuration: context.configuration) }
+            let candidates = participants.sorted {
+                compareParticipants($0, $1, snapshot: snapshot, configuration: context.configuration)
+            }
             return SeriesRoundCardSide(
                 id: row.scoringUnitID,
                 title: ownerTitle(row: row, snapshot: snapshot),
                 subtitle: "\(ordinal(index + 1)) place",
                 scoreLabel: SeriesRoundCardFormatting.scoreLabel(total: row.total, highestWins: context.configuration.highestWins),
                 result: index == 0 ? (context.lifecycle == .live ? .leading : .winner) : .none,
-                contributors: candidates.prefix(2).map {
+                contributors: candidates.map {
                     contributor(
                         participant: $0,
                         snapshot: snapshot,
@@ -261,10 +261,11 @@ enum SeriesRoundCardStateBuilder {
                         role: context.configuration.scoreOwnerScope == .individual
                             ? context.configuration.defaultContributorRole
                             : .sharedScoreMember,
-                        isViewer: $0.id == viewerParticipantID
+                        isViewer: $0.id == viewerParticipantID,
+                        countsTowardScore: selectedIDs.isEmpty || selectedIDs.contains($0.id)
                     )
                 },
-                hiddenContributorCount: max(0, candidates.count - 2)
+                hiddenContributorCount: 0
             )
         }
     }
@@ -274,7 +275,8 @@ enum SeriesRoundCardStateBuilder {
         snapshot: RoundSnapshot,
         configuration: SeriesRoundCardResolvedConfiguration,
         role: SeriesRoundCardContributorRole,
-        isViewer: Bool
+        isViewer: Bool,
+        countsTowardScore: Bool
     ) -> SeriesRoundCardContributor {
         .init(
             id: participant.id,
@@ -288,7 +290,8 @@ enum SeriesRoundCardStateBuilder {
             progressLabel: participantProgressLabel(participantID: participant.id, snapshot: snapshot),
             role: role,
             isViewer: isViewer,
-            isSubstitute: participant.isSubstitute
+            isSubstitute: participant.isSubstitute,
+            countsTowardScore: countsTowardScore
         )
     }
 
@@ -331,9 +334,11 @@ enum SeriesRoundCardStateBuilder {
     ) -> Bool {
         let lhsValue = participantSortValue(lhs.id, snapshot: snapshot, configuration: configuration)
         let rhsValue = participantSortValue(rhs.id, snapshot: snapshot, configuration: configuration)
-        if lhsValue != rhsValue {
+        if let lhsValue, let rhsValue, lhsValue != rhsValue {
             return configuration.highestWins ? lhsValue > rhsValue : lhsValue < rhsValue
         }
+        if lhsValue != nil, rhsValue == nil { return true }
+        if lhsValue == nil, rhsValue != nil { return false }
         return lhs.name.fullName.localizedCaseInsensitiveCompare(rhs.name.fullName) == .orderedAscending
     }
 
@@ -341,16 +346,22 @@ enum SeriesRoundCardStateBuilder {
         _ id: String,
         snapshot: RoundSnapshot,
         configuration: SeriesRoundCardResolvedConfiguration
-    ) -> Double {
+    ) -> Double? {
         let entries = snapshot.scoring.filter { $0.scoringUnitID == id }
         if configuration.highestWins {
-            return entries.compactMap(\.points).reduce(0, +)
+            let points = entries.compactMap(\.points)
+            return points.isPopulated ? points.reduce(0, +) : nil
         }
-        let relative = entries.compactMap(\.relativeToPar).reduce(0, +)
+        let relative = entries.compactMap(\.relativeToPar)
+        let strokes = entries.compactMap(\.strokes)
+        guard relative.isPopulated || strokes.isPopulated else { return nil }
         let handicap = configuration.scoreBasis == .net
             ? snapshot.participants.first(where: { $0.id == id })?.adjustedHandicap ?? 0
             : 0
-        return Double(relative - handicap)
+        if relative.isPopulated {
+            return Double(relative.reduce(0, +) - handicap)
+        }
+        return Double(strokes.reduce(0, +) - handicap)
     }
 
     private static func ownerTitle(row: ScoringRow, snapshot: RoundSnapshot) -> String {

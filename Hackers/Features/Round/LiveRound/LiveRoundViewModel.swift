@@ -149,6 +149,7 @@ final class LiveRoundViewModel: ObservableObject, Loggable {
     @Published private(set) var visibleGroupSwitchRequest: VisibleGroupSwitchRequest?
     @Published private(set) var resolvedSeriesID: String?
     @Published private(set) var isSeriesCommissioner: Bool = false
+    @Published private(set) var roundManagementAccess: RoundManagementAccess = .none
     @Published private(set) var seriesScoreboardSnapshot: SeriesScoreboardSnapshot?
     @Published private(set) var matchupProbabilities: [String: MatchupProbability] = [:]
     @Published var selectedTeeID: String?
@@ -162,7 +163,12 @@ final class LiveRoundViewModel: ObservableObject, Loggable {
     /// source of truth for "which hole is being viewed."
     @Published var currentHoleIndex: Int = 0
     @Published var scoreBasis: ScoreBasis = .gross
-    @Published var matchupScoreBasis: ScoreBasis = .gross
+    @Published var matchupScoreBasis: ScoreBasis = .gross {
+        didSet {
+            guard matchupScoreBasis != oldValue else { return }
+            scheduleMatchupProbabilityRefresh()
+        }
+    }
     @Published var leaderboardMode: LeaderboardMode = .individual
     
     var handicapsEnabled: Bool {
@@ -182,9 +188,10 @@ final class LiveRoundViewModel: ObservableObject, Loggable {
     }
 
     var isCurrentUserHost: Bool {
-        guard let id = currentParticipantID else { return false }
-        return snapshot.participants.first(where: { $0.id == id })?.isHost == true
+        roundManagementAccess.isHost
     }
+
+    var canManageRound: Bool { roundManagementAccess.canManageRound }
     
     /// Pin/favorite players to top of leaderboard
     @Published var pinnedParticipantIDs: Set<String> = []
@@ -237,6 +244,10 @@ final class LiveRoundViewModel: ObservableObject, Loggable {
     /// Participant-level format results for Solo leaderboard contribution views.
     private var cachedIndividualContributionEngineResults: [String: ScoringResult] = [:]
     private var cachedPlayerSimulations: [String: PlayerProjectionSimulation] = [:]
+    private var matchupProbabilityTask: Task<Void, Never>?
+    private var matchupProbabilityTaskRevision: String?
+    private var matchupProbabilityResultRevision: String?
+    private var isMatchupProbabilityPrecomputationEnabled = false
     private var hasPerformedInitialHoleNudge = false
     private var hasSelectedInitialVisibleGroupStartingHole = false
     private var loadedSeriesAccessRoundID: String?
@@ -306,6 +317,7 @@ final class LiveRoundViewModel: ObservableObject, Loggable {
                 }
 
                 self.applyScoreBasisDefaultsForCurrentSnapshot(force: false)
+                self.scheduleMatchupProbabilityRefresh()
 
                 if !self.hasInitializedVisibilitySelection && self.visibleParticipantIDs.isEmpty && !s.participants.isEmpty {
                     self.visibleParticipantIDs = Set(s.participants.map(\.id))
@@ -356,6 +368,7 @@ final class LiveRoundViewModel: ObservableObject, Loggable {
         updateSelectedTeeIfNeeded()
         refreshSeriesScoreboardProjection()
         applyScoreBasisDefaultsForCurrentSnapshot(force: true)
+        scheduleMatchupProbabilityRefresh()
         if !hasInitializedVisibilitySelection && visibleParticipantIDs.isEmpty && !snapshot.participants.isEmpty {
             visibleParticipantIDs = Set(snapshot.participants.map(\.id))
             lastAppliedVisibleParticipantIDs = visibleParticipantIDs
@@ -537,12 +550,12 @@ final class LiveRoundViewModel: ObservableObject, Loggable {
         !isSpectator && actualParticipant != nil
     }
 
-    private var canProxySeriesGroupScoring: Bool {
-        isSeriesCommissioner && resolvedSeriesID?.isPopulated == true
+    private var canProxyManagedGroupScoring: Bool {
+        !isSpectator && canManageRound
     }
 
     var canProxyVisibleGroupScoring: Bool {
-        canProxySeriesGroupScoring && visibleTeeGroupID?.isPopulated == true
+        canProxyManagedGroupScoring && visibleTeeGroupID?.isPopulated == true
     }
 
     var canScoreVisibleGroup: Bool {
@@ -554,11 +567,11 @@ final class LiveRoundViewModel: ObservableObject, Loggable {
     }
 
     var canChangeVisibleGroup: Bool {
-        isSeriesCommissioner && resolvedSeriesID?.isPopulated == true && orderedTeeGroups.count > 1
+        !isSpectator && canManageRound && orderedTeeGroups.count > 1
     }
 
     var canChangeVisibleGroupStartingHole: Bool {
-        !isSpectator && currentParticipantID != nil && visibleTeeGroup != nil
+        !isSpectator && (currentParticipantID != nil || canManageRound) && visibleTeeGroup != nil
     }
 
     func canEditScorecard(participant: RoundParticipant) -> Bool {
@@ -582,6 +595,7 @@ final class LiveRoundViewModel: ObservableObject, Loggable {
     }
 
     func selectVisibleTeeGroup(_ groupID: String) {
+        guard canChangeVisibleGroup || groupID == actualTeeGroupID else { return }
         guard orderedTeeGroups.contains(where: { $0.id == groupID }) else { return }
         let targetHoleNumber = targetHoleNumber(forVisibleGroupID: groupID)
         visibleTeeGroupID = groupID
@@ -4731,16 +4745,21 @@ final class LiveRoundViewModel: ObservableObject, Loggable {
         // If guest is spectating/playing without auth, we use ephemeral participant id.
         if let ephemeral = appSession?.ephemeralParticipantID, ephemeral.isPopulated {
             currentParticipantID = ephemeral
+            applySeriesAccessOverrideIfAvailable()
             syncVisibleTeeGroupIfNeeded()
             updateSelectedTeeIfNeeded()
             return
         }
         
-        if currentParticipantID.exists { return }
+        if currentParticipantID.exists {
+            applySeriesAccessOverrideIfAvailable()
+            return
+        }
         
         guard let primary = await AppData.shared.getPrimaryPlayer() else { return }
         if let p = snapshot.participants.first(where: { $0.playerID == primary.id }) {
             currentParticipantID = p.id
+            applySeriesAccessOverrideIfAvailable()
             syncVisibleTeeGroupIfNeeded()
             updateSelectedTeeIfNeeded()
         }
@@ -4752,6 +4771,7 @@ final class LiveRoundViewModel: ObservableObject, Loggable {
         visibleTeeGroupID = nil
         resolvedSeriesID = nil
         isSeriesCommissioner = false
+        roundManagementAccess = .none
         seriesScoreboardSnapshot = nil
         liveSeriesScoreboardContext = nil
         loadedSeriesAccessRoundID = nil
@@ -4768,7 +4788,7 @@ final class LiveRoundViewModel: ObservableObject, Loggable {
             return actualTeeGroupID
         }
 
-        if canProxySeriesGroupScoring {
+        if canProxyManagedGroupScoring {
             return orderedTeeGroups.first?.id
         }
 
@@ -4776,9 +4796,25 @@ final class LiveRoundViewModel: ObservableObject, Loggable {
     }
 
     private func applySeriesAccessOverrideIfAvailable() {
-        guard let seriesAccessOverride else { return }
-        resolvedSeriesID = seriesAccessOverride.seriesID
-        isSeriesCommissioner = seriesAccessOverride.isCommissioner
+        if let seriesAccessOverride {
+            resolvedSeriesID = seriesAccessOverride.seriesID
+            isSeriesCommissioner = seriesAccessOverride.isCommissioner
+            roundManagementAccess = RoundManagementAccess(
+                isHost: actualParticipant?.isHost == true,
+                isSeriesCommissioner: seriesAccessOverride.isCommissioner,
+                isRoundCreator: false
+            )
+            return
+        }
+
+        guard let actualParticipant else { return }
+        let participantAccess = RoundManagementAccess.resolve(
+            snapshot: snapshot,
+            currentUserID: actualParticipant.userID,
+            currentPlayerID: actualParticipant.playerID
+        )
+        roundManagementAccess.isHost = participantAccess.isHost
+        roundManagementAccess.isRoundCreator = participantAccess.isRoundCreator
     }
 
     private func syncVisibleTeeGroupIfNeeded() {
@@ -4825,6 +4861,7 @@ final class LiveRoundViewModel: ObservableObject, Loggable {
         if let seriesAccessOverride {
             resolvedSeriesID = seriesAccessOverride.seriesID
             isSeriesCommissioner = seriesAccessOverride.isCommissioner
+            applySeriesAccessOverrideIfAvailable()
             if let seriesID = seriesAccessOverride.seriesID, seriesID.isPopulated {
                 await loadLiveSeriesScoreboardContext(seriesID: seriesID)
             } else {
@@ -4847,6 +4884,12 @@ final class LiveRoundViewModel: ObservableObject, Loggable {
               seriesID.isPopulated else {
             resolvedSeriesID = nil
             isSeriesCommissioner = false
+            let (currentUserID, currentPlayerID) = await currentUserAndPlayerIDs()
+            roundManagementAccess = .resolve(
+                snapshot: snapshot,
+                currentUserID: currentUserID,
+                currentPlayerID: currentPlayerID
+            )
             liveSeriesScoreboardContext = nil
             seriesScoreboardSnapshot = nil
             syncVisibleTeeGroupIfNeeded()
@@ -4861,12 +4904,14 @@ final class LiveRoundViewModel: ObservableObject, Loggable {
         let activeMembers = members.filter(\.isActive)
         let (currentUserID, currentPlayerID) = await currentUserAndPlayerIDs()
 
-        let isOwnerCommissioner = currentUserID?.isPopulated == true && series?.commissionerUserID == currentUserID
-        let isPlayerCommissioner = currentPlayerID?.isPopulated == true
-            && (series?.commissionerPlayerID == currentPlayerID
-                || activeMembers.first(where: { $0.playerID == currentPlayerID })?.role == .commissioner)
-
-        isSeriesCommissioner = isOwnerCommissioner || isPlayerCommissioner
+        roundManagementAccess = .resolve(
+            snapshot: snapshot,
+            currentUserID: currentUserID,
+            currentPlayerID: currentPlayerID,
+            series: series,
+            members: activeMembers
+        )
+        isSeriesCommissioner = roundManagementAccess.isSeriesCommissioner
         await loadLiveSeriesScoreboardContext(seriesID: seriesID, resolvedSeries: series, resolvedMembers: members)
         syncVisibleTeeGroupIfNeeded()
         updateSelectedTeeIfNeeded(force: true)
@@ -4939,6 +4984,8 @@ final class LiveRoundViewModel: ObservableObject, Loggable {
             currentRoundMappings: mappings,
             canonicalResults: verifiedResults
         )
+        cachedPlayerSimulations.removeAll()
+        scheduleMatchupProbabilityRefresh()
         refreshSeriesScoreboardProjection()
     }
 
@@ -4957,6 +5004,12 @@ final class LiveRoundViewModel: ObservableObject, Loggable {
         !(snapshot.isSecretScoring && !snapshot.areScoresRevealed)
     }
 
+    /// Starts keeping matchup estimates warm independently of whether the Matchups tab is visible.
+    func startMatchupProbabilityPrecomputation() {
+        isMatchupProbabilityPrecomputationEnabled = true
+        scheduleMatchupProbabilityRefresh()
+    }
+
     func projectionRevision(scoreBasis: ScoreBasis) -> String {
         let scoreRevision = snapshot.scoring
             .sorted { $0.id < $1.id }
@@ -4969,7 +5022,37 @@ final class LiveRoundViewModel: ObservableObject, Loggable {
                 ].joined(separator: ":")
             }
             .joined(separator: "|")
-        return "\(snapshot.round.id)|\(scoreBasis.rawValue)|\(scoreRevision)"
+        let participantRevision = snapshot.participants
+            .sorted { $0.id < $1.id }
+            .map {
+                [
+                    $0.id,
+                    $0.teeBoxID,
+                    String($0.lockedHandicapAllowance),
+                    $0.resolvedPresenceStatus.rawValue,
+                    $0.isSubstitute ? "1" : "0"
+                ].joined(separator: ":")
+            }
+            .joined(separator: "|")
+        let matchupRevision = (snapshot.roundSegment?.matchups ?? [])
+            .sorted { $0.id < $1.id }
+            .map {
+                "\($0.id):\($0.effectiveMode.rawValue):\($0.pairingIDs().joined(separator: ","))"
+            }
+            .joined(separator: "|")
+        let historyRevision = liveSeriesScoreboardContext?.canonicalResults
+            .sorted { $0.id < $1.id }
+            .map { "\($0.id):\($0.semanticHash)" }
+            .joined(separator: "|") ?? "-"
+        return [
+            snapshot.round.id,
+            scoreBasis.rawValue,
+            snapshot.areScoresRevealed ? "revealed" : "hidden",
+            participantRevision,
+            matchupRevision,
+            historyRevision,
+            scoreRevision
+        ].joined(separator: "|")
     }
 
     func playerProjection(
@@ -4981,12 +5064,64 @@ final class LiveRoundViewModel: ObservableObject, Loggable {
     }
 
     func refreshMatchupProbabilities() async {
-        guard !(snapshot.isSecretScoring && !snapshot.areScoresRevealed) else {
+        isMatchupProbabilityPrecomputationEnabled = true
+        let task = scheduleMatchupProbabilityRefresh()
+        await task?.value
+    }
+
+    @discardableResult
+    private func scheduleMatchupProbabilityRefresh() -> Task<Void, Never>? {
+        guard isMatchupProbabilityPrecomputationEnabled else { return nil }
+
+        let expectedMode = snapshot.expectedMatchupMode
+        let hasValidMatchup = snapshot.configuration.resolvedCompetitionScope == .matchup
+            && (snapshot.roundSegment?.matchups ?? []).contains {
+                $0.effectiveMode == expectedMode && $0.isValid
+            }
+        guard shouldShowMatchupProbabilities, hasValidMatchup else {
+            matchupProbabilityTask?.cancel()
+            matchupProbabilityTask = nil
+            matchupProbabilityTaskRevision = nil
+            matchupProbabilityResultRevision = nil
             matchupProbabilities = [:]
-            return
+            return nil
         }
 
         let revision = projectionRevision(scoreBasis: matchupScoreBasis)
+        if matchupProbabilityResultRevision == revision {
+            return nil
+        }
+        if matchupProbabilityTaskRevision == revision {
+            return matchupProbabilityTask
+        }
+
+        matchupProbabilityTask?.cancel()
+        matchupProbabilityTaskRevision = revision
+        matchupProbabilities = [:]
+
+        let task = Task { [weak self] in
+            do {
+                try await Task.sleep(for: .milliseconds(120))
+            } catch {
+                self?.finishMatchupProbabilityTask(revision: revision)
+                return
+            }
+            guard let self else { return }
+            await self.computeMatchupProbabilities(revision: revision)
+            self.finishMatchupProbabilityTask(revision: revision)
+        }
+        matchupProbabilityTask = task
+        return task
+    }
+
+    private func finishMatchupProbabilityTask(revision: String) {
+        guard matchupProbabilityTaskRevision == revision else { return }
+        matchupProbabilityTask = nil
+        matchupProbabilityTaskRevision = nil
+    }
+
+    private func computeMatchupProbabilities(revision: String) async {
+        guard revision == projectionRevision(scoreBasis: matchupScoreBasis), !Task.isCancelled else { return }
         let template = snapshot.resolvedActiveTemplate
         guard template.inputMode == .strokes, template.scoreSource == .individual else {
             matchupProbabilities = Dictionary(uniqueKeysWithValues: orderedMatchupSections.map {
@@ -4995,6 +5130,7 @@ final class LiveRoundViewModel: ObservableObject, Loggable {
                     reason: "Odds aren’t available for custom or shared-score formats."
                 ))
             })
+            matchupProbabilityResultRevision = revision
             return
         }
 
@@ -5016,6 +5152,7 @@ final class LiveRoundViewModel: ObservableObject, Loggable {
             )
             guard revision == projectionRevision(scoreBasis: matchupScoreBasis), !Task.isCancelled else { return }
             matchupProbabilities = values
+            matchupProbabilityResultRevision = revision
         } catch {
             guard !(error is CancellationError) else { return }
             matchupProbabilities = [:]
@@ -5032,7 +5169,6 @@ final class LiveRoundViewModel: ObservableObject, Loggable {
         guard let input = projectionInput(for: participant, scoreBasis: scoreBasis) else { return nil }
 
         do {
-            try await Task.sleep(for: .milliseconds(180))
             let seed = ProjectionSeed.make(cacheKey)
             let result = try await RoundProjectionSimulator.shared.simulate(input: input, seed: seed)
             guard revision == projectionRevision(scoreBasis: scoreBasis), !Task.isCancelled else { return nil }
@@ -5429,8 +5565,8 @@ final class LiveRoundViewModel: ObservableObject, Loggable {
     private func currentUserAndPlayerIDs() async -> (String?, String?) {
         let user = await AppData.shared.user
         let primaryPlayer = await AppData.shared.getPrimaryPlayer()
-        let userID = user?.id ?? actualParticipant?.userID
-        let playerID = primaryPlayer?.id ?? actualParticipant?.playerID
+        let userID = actualParticipant?.userID ?? user?.id
+        let playerID = actualParticipant?.playerID ?? primaryPlayer?.id
         return (userID, playerID)
     }
 

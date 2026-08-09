@@ -25,6 +25,7 @@ enum HackersError: Error {
     // MARK: - Round / Lobby
     
     case playerNotFound
+    case hostTransferRequiresCurrentHost
     
     // MARK: - Play
     

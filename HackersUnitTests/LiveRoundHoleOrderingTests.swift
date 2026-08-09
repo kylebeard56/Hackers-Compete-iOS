@@ -382,7 +382,44 @@ final class LiveRoundViewModelHoleOrderingTests: XCTestCase {
         XCTAssertEqual(vm.visibleTeeGroupID, "g1")
         XCTAssertEqual(vm.visibleTeeGroupParticipants.map(\.id), ["p1", "p2"])
         XCTAssertTrue(vm.canScoreVisibleGroup)
+        XCTAssertTrue(vm.canChangeVisibleGroup)
+        XCTAssertTrue(vm.canChangeVisibleGroupStartingHole)
         XCTAssertFalse(vm.canCompleteActualGroup)
+    }
+
+    func testStandaloneHostCanManageAndProxyOtherTeeGroups() async {
+        let vm = await boundViewModel(
+            snapshot: Self.makeMultiGroupSnapshot(),
+            participantID: "p1"
+        )
+
+        XCTAssertTrue(vm.isCurrentUserHost)
+        XCTAssertTrue(vm.canManageRound)
+        XCTAssertTrue(vm.canChangeVisibleGroup)
+
+        vm.selectVisibleTeeGroup("g2")
+
+        XCTAssertEqual(vm.visibleTeeGroupID, "g2")
+        XCTAssertTrue(vm.canProxyVisibleGroupScoring)
+        XCTAssertTrue(vm.canScoreVisibleGroup)
+        XCTAssertFalse(vm.canCompleteActualGroup)
+    }
+
+    func testOrdinaryParticipantCannotSwitchOrProxyOtherTeeGroups() async {
+        let vm = await boundViewModel(
+            snapshot: Self.makeMultiGroupSnapshot(),
+            participantID: "p2",
+            useFirstParticipantIfMissing: false
+        )
+
+        XCTAssertFalse(vm.isCurrentUserHost)
+        XCTAssertFalse(vm.canManageRound)
+        XCTAssertFalse(vm.canChangeVisibleGroup)
+
+        vm.selectVisibleTeeGroup("g2")
+
+        XCTAssertEqual(vm.visibleTeeGroupID, "g1")
+        XCTAssertFalse(vm.canProxyVisibleGroupScoring)
     }
 
     func testScorecardEditPermissions_onlyActualGroupCanEdit() async {

@@ -95,6 +95,7 @@ struct SeriesRoundCardContributor: Identifiable, Codable, Equatable {
     var role: SeriesRoundCardContributorRole
     var isViewer: Bool
     var isSubstitute: Bool
+    var countsTowardScore: Bool? = nil
 }
 
 struct SeriesRoundCardSide: Identifiable, Codable, Equatable {
@@ -125,6 +126,7 @@ struct SeriesRoundCardViewState: Identifiable, Codable, Equatable {
     var sides: [SeriesRoundCardSide]
     var viewer: SeriesRoundCardViewerState?
     var participantCountLabel: String?
+    var substituteCountLabel: String? = nil
     var primaryAction: SeriesRoundCardPrimaryAction
     var isAdjusted: Bool
     var setupDiffers: Bool
@@ -133,7 +135,7 @@ struct SeriesRoundCardViewState: Identifiable, Codable, Equatable {
         switch lifecycle {
         case .upcoming: return "Upcoming"
         case .lobby: return "Lobby open"
-        case .live: return isProvisional ? "Live · Provisional" : "Live"
+        case .live: return "Live"
         case .completed: return resolvedResultLabel ?? "Completed"
         case .needsReview: return "Needs review"
         case .finalized: return resolvedResultLabel ?? "Final"
@@ -319,6 +321,14 @@ enum V2SeriesRoundCardAdapter {
 }
 
 enum SeriesRoundCardFormatting {
+    static func playerName(_ fullName: String) -> String {
+        let name = Name(fullName).normalizedForStorage
+        let given = name.givenName.trimmingCharacters(in: .whitespacesAndNewlines)
+        let family = name.familyName.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard let initial = family.first else { return given }
+        return "\(given) \(String(initial).uppercased())"
+    }
+
     static func scheduleLabel(
         lifecycle: SeriesRoundCardLifecycle,
         scheduledAt: Time?,
@@ -344,5 +354,26 @@ enum SeriesRoundCardFormatting {
         let value = Int(total.rounded())
         if value == 0 { return "E" }
         return value > 0 ? "+\(value)" : "\(value)"
+    }
+
+    static func participantCountLabel(
+        playing: Int,
+        total: Int,
+        lifecycle: SeriesRoundCardLifecycle
+    ) -> String? {
+        guard total > 0 else { return nil }
+        let verb: String
+        switch lifecycle {
+        case .completed, .needsReview, .finalized, .archived:
+            verb = "played"
+        case .upcoming, .lobby, .live, .canceled:
+            verb = "playing"
+        }
+        return "\(min(playing, total)) of \(total) \(verb)"
+    }
+
+    static func substituteCountLabel(_ count: Int) -> String? {
+        guard count > 0 else { return nil }
+        return "\(count) \(count == 1 ? "sub" : "subs")"
     }
 }

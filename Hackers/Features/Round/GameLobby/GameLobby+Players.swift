@@ -516,7 +516,7 @@ extension GameLobby {
                     Text("Strokes")
                         .fontStyle(kFontName, size: 13, weight: .medium)
                         .foregroundStyle(Color.neutral)
-                        .frame(width: 64) // 48 + 8pt padding each size for handicap field
+                        .frame(width: seriesHandicapLobbyLockActive && isSeriesCommissioner ? 112 : 64)
                 }
             }
             
@@ -547,19 +547,32 @@ extension GameLobby {
 
                     if snapshot.configuration.useHandicaps {
                         let seriesLock = seriesHandicapLobbyLockActive
-                        let lockedForUser = seriesLock && !isSeriesCommissioner
                         let rosterEntryFormat = snapshot.configuration.handicapEntryFormat
                         HandicapTextField(
                             id: participant.id,
                             initialValue: participant.adjustedHandicap,
-                            entryValue: rosterEntryFormat == .courseHandicap
-                                ? participant.handicapIndex ?? Double(participant.originalHandicap)
-                                : participant.handicapIndex,
-                            entryFormat: rosterEntryFormat,
+                            entryValue: seriesLock
+                                ? nil
+                                : (rosterEntryFormat == .courseHandicap
+                                    ? participant.handicapIndex ?? Double(participant.originalHandicap)
+                                    : participant.handicapIndex),
+                            entryFormat: seriesLock ? .strokes : rosterEntryFormat,
                             focusedField: $focus,
                             palette: palette,
                             maximumValue: seriesLock ? effectiveSeriesLeagueHandicapMaximum : nil,
                             onDebouncedEdit: { newValue in
+                                if seriesLock {
+                                    guard isSeriesCommissioner else { return }
+                                    let maximum = effectiveSeriesLeagueHandicapMaximum ?? 36
+                                    let updated = participant.applyingLeagueHandicapOverride(
+                                        Int(newValue.rounded()),
+                                        maximum: maximum
+                                    )
+                                    guard updated.adjustedHandicap != participant.adjustedHandicap else { return }
+                                    Task { try? await roundSession.update(participant: updated) }
+                                    return
+                                }
+
                                 var updated = HandicapCalculator.participant(
                                     participant,
                                     applying: newValue,
@@ -572,16 +585,16 @@ extension GameLobby {
                                    participant.handicapIndex == updated.handicapIndex {
                                     return
                                 }
-                                if seriesLock && isSeriesCommissioner {
-                                    updated.originalHandicap = participant.originalHandicap
-                                    updated.handicapIndex = participant.handicapIndex
-                                } else {
-                                    updated.leagueHandicapStrokesAtCreation = nil
-                                }
+                                updated.leagueHandicapStrokesAtCreation = nil
                                 Task { try? await roundSession.update(participant: updated) }
                             },
-                            isSeriesHandicapLocked: lockedForUser,
-                            leagueHandicapBaseline: lockedForUser ? nil : participant.leagueHandicapStrokesAtCreation
+                            onRevertOverride: {
+                                guard let updated = participant.restoringLeagueHandicapComputedBaseline() else { return }
+                                Task { try? await roundSession.update(participant: updated) }
+                            },
+                            isSeriesHandicapLocked: seriesLock,
+                            canOverrideSeriesHandicap: seriesLock && isSeriesCommissioner,
+                            leagueHandicapBaseline: participant.leagueHandicapComputedBaseline
                         )
                     }
                 }

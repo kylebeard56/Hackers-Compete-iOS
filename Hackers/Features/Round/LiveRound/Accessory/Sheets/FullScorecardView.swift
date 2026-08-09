@@ -21,14 +21,57 @@ private extension View {
     }
 }
 
+enum FullScorecardPresentation: Equatable {
+    case modal
+    case embeddedLiveTable
+}
+
+enum ScorecardInteractionMode: String, CaseIterable, Equatable {
+    case view
+    case edit
+
+    var label: String { rawValue.capitalized }
+
+    func allowsScoreEditing(
+        presentation: FullScorecardPresentation,
+        hasPermission: Bool
+    ) -> Bool {
+        guard hasPermission else { return false }
+        switch presentation {
+        case .modal:
+            return true
+        case .embeddedLiveTable:
+            return self == .edit
+        }
+    }
+}
+
+@MainActor
+final class FullScorecardPresentationState: ObservableObject {
+    @Published var interactionMode: ScorecardInteractionMode = .view
+    @Published var isRotated = false
+    @Published var showPar = true
+    @Published var showYardage = true
+    @Published var showHandicap = true
+    @Published var showPlayerVisibilitySheet = false
+
+    func resetForTabExit() {
+        interactionMode = .view
+        isRotated = false
+        showPlayerVisibilitySheet = false
+    }
+}
+
 struct FullScorecardView: View {
     @Environment(\.dismiss) private var dismiss
     @Environment(\.colorScheme) private var colorScheme
     
-    @ObservedObject var viewModel: LiveRoundViewModel
+    @ObservedObject private var viewModel: LiveRoundViewModel
+    @StateObject private var presentationState: FullScorecardPresentationState
     let participant: RoundParticipant
-    var allowsScoreEditing: Bool = true
-    var initialSelectedScoringUnitID: String? = nil
+    let allowsScoreEditing: Bool
+    let initialSelectedScoringUnitID: String?
+    let presentation: FullScorecardPresentation
     
     @State private var selectedParticipantID: String?
     @State private var horizontalOffset: CGFloat = 0
@@ -38,15 +81,10 @@ struct FullScorecardView: View {
     @State private var directionalScrollDistance: CGFloat = 0
     @State private var isFloatingToolbarVisible = true
     @State private var isUserDraggingVertically = false
-    @State private var isRotated = false
-    @State private var showPar = true
-    @State private var showYardage = true
-    @State private var showHandicap = true
     @State private var scoreDisplayMode: ScorecardScoringDisplay = .strokes
     @State private var scoreEditAnchor: ScoreEditAnchor?
     @State private var scoreEditCustomText: String = ""
     @State private var scoreEditShowCustomPrompt = false
-    @State private var showScorecardVisibilitySheet = false
     @State private var editVisibilityPage: Int? = 0  // 0 = toggles, 1 = players
     @State private var rightPanelContent: RightPanelContent? = nil
     private let layout = GridLayout()
@@ -63,8 +101,32 @@ struct FullScorecardView: View {
     private var orderedParticipants: [LiveRoundViewModel.LeaderboardRow] {
         viewModel.scorecardParticipants
     }
+
+    private var isRotated: Bool { presentationState.isRotated }
+    private var showPar: Bool { presentationState.showPar }
+    private var showYardage: Bool { presentationState.showYardage }
+    private var showHandicap: Bool { presentationState.showHandicap }
+    private var usesExplicitEditMode: Bool { presentation == .embeddedLiveTable }
     
     var kHeaderTextColor: Color { palette.backgroundColor }
+
+    init(
+        viewModel: LiveRoundViewModel,
+        participant: RoundParticipant,
+        allowsScoreEditing: Bool = true,
+        initialSelectedScoringUnitID: String? = nil,
+        presentation: FullScorecardPresentation = .modal,
+        presentationState: FullScorecardPresentationState? = nil
+    ) {
+        _viewModel = ObservedObject(wrappedValue: viewModel)
+        _presentationState = StateObject(
+            wrappedValue: presentationState ?? FullScorecardPresentationState()
+        )
+        self.participant = participant
+        self.allowsScoreEditing = allowsScoreEditing
+        self.initialSelectedScoringUnitID = initialSelectedScoringUnitID
+        self.presentation = presentation
+    }
     
     // MARK: - Main Body ✅
     
@@ -76,7 +138,9 @@ struct FullScorecardView: View {
             
             ZStack {
                 VStack(spacing: layout.sectionSpacing) {
-                    topBar
+                    if presentation == .modal || isRotated {
+                        topBar
+                    }
                     
                     Group {
                         if isRotated {
@@ -112,7 +176,7 @@ struct FullScorecardView: View {
                         }
                     }
                 }
-                .padding(.top, layout.topPadding)
+                .padding(.top, presentation == .embeddedLiveTable && !isRotated ? 0 : layout.topPadding)
             }
             //.padding(layout.screenEdgePadding)
             .rotationEffect(.degrees(isRotated ? 90 : 0))
@@ -123,7 +187,7 @@ struct FullScorecardView: View {
             .position(x: geom.size.width / 2, y: geom.size.height / 2)
             .animation(.easeInOut(duration: 0.25), value: isRotated)
         }
-        .background(viewModel.theme.color.opacity(0.1)) // Add a tad more color
+        .background(viewModel.theme.color.opacity(presentation == .embeddedLiveTable ? 0.06 : 0.1))
         .onAppear {
             viewModel.set(snapshot: viewModel.snapshot)
             if selectedParticipantID == nil {
@@ -138,8 +202,16 @@ struct FullScorecardView: View {
         .onChange(of: verticalOffset) { _, newValue in
             handleVerticalScrollChange(newValue)
         }
-        .sheet(isPresented: $showScorecardVisibilitySheet) {
-            ScorecardVisibilitySheet(viewModel: viewModel, onDismiss: { showScorecardVisibilitySheet = false })
+        .onDisappear {
+            if presentation == .embeddedLiveTable {
+                presentationState.resetForTabExit()
+            }
+        }
+        .sheet(isPresented: $presentationState.showPlayerVisibilitySheet) {
+            ScorecardVisibilitySheet(
+                viewModel: viewModel,
+                onDismiss: { presentationState.showPlayerVisibilitySheet = false }
+            )
                 .presentationDragIndicator(.visible)
                 .presentationBackground(.ultraThinMaterial)
         }
@@ -165,7 +237,19 @@ private extension FullScorecardView {
     
     var topBar: some View {
         HStack(spacing: layout.navSpacing) {
-            NavButton(style: .glass, onTap: { dismiss() })
+            if presentation == .embeddedLiveTable {
+                NavButton(
+                    style: .glass,
+                    icon: "f00d",
+                    color: palette.foregroundColor
+                ) {
+                    withAnimation(.easeInOut(duration: 0.2)) {
+                        presentationState.isRotated = false
+                    }
+                }
+            } else {
+                NavButton(style: .glass, onTap: { dismiss() })
+            }
             
             Spacer(minLength: 0)
             
@@ -190,6 +274,10 @@ private extension FullScorecardView {
             Spacer(minLength: 0)
             
             if isRotated {
+                if allowsScoreEditing && presentation == .embeddedLiveTable {
+                    interactionModePicker
+                }
+
                 if scoreDisplayModes.count > 1 {
                     scoreDisplayPicker
                 }
@@ -201,14 +289,16 @@ private extension FullScorecardView {
                 filterMenuButton
             }
 
-            NavButton(
-                style: .glass,
-                icon: isRotated ? "f066" : "f065",
-                weight: .regular,
-                color: palette.foregroundColor
-            ) {
-                withAnimation(.easeInOut(duration: 0.2)) {
-                    isRotated.toggle()
+            if presentation == .modal {
+                NavButton(
+                    style: .glass,
+                    icon: isRotated ? "f066" : "f065",
+                    weight: .regular,
+                    color: palette.foregroundColor
+                ) {
+                    withAnimation(.easeInOut(duration: 0.2)) {
+                        presentationState.isRotated.toggle()
+                    }
                 }
             }
         }
@@ -393,7 +483,12 @@ private extension FullScorecardView {
             let isSelected = row.id == selectedParticipantID
             let highlightStyle = participantHighlightStyle(for: row.participant)
             let accentColor = highlightStyle.accent.opacity(0.8)
-            let canEditParticipant = allowsScoreEditing && viewModel.canEditScorecard(participant: row.participant)
+            let hasEditPermission = allowsScoreEditing && viewModel.canEditScorecard(participant: row.participant)
+            let canEditParticipant = presentationState.interactionMode.allowsScoreEditing(
+                presentation: presentation,
+                hasPermission: hasEditPermission
+            )
+            let showsEditAffordance = usesExplicitEditMode && canEditParticipant
             let scoreCellView = scoreCell(
                 par: par,
                 gross: gross,
@@ -403,6 +498,15 @@ private extension FullScorecardView {
                 highlightColor: accentColor,
                 highlightTextColor: highlightStyle.readableText
             )
+            .background {
+                RoundedRectangle(cornerRadius: 8, style: .continuous)
+                    .fill(accentColor.opacity(showsEditAffordance ? 0.1 : 0))
+            }
+            .overlay {
+                RoundedRectangle(cornerRadius: 8, style: .continuous)
+                    .stroke(accentColor.opacity(showsEditAffordance ? 0.55 : 0), lineWidth: 1)
+            }
+            .animation(.easeInOut(duration: 0.18), value: presentationState.interactionMode)
             let isEditing: Bool
             if case .scoreEdit(let anchor) = rightPanelContent, isRotated {
                 isEditing = anchor.scoringUnitID == row.scoringUnitID && anchor.holeNumber == holeNumber
@@ -669,7 +773,10 @@ private extension FullScorecardView {
         let name = scorecardPrimaryName(for: row)
         let partnerNames = scorecardSecondaryNames(for: row)
         let isSelected = row.id == selectedParticipantID
-        let canEditParticipant = allowsScoreEditing && viewModel.canEditScorecard(participant: row.participant)
+        let canEditParticipant = presentationState.interactionMode.allowsScoreEditing(
+            presentation: presentation,
+            hasPermission: allowsScoreEditing && viewModel.canEditScorecard(participant: row.participant)
+        )
         let accrued = accruedScoreLabel(for: row)
         let accruedColor = isSelected ? participantHighlightStyle(for: row.participant).readableText : palette.foregroundColor
         
@@ -737,7 +844,10 @@ private extension FullScorecardView {
     func leftOverlayCell(_ row: LiveRoundViewModel.LeaderboardRow) -> some View {
         let initials = row.isSharedScoreUnit ? scorecardSharedInitials(for: row) : row.participant.name.initials
         let isSelected = row.id == selectedParticipantID
-        let canEditParticipant = allowsScoreEditing && viewModel.canEditScorecard(participant: row.participant)
+        let canEditParticipant = presentationState.interactionMode.allowsScoreEditing(
+            presentation: presentation,
+            hasPermission: allowsScoreEditing && viewModel.canEditScorecard(participant: row.participant)
+        )
         let accrued = accruedScoreLabel(for: row)
         let accruedColor = isSelected ? participantHighlightStyle(for: row.participant).readableText : palette.foregroundColor
         
@@ -1015,8 +1125,45 @@ private extension FullScorecardView {
         .pickerStyle(.segmented)
         .frame(width: 168)
     }
+
+    private var interactionModePicker: some View {
+        Picker("Table interaction", selection: $presentationState.interactionMode) {
+            ForEach(ScorecardInteractionMode.allCases, id: \.self) { mode in
+                Text(mode.label).tag(mode)
+            }
+        }
+        .pickerStyle(.segmented)
+        .frame(width: 126)
+        .accessibilityHint("Edit mode enables score cells you are allowed to change")
+    }
     
     private var toolbarFooter: some View {
+        Group {
+            if presentation == .embeddedLiveTable {
+                ScrollView(.horizontal, showsIndicators: false) {
+                    HStack(spacing: 8) {
+                        if allowsScoreEditing {
+                            interactionModePicker
+                        }
+
+                        if scoreDisplayModes.count > 1 {
+                            scoreDisplayPicker
+                        }
+
+                        if viewModel.handicapsEnabled {
+                            grossNetPicker
+                        }
+                    }
+                    .padding(.horizontal, 2)
+                }
+                .frame(maxWidth: .infinity, alignment: .leading)
+            } else {
+                modalToolbarFooter
+            }
+        }
+    }
+
+    private var modalToolbarFooter: some View {
         ViewThatFits(in: .horizontal) {
             HStack(spacing: 8) {
                 if scoreDisplayModes.count > 1 {
@@ -1094,7 +1241,7 @@ private extension FullScorecardView {
                 Menu {
                     Button {
                         Haptics.fire(.light)
-                        showScorecardVisibilitySheet = true
+                        presentationState.showPlayerVisibilitySheet = true
                     } label: {
                         Text("Hide players")
                         Text(visiblePlayersSubtitle)
@@ -1103,19 +1250,19 @@ private extension FullScorecardView {
                     Section(header: Text("Visibility within scorecard")) {
                         Button {
                             Haptics.fire(.light)
-                            withAnimation(.easeInOut(duration: 0.2)) { showPar.toggle() }
+                            withAnimation(.easeInOut(duration: 0.2)) { presentationState.showPar.toggle() }
                         } label: {
                             Label("Par", systemImage: showPar ? "checkmark.circle.fill" : "circle")
                         }
                         Button {
                             Haptics.fire(.light)
-                            withAnimation(.easeInOut(duration: 0.2)) { showYardage.toggle() }
+                            withAnimation(.easeInOut(duration: 0.2)) { presentationState.showYardage.toggle() }
                         } label: {
                             Label("Yardage", systemImage: showYardage ? "checkmark.circle.fill" : "circle")
                         }
                         Button {
                             Haptics.fire(.light)
-                            withAnimation(.easeInOut(duration: 0.2)) { showHandicap.toggle() }
+                            withAnimation(.easeInOut(duration: 0.2)) { presentationState.showHandicap.toggle() }
                         } label: {
                             Label("Handicap", systemImage: showHandicap ? "checkmark.circle.fill" : "circle")
                         }
@@ -1229,7 +1376,7 @@ private extension FullScorecardView {
                 
                 Button {
                     Haptics.fire(.light)
-                    withAnimation(.easeInOut(duration: 0.2)) { showPar.toggle() }
+                    withAnimation(.easeInOut(duration: 0.2)) { presentationState.showPar.toggle() }
                 } label: {
                     HStack {
                         Text("Par")
@@ -1242,7 +1389,7 @@ private extension FullScorecardView {
                 
                 Button {
                     Haptics.fire(.light)
-                    withAnimation(.easeInOut(duration: 0.2)) { showYardage.toggle() }
+                    withAnimation(.easeInOut(duration: 0.2)) { presentationState.showYardage.toggle() }
                 } label: {
                     HStack {
                         Text("Yardage")
@@ -1255,7 +1402,7 @@ private extension FullScorecardView {
                 
                 Button {
                     Haptics.fire(.light)
-                    withAnimation(.easeInOut(duration: 0.2)) { showHandicap.toggle() }
+                    withAnimation(.easeInOut(duration: 0.2)) { presentationState.showHandicap.toggle() }
                 } label: {
                     HStack {
                         Text("Handicap")
@@ -1858,17 +2005,21 @@ private let mockTheme: GolfTheme = .purple
     }
 }
 
+private enum PlayerInsightsSection: String, CaseIterable {
+    case overview = "Overview"
+    case scorecard = "Scorecard"
+}
+
 struct PlayerInsightsView: View {
     @Environment(\.dismiss) private var dismiss
     @Environment(\.colorScheme) private var colorScheme
 
     @ObservedObject var viewModel: LiveRoundViewModel
     let participant: RoundParticipant
-    let allowsScoreEditing: Bool
 
     @State private var projection: PlayerFinishProjection?
     @State private var isLoadingProjection = false
-    @State private var showFullScorecard = false
+    @State private var selectedSection: PlayerInsightsSection = .overview
 
     private var palette: DesignPalette { .init(theme: .primary, scheme: colorScheme) }
     private var basis: ScoreBasis { viewModel.scoreBasis }
@@ -1897,29 +2048,22 @@ struct PlayerInsightsView: View {
 
     var body: some View {
         NavigationStack {
-            Group {
-                if canRevealInsights {
-                    ScrollView(.vertical, showsIndicators: false) {
-                        VStack(spacing: 16) {
-                            identityCard
-                            currentRoundCard
-                            trendCard
-                            if holesCompleted > 0 {
-                                scoringMixCard
-                            }
-                            fullScorecardButton
-                        }
-                        .padding(16)
-                        .padding(.bottom, 16)
+            VStack(spacing: 0) {
+                identityCard
+                    .padding(.horizontal, 16)
+                    .padding(.top, 16)
+
+                Picker("Player insights section", selection: $selectedSection) {
+                    ForEach(PlayerInsightsSection.allCases, id: \.self) { section in
+                        Text(section.rawValue).tag(section)
                     }
-                } else {
-                    ContentUnavailableView(
-                        "Scores hidden",
-                        systemImage: "eye.slash",
-                        description: Text("This player’s score and projection will appear when secret scoring is revealed.")
-                    )
-                    .padding(24)
                 }
+                .pickerStyle(.segmented)
+                .padding(.horizontal, 16)
+                .padding(.top, 12)
+                .padding(.bottom, 8)
+
+                insightsContent
             }
             .background(palette.backgroundColor.opacity(0.98))
             .navigationTitle("Player insights")
@@ -1940,24 +2084,57 @@ struct PlayerInsightsView: View {
             projection = await viewModel.playerProjection(for: participant, scoreBasis: basis)
             isLoadingProjection = false
         }
-        .fullScreenCover(isPresented: $showFullScorecard) {
-            FullScorecardView(
-                viewModel: viewModel,
-                participant: participant,
-                allowsScoreEditing: allowsScoreEditing,
-                initialSelectedScoringUnitID: participant.id
+    }
+
+    @ViewBuilder
+    private var insightsContent: some View {
+        if canRevealInsights {
+            switch selectedSection {
+            case .overview:
+                ScrollView(.vertical, showsIndicators: false) {
+                    VStack(spacing: 16) {
+                        currentRoundCard
+                        trendCard
+                        if holesCompleted > 0 {
+                            scoringMixCard
+                        }
+                    }
+                    .padding(16)
+                    .padding(.bottom, 16)
+                }
+            case .scorecard:
+                IndividualScorecardView(
+                    viewModel: viewModel,
+                    participant: participant,
+                    presentation: .embedded,
+                    showsPlayerHeader: false
+                )
+            }
+        } else {
+            ContentUnavailableView(
+                "Scores hidden",
+                systemImage: "eye.slash",
+                description: Text("This player’s score details will appear when secret scoring is revealed.")
             )
-            .presentationBackground(.ultraThinMaterial)
+            .padding(24)
+            .frame(maxWidth: .infinity, maxHeight: .infinity)
         }
     }
 
     private var identityCard: some View {
-        HStack(spacing: 14) {
+        let accent = viewModel.teamColor(for: participant) ?? viewModel.theme.color
+        let isFavorite = viewModel.pinnedParticipantIDs.contains(participant.id)
+
+        return HStack(spacing: 14) {
+            RoundedRectangle(cornerRadius: 999, style: .continuous)
+                .fill(accent)
+                .frame(width: 5, height: 48)
+
             PlayerAvatarView(
                 initials: participant.name.initials,
                 size: 54,
-                fillColor: viewModel.teamColor(for: participant)?.opacity(0.24),
-                glassTint: viewModel.theme.color.opacity(0.18)
+                fillColor: accent.opacity(0.24),
+                glassTint: accent.opacity(0.18)
             )
 
             VStack(alignment: .leading, spacing: 4) {
@@ -1970,11 +2147,31 @@ struct PlayerInsightsView: View {
                     .foregroundStyle(Color.neutral)
             }
             Spacer(minLength: 0)
+
+            Button {
+                Haptics.fire(.light)
+                viewModel.togglePinned(participant)
+            } label: {
+                Image(systemName: isFavorite ? "star.fill" : "star")
+                    .font(.system(size: 20, weight: .semibold))
+                    .foregroundStyle(isFavorite ? accent : Color.neutral2)
+                    .frame(width: 44, height: 44)
+                    .contentShape(Rectangle())
+            }
+            .buttonStyle(.plain)
+            .accessibilityLabel(isFavorite ? "Stop following \(participant.name.fullName)" : "Follow \(participant.name.fullName)")
+            .accessibilityHint("Followed players are pinned in this round’s leaderboard")
         }
         .padding(16)
         .frame(maxWidth: .infinity, alignment: .leading)
-        .glassCardEffect(interactive: false, forceMaterial: true)
-        .accessibilityElement(children: .combine)
+        .glassCardEffect(
+            cornerRadius: 26,
+            interactive: false,
+            forceMaterial: true,
+            tint: accent.opacity(colorScheme.isLight ? 0.09 : 0.16),
+            strokeOpacity: 0.65
+        )
+        .accessibilityElement(children: .contain)
     }
 
     private var currentRoundCard: some View {
@@ -2211,20 +2408,6 @@ struct PlayerInsightsView: View {
         }
         .foregroundStyle(Color.neutral)
         .frame(maxWidth: .infinity, minHeight: 140)
-    }
-
-    private var fullScorecardButton: some View {
-        Button {
-            showFullScorecard = true
-        } label: {
-            Label("Full scorecard", systemImage: "rectangle.grid.3x2")
-                .fontStyle(kFontName, size: 16, weight: .semibold)
-                .frame(maxWidth: .infinity)
-                .padding(.vertical, 14)
-        }
-        .buttonStyle(.borderedProminent)
-        .tint(viewModel.theme.color)
-        .accessibilityHint("Opens the complete hole-by-hole scorecard")
     }
 
     private var accessibilitySummary: String {

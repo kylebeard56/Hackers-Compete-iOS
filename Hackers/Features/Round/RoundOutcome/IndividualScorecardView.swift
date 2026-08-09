@@ -7,6 +7,11 @@
 
 import SwiftUI
 
+enum IndividualScorecardPresentation {
+    case standalone
+    case embedded
+}
+
 struct IndividualScorecardView: View {
     @Environment(\.dismiss) var dismiss
     @Environment(\.colorScheme) var colorScheme
@@ -14,6 +19,8 @@ struct IndividualScorecardView: View {
     @ObservedObject var viewModel: LiveRoundViewModel
     let participant: RoundParticipant
     var scorecardAsset: StorageAsset? = nil
+    var presentation: IndividualScorecardPresentation = .standalone
+    var showsPlayerHeader = true
 
     @State private var showScorecardOverlay = false
     @State private var scorecardOverlayImage: UIImage?
@@ -45,9 +52,9 @@ struct IndividualScorecardView: View {
         ZStack {
             ScrollView(showsIndicators: false) {
                 VStack(spacing: 16) {
-                    //navPadding
-
-                    playerHeader
+                    if showsPlayerHeader {
+                        playerHeader
+                    }
                     totalScoreCallout
                     scorecardButton
                     frontNineTile
@@ -55,14 +62,16 @@ struct IndividualScorecardView: View {
                     courseDateFooter
                 }
                 .padding(.horizontal, 16)
-                .padding(.top, UIApplication.shared.topSafeAreaInset + 16)
-                .padding(.bottom, 60)
+                .padding(.top, presentation == .standalone ? UIApplication.shared.topSafeAreaInset + 16 : 8)
+                .padding(.bottom, presentation == .standalone ? 60 : 24)
             }
 
-            scorecardNavHeader
-                .padding(.top, 16)
-                .padding(.horizontal, 16)
-                .alignTop()
+            if presentation == .standalone {
+                scorecardNavHeader
+                    .padding(.top, 16)
+                    .padding(.horizontal, 16)
+                    .alignTop()
+            }
         }
         .background(palette.backgroundColor)
         .navigationBarBackButtonHidden(true)

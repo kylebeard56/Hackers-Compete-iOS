@@ -33,26 +33,34 @@ enum IconType {
 
 private enum Tab: String, CaseIterable {
     case scoring
+    case table
     case matchups
+
+    var title: String {
+        switch self {
+        case .scoring: "Scorecard"
+        case .table: "Table"
+        case .matchups: "Matchups"
+        }
+    }
 
     var icon: String {
         switch self {
         case .scoring: "menucard"
+        case .table: "tablecells"
         case .matchups: "f71d"  // Font Awesome crossed swords
         }
     }
-    
-    func fontWeight(_ selection: Bool) -> FontModule.Weight {
-        selection ? iconType.activeWeight : iconType.normalWeight
-    }
-    
+
     var iconType: IconType {
         switch self {
-        case .scoring:
-            return .sanFrancisco
-        case .matchups:
-            return .fontAwesome
+        case .scoring, .table: .sanFrancisco
+        case .matchups: .fontAwesome
         }
+    }
+
+    func fontWeight(isSelected: Bool) -> FontModule.Weight {
+        isSelected ? iconType.activeWeight : iconType.normalWeight
     }
 }
 
@@ -71,7 +79,6 @@ struct LiveRound: View, Loggable {
     
     @CappedScaledMetric(relativeTo: .body) var leaderboardHeaderScoreWidth: CGFloat = 44
     @CappedScaledMetric(relativeTo: .body) var leaderboardHeaderThruWidth: CGFloat = 54
-    @CappedScaledMetric(relativeTo: .body) var leaderboardHeaderStarWidth: CGFloat = 24
     @CappedScaledMetric(relativeTo: .body) var skeletonAvatarSize: CGFloat = 40
     @CappedScaledMetric(relativeTo: .body) var skeletonNameHeight: CGFloat = 17
     @CappedScaledMetric(relativeTo: .caption) var skeletonSubtitleHeight: CGFloat = 12
@@ -89,6 +96,7 @@ struct LiveRound: View, Loggable {
     
     @State private var selectedTab: Tab = .scoring
     @StateObject var viewModel: LiveRoundViewModel
+    @StateObject private var tablePresentationState: FullScorecardPresentationState
     
     @State private var isShowingInitialScoringSkeleton = false
     @State private var hasHandledInitialScoringSkeleton = false
@@ -104,17 +112,21 @@ struct LiveRound: View, Loggable {
     @State private var showCompleteRoundSheet = false
     @State var showSwipeHint = true
     @State private var didTrackLiveRoundView = false
-    @State var showSecretScoreAlert = false
     @State var showRevealConfirmation = false
 
     @MainActor
     init(viewModel: LiveRoundViewModel? = nil) {
         _viewModel = StateObject(wrappedValue: viewModel ?? LiveRoundViewModel())
+        _tablePresentationState = StateObject(wrappedValue: FullScorecardPresentationState())
     }
 
     /// Complete-round FAB when the user may finish (any hole); CompleteRoundSheet warns about unscored holes and offers "Mark as max score".
     private var shouldShowCompleteRoundButton: Bool {
         viewModel.canCompleteActualGroup && viewModel.holeNumbers.isPopulated
+    }
+
+    private var showsLiveRoundChrome: Bool {
+        selectedTab != .table || !tablePresentationState.isRotated
     }
     
     var palette: DesignPalette { .init(theme: .glass, scheme: colorScheme) }
@@ -158,15 +170,19 @@ struct LiveRound: View, Loggable {
             if selectedTab == .scoring {
                 scoringContent
                     .edgesIgnoringSafeArea(.vertical)
+            } else if selectedTab == .table {
+                tableContent
             } else if selectedTab == .matchups {
                 matchupsContent
             }
 
-            scoringNavHeader
-                .padding(.horizontal, 16)
-                .alignTop()
+            if showsLiveRoundChrome {
+                scoringNavHeader
+                    .padding(.horizontal, 16)
+                    .alignTop()
+            }
             
-            if visibleTabs.count > 1 {
+            if visibleTabs.count > 1 && showsLiveRoundChrome {
                 HStack(spacing: 8) {
                     liveTabStrip
                         .padding(.vertical, 4)
@@ -185,7 +201,7 @@ struct LiveRound: View, Loggable {
                 .alignBottom()
             }
 
-            if shouldShowCompleteRoundButton {
+            if shouldShowCompleteRoundButton && showsLiveRoundChrome {
                 HStack {
                     Spacer(minLength: 0)
                     NavButton(style: .glass, icon: "f00c", size: 24) {
@@ -208,6 +224,7 @@ struct LiveRound: View, Loggable {
             }
             print(roundSession.snapshot.round.id)
             viewModel.bind(appSession: appSession, roundSession: roundSession)
+            viewModel.startMatchupProbabilityPrecomputation()
             restoreDurableRoundContextIfNeeded()
             trackLiveRoundViewedIfNeeded(snapshot: roundSession.snapshot)
             await runInitialScoringSkeletonIfNeeded()
@@ -227,7 +244,10 @@ struct LiveRound: View, Loggable {
         .onChange(of: scoringPageHole) { _, hole in
             persistDurableRoundContext(hole: hole)
         }
-        .onChange(of: selectedTab) { _, _ in
+        .onChange(of: selectedTab) { oldTab, _ in
+            if oldTab == .table {
+                tablePresentationState.resetForTabExit()
+            }
             persistDurableRoundContext(hole: scoringPageHole)
         }
         .onChange(of: viewModel.visibleGroupSwitchRequest?.revisionID) { _, _ in
@@ -255,8 +275,7 @@ struct LiveRound: View, Loggable {
         .sheet(item: $viewModel.presentedParticipant) { participant in
             PlayerInsightsView(
                 viewModel: viewModel,
-                participant: participant,
-                allowsScoreEditing: viewModel.canEditActualGroupScores
+                participant: participant
             )
             .presentationDetents([.large])
             .presentationDragIndicator(.visible)
@@ -290,6 +309,9 @@ struct LiveRound: View, Loggable {
             guard let id = appSession.activeRoundID else { return }
             Task { await roundSession.activate(roundID: id, profile: .liveRound) }
         }
+        .onDisappear {
+            tablePresentationState.resetForTabExit()
+        }
     }
 
     private func restoreDurableRoundContextIfNeeded() {
@@ -304,7 +326,12 @@ struct LiveRound: View, Loggable {
             scoringPageHole = selectedHole
         }
 
-        let restoredTab: Tab = state.selectedTab == .matchups ? .matchups : .scoring
+        let restoredTab: Tab
+        switch state.selectedTab {
+        case .scoring: restoredTab = .scoring
+        case .table: restoredTab = .table
+        case .matchups: restoredTab = .matchups
+        }
         selectedTab = visibleTabs.contains(restoredTab) ? restoredTab : .scoring
         persistDurableRoundContext(hole: scoringPageHole ?? viewModel.currentHoleNumber)
     }
@@ -312,18 +339,24 @@ struct LiveRound: View, Loggable {
     private func persistDurableRoundContext(hole: Int?) {
         appSession.updateLiveRoundResume(
             selectedHole: hole,
-            selectedTab: selectedTab == .matchups ? .matchups : .scoring
+            selectedTab: {
+                switch selectedTab {
+                case .scoring: .scoring
+                case .table: .table
+                case .matchups: .matchups
+                }
+            }()
         )
     }
     
-    /// Tabs to show: Scoring always; Matchups when scope is matchup and valid matchups exist for the current mode.
+    /// Scorecard and Table are always available; Matchups appears for valid matchup rounds.
     private var visibleTabs: [Tab] {
         let matchups = snapshot.roundSegment?.matchups ?? []
         let expectedMode = viewModel.expectedMatchupMode
         let matchupsForMode = matchups.filter { $0.effectiveMode == expectedMode }
         let validMatchupsForMode = matchupsForMode.filter { $0.isValid }
         let showMatchups = snapshot.configuration.resolvedCompetitionScope == .matchup && !validMatchupsForMode.isEmpty
-        return showMatchups ? [.scoring, .matchups] : [.scoring]
+        return showMatchups ? [.scoring, .table, .matchups] : [.scoring, .table]
     }
 
     @ViewBuilder
@@ -340,12 +373,17 @@ struct LiveRound: View, Loggable {
                         Haptics.fire(.light)
                         selectedTab = tab
                     } label: {
-                        Icon(name: tab.icon, size: 20, weight: tab.fontWeight(selectedTab == tab))
+                        Icon(
+                            name: tab.icon,
+                            size: 20,
+                            weight: tab.fontWeight(isSelected: selectedTab == tab)
+                        )
                             .foregroundStyle(selectedTab == tab ? palette.foregroundColor : Color.charcoal)
                             .frame(width: tabWidth, height: tabHeight)
                             .contentShape(Rectangle())
                     }
                     .buttonStyle(.plain)
+                    .accessibilityLabel(tab.title)
                 }
             }
 
@@ -356,6 +394,35 @@ struct LiveRound: View, Loggable {
                 .animation(.spring(response: 0.35, dampingFraction: 0.8), value: selectedTab)
         }
         .frame(width: tabWidth * CGFloat(tabs.count), height: tabHeight)
+    }
+
+    @ViewBuilder
+    private var tableContent: some View {
+        if let participant = viewModel.currentParticipant ?? snapshot.participants.first {
+            VStack(spacing: 8) {
+                if !tablePresentationState.isRotated {
+                    navPadding
+                }
+
+                FullScorecardView(
+                    viewModel: viewModel,
+                    participant: participant,
+                    allowsScoreEditing: viewModel.canEditActualGroupScores,
+                    initialSelectedScoringUnitID: participant.id,
+                    presentation: .embeddedLiveTable,
+                    presentationState: tablePresentationState
+                )
+            }
+            .padding(.top, tablePresentationState.isRotated ? 0 : UIApplication.shared.topSafeAreaInset)
+            .padding(.bottom, tablePresentationState.isRotated ? 0 : 88)
+        } else {
+            ContentUnavailableView(
+                "Score table unavailable",
+                systemImage: "tablecells",
+                description: Text("Players will appear here when the round is ready.")
+            )
+            .padding(24)
+        }
     }
     
 //    func updateTabBarScale(
@@ -401,6 +468,12 @@ extension LiveRound {
             
             if selectedTab == .scoring {
                 navHoleSelector
+            } else if selectedTab == .table {
+                Text("Score table".uppercased())
+                    .fontStyle(kFontName, size: 15, weight: .semibold)
+                    .foregroundStyle(palette.foregroundColor)
+                    .lineLimit(1)
+                    .minimumScaleFactor(0.7)
             } else if selectedTab == .matchups {
                 Text("Matchups".uppercased())
                     .fontStyle(kFontName, size: 15, weight: .semibold)
@@ -418,6 +491,68 @@ extension LiveRound {
             Spacer(minLength: 0)
             
             Menu {
+                if selectedTab == .table {
+                    Section(header: Text("Score table")) {
+                        Button {
+                            Haptics.fire(.light)
+                            tablePresentationState.showPlayerVisibilitySheet = true
+                        } label: {
+                            Label("Visible players", systemImage: "person.2")
+                            Text(viewModel.visibleParticipantIDsLabel())
+                        }
+
+                        Button {
+                            Haptics.fire(.light)
+                            withAnimation(.easeInOut(duration: 0.2)) {
+                                tablePresentationState.showPar.toggle()
+                            }
+                        } label: {
+                            Label(
+                                "Par",
+                                systemImage: tablePresentationState.showPar ? "checkmark.circle.fill" : "circle"
+                            )
+                        }
+                        .menuActionDismissBehavior(.disabled)
+
+                        Button {
+                            Haptics.fire(.light)
+                            withAnimation(.easeInOut(duration: 0.2)) {
+                                tablePresentationState.showYardage.toggle()
+                            }
+                        } label: {
+                            Label(
+                                "Yardage",
+                                systemImage: tablePresentationState.showYardage ? "checkmark.circle.fill" : "circle"
+                            )
+                        }
+                        .menuActionDismissBehavior(.disabled)
+
+                        Button {
+                            Haptics.fire(.light)
+                            withAnimation(.easeInOut(duration: 0.2)) {
+                                tablePresentationState.showHandicap.toggle()
+                            }
+                        } label: {
+                            Label(
+                                "Hole handicap",
+                                systemImage: tablePresentationState.showHandicap ? "checkmark.circle.fill" : "circle"
+                            )
+                        }
+                        .menuActionDismissBehavior(.disabled)
+
+                        Button {
+                            Haptics.fire(.light)
+                            withAnimation(.easeInOut(duration: 0.2)) {
+                                tablePresentationState.isRotated = true
+                            }
+                        } label: {
+                            Label("Rotate table", systemImage: "rotate.right")
+                        }
+                    }
+
+                    Divider()
+                }
+
                 if !viewModel.isSpectator {
                     Button {
                         Haptics.fire(.light)
@@ -540,7 +675,7 @@ extension LiveRound {
                 .accessibilityHint("Jump to the next hole when scores are entered by you or others for the current hole")
                 .menuActionDismissBehavior(.disabled)
                 
-                if viewModel.isCurrentUserHost
+                if viewModel.canManageRound
                     && snapshot.isSecretScoring
                     && !snapshot.areScoresRevealed {
                     Divider()

@@ -76,8 +76,8 @@ struct GameLobby: View, Loggable {
     @Namespace var courseTransition
     
     @State private var scrollOffset: CGFloat = 0
-    @State private var isCurrentUserHost = false
     @State private var currentUserID: String?
+    @State private var currentPlayerID: String?
     @State private var previousRoundStatus: RoundStatus?
     @State private var didTrackLobbyView = false
     @State private var isSyncingTeams = false
@@ -86,7 +86,8 @@ struct GameLobby: View, Loggable {
     @State private var roundNameDraft = ""
 
     /// Series context for league-handicap lobby lock (client-side only).
-    @State var isSeriesCommissioner = false
+    @State private var activeSeries: Series?
+    @State private var activeSeriesMembers: [SeriesMember] = []
     @State var seriesLeagueHandicapsEnabled = false
     @State var seriesLeagueHandicapMaximum: Int?
 
@@ -94,6 +95,18 @@ struct GameLobby: View, Loggable {
     @State var stablefordPointsEditorItem: StablefordPointsEditorItem?
 
     var palette: DesignPalette { .init(theme: .glass, scheme: colorScheme) }
+
+    var roundManagementAccess: RoundManagementAccess {
+        .resolve(
+            snapshot: snapshot,
+            currentUserID: currentUserID,
+            currentPlayerID: currentPlayerID,
+            series: activeSeries,
+            members: activeSeriesMembers
+        )
+    }
+
+    var isSeriesCommissioner: Bool { roundManagementAccess.isSeriesCommissioner }
 
     private var teeGroupSyncKey: String {
         guard snapshot.shouldAutoMirrorTeeGroupsToTeams else { return "" }
@@ -173,7 +186,8 @@ struct GameLobby: View, Loggable {
         .task(id: appSession.activeSeriesID) {
             guard let sid = appSession.activeSeriesID, sid.isPopulated else {
                 await MainActor.run {
-                    isSeriesCommissioner = false
+                    activeSeries = nil
+                    activeSeriesMembers = []
                     seriesLeagueHandicapsEnabled = false
                     seriesLeagueHandicapMaximum = nil
                 }
@@ -181,31 +195,31 @@ struct GameLobby: View, Loggable {
             }
             async let seriesResult = FirebaseService.shared.fetchSeries(id: sid)
             async let members = FirebaseService.shared.fetchSeriesMembers(seriesID: sid)
-            let user = await AppData.shared.user
             let handicapsOn: Bool
             let handicapMaximum: Int?
+            let resolvedSeries: Series?
             switch await seriesResult {
             case .success(let series):
+                resolvedSeries = series
                 handicapsOn = series.handicapConfig.isEnabled
                 handicapMaximum = series.handicapConfig.config.maximumHandicap
             case .failure:
+                resolvedSeries = nil
                 handicapsOn = false
                 handicapMaximum = nil
             }
             let memberList = await members
-            let isComm: Bool = {
-                guard let uid = user?.id else { return false }
-                return memberList.contains { $0.userID == uid && $0.role == .commissioner }
-            }()
             await MainActor.run {
+                activeSeries = resolvedSeries
+                activeSeriesMembers = memberList
                 seriesLeagueHandicapsEnabled = handicapsOn
                 seriesLeagueHandicapMaximum = handicapsOn ? handicapMaximum : nil
-                isSeriesCommissioner = isComm
             }
         }
         .task {
             TelemetryService.shared.setContext(roundID: appSession.activeRoundID, seriesID: appSession.activeSeriesID)
             currentUserID = await AppData.shared.user?.id
+            currentPlayerID = await AppData.shared.getPrimaryPlayer()?.id
             if let id = appSession.activeRoundID {
                 await roundSession.activate(roundID: id, profile: .lobby)
                 if !isEditMode {
@@ -253,12 +267,6 @@ struct GameLobby: View, Loggable {
             sharedScoreAllowanceText = Self.allowanceText(
                 from: s.configuration.sharedScoreHandicapConfig ?? s.resolvedActiveTemplate.requirements.defaultHandicapConfig
             )
-            if let currentUserID {
-                isCurrentUserHost = s.participants.contains { $0.userID == currentUserID && $0.isHost }
-            } else {
-                isCurrentUserHost = false
-            }
-
             trackLobbyViewedIfNeeded(snapshot: s)
 
             guard s.round.id == appSession.activeRoundID else { return }
@@ -362,6 +370,7 @@ struct GameLobby: View, Loggable {
                 participant: player,
                 seriesHandicapLockActive: seriesHandicapLobbyLockActive,
                 isSeriesCommissioner: isSeriesCommissioner,
+                canTransferHost: roundManagementAccess.canTransferHost,
                 seriesHandicapMaximum: effectiveSeriesLeagueHandicapMaximum
             )
             .presentationDragIndicator(.visible)
@@ -559,17 +568,17 @@ extension GameLobby {
                 
                 PrimaryButton(
                     appearance: .fill,
-                    title: isEditMode ? "Done" : (isCurrentUserHost ? "Start round" : "Waiting for host..."),
+                    title: isEditMode ? "Done" : (roundManagementAccess.canManageRound ? "Start round" : "Waiting for manager..."),
                     labelColor: .white,
-                    buttonColor: (isEditMode || isCurrentUserHost) ? .accentGreen : .neutral3,
+                    buttonColor: (isEditMode || roundManagementAccess.canManageRound) ? .accentGreen : .neutral3,
                     theme: palette.theme,
                     height: 52,
-                    isDisabled: .constant(!isEditMode && !isCurrentUserHost),
+                    isDisabled: .constant(!isEditMode && !roundManagementAccess.canManageRound),
                     isLoading: $roundSession.isStartingLiveRound,
                     onTap: {
                         if isEditMode {
                             dismiss()
-                        } else if isCurrentUserHost {
+                        } else if roundManagementAccess.canManageRound {
                             Task {
                                 if await roundSession.activateLiveRound() {
                                     appSession.routeTo(.liveRound, replacingCurrent: true)

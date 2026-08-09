@@ -42,11 +42,11 @@ extension AppSession {
         }
     }
     
-    /// Permanently deletes a round via cloud function. Only the host (creator) may delete.
+    /// Permanently deletes a round via cloud function. Only the round creator may delete.
     func deleteRound(_ round: Round) async {
         addBreadcrumb(message: "Delete round for id: \(round.id)")
         guard let user = await AppData.shared.user, round.createdBy == user.id else {
-            addBreadcrumb(message: "User is not host, cannot delete")
+            addBreadcrumb(message: "User is not creator, cannot delete")
             return
         }
         await cloudFunctionDelete(round)

@@ -20,7 +20,7 @@ struct SeriesRoundCardSummaryView: View {
 
             competitionSummary
 
-            if state.viewer?.label != nil || state.participantCountLabel != nil {
+            if showsParticipationStatus {
                 Divider()
                 participation
             }
@@ -59,6 +59,13 @@ struct SeriesRoundCardSummaryView: View {
                 .fontStyle(kFontName, size: 13, weight: .semibold)
                 .foregroundStyle(palette.foregroundColor)
                 .lineLimit(2)
+
+            if let participantContextLabel {
+                Text(participantContextLabel)
+                    .fontStyle(kFontName, size: 12, weight: .regular)
+                    .foregroundStyle(Color.neutral)
+                    .lineLimit(1)
+            }
         }
     }
 
@@ -136,7 +143,7 @@ struct SeriesRoundCardSummaryView: View {
                     ForEach(Array(side.contributors.enumerated()), id: \.element.id) { index, contributor in
                         contributorRow(contributor)
                         if index < side.contributors.count - 1 {
-                            Divider().padding(.leading, 16)
+                            Divider().padding(.leading, 8)
                         }
                     }
                 }
@@ -161,27 +168,31 @@ struct SeriesRoundCardSummaryView: View {
         HStack(spacing: 8) {
             VStack(alignment: .leading, spacing: 4) {
                 HStack(spacing: 4) {
-                    Text(contributor.name)
+                    Text(SeriesRoundCardFormatting.playerName(contributor.name))
                         .fontStyle(kFontName, size: 13, weight: contributor.isViewer ? .semibold : .medium)
                         .foregroundStyle(palette.foregroundColor)
                         .lineLimit(1)
+                        .accessibilityLabel(contributor.name)
+                    if contributor.countsTowardScore == true {
+                        Circle()
+                            .fill(Color.accentPurple)
+                            .frame(width: 8, height: 8)
+                            .accessibilityLabel("Counts toward team score")
+                    }
                     if contributor.isViewer {
                         Text("YOU")
                             .fontStyle(kFontName, size: 9, weight: .semibold)
                             .foregroundStyle(Color.accentGreen)
+                            .padding(.horizontal, 4)
+                            .padding(.vertical, 2)
+                            .background(Color.accentGreen.opacity(0.12))
+                            .clipShape(.capsule)
                     }
                     if contributor.isSubstitute {
                         Text("SUB")
                             .fontStyle(kFontName, size: 9, weight: .semibold)
                             .foregroundStyle(Color.neutral)
                     }
-                }
-
-                if let roleLabel = contributorRoleLabel(contributor.role) {
-                    Text(roleLabel)
-                        .fontStyle(kFontName, size: 10, weight: .regular)
-                        .foregroundStyle(Color.neutral)
-                        .lineLimit(1)
                 }
             }
 
@@ -197,7 +208,7 @@ struct SeriesRoundCardSummaryView: View {
                 metric(label: "THRU", value: progress)
             }
         }
-        .padding(.horizontal, 12)
+        .padding(.horizontal, 4)
         .padding(.vertical, 8)
         .accessibilityElement(children: .combine)
     }
@@ -216,7 +227,7 @@ struct SeriesRoundCardSummaryView: View {
     }
 
     private var participation: some View {
-        HStack(spacing: 8) {
+        Group {
             if let label = state.viewer?.label {
                 Label(label, systemImage: viewerIcon)
                     .fontStyle(kFontName, size: 12, weight: .semibold)
@@ -225,14 +236,6 @@ struct SeriesRoundCardSummaryView: View {
                     .padding(.vertical, 8)
                     .background(viewerTint.opacity(0.12))
                     .clipShape(.capsule)
-            }
-
-            Spacer(minLength: 0)
-
-            if let participantCountLabel = state.participantCountLabel {
-                Text(participantCountLabel)
-                    .fontStyle(kFontName, size: 12, weight: .medium)
-                    .foregroundStyle(Color.neutral)
             }
         }
     }
@@ -258,15 +261,30 @@ struct SeriesRoundCardSummaryView: View {
             .clipShape(.capsule)
     }
 
+    @ViewBuilder
     private var statusChip: some View {
-        Text(state.statusLabel.uppercased())
-            .fontStyle(kFontName, size: 11, weight: .semibold)
-            .foregroundStyle(statusTint)
+        if state.lifecycle == .live {
+            LiveStatusView(
+                color: statusTint,
+                fontSize: 11,
+                label: "LIVE",
+                rippleColor: statusTint.opacity(0.2)
+            )
             .padding(.horizontal, 12)
             .padding(.vertical, 8)
             .background(statusTint.opacity(0.12))
             .clipShape(.capsule)
-            .accessibilityLabel(state.statusLabel)
+            .accessibilityLabel(state.isProvisional ? "Live. Scores are provisional." : "Live")
+        } else {
+            Text(state.statusLabel.uppercased())
+                .fontStyle(kFontName, size: 11, weight: .semibold)
+                .foregroundStyle(statusTint)
+                .padding(.horizontal, 12)
+                .padding(.vertical, 8)
+                .background(statusTint.opacity(0.12))
+                .clipShape(.capsule)
+                .accessibilityLabel(state.statusLabel)
+        }
     }
 
     private var formatContextLabel: String {
@@ -323,13 +341,13 @@ struct SeriesRoundCardSummaryView: View {
         }
     }
 
-    private func contributorRoleLabel(_ role: SeriesRoundCardContributorRole) -> String? {
-        switch role {
-        case .selectedForRound: return "Counts toward team score"
-        case .variablePerHole: return "Leaders · contributors vary by hole"
-        case .allScoresCount: return "All scores count"
-        case .leaderOnly: return nil
-        case .sharedScoreMember: return "Shared score"
-        }
+    private var participantContextLabel: String? {
+        let values = [state.participantCountLabel, state.substituteCountLabel].compactMap { $0 }
+        return values.isEmpty ? nil : values.joined(separator: " \(kDot) ")
+    }
+
+    private var showsParticipationStatus: Bool {
+        guard state.viewer?.label != nil else { return false }
+        return state.lifecycle == .upcoming || state.lifecycle == .lobby
     }
 }

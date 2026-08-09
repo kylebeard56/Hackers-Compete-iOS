@@ -254,22 +254,48 @@ extension RoundParticipant {
     var resolvedPresenceStatus: RoundParticipantPresenceStatus { presenceStatus ?? .active }
     var isPresenceActive: Bool { resolvedPresenceStatus != .noShow }
 
+    /// Computed Series allowance that can be restored after a round-local override.
+    var leagueHandicapComputedBaseline: Int? {
+        leagueHandicapStrokesAtCreation ?? handicapSnapshot?.effectiveStrokes
+    }
+
     /// True when commissioner changed strokes vs series seed (commissioner-only orange hint).
     var isLeagueHandicapModifiedFromCreation: Bool {
-        guard let baseline = leagueHandicapStrokesAtCreation else { return false }
+        guard let baseline = leagueHandicapComputedBaseline else { return false }
         return adjustedHandicap != baseline
+    }
+
+    /// Returns a round-local strokes override without mutating the league calculation inputs.
+    func applyingLeagueHandicapOverride(_ strokes: Int, maximum: Int) -> RoundParticipant {
+        var participant = self
+        participant.adjustedHandicap = min(max(strokes, 0), max(maximum, 0))
+        return participant
+    }
+
+    /// Returns a participant restored to the immutable Series-computed baseline, when available.
+    func restoringLeagueHandicapComputedBaseline() -> RoundParticipant? {
+        guard let baseline = leagueHandicapComputedBaseline else { return nil }
+        var participant = self
+        participant.adjustedHandicap = baseline
+        return participant
     }
 
     /// The allowance locked for this round. League handicap updates after activation
     /// must never alter live or historical scoring context.
     var lockedHandicapAllowance: Int {
-        handicapSnapshot?.effectiveStrokes
+        if isLeagueHandicapModifiedFromCreation {
+            return adjustedHandicap
+        }
+        return handicapSnapshot?.effectiveStrokes
             ?? leagueHandicapStrokesAtCreation
             ?? adjustedHandicap
     }
 
     var lockedHandicapProvenance: String {
         let strokes = lockedHandicapAllowance
+        if let baseline = leagueHandicapComputedBaseline, strokes != baseline {
+            return "Commissioner override: Course HCP \(strokes) (computed \(baseline))"
+        }
         if let index = handicapSnapshot?.handicapIndex ?? handicapIndex {
             return "Index \(String(format: "%.1f", index)) → Course HCP \(strokes)"
         }

@@ -8,7 +8,7 @@
 import AlertToast
 import SwiftUI
 
-struct ManagePlayerView: View {
+struct ManagePlayerView: View, Loggable {
     @Environment(\.colorScheme) var colorScheme
     @Environment(\.dismiss) var dismiss
 
@@ -17,6 +17,7 @@ struct ManagePlayerView: View {
     /// When true and user is not a series commissioner, strokes are read-only in the sheet.
     let seriesHandicapLockActive: Bool
     let isSeriesCommissioner: Bool
+    let canTransferHost: Bool
     let seriesHandicapMaximum: Int?
 
     var snapshot: RoundSnapshot { roundSession.snapshot }
@@ -27,12 +28,14 @@ struct ManagePlayerView: View {
         participant: RoundParticipant,
         seriesHandicapLockActive: Bool = false,
         isSeriesCommissioner: Bool = false,
+        canTransferHost: Bool = false,
         seriesHandicapMaximum: Int? = nil
     ) {
         _roundSession = StateObject(wrappedValue: roundSession)
         _participant = State(initialValue: participant)
         self.seriesHandicapLockActive = seriesHandicapLockActive
         self.isSeriesCommissioner = isSeriesCommissioner
+        self.canTransferHost = canTransferHost
         self.seriesHandicapMaximum = seriesHandicapMaximum
     }
     
@@ -41,11 +44,12 @@ struct ManagePlayerView: View {
     @State private var showTeeSelection = false
     @State private var handicapString = "0"
     @State private var handicapValue: Double = 0
+    @State private var hasConfirmedHandicapOverride = false
+    @State private var showHandicapOverrideAlert = false
     @State private var groupID: String? = nil
     @State private var teamID: String? = nil
     
     @State private var showHostChangeSheet = false
-    @State private var userIsHost = false
     private var isHost: Bool { participant?.isHost ?? false }
     
     @State private var showRemoveAlert = false
@@ -59,13 +63,26 @@ struct ManagePlayerView: View {
         name.isPopulated && tee.exists
     }
 
-    private var strokesHandicapLockedForEditor: Bool {
+    private var strokesHandicapReadOnly: Bool {
         seriesHandicapLockActive && !isSeriesCommissioner
+    }
+
+    private var leagueHandicapBaseline: Int? {
+        participant?.leagueHandicapComputedBaseline
+    }
+
+    private var isRoundHandicapOverridden: Bool {
+        guard seriesHandicapLockActive, let leagueHandicapBaseline else { return false }
+        return Int(handicapValue.rounded()) != leagueHandicapBaseline
+    }
+
+    private var effectiveHandicapEntryFormat: HandicapEntryFormat {
+        seriesHandicapLockActive ? .strokes : snapshot.configuration.handicapEntryFormat
     }
 
     private var commissionerStrokesValueColor: Color {
         guard seriesHandicapLockActive, isSeriesCommissioner,
-              let baseline = participant?.leagueHandicapStrokesAtCreation else {
+              let baseline = leagueHandicapBaseline else {
             return palette.foregroundColor
         }
         return Int(handicapValue.rounded()) != baseline ? Color.orange : palette.foregroundColor
@@ -114,14 +131,13 @@ struct ManagePlayerView: View {
         .task {
             name = participant?.name.fullName ?? ""
             tee = snapshot.tees.first(where: { $0.id == participant?.teeBoxID }) ?? snapshot.defaultTee
-            handicapValue = participant?.handicapIndex ?? Double(participant?.originalHandicap ?? participant?.adjustedHandicap ?? 0)
+            handicapValue = seriesHandicapLockActive
+                ? Double(participant?.adjustedHandicap ?? 0)
+                : participant?.handicapIndex ?? Double(participant?.originalHandicap ?? participant?.adjustedHandicap ?? 0)
             handicapString = formattedHandicapInput(handicapValue)
             groupID = participant?.groupID
             teamID = participant?.teamID
             
-            if let user = await AppData.shared.user {
-                userIsHost = snapshot.participants.first(where: \.isHost)?.userID == user.id
-            }
         }
         .alert(
             "Are you sure you want to remove \(participant?.name.fullName ?? "this player") from this round?",
@@ -132,6 +148,12 @@ struct ManagePlayerView: View {
                 if let participant { onRemove(participant) }
             }
             Button("Cancel", role: .cancel) { }
+        }
+        .alert("Override handicap?", isPresented: $showHandicapOverrideAlert) {
+            Button("Cancel", role: .cancel) { }
+            Button("Override handicap", action: confirmHandicapOverride)
+        } message: {
+            Text("This changes the strokes used for this round only. The league-computed value remains available to restore.")
         }
     }
 }
@@ -244,7 +266,7 @@ extension ManagePlayerView {
                 Spacer(minLength: 0)
             }
 
-            if strokesHandicapLockedForEditor {
+            if strokesHandicapReadOnly {
                 HStack(spacing: 10) {
                     Text("\(computedHandicapValue)")
                         .fontStyle(kFontName, size: 17, weight: .regular)
@@ -263,23 +285,61 @@ extension ManagePlayerView {
                 .background(palette.cardEmbeddedRowBackground.opacity(0.55))
                 .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
 
-                Text("Handicap comes from the league. A commissioner can change it from the roster.")
+                Text("Handicap comes from the league. A commissioner can override it for this round.")
                     .fontStyle(kFontName, size: 13, weight: .regular)
                     .foregroundStyle(Color.neutral)
                     .multilineTextAlignment(.leading)
                     .alignLeading()
+            } else if seriesHandicapLockActive && !isRoundHandicapOverridden && !hasConfirmedHandicapOverride {
+                Button(action: requestHandicapOverride) {
+                    HStack(spacing: 10) {
+                        Text("\(computedHandicapValue)")
+                            .fontStyle(kFontName, size: 17, weight: .regular)
+                            .foregroundStyle(Color.neutral3)
+                        Image(systemName: "lock.fill")
+                            .font(.system(size: 12, weight: .semibold))
+                            .foregroundStyle(Color.neutral3)
+                        Spacer(minLength: 0)
+                        Text("Max: \(maximumHandicapValue)")
+                            .fontStyle(kFontName, size: 15, weight: .regular)
+                            .foregroundStyle(Color.neutral3)
+                    }
+                    .padding(.vertical, 12)
+                    .padding(.horizontal, 14)
+                    .frame(maxWidth: .infinity, minHeight: 44, alignment: .leading)
+                    .background(palette.cardEmbeddedRowBackground.opacity(0.55))
+                    .clipShape(RoundedRectangle(cornerRadius: 12))
+                }
+                .buttonStyle(.plain)
+                .accessibilityLabel("Handicap \(computedHandicapValue), league locked")
+                .accessibilityHint("Double tap to override the handicap for this round")
             } else {
                 HStack(spacing: 12) {
                     TextField("0", text: $handicapString)
                         .fontStyle(kFontName, size: 17, weight: .regular)
                         .foregroundStyle(commissionerStrokesValueColor)
-                        .keyboardType(snapshot.configuration.handicapEntryFormat == .courseHandicap ? .decimalPad : .numberPad)
+                        .keyboardType(effectiveHandicapEntryFormat == .courseHandicap ? .decimalPad : .numberPad)
                         .focused($focus, equals: .handicap)
+
+                    if seriesHandicapLockActive {
+                        Image(systemName: "lock.fill")
+                            .font(.system(size: 12, weight: .semibold))
+                            .foregroundStyle(isRoundHandicapOverridden ? Color.orange : Color.neutral3)
+                            .accessibilityHidden(true)
+                    }
 
                     Spacer(minLength: 0)
 
                     if focus == .handicap && handicapString.isPopulated {
                         ClearTextButton(theme: palette.theme, onTap: { handicapString = "" })
+                    }
+
+                    if seriesHandicapLockActive && isRoundHandicapOverridden {
+                        Button("Use computed value", systemImage: "arrow.uturn.backward", action: revertHandicapOverride)
+                            .labelStyle(.iconOnly)
+                            .foregroundStyle(Color.orange)
+                            .frame(width: 44, height: 44)
+                            .accessibilityHint("Restores the league-computed handicap for this round")
                     }
 
                     Text("Max: \(maximumHandicapValue)")
@@ -288,7 +348,7 @@ extension ManagePlayerView {
                 }
                 .borderedContentStyle(isActive: focus == .handicap, theme: palette.theme)
                 .onChange(of: handicapString) {
-                    if snapshot.configuration.handicapEntryFormat == .courseHandicap {
+                    if effectiveHandicapEntryFormat == .courseHandicap {
                         let filtered = decimalHandicapText(handicapString)
                         if filtered != handicapString {
                             handicapString = filtered
@@ -302,7 +362,7 @@ extension ManagePlayerView {
                 }
             }
 
-            if snapshot.configuration.handicapEntryFormat == .courseHandicap, let computedCourseHandicapValue {
+            if effectiveHandicapEntryFormat == .courseHandicap, let computedCourseHandicapValue {
                 Text("Course HCP: \(Int(computedCourseHandicapValue.rounded(.toNearestOrAwayFromZero)))")
                     .fontStyle(kFontName, size: 13, weight: .semibold)
                     .foregroundStyle(Color.neutral)
@@ -474,26 +534,25 @@ extension ManagePlayerView {
                 Line()
                 
                 HStack(spacing: 12) {
-                    // Uncomment below if you want to make it where only the host can change hosts.
-                    
-                    //if (userIsHost && isHost) || !isHost {
-                    PrimaryButton(
-                        appearance: .fill,
-                        title: isHost ? "Change host" : "Remove",
-                        labelColor: isHost ? palette.foregroundColor : .white,
-                        buttonColor: isHost ? palette.buttonColor : .systemError,
-                        theme: palette.theme,
-                        fillWidth: false,
-                        isDisabled: .false,
-                        isLoading: $isRemoving,
-                        onTap: {
-                            if isHost {
-                                showHostChangeSheet = true
-                            } else {
-                                showRemoveAlert = true
+                    if !isHost || canTransferHost {
+                        PrimaryButton(
+                            appearance: .fill,
+                            title: isHost ? "Change host" : "Remove",
+                            labelColor: isHost ? palette.foregroundColor : .white,
+                            buttonColor: isHost ? palette.buttonColor : .systemError,
+                            theme: palette.theme,
+                            fillWidth: false,
+                            isDisabled: .false,
+                            isLoading: $isRemoving,
+                            onTap: {
+                                if isHost {
+                                    showHostChangeSheet = true
+                                } else {
+                                    showRemoveAlert = true
+                                }
                             }
-                        }
-                    )
+                        )
+                    }
                     
                     PrimaryButton(
                         appearance: .fill,
@@ -519,13 +578,16 @@ extension ManagePlayerView {
         let computed = HandicapCalculator.participant(
             p,
             applying: handicapValue,
-            format: snapshot.configuration.handicapEntryFormat,
+            format: effectiveHandicapEntryFormat,
             courseSegment: courseSegment,
             maximumHandicap: maximumHandicapValue,
             handicapStrokeBasis: snapshot.handicapStrokeBasis
         )
         if seriesHandicapLockActive && isSeriesCommissioner {
-            p.adjustedHandicap = computed.adjustedHandicap
+            p = p.applyingLeagueHandicapOverride(
+                computed.adjustedHandicap,
+                maximum: maximumHandicapValue
+            )
         } else {
             p.originalHandicap = computed.originalHandicap
             p.adjustedHandicap = computed.adjustedHandicap
@@ -547,7 +609,7 @@ extension ManagePlayerView {
     private var computedHandicapValue: Int {
         HandicapCalculator.strokes(
             for: handicapValue,
-            format: snapshot.configuration.handicapEntryFormat,
+            format: effectiveHandicapEntryFormat,
             participant: handicapComputationParticipant,
             courseSegment: participantCourseSegment,
             maximumHandicap: maximumHandicapValue,
@@ -571,7 +633,36 @@ extension ManagePlayerView {
     }
 
     private func formattedHandicapInput(_ value: Double) -> String {
-        snapshot.configuration.handicapEntryFormat == .courseHandicap ? String(format: "%.1f", value) : "\(Int(value.rounded()))"
+        effectiveHandicapEntryFormat == .courseHandicap
+            ? value.formatted(.number.precision(.fractionLength(1)))
+            : "\(Int(value.rounded()))"
+    }
+
+    private func requestHandicapOverride() {
+        showHandicapOverrideAlert = true
+    }
+
+    private func confirmHandicapOverride() {
+        hasConfirmedHandicapOverride = true
+        focus = .handicap
+    }
+
+    private func revertHandicapOverride() {
+        guard let updated = participant?.restoringLeagueHandicapComputedBaseline(),
+              let baseline = updated.leagueHandicapComputedBaseline else { return }
+        handicapValue = Double(baseline)
+        handicapString = formattedHandicapInput(handicapValue)
+        hasConfirmedHandicapOverride = false
+        focus = nil
+
+        Task {
+            do {
+                try await roundSession.update(participant: updated)
+                participant = updated
+            } catch {
+                addBreadcrumb(level: .error, message: "Failed to restore computed handicap", error: error)
+            }
+        }
     }
 
     private func decimalHandicapText(_ text: String) -> String {

@@ -117,9 +117,13 @@ extension SeriesViewModel {
         )
         let counts = attendanceCounts(for: seriesRound.id)
         let participantCount = linked?.players.count ?? counts.playing
-        let participantCountLabel = participantCount > 0
-            ? "\(participantCount) player\(participantCount == 1 ? "" : "s")"
-            : nil
+        let totalParticipantCount = max(eligibleMembers.count, participantCount)
+        let plannedSubstituteCount = Set(
+            seriesRound.plannedTeeGroups
+                .flatMap(\.seats)
+                .filter(\.isSubstitute)
+                .map(\.memberID)
+        ).count
         let sides = outcome.map {
             roundCardSides(
                 from: $0,
@@ -150,7 +154,12 @@ extension SeriesViewModel {
             isProvisional: lifecycle == .live && !allScoresComplete(for: seriesRound),
             sides: sides,
             viewer: viewer,
-            participantCountLabel: participantCountLabel,
+            participantCountLabel: SeriesRoundCardFormatting.participantCountLabel(
+                playing: participantCount,
+                total: totalParticipantCount,
+                lifecycle: lifecycle
+            ),
+            substituteCountLabel: SeriesRoundCardFormatting.substituteCountLabel(plannedSubstituteCount),
             primaryAction: primaryAction(for: seriesRound, lifecycle: lifecycle, viewer: viewer),
             isAdjusted: seriesRound.isAdjusted,
             setupDiffers: linkedConfigurationDivergence(for: seriesRound) != nil
@@ -239,7 +248,7 @@ extension SeriesViewModel {
                     subtitle: roster.isEmpty ? nil : "Scheduled lineup",
                     scoreLabel: nil,
                     result: .none,
-                    contributors: roster.prefix(2).map { member in
+                    contributors: roster.map { member in
                         contributor(
                             member: member,
                             role: .leaderOnly,
@@ -247,7 +256,7 @@ extension SeriesViewModel {
                             handicapLabel: effectiveHandicap(for: member.id).map(Self.handicapLabel)
                         )
                     },
-                    hiddenContributorCount: max(0, roster.count - 2)
+                    hiddenContributorCount: 0
                 )
             }
         }
@@ -277,13 +286,6 @@ extension SeriesViewModel {
     ) -> [SeriesRoundCardSide] {
         outcome.sides.map { side in
             let players = outcome.players.filter { $0.ownerID == side.id }
-            let candidates: [SeriesMatchupOutcome.Player]
-            if configuration.defaultContributorRole == .selectedForRound {
-                let selected = players.filter(\.scoreCounts)
-                candidates = selected.isPopulated ? selected : players
-            } else {
-                candidates = players
-            }
             let result: SeriesRoundCardResult
             if outcome.isTie {
                 result = lifecycle == .live ? .tied : .tied
@@ -298,10 +300,10 @@ extension SeriesViewModel {
             return SeriesRoundCardSide(
                 id: side.id,
                 title: side.title,
-                subtitle: side.subtitle,
+                subtitle: nil,
                 scoreLabel: side.score,
                 result: result,
-                contributors: candidates.prefix(2).map { player in
+                contributors: players.map { player in
                     SeriesRoundCardContributor(
                         id: player.participantID,
                         name: player.name,
@@ -310,10 +312,11 @@ extension SeriesViewModel {
                         progressLabel: nil,
                         role: configuration.defaultContributorRole,
                         isViewer: player.participantID == currentPlayerID,
-                        isSubstitute: player.isSubstitute
+                        isSubstitute: player.isSubstitute,
+                        countsTowardScore: player.scoreCounts
                     )
                 },
-                hiddenContributorCount: max(0, candidates.count - 2)
+                hiddenContributorCount: 0
             )
         }
     }

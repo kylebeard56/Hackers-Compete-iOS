@@ -192,6 +192,73 @@ final class SeriesRoundCardPresentationTests: XCTestCase {
         XCTAssertNil(decoded.cardProjection?.state.viewer)
     }
 
+    func testParticipantMetadataFormatsPlayingAndSubstituteCounts() {
+        XCTAssertEqual(
+            SeriesRoundCardFormatting.participantCountLabel(
+                playing: 39,
+                total: 42,
+                lifecycle: .live
+            ),
+            "39 of 42 playing"
+        )
+        XCTAssertEqual(
+            SeriesRoundCardFormatting.participantCountLabel(
+                playing: 42,
+                total: 42,
+                lifecycle: .finalized
+            ),
+            "42 of 42 played"
+        )
+        XCTAssertEqual(SeriesRoundCardFormatting.substituteCountLabel(1), "1 sub")
+        XCTAssertEqual(SeriesRoundCardFormatting.substituteCountLabel(2), "2 subs")
+        XCTAssertNil(SeriesRoundCardFormatting.substituteCountLabel(0))
+    }
+
+    func testPlayerNameFormattingUsesFirstNameAndLastInitial() {
+        XCTAssertEqual(SeriesRoundCardFormatting.playerName("Andrew McCartney"), "Andrew M")
+        XCTAssertEqual(SeriesRoundCardFormatting.playerName("  Ariel   Hawley  "), "Ariel H")
+        XCTAssertEqual(SeriesRoundCardFormatting.playerName("Madonna"), "Madonna")
+        XCTAssertEqual(SeriesRoundCardFormatting.playerName(""), "")
+    }
+
+    func testBestNCardShowsEveryPlayerInScoreOrderAndMarksCountingScores() throws {
+        var snapshot = MockLiveRoundBest2of4Matchup.snapshot
+        snapshot.participants[7].isSubstitute = true
+        let state = SeriesRoundCardStateBuilder.build(
+            snapshot: snapshot,
+            context: .init(
+                id: "series-round",
+                canonicalRoundID: snapshot.round.id,
+                title: "Week 5",
+                scheduleLabel: "Today",
+                lifecycle: .live,
+                configuration: resolved(
+                    teamScoring: .init(mode: .bestN, count: 2, scope: .perRound),
+                    scope: .matchup
+                ),
+                primaryAction: .continuePlaying,
+                viewerPlayerID: "player_p02",
+                viewerMemberID: nil,
+                isAdjusted: false,
+                setupDiffers: false
+            )
+        )
+
+        XCTAssertEqual(state.participantCountLabel, "8 of 8 playing")
+        XCTAssertEqual(state.substituteCountLabel, "1 sub")
+        XCTAssertEqual(state.sides.count, 2)
+        XCTAssertTrue(state.sides.allSatisfy { $0.contributors.count == 4 })
+        XCTAssertTrue(state.sides.allSatisfy { $0.hiddenContributorCount == 0 })
+        XCTAssertTrue(state.sides.allSatisfy { $0.contributors.filter { $0.countsTowardScore == true }.count == 2 })
+
+        let red = try XCTUnwrap(state.sides.first(where: { $0.id == "team_red" }))
+        XCTAssertEqual(
+            red.contributors.map(\.name),
+            ["Liam Carter", "Kyle Beard", "Ethan Brooks", "Jake Palmer"]
+        )
+        XCTAssertEqual(red.contributors.first(where: { $0.isViewer })?.name, "Jake Palmer")
+    }
+
     private func resolved(
         teamScoring: RoundTeamScoringConfiguration = .init(),
         scope: CompetitionScope = .field,

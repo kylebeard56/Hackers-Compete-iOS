@@ -13,7 +13,6 @@ struct LeaderboardRowView: View {
     @CappedScaledMetric(relativeTo: .caption) var teamDotSize: CGFloat = 8
     @CappedScaledMetric(relativeTo: .body) var scoreWidth: CGFloat = 40
     @CappedScaledMetric(relativeTo: .body) var thruWidth: CGFloat = 40
-    @CappedScaledMetric(relativeTo: .body) var starSize: CGFloat = 20
     @CappedScaledMetric(relativeTo: .body) var rowSpacing: CGFloat = 8
 
     let palette: DesignPalette
@@ -25,8 +24,6 @@ struct LeaderboardRowView: View {
     var isHighestWinsFormat: Bool = false
     var isScoreHidden: Bool = false
     var showsHandicap: Bool = false
-    var onHiddenScoreTap: Callback? = nil
-    let onTogglePinned: Callback
     let onTap: Callback
 
     private var showsSubstituteMarker: Bool {
@@ -34,38 +31,19 @@ struct LeaderboardRowView: View {
     }
     
     var body: some View {
-        HStack(spacing: rowSpacing) {
-            
-            Button {
-                Haptics.fire(.light)
-                if isScoreHidden {
-                    onHiddenScoreTap?()
-                } else {
-                    onTap()
-                }
-            } label: {
-                ViewThatFits(in: .horizontal) {
-                    rowContent(showsHandicapColumn: showsHandicap)
-                    rowContent(showsHandicapColumn: false)
-                }
-            }
-            
-            if row.memberNames == nil && !row.isSharedScoreUnit {
-                Button {
-                    Haptics.fire(.light)
-                    onTogglePinned()
-                } label: {
-                    Image(systemName: row.isPinned ? "star.fill" : "star")
-                        .foregroundStyle(row.isPinned ? Color.systemYellow : Color.neutral3)
-                        .frame(width: starSize, height: starSize)
-                }
-            }
+        Button {
+            Haptics.fire(.light)
+            onTap()
+        } label: {
+            rowContent
+                .contentShape(Rectangle())
         }
+        .buttonStyle(.plain)
         .accessibilityElement(children: .combine)
         .accessibilityValue(accessibilityValue)
     }
 
-    private func rowContent(showsHandicapColumn: Bool) -> some View {
+    private var rowContent: some View {
         HStack(spacing: rowSpacing) {
             Text(placeLabel)
                 .fontStyle(kFontName, size: 13, weight: .medium)
@@ -86,11 +64,11 @@ struct LeaderboardRowView: View {
                            height: row.memberNames != nil ? accentBarHeight : teamDotSize)
             }
 
-            nameStack(showsCompactHandicap: showsHandicap && !showsHandicapColumn)
+            nameStack
 
             Spacer(minLength: 0)
 
-            if showsHandicapColumn {
+            if showsHandicap {
                 Text(handicapValue)
                     .fontStyle(kFontName, size: 14, weight: .medium)
                     .foregroundStyle(Color.neutral2)
@@ -111,26 +89,14 @@ struct LeaderboardRowView: View {
     }
 
     @ViewBuilder
-    private func nameStack(showsCompactHandicap: Bool) -> some View {
+    private var nameStack: some View {
         if row.isSharedScoreUnit {
             VStack(alignment: .leading, spacing: 2) {
                 ForEach(row.participants) { participant in
-                    LiveRoundAdaptiveNameText(
-                        name: participant.name,
-                        format: nameDisplayFormat,
-                        fontSize: 15,
-                        weight: .semibold,
-                        color: palette.foregroundColor
-                    )
-                }
-
-                if showsCompactHandicap {
-                    Text(compactSharedHandicapLabel)
-                        .fontStyle(kFontName, size: 12, weight: .regular)
-                        .foregroundStyle(Color.neutral)
-                        .lineLimit(1)
+                    compactNameText(participant.name)
                 }
             }
+            .clipped()
         } else {
             VStack(alignment: .leading, spacing: 2) {
                 if let teamName = row.teamName, teamName.isPopulated {
@@ -140,13 +106,7 @@ struct LeaderboardRowView: View {
                         .lineLimit(1)
                 } else {
                     HStack(spacing: 1) {
-                        LiveRoundAdaptiveNameText(
-                            name: row.participant.name,
-                            format: nameDisplayFormat,
-                            fontSize: 15,
-                            weight: .semibold,
-                            color: palette.foregroundColor
-                        )
+                        compactNameText(row.participant.name)
                         if row.participant.isSubstitute {
                             Text("*")
                                 .fontStyle(kFontName, size: 15, weight: .semibold)
@@ -161,15 +121,16 @@ struct LeaderboardRowView: View {
                         .foregroundStyle(Color.neutral)
                         .lineLimit(1)
                 }
-
-                if showsCompactHandicap {
-                    Text("HCP \(handicapValue)")
-                        .fontStyle(kFontName, size: 12, weight: .regular)
-                        .foregroundStyle(Color.neutral)
-                        .lineLimit(1)
-                }
             }
         }
+    }
+
+    private func compactNameText(_ name: Name) -> some View {
+        Text(nameDisplayFormat.displayName(for: name))
+            .fontStyle(kFontName, size: 15, weight: .semibold)
+            .foregroundStyle(palette.foregroundColor)
+            .lineLimit(1)
+            .truncationMode(.tail)
     }
 
     private var handicapValue: String {
@@ -178,11 +139,6 @@ struct LeaderboardRowView: View {
                 .replacingOccurrences(of: "HCP ", with: "") ?? "—"
         }
         return "\(row.participant.lockedHandicapAllowance)"
-    }
-
-    private var compactSharedHandicapLabel: String {
-        guard let label = row.sharedHandicapLabel, label.isPopulated else { return "HCP —" }
-        return label
     }
 
     private var accessibilityValue: String {
@@ -212,10 +168,7 @@ struct LeaderboardRowView: View {
     }
 
     private var accentBarHeight: CGFloat {
-        guard row.isSharedScoreUnit else { return 28 }
-        let nameHeight = CGFloat(max(row.participants.count, 1)) * 18
-        let subtitleHeight: CGFloat = row.sharedHandicapLabel?.isPopulated == true ? 14 : 0
-        return max(36, nameHeight + subtitleHeight)
+        row.isSharedScoreUnit || row.memberNames != nil ? 46 : 28
     }
 }
 
@@ -258,7 +211,6 @@ private struct LeaderboardRowViewPreview: View {
             row: row,
             teamColor: viewModel.teamColor(for: row.participant),
             nameDisplayFormat: viewModel.nameDisplayFormat,
-            onTogglePinned: { },
             onTap: { }
         )
         .padding(16)

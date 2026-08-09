@@ -11,6 +11,7 @@ const {
   participationStatus,
   canTransition,
   canTransitionMigration,
+  isCommissioner,
 } = require("../series-round-v2");
 const {
   configurationFrom,
@@ -38,6 +39,22 @@ test("round lifecycle only moves forward through canonical states", () => {
   assert.equal(canTransition("completed", "archived"), true);
   assert.equal(canTransition("completed", "live"), false);
   assert.equal(canTransition("lobby", "completed"), false);
+});
+
+test("commissioner authority includes active secondary commissioners", () => {
+  const document = (value) => ({ data: () => value });
+  const series = { commissioner_user_id: "primary" };
+  const members = [
+    document({ user_id: "secondary", role: "commissioner", is_active: true }),
+    document({ user_id: "inactive", role: "commissioner", is_active: false }),
+    document({ user_id: "captain", role: "captain", is_active: true }),
+  ];
+
+  assert.equal(isCommissioner(series, members, "primary"), true);
+  assert.equal(isCommissioner(series, members, "secondary"), true);
+  assert.equal(isCommissioner(series, members, "inactive"), false);
+  assert.equal(isCommissioner(series, members, "captain"), false);
+  assert.equal(isCommissioner(series, members, "member"), false);
 });
 
 test("migration cutover only activates ready data and rolls back active data", () => {

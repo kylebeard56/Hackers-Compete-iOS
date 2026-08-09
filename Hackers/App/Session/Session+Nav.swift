@@ -14,6 +14,7 @@ enum RoundResumeDestination: String, Codable, Sendable {
 
 enum RoundResumeTab: String, Codable, Sendable {
     case scoring
+    case table
     case matchups
 }
 

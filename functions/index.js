@@ -5,8 +5,9 @@ if (!admin.apps.length) {
 }
 
 const { setGlobalOptions } = require("firebase-functions/v2");
-const { onCall } = require("firebase-functions/v2/https");
+const { HttpsError, onCall } = require("firebase-functions/v2/https");
 const firebase_tools = require("firebase-tools");
+const { canDeleteRound, roundIDFromDeletePath } = require("./round-permissions");
 const {
   onRoundGoesLive,
   onParticipantAddedToLiveRound,
@@ -37,25 +38,32 @@ exports.deleteFullRound = onCall(async (request) => {
 
   // Require the user to be signed in
   if (!auth) {
-    const functions = require("firebase-functions");
-    throw new functions.https.HttpsError(
+    throw new HttpsError(
       "unauthenticated",
       "You must be signed in to call this function."
     );
   }
 
   const path = data?.path;
-  if (typeof path !== "string" || !path.includes("/")) {
-    const functions = require("firebase-functions");
-    throw new functions.https.HttpsError(
+  const roundID = roundIDFromDeletePath(path);
+  if (!roundID) {
+    throw new HttpsError(
       "invalid-argument",
-      "Expected { path: 'collection/docId' }"
+      "Expected { path: 'rounds/roundId' }"
     );
+  }
+
+  const roundSnapshot = await admin.firestore().collection("rounds").doc(roundID).get();
+  if (!roundSnapshot.exists) {
+    throw new HttpsError("not-found", "Round was not found.");
+  }
+  if (!canDeleteRound(roundSnapshot.data(), auth.uid)) {
+    throw new HttpsError("permission-denied", "Only the round creator can delete this round.");
   }
 
   try {
     // Recursively delete the document and subcollections
-    await firebase_tools.firestore.delete(path, {
+    await firebase_tools.firestore.delete(`rounds/${roundID}`, {
       project: process.env.GCLOUD_PROJECT,
       recursive: true,
       force: true,
@@ -63,8 +71,7 @@ exports.deleteFullRound = onCall(async (request) => {
 
     return { ok: true, path };
   } catch (error) {
-    const functions = require("firebase-functions");
-    throw new functions.https.HttpsError(
+    throw new HttpsError(
       "internal",
       "Failed to delete document tree",
       error.message

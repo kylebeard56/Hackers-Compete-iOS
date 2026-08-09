@@ -441,11 +441,18 @@ const transitionRoundV2 = onCall(async ({ auth, data }) => {
     if (!roundSnapshot.exists) throw new HttpsError("not-found", "Round V2 was not found.");
     const round = roundSnapshot.data();
     let series = null;
+    let commissionerMembers = [];
     if (round.series_context?.series_id) {
-      const seriesSnapshot = await transaction.get(db.collection(COLLECTIONS.series).doc(round.series_context.series_id));
+      const seriesRef = db.collection(COLLECTIONS.series).doc(round.series_context.series_id);
+      const seriesSnapshot = await transaction.get(seriesRef);
       series = seriesSnapshot.data();
+      const memberSnapshots = await transaction.get(
+        seriesRef.collection("members").where("user_id", "==", auth.uid)
+      );
+      commissionerMembers = memberSnapshots.docs;
     }
-    if (round.created_by_user_id !== auth.uid && series?.commissioner_user_id !== auth.uid) {
+    const ownerUserID = round.created_by_user_id || round.created_by;
+    if (ownerUserID !== auth.uid && !isCommissioner(series || {}, commissionerMembers, auth.uid)) {
       throw new HttpsError("permission-denied", "Only the round owner or commissioner can change lifecycle state.");
     }
     if (round.revision !== expected) throw new HttpsError("aborted", "Round revision changed; refresh before retrying.");
@@ -759,6 +766,7 @@ module.exports = {
   participationStatus,
   canTransition,
   canTransitionMigration,
+  isCommissioner,
   createSeriesV2,
   createSeriesRoundV2,
   transitionRoundV2,

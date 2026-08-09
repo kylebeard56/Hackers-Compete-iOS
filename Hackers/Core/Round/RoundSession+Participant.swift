@@ -395,6 +395,18 @@ extension RoundSession {
 extension RoundSession {
     func changeHost(to participant: RoundParticipant) async throws {
         addBreadcrumb()
+        let currentUserID = await AppData.shared.user?.id
+        let currentPlayerID = await AppData.shared.getPrimaryPlayer()?.id
+        let access = RoundManagementAccess.resolve(
+            snapshot: snapshot,
+            currentUserID: currentUserID,
+            currentPlayerID: currentPlayerID
+        )
+        guard access.canTransferHost else {
+            addBreadcrumb(level: .warning, message: "Only the current host can transfer host ownership")
+            throw HackersError.hostTransferRequiresCurrentHost
+        }
+
         let previousHostID = snapshot.participants.first(where: \.isHost)?.id
 
         do {

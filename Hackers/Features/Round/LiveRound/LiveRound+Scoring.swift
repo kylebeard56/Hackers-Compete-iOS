@@ -42,12 +42,6 @@ extension LiveRound {
                 //.presentationBackground(.ultraThinMaterial)
                 .interactiveDismissDisabled(true)
             }
-            .alert("Scores Hidden", isPresented: $showSecretScoreAlert) {
-                Button("OK", role: .cancel) { }
-            } message: {
-                let host = snapshot.hostName?.fullName ?? "the host"
-                Text("Scores are kept secret until revealed by \(host) at the end of the round.")
-            }
             .alert("Reveal Scores", isPresented: $showRevealConfirmation) {
                 Button("Cancel", role: .cancel) { }
                 Button("Reveal") {
@@ -458,6 +452,7 @@ extension LiveRound {
             }
 
             Spacer(minLength: 0)
+
         }
         .padding(.top, 4)
     }
@@ -839,11 +834,8 @@ extension LiveRound {
     // MARK: - Individual List
 
     private var leaderboardColumnHeaders: some View {
-        ViewThatFits(in: .horizontal) {
-            leaderboardColumnHeaderRow(showsHandicapColumn: viewModel.handicapsEnabled)
-            leaderboardColumnHeaderRow(showsHandicapColumn: false)
-        }
-        .accessibilityHidden(true)
+        leaderboardColumnHeaderRow(showsHandicapColumn: viewModel.handicapsEnabled)
+            .accessibilityHidden(true)
     }
 
     private func leaderboardColumnHeaderRow(showsHandicapColumn: Bool) -> some View {
@@ -865,8 +857,6 @@ extension LiveRound {
             Text("Thru")
                 .frame(width: 40, alignment: .center)
 
-            Color.clear
-                .frame(width: 20, height: 1)
         }
         .fontStyle(kFontName, size: 10, weight: .semibold)
         .foregroundStyle(Color.neutral3)
@@ -913,14 +903,6 @@ extension LiveRound {
                     isHighestWinsFormat: viewModel.snapshot.resolvedActiveTemplate.leaderboardSort == .highestWins,
                     isScoreHidden: hideScore,
                     showsHandicap: viewModel.handicapsEnabled,
-                    onHiddenScoreTap: {
-                        if viewModel.isCurrentUserHost {
-                            showRevealConfirmation = true
-                        } else {
-                            showSecretScoreAlert = true
-                        }
-                    },
-                    onTogglePinned: { viewModel.togglePinned(row.participant) },
                     onTap: { viewModel.presentedParticipant = row.participant }
                 )
 
@@ -967,14 +949,6 @@ extension LiveRound {
                             isHighestWinsFormat: viewModel.snapshot.resolvedActiveTemplate.leaderboardSort == .highestWins,
                             isScoreHidden: hideScore,
                             showsHandicap: viewModel.handicapsEnabled,
-                            onHiddenScoreTap: {
-                                if viewModel.isCurrentUserHost {
-                                    showRevealConfirmation = true
-                                } else {
-                                    showSecretScoreAlert = true
-                                }
-                            },
-                            onTogglePinned: { viewModel.togglePinned(row.participant) },
                             onTap: { viewModel.presentedParticipant = row.participant }
                         )
                         
@@ -1232,7 +1206,18 @@ extension LiveRound {
                 .frame(maxWidth: .infinity, minHeight: skeletonCellHeight, maxHeight: skeletonCellHeight, alignment: .leading)
             
             Spacer(minLength: 0)
-            
+
+            if viewModel.handicapsEnabled {
+                RoundedRectangle(cornerRadius: 6)
+                    .fill(Color.clear)
+                    .liveRoundSkeleton(
+                        palette: palette,
+                        themeColor: viewModel.theme.color,
+                        cornerRadius: 6
+                    )
+                    .frame(width: 42, height: skeletonCellHeight)
+            }
+
             RoundedRectangle(cornerRadius: 6)
                 .fill(Color.clear)
                 .liveRoundSkeleton(
@@ -1251,14 +1236,6 @@ extension LiveRound {
                 )
                 .frame(width: leaderboardHeaderThruWidth, height: skeletonCellHeight)
             
-            RoundedRectangle(cornerRadius: 6)
-                .fill(Color.clear)
-                .liveRoundSkeleton(
-                    palette: palette,
-                    themeColor: viewModel.theme.color,
-                    cornerRadius: 6
-                )
-                .frame(width: leaderboardHeaderStarWidth, height: skeletonCellHeight)
         }
     }
 }

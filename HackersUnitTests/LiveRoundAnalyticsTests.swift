@@ -24,6 +24,66 @@ final class RoundResumeStoreTests: XCTestCase {
         XCTAssertNil(store.load())
     }
 
+    func testTableRoundResumeStateRoundTrips() {
+        let suiteName = "RoundResumeStoreTests.Table.\(UUID().uuidString)"
+        let defaults = UserDefaults(suiteName: suiteName)!
+        let store = UserDefaultsRoundResumeStore(defaults: defaults, key: "resume")
+        let state = RoundResumeState(
+            roundID: "round_table",
+            destination: .liveRound,
+            selectedHole: 12,
+            selectedTab: .table
+        )
+
+        store.save(state)
+
+        XCTAssertEqual(store.load(), state)
+    }
+
+    func testLegacyScoringRoundResumeStateStillDecodes() throws {
+        let json = """
+        {
+          "roundID": "legacy_round",
+          "destination": "live_round",
+          "selectedHole": 3,
+          "selectedTab": "scoring",
+          "timestamp": 1725000000
+        }
+        """.data(using: .utf8)!
+
+        let decoded = try JSONDecoder().decode(RoundResumeState.self, from: json)
+
+        XCTAssertEqual(decoded.selectedTab, .scoring)
+        XCTAssertEqual(decoded.selectedHole, 3)
+    }
+
+    func testEmbeddedScoreTableRequiresExplicitEditMode() {
+        XCTAssertFalse(
+            ScorecardInteractionMode.view.allowsScoreEditing(
+                presentation: .embeddedLiveTable,
+                hasPermission: true
+            )
+        )
+        XCTAssertTrue(
+            ScorecardInteractionMode.edit.allowsScoreEditing(
+                presentation: .embeddedLiveTable,
+                hasPermission: true
+            )
+        )
+        XCTAssertFalse(
+            ScorecardInteractionMode.edit.allowsScoreEditing(
+                presentation: .embeddedLiveTable,
+                hasPermission: false
+            )
+        )
+        XCTAssertTrue(
+            ScorecardInteractionMode.view.allowsScoreEditing(
+                presentation: .modal,
+                hasPermission: true
+            )
+        )
+    }
+
     func testResumeRoutingUsesAuthoritativeRoundStatus() {
         XCTAssertEqual(RoundResumeRouter.resolve(status: .lobby), .lobby)
         XCTAssertEqual(RoundResumeRouter.resolve(status: .live), .liveRound)

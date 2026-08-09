@@ -166,6 +166,7 @@
 		B4A4A1272E4F464100CE5619 /* Tee.swift in Sources */ = {isa = PBXBuildFile; fileRef = B4A4A1262E4F464000CE5619 /* Tee.swift */; };
 		B4A4A1292E4F482E00CE5619 /* DistanceFormatter.swift in Sources */ = {isa = PBXBuildFile; fileRef = B4A4A1282E4F482D00CE5619 /* DistanceFormatter.swift */; };
 		B4A4A12B2E4F48BA00CE5619 /* AddressFormatter.swift in Sources */ = {isa = PBXBuildFile; fileRef = B4A4A12A2E4F48BA00CE5619 /* AddressFormatter.swift */; };
+		B4A5110231A0000100A51101 /* RoundManagementAccess.swift in Sources */ = {isa = PBXBuildFile; fileRef = B4A5110131A0000100A51101 /* RoundManagementAccess.swift */; };
 		B4AB581E2E4764E3007232FB /* ScoringService.swift in Sources */ = {isa = PBXBuildFile; fileRef = B4AB581D2E4764DC007232FB /* ScoringService.swift */; };
 		B4AB58202E47653D007232FB /* ScoringService+Course.swift in Sources */ = {isa = PBXBuildFile; fileRef = B4AB581F2E476539007232FB /* ScoringService+Course.swift */; };
 		B4AB58222E476595007232FB /* ScoringService+StrokePlay.swift in Sources */ = {isa = PBXBuildFile; fileRef = B4AB58212E47658D007232FB /* ScoringService+StrokePlay.swift */; };
@@ -560,6 +561,7 @@
 		B4A4A1262E4F464000CE5619 /* Tee.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Tee.swift; sourceTree = "<group>"; };
 		B4A4A1282E4F482D00CE5619 /* DistanceFormatter.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DistanceFormatter.swift; sourceTree = "<group>"; };
 		B4A4A12A2E4F48BA00CE5619 /* AddressFormatter.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AddressFormatter.swift; sourceTree = "<group>"; };
+		B4A5110131A0000100A51101 /* RoundManagementAccess.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RoundManagementAccess.swift; sourceTree = "<group>"; };
 		B4AB581D2E4764DC007232FB /* ScoringService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ScoringService.swift; sourceTree = "<group>"; };
 		B4AB581F2E476539007232FB /* ScoringService+Course.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "ScoringService+Course.swift"; sourceTree = "<group>"; };
 		B4AB58212E47658D007232FB /* ScoringService+StrokePlay.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "ScoringService+StrokePlay.swift"; sourceTree = "<group>"; };
@@ -1052,6 +1054,7 @@
 				B453F6FC2E56A41F00CD8A74 /* Round.swift */,
 				B426002D2E5A30CD0006C6C2 /* Round+Course.swift */,
 				B4F120A92E606B2A000F5CDE /* RoundSnapshot.swift */,
+				B4A5110131A0000100A51101 /* RoundManagementAccess.swift */,
 				B4F6920E2F4DC51C009FB81A /* ScoringSession.swift */,
 				B42600392E5A3A820006C6C2 /* Game */,
 				B4F120A62E6066EE000F5CDE /* Subcollections */,
@@ -2391,6 +2394,7 @@
 				B426002E2E5A30CF0006C6C2 /* Round+Course.swift in Sources */,
 				B4CA89B02E2013C10048003A /* Firebase+API.swift in Sources */,
 				B4F120AA2E606B2C000F5CDE /* RoundSnapshot.swift in Sources */,
+				B4A5110231A0000100A51101 /* RoundManagementAccess.swift in Sources */,
 				B4CA89D32E202CA10048003A /* Array.swift in Sources */,
 				B433DB502F336EF2006665CC /* LiveHoleScoringView.swift in Sources */,
 				B4BA1DC32E500BCC0070011F /* Geohash.swift in Sources */,
