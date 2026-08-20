@@ -198,14 +198,24 @@ struct SeriesRoundCardSummaryView: View {
 
             Spacer(minLength: 8)
 
-            if let handicap = contributor.handicapLabel {
-                metric(label: "HCP", value: handicap)
-            }
-            if let score = contributor.scoreLabel {
-                metric(label: state.scoreBasis == .net ? "NET" : "GROSS", value: score)
-            }
-            if let progress = contributor.progressLabel {
-                metric(label: "THRU", value: progress)
+            if state.lifecycle == .upcoming,
+               let metadata = contributor.preRoundMetadataLabel {
+                Text(metadata)
+                    .fontStyle(kFontName, size: 11, weight: .medium)
+                    .foregroundStyle(Color.neutral)
+                    .lineLimit(1)
+                    .minimumScaleFactor(0.85)
+                    .monospacedDigit()
+            } else {
+                if let handicap = contributor.handicapLabel {
+                    metric(label: "HCP", value: handicap)
+                }
+                if let score = contributor.scoreLabel {
+                    metric(label: state.scoreBasis == .net ? "NET" : "GROSS", value: score)
+                }
+                if let progress = contributor.progressLabel {
+                    metric(label: "THRU", value: progress)
+                }
             }
         }
         .padding(.horizontal, 4)

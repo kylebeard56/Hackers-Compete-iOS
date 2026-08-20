@@ -537,7 +537,14 @@ final class SeriesScoreboardCalculatorTests: XCTestCase {
         ]
         let scores = [
             handicapRoundScore(id: "alice1", memberID: "alice", roundID: "round1", score: 45, par: 36, rating: 34, slope: 113),
-            handicapRoundScore(id: "alice2", memberID: "alice", roundID: "round2", score: 45, par: 36),
+            handicapRoundScore(
+                id: "alice2",
+                memberID: "alice",
+                roundID: "round2",
+                score: 47,
+                par: 36,
+                countsTowardHandicapIndex: false
+            ),
             handicapRoundScore(id: "bob1", memberID: "bob", roundID: "round1", score: 40, par: 36),
             handicapRoundScore(id: "ignored", memberID: "bob", roundID: "round3", score: 30, par: 36),
         ]
@@ -555,12 +562,18 @@ final class SeriesScoreboardCalculatorTests: XCTestCase {
 
         XCTAssertEqual(rows.map(\.memberID), ["bob", "alice", "charlie"])
         XCTAssertEqual(rows[0].averageDifferential, 4)
+        XCTAssertEqual(rows[0].averageGross, 40)
+        XCTAssertEqual(rows[0].averageNet ?? .nan, 30.3, accuracy: 0.000_001)
         XCTAssertEqual(rows[0].currentHandicap, 9.7)
         XCTAssertEqual(rows[0].roundsPlayed, 1)
-        XCTAssertEqual(rows[1].averageDifferential, 10)
+        XCTAssertEqual(rows[1].averageDifferential, 11)
+        XCTAssertEqual(rows[1].averageGross, 46)
+        XCTAssertEqual(rows[1].averageNet ?? .nan, 37.8, accuracy: 0.000_001)
         XCTAssertEqual(rows[1].currentHandicap, 8.2)
         XCTAssertEqual(rows[1].roundsPlayed, 2)
         XCTAssertNil(rows[2].averageDifferential)
+        XCTAssertNil(rows[2].averageGross)
+        XCTAssertNil(rows[2].averageNet)
         XCTAssertEqual(rows[2].roundsPlayed, 0)
     }
 
@@ -625,7 +638,8 @@ final class SeriesScoreboardCalculatorTests: XCTestCase {
         score: Double,
         par: Double,
         rating: Double? = nil,
-        slope: Int? = nil
+        slope: Int? = nil,
+        countsTowardHandicapIndex: Bool = true
     ) -> SeriesHandicapScore {
         SeriesHandicapScore(
             id: id,
@@ -635,7 +649,8 @@ final class SeriesScoreboardCalculatorTests: XCTestCase {
             courseRating: rating,
             courseSlope: slope,
             source: .round,
-            sourceRoundID: roundID
+            sourceRoundID: roundID,
+            countsTowardHandicapIndex: countsTowardHandicapIndex
         )
     }
 

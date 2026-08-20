@@ -133,6 +133,8 @@ struct SeriesIndividualStatsRow: Identifiable, Equatable {
     let memberID: String
     let name: String
     let averageDifferential: Double?
+    let averageGross: Double?
+    let averageNet: Double?
     let currentHandicap: Double?
     let roundsPlayed: Int
 
@@ -1864,11 +1866,23 @@ final class SeriesViewModel: ObservableObject, Loggable {
             let averageDifferential = differentials.isEmpty
                 ? nil
                 : differentials.reduce(0, +) / Double(differentials.count)
+            let grossScores = scores.map(\.score).filter(\.isFinite)
+            let averageGross = grossScores.isEmpty
+                ? nil
+                : grossScores.reduce(0, +) / Double(grossScores.count)
+            let currentHandicap = handicaps[member.id]?.effectiveIndex.flatMap { handicap in
+                handicap.isFinite ? handicap : nil
+            }
+            let averageNet = averageGross.flatMap { gross in
+                currentHandicap.map { gross - $0 }
+            }
             return SeriesIndividualStatsRow(
                 memberID: member.id,
                 name: member.name.fullName,
                 averageDifferential: averageDifferential,
-                currentHandicap: handicaps[member.id]?.effectiveIndex,
+                averageGross: averageGross,
+                averageNet: averageNet,
+                currentHandicap: currentHandicap,
                 roundsPlayed: Set(scores.compactMap(\.sourceRoundID)).count
             )
         }

@@ -5,6 +5,7 @@
 //  Created by Kyle Beard on 3/9/26.
 //
 
+import SkeletonUI
 import SwiftUI
 
 // MARK: - Matchups Content
@@ -142,6 +143,10 @@ private struct MatchupTileView: View {
         viewModel.matchupProbabilities[section.matchup.id]
     }
 
+    private var isProbabilityLoading: Bool {
+        viewModel.loadingMatchupProbabilityIDs.contains(section.matchup.id)
+    }
+
     var body: some View {
         ZStack(alignment: .bottomTrailing) {
             VStack(spacing: 0) {
@@ -196,7 +201,9 @@ private struct MatchupTileView: View {
     @ViewBuilder
     private var matchupProbabilityView: some View {
         if viewModel.shouldShowMatchupProbabilities {
-            if let probability, probability.isSupported {
+            if isProbabilityLoading {
+                matchupProbabilitySkeleton
+            } else if let probability, probability.isSupported {
                 VStack(alignment: .leading, spacing: 7) {
                     HStack {
                         Text("Win probability")
@@ -207,7 +214,7 @@ private struct MatchupTileView: View {
                     .foregroundStyle(Color.neutral)
 
                     GeometryReader { geometry in
-                        HStack(spacing: 1) {
+                        HStack(spacing: 0) {
                             Rectangle()
                                 .fill(leftProbabilityColor)
                                 .frame(width: probabilityWidth(
@@ -222,7 +229,12 @@ private struct MatchupTileView: View {
                                 ))
                             Rectangle()
                                 .fill(rightProbabilityColor)
+                                .frame(width: probabilityWidth(
+                                    probability.rightWin,
+                                    totalWidth: geometry.size.width
+                                ))
                         }
+                        .frame(width: geometry.size.width, height: 8)
                         .clipShape(Capsule())
                     }
                     .frame(height: 8)
@@ -253,16 +265,27 @@ private struct MatchupTileView: View {
                     .padding(.top, 12)
                     .fixedSize(horizontal: false, vertical: true)
             } else {
-                HStack(spacing: 8) {
-                    ProgressView().controlSize(.small)
-                    Text("Estimating matchup")
-                }
-                .fontStyle(kFontName, size: 11, weight: .medium)
-                .foregroundStyle(Color.neutral)
-                .padding(.top, 12)
-                .accessibilityLabel("Estimating matchup win probability")
+                matchupProbabilitySkeleton
             }
         }
+    }
+
+    private var matchupProbabilitySkeleton: some View {
+        Capsule()
+            .skeleton(
+                with: true,
+                animation: accessibilityReduceMotion ? .none : .linear(duration: 1.6),
+                appearance: .solid(
+                    color: palette.skeletonColor,
+                    background: palette.skeletonBackground
+                ),
+                shape: .rounded(.radius(4)),
+                lines: 1,
+                scales: [1: 0.55, 2: 0.3]
+            )
+            .frame(height: 8)
+            .padding(.top, 14)
+            .accessibilityLabel("Estimating matchup win probability")
     }
 
     private var leftProbabilityColor: Color {
@@ -688,6 +711,9 @@ private struct MatchupTileView: View {
                     palette: palette,
                     isActive: item.side.isParticipantActive(item.participant),
                     isPointsFormat: isPointsFormat,
+                    topTwoProbability: isProbabilityLoading
+                        ? nil
+                        : probability?.participantCountingProbabilities[item.participant.id],
                     scoreColumnWidth: scoreColumnWidth
                 )
 
@@ -723,6 +749,7 @@ private struct MatchupPlayerRowView: View {
     let palette: DesignPalette
     let isActive: Bool
     let isPointsFormat: Bool
+    let topTwoProbability: Int?
     var scoreColumnWidth: CGFloat = 44
 
     private var teamColor: Color? {
@@ -755,6 +782,17 @@ private struct MatchupPlayerRowView: View {
                     }
                 }
                     .frame(maxWidth: .infinity, alignment: .leading)
+
+                if isActive, let topTwoProbability {
+                    Text("\(topTwoProbability)% top 2")
+                        .fontStyle(kFontName, size: 11, weight: .semibold)
+                        .foregroundStyle(teamColor ?? palette.foregroundColor)
+                        .contentTransition(.numericText())
+                        .fixedSize(horizontal: true, vertical: false)
+                        .accessibilityLabel(
+                            "\(topTwoProbability) percent chance of counting in the top two"
+                        )
+                }
 
                 if isActive {
                     Circle()

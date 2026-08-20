@@ -92,6 +92,7 @@ struct SeriesRoundCardContributor: Identifiable, Codable, Equatable {
     var scoreLabel: String?
     var handicapLabel: String?
     var progressLabel: String?
+    var preRoundMetadataLabel: String? = nil
     var role: SeriesRoundCardContributorRole
     var isViewer: Bool
     var isSubstitute: Bool
@@ -327,6 +328,20 @@ enum SeriesRoundCardFormatting {
         let family = name.familyName.trimmingCharacters(in: .whitespacesAndNewlines)
         guard let initial = family.first else { return given }
         return "\(given) \(String(initial).uppercased())"
+    }
+
+    static func preRoundMetadataLabel(
+        handicap: String?,
+        teeGroup: String?
+    ) -> String? {
+        var components: [String] = []
+        if let handicap, handicap.isPopulated {
+            components.append("\(handicap) HCP")
+        }
+        if let teeGroup, teeGroup.isPopulated {
+            components.append(teeGroup)
+        }
+        return components.isEmpty ? nil : components.joined(separator: " · ")
     }
 
     static func scheduleLabel(

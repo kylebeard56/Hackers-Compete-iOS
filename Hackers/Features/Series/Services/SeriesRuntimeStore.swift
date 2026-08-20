@@ -588,6 +588,7 @@ struct MatchupProbability: Hashable, Sendable {
     let leftWin: Int
     let tie: Int
     let rightWin: Int
+    let participantCountingProbabilities: [String: Int]
     let confidence: ProjectionConfidence
     let isSupported: Bool
     let unsupportedReason: String?
@@ -598,6 +599,7 @@ struct MatchupProbability: Hashable, Sendable {
             leftWin: 0,
             tie: 0,
             rightWin: 0,
+            participantCountingProbabilities: [:],
             confidence: .limited,
             isSupported: false,
             unsupportedReason: reason
@@ -613,6 +615,7 @@ struct RoundProjectionSnapshot: Sendable {
 }
 
 struct ProjectionHistoricalSample: Hashable, Sendable {
+    let sourceID: String
     let grossRelativeToPar: Int
     let weight: Double
 }
@@ -622,6 +625,7 @@ struct ProjectionHoleInput: Hashable, Sendable {
     let par: Int
     let strokesReceived: Int
     let recordedGross: Int?
+    let isUnresolvedPickup: Bool
     let historicalSamples: [ProjectionHistoricalSample]
 }
 
@@ -637,37 +641,63 @@ struct PlayerProjectionSimulation: Sendable {
     let finishScenarios: [Int]
     let holeScenarios: [[Int]]
     let grossHoleScenarios: [[Int]]
+    let unresolvedPickupHoleNumbers: Set<Int>
 }
 
 actor RoundProjectionSimulator {
     static let shared = RoundProjectionSimulator()
 
+    private var cachedSimulations: [String: PlayerProjectionSimulation] = [:]
+    private var cacheOrder: [String] = []
+    private let maximumCachedSimulations = 48
+
     func simulate(
         input: PlayerProjectionInput,
         iterations: Int = 5_000,
-        seed: UInt64
+        seed: UInt64,
+        cacheKey: String? = nil,
+        retainsDiagnosticScenarios: Bool = true
     ) throws -> PlayerProjectionSimulation {
         let runCount = max(250, iterations)
+        let resolvedCacheKey = cacheKey.map {
+            "\($0)|runs:\(runCount)|seed:\(seed)|diagnostics:\(retainsDiagnosticScenarios)"
+        }
+        if let resolvedCacheKey,
+           let cached = cachedSimulations[resolvedCacheKey] {
+            return cached
+        }
         let holes = input.holes.sorted { $0.holeNumber < $1.holeNumber }
-        let sampleCount = Set(holes.flatMap(\.historicalSamples)).count
+        let sampleCount = Set(holes.flatMap(\.historicalSamples).map(\.sourceID)).count
         let confidence = ProjectionConfidence.resolve(sampleCount: sampleCount)
         var random = ProjectionSeededGenerator(seed: seed)
         var finishScenarios: [Int] = []
         finishScenarios.reserveCapacity(runCount)
         var holeScenarios: [[Int]] = []
-        holeScenarios.reserveCapacity(runCount)
+        if retainsDiagnosticScenarios {
+            holeScenarios.reserveCapacity(runCount)
+        }
         var grossHoleScenarios: [[Int]] = []
         grossHoleScenarios.reserveCapacity(runCount)
         var pathSamples = Array(repeating: [Int](), count: holes.count)
         for index in pathSamples.indices {
             pathSamples[index].reserveCapacity(runCount)
         }
+        let scoreDistributions = holes.map {
+            scoreDistribution(
+                hole: $0,
+                handicapAllowance: input.handicapAllowance,
+                holeCount: holes.count
+            )
+        }
 
         for run in 0..<runCount {
             if run.isMultiple(of: 128), Task.isCancelled { throw CancellationError() }
+            let roundForm = random.nextGaussian()
             var cumulative = 0
             var scenarioHoles: [Int] = []
-            scenarioHoles.reserveCapacity(holes.count)
+            if retainsDiagnosticScenarios {
+                scenarioHoles.reserveCapacity(holes.count)
+            }
             var scenarioGrossHoles: [Int] = []
             scenarioGrossHoles.reserveCapacity(holes.count)
             for (index, hole) in holes.enumerated() {
@@ -676,9 +706,8 @@ actor RoundProjectionSimulator {
                     gross = recordedGross
                 } else {
                     let relative = sampledRelativeScore(
-                        hole: hole,
-                        handicapAllowance: input.handicapAllowance,
-                        holeCount: holes.count,
+                        distribution: scoreDistributions[index],
+                        roundForm: roundForm,
                         random: &random
                     )
                     gross = max(1, hole.par + relative)
@@ -687,12 +716,16 @@ actor RoundProjectionSimulator {
                     ? gross - hole.strokesReceived
                     : gross
                 cumulative += basisStrokes - hole.par
-                scenarioHoles.append(basisStrokes - hole.par)
+                if retainsDiagnosticScenarios {
+                    scenarioHoles.append(basisStrokes - hole.par)
+                }
                 scenarioGrossHoles.append(gross - hole.par)
                 pathSamples[index].append(cumulative)
             }
             finishScenarios.append(cumulative)
-            holeScenarios.append(scenarioHoles)
+            if retainsDiagnosticScenarios {
+                holeScenarios.append(scenarioHoles)
+            }
             grossHoleScenarios.append(scenarioGrossHoles)
         }
 
@@ -722,12 +755,28 @@ actor RoundProjectionSimulator {
             actualTrend: actualTrend,
             projectedTrend: projectedTrend
         )
-        return PlayerProjectionSimulation(
+        let simulation = PlayerProjectionSimulation(
             projection: projection,
-            finishScenarios: finishScenarios,
+            finishScenarios: retainsDiagnosticScenarios ? finishScenarios : [],
             holeScenarios: holeScenarios,
-            grossHoleScenarios: grossHoleScenarios
+            grossHoleScenarios: grossHoleScenarios,
+            unresolvedPickupHoleNumbers: Set(
+                holes.lazy.filter(\.isUnresolvedPickup).map(\.holeNumber)
+            )
         )
+        if let resolvedCacheKey {
+            insert(simulation, for: resolvedCacheKey)
+        }
+        return simulation
+    }
+
+    private func insert(_ simulation: PlayerProjectionSimulation, for key: String) {
+        cachedSimulations[key] = simulation
+        cacheOrder.removeAll { $0 == key }
+        cacheOrder.append(key)
+        while cacheOrder.count > maximumCachedSimulations {
+            cachedSimulations[cacheOrder.removeFirst()] = nil
+        }
     }
 
     private func actualTrend(
@@ -746,26 +795,64 @@ actor RoundProjectionSimulator {
     }
 
     private func sampledRelativeScore(
-        hole: ProjectionHoleInput,
-        handicapAllowance: Int,
-        holeCount: Int,
+        distribution: ScoreDistribution,
+        roundForm: Double,
         random: inout ProjectionSeededGenerator
     ) -> Int {
-        let usable = hole.historicalSamples.filter { $0.weight > 0 }
+        // A shared form draw prevents an 18-hole finish from becoming unrealistically
+        // certain when one good or bad day affects several remaining holes together.
+        let roundCorrelation = 0.20
+        let independentScale = sqrt(1 - roundCorrelation)
+        let formScale = sqrt(roundCorrelation)
+        let standardizedScore = formScale * roundForm
+            + independentScale * random.nextGaussian()
+        let relative = distribution.mean + distribution.standardDeviation * standardizedScore
+        return max(-3, min(6, Int(relative.rounded())))
+    }
+
+    private func scoreDistribution(
+        hole: ProjectionHoleInput,
+        handicapAllowance: Int,
+        holeCount: Int
+    ) -> ScoreDistribution {
+        let priorMean = Double(max(0, handicapAllowance)) / Double(max(1, holeCount))
+        let priorStandardDeviation = min(2.10, max(1.05, 1.15 + priorMean * 0.35))
+        let usable = hole.historicalSamples.compactMap { sample -> (value: Double, weight: Double)? in
+            guard sample.weight > 0 else { return nil }
+            return (
+                Double(max(-3, min(6, sample.grossRelativeToPar))),
+                sample.weight
+            )
+        }
         let totalWeight = usable.reduce(0) { $0 + $1.weight }
-        if totalWeight > 0, random.nextUnit() < min(0.90, 0.55 + Double(usable.count) * 0.02) {
-            var target = random.nextUnit() * totalWeight
-            for sample in usable {
-                target -= sample.weight
-                if target <= 0 {
-                    return max(-3, min(6, sample.grossRelativeToPar))
-                }
-            }
+        guard totalWeight > 0 else {
+            return ScoreDistribution(mean: priorMean, standardDeviation: priorStandardDeviation)
         }
 
-        let mean = Double(max(0, handicapAllowance)) / Double(max(1, holeCount))
-        let gaussian = random.nextGaussian()
-        return max(-3, min(6, Int((mean + gaussian * 1.25).rounded())))
+        let weightedMean = usable.reduce(0) { $0 + $1.value * $1.weight } / totalWeight
+        let weightedVariance = usable.reduce(0) {
+            $0 + $1.weight * pow($1.value - weightedMean, 2)
+        } / totalWeight
+        let squaredWeightTotal = usable.reduce(0) { $0 + pow($1.weight, 2) }
+        let effectiveSampleCount = squaredWeightTotal > 0
+            ? pow(totalWeight, 2) / squaredWeightTotal
+            : 0
+
+        // Sparse or highly concentrated evidence is pulled toward a handicap-based prior.
+        // Pooling both within-distribution variance and the means' separation avoids
+        // overconfidence when recent form disagrees with the longer-term expectation.
+        let evidenceWeight = min(24, effectiveSampleCount)
+        let priorWeight = 6.0
+        let combinedWeight = evidenceWeight + priorWeight
+        let mean = (weightedMean * evidenceWeight + priorMean * priorWeight) / combinedWeight
+        let variance = (
+            evidenceWeight * (weightedVariance + pow(weightedMean - mean, 2))
+                + priorWeight * (pow(priorStandardDeviation, 2) + pow(priorMean - mean, 2))
+        ) / combinedWeight
+        return ScoreDistribution(
+            mean: mean,
+            standardDeviation: min(2.50, max(0.75, sqrt(variance)))
+        )
     }
 
     private func percentile(_ sorted: [Int], fraction: Double) -> Int {
@@ -773,50 +860,99 @@ actor RoundProjectionSimulator {
         let index = Int((Double(sorted.count - 1) * fraction).rounded())
         return sorted.indices.contains(index) ? sorted[index] : first
     }
+
+    private struct ScoreDistribution {
+        let mean: Double
+        let standardDeviation: Double
+    }
 }
 
 actor MatchupProbabilitySimulator {
     static let shared = MatchupProbabilitySimulator()
 
+    private var cachedProbabilities: [String: [String: MatchupProbability]] = [:]
+    private var cacheOrder: [String] = []
+    private let maximumCachedProbabilityBatches = 24
+
     func simulate(
         snapshot sourceSnapshot: RoundSnapshot,
         scoreBasis: ScoreBasis,
-        playerSimulations: [String: PlayerProjectionSimulation]
+        playerSimulations: [String: PlayerProjectionSimulation],
+        matchupIDs targetMatchupIDs: Set<String>? = nil,
+        participantIDs targetParticipantIDs: Set<String>? = nil,
+        cacheKey: String? = nil
     ) async throws -> [String: MatchupProbability] {
+        let resolvedCacheKey = cacheKey.map { "\($0)|basis:\(scoreBasis.rawValue)" }
+        if let resolvedCacheKey,
+           let cached = cachedProbabilities[resolvedCacheKey] {
+            return cached
+        }
+        let requestedMatchups = (sourceSnapshot.roundSegment?.matchups ?? []).filter {
+            targetMatchupIDs?.contains($0.id) ?? true
+        }
         let template = sourceSnapshot.resolvedActiveTemplate
         guard template.inputMode == .strokes, template.scoreSource == .individual else {
             return unsupportedProbabilities(
                 snapshot: sourceSnapshot,
+                matchups: requestedMatchups,
                 reason: "Odds aren’t available for custom or shared-score formats."
             )
         }
-        guard let segment = sourceSnapshot.roundSegment,
+        guard let sourceSegment = sourceSnapshot.roundSegment,
               let tee = sourceSnapshot.defaultTee ?? sourceSnapshot.tees.first else {
             return unsupportedProbabilities(
                 snapshot: sourceSnapshot,
+                matchups: requestedMatchups,
                 reason: "Course scoring context is incomplete."
             )
         }
+        guard requestedMatchups.isPopulated else { return [:] }
 
-        let activeParticipants = sourceSnapshot.participants.filter { participant in
-            sourceSnapshot.configuration.substitutesScore || !participant.isSubstitute
-        }
+        var segment = sourceSegment
+        segment.matchups = requestedMatchups
+
+        let activeParticipants = ScoringEngine.scoringEligibleParticipants(
+            sourceSnapshot.participants,
+            substitutesScore: sourceSnapshot.configuration.substitutesScore,
+            attendanceConfirmationEnabled: sourceSnapshot.configuration.attendanceConfirmationEnabled == true
+        ).filter { targetParticipantIDs?.contains($0.id) ?? true }
         let availableSimulations = activeParticipants.compactMap { playerSimulations[$0.id] }
         guard availableSimulations.count == activeParticipants.count,
               let runCount = availableSimulations.map({ $0.grossHoleScenarios.count }).min(),
               runCount > 0 else {
             return unsupportedProbabilities(
                 snapshot: sourceSnapshot,
+                matchups: requestedMatchups,
                 reason: "Not enough scoring context is available yet."
+            )
+        }
+
+        let hasUnresolvedPickup = availableSimulations.contains {
+            $0.unresolvedPickupHoleNumbers.isPopulated
+        }
+        let pickupSelectionScope = pickupSelectionScope(
+            template: template,
+            configuration: sourceSnapshot.configuration
+        )
+        let canTreatPickupAsNonCounting = template.id == FormatTemplateRegistry.stableford.id
+            || pickupSelectionScope != nil
+        guard !hasUnresolvedPickup || canTreatPickupAsNonCounting else {
+            return unsupportedProbabilities(
+                snapshot: sourceSnapshot,
+                matchups: requestedMatchups,
+                reason: "Resolve picked-up holes before estimating this matchup."
             )
         }
 
         let holeNumbers = segment.holeRange.holeNumbers
         var snapshot = sourceSnapshot
-        snapshot.participants = snapshot.participants.map { participant in
+        snapshot.participants = activeParticipants.map { participant in
             var frozen = participant
             frozen.adjustedHandicap = participant.lockedHandicapAllowance
             return frozen
+        }
+        if let segmentIndex = snapshot.segments.firstIndex(where: { $0.id == segment.id }) {
+            snapshot.segments[segmentIndex] = segment
         }
         let scoreSlots = activeParticipants.flatMap { participant in
             holeNumbers.enumerated().map { index, holeNumber in
@@ -843,67 +979,77 @@ actor MatchupProbabilitySimulator {
                 )
             }
         }
-        let matchupIDs = (segment.matchups ?? []).map(\.id)
-        let workerCount = min(runCount, max(1, min(8, ProcessInfo.processInfo.activeProcessorCount)))
-        let runsPerWorker = Int(ceil(Double(runCount) / Double(workerCount)))
-        var counts = Dictionary(uniqueKeysWithValues: matchupIDs.map { ($0, MatchupCounts()) })
-
-        try await withThrowingTaskGroup(of: [String: MatchupCounts].self) { group in
-            for start in stride(from: 0, to: runCount, by: runsPerWorker) {
-                let range = start..<min(runCount, start + runsPerWorker)
-                group.addTask {
-                    try self.evaluateRuns(
-                        range,
-                        snapshot: snapshot,
-                        segment: segment,
-                        holes: tee.holes,
-                        scoreBasis: scoreBasis,
-                        scoreSlots: scoreSlots,
-                        matchupIDs: matchupIDs,
-                        playerSimulations: playerSimulations
-                    )
-                }
-            }
-            for try await partial in group {
-                for (matchupID, value) in partial {
-                    counts[matchupID, default: .init()].merge(value)
-                }
-            }
-        }
+        let matchupIDs = requestedMatchups.map(\.id)
+        // Keep the scoring engine on one utility-priority executor instead of spawning up to
+        // eight workers per caller. This actor deliberately does not suspend during evaluation,
+        // so concurrent UI/Watch requests serialize and can reuse the completed batch below.
+        let counts = try evaluateRuns(
+            0..<runCount,
+            snapshot: snapshot,
+            segment: segment,
+            holes: tee.holes,
+            scoreBasis: scoreBasis,
+            scoreSlots: scoreSlots,
+            matchupIDs: matchupIDs,
+            playerSimulations: playerSimulations,
+            pickupSelectionScope: pickupSelectionScope
+        )
 
         let confidence = availableSimulations.map(\.projection.confidence).min {
             confidenceRank($0) < confidenceRank($1)
         } ?? .limited
-        return Dictionary(uniqueKeysWithValues: (segment.matchups ?? []).map { matchup in
-            let value = counts[matchup.id] ?? .init()
-            let completedRuns = value.leftWins + value.ties + value.rightWins
-            guard completedRuns > 0, value.unsupportedRuns == 0 else {
+        let probabilities: [String: MatchupProbability] = Dictionary(
+            uniqueKeysWithValues: requestedMatchups.map { matchup in
+                let value = counts[matchup.id] ?? .init()
+                let completedRuns = value.leftWins + value.ties + value.rightWins
+                guard completedRuns > 0, value.unsupportedRuns == 0 else {
+                    return (
+                        matchup.id,
+                        .unsupported(
+                            matchupID: matchup.id,
+                            reason: "This matchup’s aggregation can’t be reproduced from player strokes."
+                        )
+                    )
+                }
+                let left = Int((Double(value.leftWins) / Double(completedRuns) * 100).rounded())
+                let tie = min(
+                    100 - left,
+                    Int((Double(value.ties) / Double(completedRuns) * 100).rounded())
+                )
                 return (
                     matchup.id,
-                    .unsupported(
+                    MatchupProbability(
                         matchupID: matchup.id,
-                        reason: "This matchup’s aggregation can’t be reproduced from player strokes."
+                        leftWin: left,
+                        tie: tie,
+                        rightWin: max(0, 100 - left - tie),
+                        participantCountingProbabilities: participantCountingProbabilities(
+                            matchup: matchup,
+                            snapshot: sourceSnapshot,
+                            activeParticipants: activeParticipants,
+                            counts: value.participantCountingSelections,
+                            completedRuns: completedRuns
+                        ),
+                        confidence: confidence,
+                        isSupported: true,
+                        unsupportedReason: nil
                     )
                 )
             }
-            let left = Int((Double(value.leftWins) / Double(completedRuns) * 100).rounded())
-            let tie = min(
-                100 - left,
-                Int((Double(value.ties) / Double(completedRuns) * 100).rounded())
-            )
-            return (
-                matchup.id,
-                MatchupProbability(
-                    matchupID: matchup.id,
-                    leftWin: left,
-                    tie: tie,
-                    rightWin: max(0, 100 - left - tie),
-                    confidence: confidence,
-                    isSupported: true,
-                    unsupportedReason: nil
-                )
-            )
-        })
+        )
+        if let resolvedCacheKey {
+            insert(probabilities, for: resolvedCacheKey)
+        }
+        return probabilities
+    }
+
+    private func insert(_ probabilities: [String: MatchupProbability], for key: String) {
+        cachedProbabilities[key] = probabilities
+        cacheOrder.removeAll { $0 == key }
+        cacheOrder.append(key)
+        while cacheOrder.count > maximumCachedProbabilityBatches {
+            cachedProbabilities[cacheOrder.removeFirst()] = nil
+        }
     }
 
     private nonisolated func outcome(
@@ -935,14 +1081,21 @@ actor MatchupProbabilitySimulator {
         scoreBasis: ScoreBasis,
         scoreSlots: [ScenarioScoreSlot],
         matchupIDs: [String],
-        playerSimulations: [String: PlayerProjectionSimulation]
+        playerSimulations: [String: PlayerProjectionSimulation],
+        pickupSelectionScope: AggregationScope?
     ) throws -> [String: MatchupCounts] {
         var snapshot = sourceSnapshot
         var values = Dictionary(uniqueKeysWithValues: matchupIDs.map { ($0, MatchupCounts()) })
         for run in range {
             if run.isMultiple(of: 32) { try Task.checkCancellation() }
             snapshot.scoring = scoreSlots.compactMap { slot in
-                guard let scenario = playerSimulations[slot.participantID]?.grossHoleScenarios[run],
+                guard let simulation = playerSimulations[slot.participantID] else { return nil }
+                if simulation.unresolvedPickupHoleNumbers.contains(slot.entry.holeNumber)
+                    || (pickupSelectionScope == .perRound
+                        && simulation.unresolvedPickupHoleNumbers.isPopulated) {
+                    return nil
+                }
+                guard let scenario = simulation.grossHoleScenarios[safe: run],
                       scenario.indices.contains(slot.holeIndex) else { return nil }
                 var entry = slot.entry
                 entry.relativeToPar = scenario[slot.holeIndex]
@@ -964,18 +1117,80 @@ actor MatchupProbabilitySimulator {
                 case .right: value.rightWins += 1
                 case .unsupported: value.unsupportedRuns += 1
                 }
+                if sourceSnapshot.configuration.teamScoring.mode == .bestN,
+                   sourceSnapshot.configuration.teamScoring.count == 2,
+                   sourceSnapshot.configuration.teamScoring.scope == .perRound {
+                    let selectedIDs = Set(matchupResult.rows.flatMap(\.countingParticipantIDs))
+                    for participantID in selectedIDs {
+                        value.participantCountingSelections[participantID, default: 0] += 1
+                    }
+                }
                 values[matchupID] = value
             }
         }
         return values
     }
 
+    private func pickupSelectionScope(
+        template: GameTemplate,
+        configuration: RoundConfiguration
+    ) -> AggregationScope? {
+        if configuration.teamScoring.mode == .bestN {
+            return configuration.teamScoring.scope
+        }
+        for stage in template.pipeline {
+            if case .select(let selection) = stage,
+               selection.includeRanks?.isPopulated == true {
+                return selection.scope
+            }
+        }
+        return nil
+    }
+
     private func unsupportedProbabilities(
         snapshot: RoundSnapshot,
+        matchups: [TeamMatchup]? = nil,
         reason: String
     ) -> [String: MatchupProbability] {
-        Dictionary(uniqueKeysWithValues: (snapshot.roundSegment?.matchups ?? []).map {
+        Dictionary(uniqueKeysWithValues: (matchups ?? snapshot.roundSegment?.matchups ?? []).map {
             ($0.id, .unsupported(matchupID: $0.id, reason: reason))
+        })
+    }
+
+    private func participantCountingProbabilities(
+        matchup: TeamMatchup,
+        snapshot: RoundSnapshot,
+        activeParticipants: [RoundParticipant],
+        counts: [String: Int],
+        completedRuns: Int
+    ) -> [String: Int] {
+        guard snapshot.configuration.teamScoring.mode == .bestN,
+              snapshot.configuration.teamScoring.count == 2,
+              snapshot.configuration.teamScoring.scope == .perRound,
+              completedRuns > 0 else {
+            return [:]
+        }
+        let pairingIDs = Set(matchup.pairingIDs())
+        let activeIDs = Set(activeParticipants.map(\.id))
+        let participantIDs: Set<String>
+        switch matchup.effectiveMode {
+        case .team:
+            participantIDs = Set(activeParticipants.compactMap {
+                guard let teamID = $0.teamID, pairingIDs.contains(teamID) else { return nil }
+                return $0.id
+            })
+        case .individual:
+            participantIDs = pairingIDs.intersection(activeIDs)
+        case .partnership, .teeGroup, .scoreOwner:
+            participantIDs = Set(snapshot.scoringGroups
+                .filter { pairingIDs.contains($0.id) }
+                .flatMap(\.memberIDs))
+                .intersection(activeIDs)
+        }
+        return Dictionary(uniqueKeysWithValues: participantIDs.map { participantID in
+            let probability = Double(counts[participantID, default: 0])
+                / Double(completedRuns) * 100
+            return (participantID, Int(probability.rounded()))
         })
     }
 
@@ -1005,12 +1220,16 @@ actor MatchupProbabilitySimulator {
         var ties = 0
         var rightWins = 0
         var unsupportedRuns = 0
+        var participantCountingSelections: [String: Int] = [:]
 
         mutating func merge(_ other: MatchupCounts) {
             leftWins += other.leftWins
             ties += other.ties
             rightWins += other.rightWins
             unsupportedRuns += other.unsupportedRuns
+            for (participantID, count) in other.participantCountingSelections {
+                participantCountingSelections[participantID, default: 0] += count
+            }
         }
     }
 }

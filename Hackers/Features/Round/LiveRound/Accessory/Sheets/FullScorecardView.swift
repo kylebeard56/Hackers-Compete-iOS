@@ -2024,6 +2024,9 @@ struct PlayerInsightsView: View {
     private var palette: DesignPalette { .init(theme: .primary, scheme: colorScheme) }
     private var basis: ScoreBasis { viewModel.scoreBasis }
     private var canRevealInsights: Bool { viewModel.canRevealInsights(for: participant) }
+    private var projectionUnavailableReason: String? {
+        viewModel.playerProjectionUnavailableReason(for: participant)
+    }
     private var actualTrend: [ProjectionTrendPoint] {
         projection?.actualTrend ?? viewModel.actualScoreTrend(for: participant, basis: basis)
     }
@@ -2043,7 +2046,7 @@ struct PlayerInsightsView: View {
         viewModel.grossScoreOutcomeCounts(for: participant)
     }
     private var projectionTaskID: String {
-        viewModel.projectionRevision(scoreBasis: basis)
+        viewModel.playerProjectionRevision(for: participant, scoreBasis: basis)
     }
 
     var body: some View {
@@ -2077,9 +2080,11 @@ struct PlayerInsightsView: View {
         }
         .task(id: projectionTaskID) {
             projection = nil
+            isLoadingProjection = false
             guard canRevealInsights,
                   holesCompleted >= 3,
-                  !isPlayerRoundComplete else { return }
+                  !isPlayerRoundComplete,
+                  projectionUnavailableReason == nil else { return }
             isLoadingProjection = true
             projection = await viewModel.playerProjection(for: participant, scoreBasis: basis)
             isLoadingProjection = false
@@ -2371,7 +2376,7 @@ struct PlayerInsightsView: View {
                     .foregroundStyle(Color.neutral)
             }
         } else {
-            Text("A projection isn’t available for this scoring format yet.")
+            Text(projectionUnavailableReason ?? "A projection isn’t available for this scoring format yet.")
                 .fontStyle(kFontName, size: 13, weight: .medium)
                 .foregroundStyle(Color.neutral)
         }
@@ -2383,7 +2388,7 @@ struct PlayerInsightsView: View {
                 Text("Gross scoring mix")
                     .fontStyle(kFontName, size: 17, weight: .semibold)
                     .foregroundStyle(palette.foregroundColor)
-                Text("Hole outcomes this round")
+                Text("Hole outcomes · better scores rise")
                     .fontStyle(kFontName, size: 12, weight: .regular)
                     .foregroundStyle(Color.neutral)
             }
@@ -2450,7 +2455,7 @@ struct PlayerInsightsView: View {
 
     private var scoringMixAccessibilityLabel: String {
         let values = outcomeCounts.map { "\($0.bucket.label), \($0.count)" }
-        return "Gross scoring mix. \(values.joined(separator: ", "))."
+        return "Gross scoring mix, arranged with better outcomes above worse outcomes. \(values.joined(separator: ", "))."
     }
 
     private func strokeCountLabel(_ value: Int) -> String {
@@ -2477,23 +2482,21 @@ private struct GrossScoringRadarChart: View {
     let foregroundColor: Color
     let accessibilityLabel: String
 
+    private var chartOutcomes: [GrossScoreOutcomeCount] {
+        let outcomesByBucket = Dictionary(uniqueKeysWithValues: outcomes.map { ($0.bucket, $0) })
+        return GrossScoreOutcomeBucket.qualityRadarOrder.compactMap { outcomesByBucket[$0] }
+    }
+
     private var maximumCount: Int {
-        max(1, outcomes.map(\.count).max() ?? 0)
+        max(1, chartOutcomes.map(\.count).max() ?? 0)
     }
 
     private var normalizedValues: [CGFloat] {
-        outcomes.map { CGFloat($0.count) / CGFloat(maximumCount) }
+        chartOutcomes.map { CGFloat($0.count) / CGFloat(maximumCount) }
     }
 
     private var categoryColors: [Color] {
-        [
-            .accentGreen,
-            .accentPurple,
-            .systemPink.opacity(0.35),
-            .systemPink.opacity(0.5),
-            .systemPink.opacity(0.65),
-            .systemError,
-        ]
+        chartOutcomes.map { color(for: $0.bucket) }
     }
 
     private var shapeGradient: AngularGradient {
@@ -2520,7 +2523,7 @@ private struct GrossScoringRadarChart: View {
             let outerPoints = points(
                 center: center,
                 radius: radius,
-                values: Array(repeating: 1, count: outcomes.count)
+                values: Array(repeating: 1, count: chartOutcomes.count)
             )
             let valuePoints = points(center: center, radius: radius, values: normalizedValues)
 
@@ -2530,7 +2533,7 @@ private struct GrossScoringRadarChart: View {
                         points: points(
                             center: center,
                             radius: radius,
-                            values: Array(repeating: CGFloat(level), count: outcomes.count)
+                            values: Array(repeating: CGFloat(level), count: chartOutcomes.count)
                         )
                     )
                     .stroke(
@@ -2539,7 +2542,7 @@ private struct GrossScoringRadarChart: View {
                     )
                 }
 
-                ForEach(outcomes.indices, id: \.self) { index in
+                ForEach(chartOutcomes.indices, id: \.self) { index in
                     Path { path in
                         path.move(to: center)
                         path.addLine(to: outerPoints[index])
@@ -2560,7 +2563,7 @@ private struct GrossScoringRadarChart: View {
                 RadarPolygon(points: valuePoints)
                     .stroke(shapeGradient, style: .init(lineWidth: 2.5, lineJoin: .round))
 
-                ForEach(Array(outcomes.enumerated()), id: \.element.id) { index, outcome in
+                ForEach(Array(chartOutcomes.enumerated()), id: \.element.id) { index, outcome in
                     if outcome.count > 0 {
                         Circle()
                             .fill(categoryColors[index])
@@ -2616,6 +2619,17 @@ private struct GrossScoringRadarChart: View {
         }
     }
 
+    private func color(for bucket: GrossScoreOutcomeBucket) -> Color {
+        switch bucket {
+        case .birdieOrBetter: .accentGreen
+        case .par: .accentPurple
+        case .bogey: .systemPink.opacity(0.35)
+        case .doubleBogey: .systemPink.opacity(0.5)
+        case .tripleBogey: .systemPink.opacity(0.65)
+        case .fourOrWorse: .systemError
+        }
+    }
+
     private func points(
         center: CGPoint,
         radius: CGFloat,
@@ -2632,7 +2646,7 @@ private struct GrossScoringRadarChart: View {
         radius: CGFloat,
         value: CGFloat
     ) -> CGPoint {
-        let angle = (-Double.pi / 2) + (Double(index) * 2 * Double.pi / Double(outcomes.count))
+        let angle = (-Double.pi / 2) + (Double(index) * 2 * Double.pi / Double(chartOutcomes.count))
         let clampedValue = min(1, max(0, value))
         return CGPoint(
             x: center.x + CGFloat(cos(angle)) * radius * clampedValue,

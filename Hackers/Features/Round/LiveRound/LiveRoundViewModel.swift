@@ -9,6 +9,8 @@ import Combine
 import SwiftUI
 
 enum NameDisplayFormat: String, CaseIterable {
+    static let defaultsKey = "live_round_name_display_format_v1"
+
     /// "J. Smith"
     case firstInitialLastName
     /// "John S."
@@ -27,6 +29,16 @@ enum NameDisplayFormat: String, CaseIterable {
             guard let f = family.first else { return given }
             return "\(given) \(f)."
         }
+    }
+
+    static var persisted: Self {
+        UserDefaults.standard.string(forKey: defaultsKey)
+            .flatMap(Self.init(rawValue:))
+            ?? .firstNameLastInitial
+    }
+
+    func persist() {
+        UserDefaults.standard.set(rawValue, forKey: Self.defaultsKey)
     }
 }
 
@@ -98,6 +110,17 @@ enum GrossScoreOutcomeBucket: Int, CaseIterable, Hashable, Sendable {
     case tripleBogey
     case fourOrWorse
 
+    /// Hexagonal chart order, clockwise from north. Better outcomes occupy the upper half;
+    /// progressively worse outcomes descend toward the south point.
+    static let qualityRadarOrder: [Self] = [
+        .birdieOrBetter,
+        .par,
+        .doubleBogey,
+        .fourOrWorse,
+        .tripleBogey,
+        .bogey,
+    ]
+
     var label: String {
         switch self {
         case .birdieOrBetter: "Birdie or better"
@@ -152,8 +175,13 @@ final class LiveRoundViewModel: ObservableObject, Loggable {
     @Published private(set) var roundManagementAccess: RoundManagementAccess = .none
     @Published private(set) var seriesScoreboardSnapshot: SeriesScoreboardSnapshot?
     @Published private(set) var matchupProbabilities: [String: MatchupProbability] = [:]
+    @Published private(set) var loadingMatchupProbabilityIDs: Set<String> = []
     @Published var selectedTeeID: String?
-    @Published var nameDisplayFormat: NameDisplayFormat = .firstNameLastInitial
+    @Published var nameDisplayFormat: NameDisplayFormat = .persisted {
+        didSet {
+            nameDisplayFormat.persist()
+        }
+    }
     @Published var theme: GolfTheme = .purple
     @Published var isSpectator: Bool = false
     @Published var showScorelessLeaderboardRows: Bool = true
@@ -243,11 +271,14 @@ final class LiveRoundViewModel: ObservableObject, Loggable {
     private var cachedEngineResults: [String: ScoringResult] = [:]
     /// Participant-level format results for Solo leaderboard contribution views.
     private var cachedIndividualContributionEngineResults: [String: ScoringResult] = [:]
-    private var cachedPlayerSimulations: [String: PlayerProjectionSimulation] = [:]
+    private var cachedPlayerSimulations: [String: (revision: String, simulation: PlayerProjectionSimulation)] = [:]
     private var matchupProbabilityTask: Task<Void, Never>?
     private var matchupProbabilityTaskRevision: String?
-    private var matchupProbabilityResultRevision: String?
+    private var matchupProbabilityResultRevisions: [String: String] = [:]
+    private var matchupProbabilityRoundID: String?
     private var isMatchupProbabilityPrecomputationEnabled = false
+    private var predictionContextRoundID: String?
+    private static let liveProjectionIterationCount = 1_000
     private var hasPerformedInitialHoleNudge = false
     private var hasSelectedInitialVisibleGroupStartingHole = false
     private var loadedSeriesAccessRoundID: String?
@@ -368,6 +399,9 @@ final class LiveRoundViewModel: ObservableObject, Loggable {
         updateSelectedTeeIfNeeded()
         refreshSeriesScoreboardProjection()
         applyScoreBasisDefaultsForCurrentSnapshot(force: true)
+        // Direct snapshots are complete fixtures/previews and do not have an asynchronous
+        // series-context load to wait for.
+        predictionContextRoundID = snapshot.round.id
         scheduleMatchupProbabilityRefresh()
         if !hasInitializedVisibilitySelection && visibleParticipantIDs.isEmpty && !snapshot.participants.isEmpty {
             visibleParticipantIDs = Set(snapshot.participants.map(\.id))
@@ -1375,7 +1409,6 @@ final class LiveRoundViewModel: ObservableObject, Loggable {
         scoreIndex = index
         cachedEngineResults.removeAll()
         cachedIndividualContributionEngineResults.removeAll()
-        cachedPlayerSimulations.removeAll()
     }
     
     func scoreEntry(for participantID: String, holeNumber: Int) -> ScoreEntry? {
@@ -2747,7 +2780,14 @@ final class LiveRoundViewModel: ObservableObject, Loggable {
     }
 
     var leaderboardRows: [LeaderboardRow] {
-        let basis = scoreBasis
+        projectedPlayerLeaderboardRows(for: scoreBasis)
+    }
+
+    /// Builds stroke standings directly from the round's active participants.
+    ///
+    /// Unlike the scoring-engine projections, this list is intentionally independent of the
+    /// round's competition scope so player standings remain available during matchup rounds.
+    func projectedPlayerLeaderboardRows(for basis: ScoreBasis) -> [LeaderboardRow] {
         let baseRows = snapshot.participants.filter(isPresenceActive).map { p in
             LeaderboardRow(
                 participant: p,
@@ -3577,6 +3617,14 @@ final class LiveRoundViewModel: ObservableObject, Loggable {
         )
         cachedEngineResults[basis.rawValue] = result
         return result
+    }
+
+    func projectedLeaderboardRows(for basis: ScoreBasis) -> [LeaderboardRow] {
+        leaderboardRows(from: engineResult(for: basis))
+    }
+
+    func projectedIndividualLeaderboardRows(for basis: ScoreBasis) -> [LeaderboardRow] {
+        leaderboardRows(from: individualContributionEngineResult(for: basis))
     }
 
     private func individualContributionEngineResult(for basis: ScoreBasis) -> ScoringResult {
@@ -4774,6 +4822,7 @@ final class LiveRoundViewModel: ObservableObject, Loggable {
         roundManagementAccess = .none
         seriesScoreboardSnapshot = nil
         liveSeriesScoreboardContext = nil
+        predictionContextRoundID = nil
         loadedSeriesAccessRoundID = nil
         isLoadingSeriesAccess = false
         selectedTeeID = nil
@@ -4869,6 +4918,10 @@ final class LiveRoundViewModel: ObservableObject, Loggable {
                 seriesScoreboardSnapshot = nil
             }
             loadedSeriesAccessRoundID = roundID
+            if snapshot.round.id == roundID {
+                predictionContextRoundID = roundID
+                scheduleMatchupProbabilityRefresh()
+            }
             syncVisibleTeeGroupIfNeeded()
             updateSelectedTeeIfNeeded(force: true)
             return
@@ -4878,6 +4931,10 @@ final class LiveRoundViewModel: ObservableObject, Loggable {
         defer {
             isLoadingSeriesAccess = false
             loadedSeriesAccessRoundID = roundID
+            if snapshot.round.id == roundID {
+                predictionContextRoundID = roundID
+                scheduleMatchupProbabilityRefresh()
+            }
         }
 
         guard let seriesID = await resolveSeriesIDForRound(),
@@ -4985,7 +5042,6 @@ final class LiveRoundViewModel: ObservableObject, Loggable {
             canonicalResults: verifiedResults
         )
         cachedPlayerSimulations.removeAll()
-        scheduleMatchupProbabilityRefresh()
         refreshSeriesScoreboardProjection()
     }
 
@@ -5010,19 +5066,87 @@ final class LiveRoundViewModel: ObservableObject, Loggable {
         scheduleMatchupProbabilityRefresh()
     }
 
-    func projectionRevision(scoreBasis: ScoreBasis) -> String {
-        let scoreRevision = snapshot.scoring
+    func projectionScenarioRevision() -> String {
+        let participantIDs = Set(snapshot.participants.map(\.id))
+        let matchupRevision = (snapshot.roundSegment?.matchups ?? [])
             .sorted { $0.id < $1.id }
             .map {
-                [
-                    $0.id,
-                    $0.strokes.map(String.init) ?? "-",
-                    $0.relativeToPar.map(String.init) ?? "-",
-                    $0.pickedUp ? "1" : "0"
-                ].joined(separator: ":")
+                "\($0.id):\($0.effectiveMode.rawValue):\($0.pairingIDs().joined(separator: ","))"
             }
             .joined(separator: "|")
-        let participantRevision = snapshot.participants
+        return [
+            snapshot.round.id,
+            projectionConfigurationRevision,
+            projectionParticipantRevision(snapshot.participants),
+            matchupRevision,
+            projectionHistoryRevision,
+            projectionScoreRevision(participantIDs: participantIDs)
+        ].joined(separator: "|")
+    }
+
+    func projectionRevision(scoreBasis: ScoreBasis) -> String {
+        "\(projectionScenarioRevision())|\(scoreBasis.rawValue)"
+    }
+
+    func playerProjectionRevision(
+        for participant: RoundParticipant,
+        scoreBasis: ScoreBasis
+    ) -> String {
+        "\(playerProjectionScenarioRevision(for: participant))|\(scoreBasis.rawValue)"
+    }
+
+    func matchupProbabilityRevision(
+        for matchup: TeamMatchup,
+        scoreBasis: ScoreBasis
+    ) -> String {
+        let participants = matchup.pairingIDs()
+            .flatMap { matchupSideParticipants(scoringUnitID: $0, matchup: matchup) }
+            .reduce(into: [String: RoundParticipant]()) { result, participant in
+                result[participant.id] = participant
+            }
+            .values
+            .sorted { $0.id < $1.id }
+        let playerRevisions = participants.map {
+            "\($0.id):\(ProjectionSeed.make(playerProjectionScenarioRevision(for: $0)))"
+        }
+        return [
+            snapshot.round.id,
+            scoreBasis.rawValue,
+            projectionConfigurationRevision,
+            "\(matchup.id):\(matchup.effectiveMode.rawValue):\(matchup.pairingIDs().joined(separator: ","))",
+            playerRevisions.joined(separator: "|")
+        ].joined(separator: "|")
+    }
+
+    private var projectionConfigurationRevision: String {
+        let encoder = JSONEncoder()
+        encoder.outputFormatting = [.sortedKeys]
+        guard let data = try? encoder.encode(snapshot.round.configuration),
+              let value = String(data: data, encoding: .utf8) else {
+            return snapshot.resolvedActiveTemplate.id
+        }
+        return String(ProjectionSeed.make(value), radix: 16)
+    }
+
+    private var projectionHistoryRevision: String {
+        liveSeriesScoreboardContext?.canonicalResults
+            .sorted { $0.id < $1.id }
+            .map { "\($0.id):\($0.semanticHash)" }
+            .joined(separator: "|") ?? "-"
+    }
+
+    private func playerProjectionScenarioRevision(for participant: RoundParticipant) -> String {
+        [
+            snapshot.round.id,
+            projectionConfigurationRevision,
+            projectionParticipantRevision([participant]),
+            projectionHistoryRevision,
+            projectionScoreRevision(participantIDs: [participant.id])
+        ].joined(separator: "|")
+    }
+
+    private func projectionParticipantRevision(_ participants: [RoundParticipant]) -> String {
+        participants
             .sorted { $0.id < $1.id }
             .map {
                 [
@@ -5034,32 +5158,38 @@ final class LiveRoundViewModel: ObservableObject, Loggable {
                 ].joined(separator: ":")
             }
             .joined(separator: "|")
-        let matchupRevision = (snapshot.roundSegment?.matchups ?? [])
+    }
+
+    private func projectionScoreRevision(participantIDs: Set<String>) -> String {
+        snapshot.scoring
+            .filter { entry in
+                participantIDs.contains(entry.scoringUnitID)
+                    || entry.participantIDs.contains { participantIDs.contains($0) }
+            }
             .sorted { $0.id < $1.id }
             .map {
-                "\($0.id):\($0.effectiveMode.rawValue):\($0.pairingIDs().joined(separator: ","))"
+                [
+                    $0.id,
+                    String($0.holeNumber),
+                    $0.strokes.map(String.init) ?? "-",
+                    $0.relativeToPar.map(String.init) ?? "-",
+                    $0.pickedUp ? "1" : "0"
+                ].joined(separator: ":")
             }
             .joined(separator: "|")
-        let historyRevision = liveSeriesScoreboardContext?.canonicalResults
-            .sorted { $0.id < $1.id }
-            .map { "\($0.id):\($0.semanticHash)" }
-            .joined(separator: "|") ?? "-"
-        return [
-            snapshot.round.id,
-            scoreBasis.rawValue,
-            snapshot.areScoresRevealed ? "revealed" : "hidden",
-            participantRevision,
-            matchupRevision,
-            historyRevision,
-            scoreRevision
-        ].joined(separator: "|")
+    }
+
+    func playerProjectionUnavailableReason(for participant: RoundParticipant) -> String? {
+        guard unresolvedPickupHoleNumbers(for: participant).isPopulated else { return nil }
+        return "Finish projection needs a resolved score for each picked-up hole."
     }
 
     func playerProjection(
         for participant: RoundParticipant,
         scoreBasis: ScoreBasis
     ) async -> PlayerFinishProjection? {
-        guard canRevealInsights(for: participant) else { return nil }
+        guard canRevealInsights(for: participant),
+              playerProjectionUnavailableReason(for: participant) == nil else { return nil }
         return await playerSimulation(for: participant, scoreBasis: scoreBasis)?.projection
     }
 
@@ -5069,110 +5199,255 @@ final class LiveRoundViewModel: ObservableObject, Loggable {
         await task?.value
     }
 
+    /// Results safe to show outside the Live Round screen. The screen has its own loading
+    /// placeholder, but Watch and Activity must never publish an old value with a new score.
+    var publishableMatchupProbabilities: [String: MatchupProbability] {
+        guard predictionContextRoundID == snapshot.round.id else { return [:] }
+        return Dictionary(uniqueKeysWithValues: (snapshot.roundSegment?.matchups ?? []).compactMap {
+            matchup -> (String, MatchupProbability)? in
+            let matchupID = matchup.id
+            guard !loadingMatchupProbabilityIDs.contains(matchupID),
+                  matchupProbabilityResultRevisions[matchupID]
+                    == matchupProbabilityRevision(for: matchup, scoreBasis: matchupScoreBasis),
+                  let probability = matchupProbabilities[matchupID] else {
+                return nil
+            }
+            return (matchupID, probability)
+        })
+    }
+
     @discardableResult
     private func scheduleMatchupProbabilityRefresh() -> Task<Void, Never>? {
         guard isMatchupProbabilityPrecomputationEnabled else { return nil }
 
-        let expectedMode = snapshot.expectedMatchupMode
-        let hasValidMatchup = snapshot.configuration.resolvedCompetitionScope == .matchup
-            && (snapshot.roundSegment?.matchups ?? []).contains {
-                $0.effectiveMode == expectedMode && $0.isValid
-            }
-        guard shouldShowMatchupProbabilities, hasValidMatchup else {
+        if matchupProbabilityRoundID != snapshot.round.id {
             matchupProbabilityTask?.cancel()
             matchupProbabilityTask = nil
             matchupProbabilityTaskRevision = nil
-            matchupProbabilityResultRevision = nil
+            matchupProbabilityResultRevisions = [:]
             matchupProbabilities = [:]
+            loadingMatchupProbabilityIDs = []
+            matchupProbabilityRoundID = snapshot.round.id
+        }
+
+        // Historical series results are prediction inputs. Computing before their asynchronous
+        // load finishes creates a transient, different set of odds on companion surfaces.
+        guard predictionContextRoundID == snapshot.round.id else { return nil }
+
+        let expectedMode = snapshot.expectedMatchupMode
+        let validMatchups = (snapshot.roundSegment?.matchups ?? []).filter {
+            $0.effectiveMode == expectedMode && $0.isValid
+        }
+        guard shouldShowMatchupProbabilities,
+              snapshot.configuration.resolvedCompetitionScope == .matchup,
+              validMatchups.isPopulated else {
+            matchupProbabilityTask?.cancel()
+            matchupProbabilityTask = nil
+            matchupProbabilityTaskRevision = nil
+            matchupProbabilityResultRevisions = [:]
+            matchupProbabilities = [:]
+            loadingMatchupProbabilityIDs = []
             return nil
         }
 
-        let revision = projectionRevision(scoreBasis: matchupScoreBasis)
-        if matchupProbabilityResultRevision == revision {
+        let validMatchupIDs = Set(validMatchups.map(\.id))
+        matchupProbabilities = matchupProbabilities.filter { validMatchupIDs.contains($0.key) }
+        matchupProbabilityResultRevisions = matchupProbabilityResultRevisions.filter {
+            validMatchupIDs.contains($0.key)
+        }
+        loadingMatchupProbabilityIDs.formIntersection(validMatchupIDs)
+
+        let currentRevisions = Dictionary(uniqueKeysWithValues: validMatchups.map {
+            ($0.id, matchupProbabilityRevision(for: $0, scoreBasis: matchupScoreBasis))
+        })
+        let targetRevisions = currentRevisions.filter {
+            matchupProbabilityResultRevisions[$0.key] != $0.value
+        }
+        guard targetRevisions.isPopulated else {
+            matchupProbabilityTask?.cancel()
+            matchupProbabilityTask = nil
+            matchupProbabilityTaskRevision = nil
+            loadingMatchupProbabilityIDs = []
             return nil
         }
-        if matchupProbabilityTaskRevision == revision {
+
+        let revisionValue = targetRevisions
+            .sorted { $0.key < $1.key }
+            .map { "\($0.key):\($0.value)" }
+            .joined(separator: "|")
+        let taskRevision = String(ProjectionSeed.make(revisionValue), radix: 16)
+        if matchupProbabilityTaskRevision == taskRevision {
             return matchupProbabilityTask
         }
 
         matchupProbabilityTask?.cancel()
-        matchupProbabilityTaskRevision = revision
-        matchupProbabilities = [:]
+        matchupProbabilityTaskRevision = taskRevision
+        loadingMatchupProbabilityIDs = Set(targetRevisions.keys)
 
-        let task = Task { [weak self] in
+        let task = Task(priority: .utility) { [weak self] in
             do {
-                try await Task.sleep(for: .milliseconds(120))
+                try await Task.sleep(for: .milliseconds(400))
             } catch {
-                self?.finishMatchupProbabilityTask(revision: revision)
+                self?.finishMatchupProbabilityTask(
+                    revision: taskRevision,
+                    targetIDs: Set(targetRevisions.keys)
+                )
                 return
             }
             guard let self else { return }
-            await self.computeMatchupProbabilities(revision: revision)
-            self.finishMatchupProbabilityTask(revision: revision)
+            await self.computeMatchupProbabilities(targetRevisions: targetRevisions)
+            self.finishMatchupProbabilityTask(
+                revision: taskRevision,
+                targetIDs: Set(targetRevisions.keys)
+            )
         }
         matchupProbabilityTask = task
         return task
     }
 
-    private func finishMatchupProbabilityTask(revision: String) {
+    private func finishMatchupProbabilityTask(revision: String, targetIDs: Set<String>) {
         guard matchupProbabilityTaskRevision == revision else { return }
         matchupProbabilityTask = nil
         matchupProbabilityTaskRevision = nil
+        loadingMatchupProbabilityIDs.subtract(targetIDs)
     }
 
-    private func computeMatchupProbabilities(revision: String) async {
-        guard revision == projectionRevision(scoreBasis: matchupScoreBasis), !Task.isCancelled else { return }
+    private func computeMatchupProbabilities(targetRevisions: [String: String]) async {
+        guard !Task.isCancelled else { return }
         let template = snapshot.resolvedActiveTemplate
         guard template.inputMode == .strokes, template.scoreSource == .individual else {
-            matchupProbabilities = Dictionary(uniqueKeysWithValues: orderedMatchupSections.map {
-                ($0.section.matchup.id, .unsupported(
-                    matchupID: $0.section.matchup.id,
-                    reason: "Odds aren’t available for custom or shared-score formats."
-                ))
-            })
-            matchupProbabilityResultRevision = revision
+            for (matchupID, revision) in targetRevisions {
+                applyMatchupProbability(
+                    .unsupported(
+                        matchupID: matchupID,
+                        reason: "Odds aren’t available for custom or shared-score formats."
+                    ),
+                    matchupID: matchupID,
+                    revision: revision
+                )
+            }
             return
         }
 
+        let matchupsByID = Dictionary(uniqueKeysWithValues: (snapshot.roundSegment?.matchups ?? []).map {
+            ($0.id, $0)
+        })
+        let eligibleParticipantIDs = Set(ScoringEngine.scoringEligibleParticipants(
+            snapshot.participants,
+            substitutesScore: snapshot.configuration.substitutesScore,
+            attendanceConfirmationEnabled: snapshot.configuration.attendanceConfirmationEnabled == true
+        ).map(\.id))
+
+        let targetMatchups = targetRevisions.keys.compactMap { matchupID -> TeamMatchup? in
+            guard let matchup = matchupsByID[matchupID],
+                  let revision = targetRevisions[matchupID],
+                  matchupProbabilityRevision(for: matchup, scoreBasis: matchupScoreBasis) == revision else {
+                return nil
+            }
+            return matchup
+        }
+        guard targetMatchups.isPopulated else { return }
+
+        let participants = targetMatchups
+            .flatMap { matchup in
+                matchup.pairingIDs()
+                .flatMap { matchupSideParticipants(scoringUnitID: $0, matchup: matchup) }
+            }
+            .filter { eligibleParticipantIDs.contains($0.id) }
+            .reduce(into: [String: RoundParticipant]()) { result, participant in
+                result[participant.id] = participant
+            }
+            .values
+            .sorted { $0.id < $1.id }
+        let participantIDs = Set(participants.map(\.id))
         var simulations: [String: PlayerProjectionSimulation] = [:]
-        for participant in snapshot.participants where isPresenceActive(participant) {
+        for participant in participants {
             if Task.isCancelled { return }
             simulations[participant.id] = await playerSimulation(
                 for: participant,
                 scoreBasis: matchupScoreBasis
             )
         }
-        guard revision == projectionRevision(scoreBasis: matchupScoreBasis), !Task.isCancelled else { return }
+        guard !Task.isCancelled else { return }
+
+        let currentMatchupIDs = Set(targetMatchups.compactMap { matchup -> String? in
+            guard let revision = targetRevisions[matchup.id],
+                  matchupProbabilityRevision(for: matchup, scoreBasis: matchupScoreBasis) == revision else {
+                return nil
+            }
+            return matchup.id
+        })
+        guard currentMatchupIDs.isPopulated else { return }
+        let batchRevision = currentMatchupIDs.sorted().compactMap { matchupID in
+            targetRevisions[matchupID].map { "\(matchupID):\($0)" }
+        }.joined(separator: "|")
 
         do {
             let values = try await MatchupProbabilitySimulator.shared.simulate(
                 snapshot: snapshot,
                 scoreBasis: matchupScoreBasis,
-                playerSimulations: simulations
+                playerSimulations: simulations,
+                matchupIDs: currentMatchupIDs,
+                participantIDs: participantIDs,
+                cacheKey: "matchup-batch|\(batchRevision)"
             )
-            guard revision == projectionRevision(scoreBasis: matchupScoreBasis), !Task.isCancelled else { return }
-            matchupProbabilities = values
-            matchupProbabilityResultRevision = revision
+            guard !Task.isCancelled else { return }
+            for matchupID in currentMatchupIDs {
+                guard let revision = targetRevisions[matchupID],
+                      let probability = values[matchupID] else { continue }
+                applyMatchupProbability(
+                    probability,
+                    matchupID: matchupID,
+                    revision: revision
+                )
+            }
         } catch {
             guard !(error is CancellationError) else { return }
-            matchupProbabilities = [:]
+            for matchupID in currentMatchupIDs {
+                matchupProbabilities[matchupID] = nil
+                loadingMatchupProbabilityIDs.remove(matchupID)
+            }
         }
     }
 
-    private func playerSimulation(
+    private func applyMatchupProbability(
+        _ probability: MatchupProbability,
+        matchupID: String,
+        revision: String
+    ) {
+        guard let matchup = snapshot.roundSegment?.matchups?.first(where: { $0.id == matchupID }),
+              matchupProbabilityRevision(for: matchup, scoreBasis: matchupScoreBasis) == revision else {
+            return
+        }
+        matchupProbabilities[matchupID] = probability
+        matchupProbabilityResultRevisions[matchupID] = revision
+        loadingMatchupProbabilityIDs.remove(matchupID)
+    }
+
+    func playerSimulation(
         for participant: RoundParticipant,
         scoreBasis: ScoreBasis
     ) async -> PlayerProjectionSimulation? {
-        let revision = projectionRevision(scoreBasis: scoreBasis)
-        let cacheKey = "\(revision)|\(participant.id)"
-        if let cached = cachedPlayerSimulations[cacheKey] { return cached }
+        let revision = playerProjectionRevision(for: participant, scoreBasis: scoreBasis)
+        let cacheKey = "\(snapshot.round.id)|\(participant.id)|\(scoreBasis.rawValue)"
+        if let cached = cachedPlayerSimulations[cacheKey], cached.revision == revision {
+            return cached.simulation
+        }
         guard let input = projectionInput(for: participant, scoreBasis: scoreBasis) else { return nil }
 
         do {
-            let seed = ProjectionSeed.make(cacheKey)
-            let result = try await RoundProjectionSimulator.shared.simulate(input: input, seed: seed)
-            guard revision == projectionRevision(scoreBasis: scoreBasis), !Task.isCancelled else { return nil }
-            cachedPlayerSimulations[cacheKey] = result
+            let seed = ProjectionSeed.make(playerProjectionScenarioRevision(for: participant))
+            let result = try await RoundProjectionSimulator.shared.simulate(
+                input: input,
+                iterations: Self.liveProjectionIterationCount,
+                seed: seed,
+                cacheKey: "player|\(revision)",
+                retainsDiagnosticScenarios: false
+            )
+            guard let currentParticipant = snapshot.participants.first(where: { $0.id == participant.id }),
+                  revision == playerProjectionRevision(for: currentParticipant, scoreBasis: scoreBasis),
+                  !Task.isCancelled else { return nil }
+            cachedPlayerSimulations[cacheKey] = (revision, result)
             return result
         } catch {
             return nil
@@ -5195,18 +5470,27 @@ final class LiveRoundViewModel: ObservableObject, Loggable {
         let playedHoleNumbers = courseOrderHoleNumbers
         let historicalContexts = liveSeriesScoreboardContext?.canonicalResults
             .filter { $0.linkedRoundID != snapshot.round.id }
-            .compactMap(\.predictionContext) ?? []
-        let currentRoundSamples = playedHoleNumbers.compactMap { holeNumber -> (par: Int, relative: Int)? in
+            .compactMap { result -> (resultID: String, context: SeriesRoundPredictionContext)? in
+                guard let context = result.predictionContext else { return nil }
+                return (result.id, context)
+            } ?? []
+        let currentRoundSamples = playedHoleNumbers.compactMap {
+            holeNumber -> (sourceID: String, par: Int, relative: Int)? in
             guard let hole = tee.holes.first(where: { $0.number == holeNumber }),
                   let gross = grossStrokes(for: participant.id, holeNumber: holeNumber) else { return nil }
-            return (hole.par, gross - hole.par)
+            return (
+                "current:\(snapshot.round.id):\(participant.id):\(holeNumber)",
+                hole.par,
+                gross - hole.par
+            )
         }
 
         let holes = playedHoleNumbers.compactMap { holeNumber -> ProjectionHoleInput? in
             guard let hole = tee.holes.first(where: { $0.number == holeNumber }) else { return nil }
             var samples: [ProjectionHistoricalSample] = []
-            for context in historicalContexts {
-                for sample in context.holeSamples {
+            for historicalContext in historicalContexts {
+                let context = historicalContext.context
+                for (sampleIndex, sample) in context.holeSamples.enumerated() {
                     let weight: Double
                     if sample.seriesMemberID == memberID,
                        context.courseID == courseID,
@@ -5225,6 +5509,7 @@ final class LiveRoundViewModel: ObservableObject, Loggable {
                         continue
                     }
                     samples.append(.init(
+                        sourceID: "\(historicalContext.resultID):\(sampleIndex)",
                         grossRelativeToPar: sample.grossStrokes - sample.par,
                         weight: weight
                     ))
@@ -5232,7 +5517,13 @@ final class LiveRoundViewModel: ObservableObject, Loggable {
             }
             samples.append(contentsOf: currentRoundSamples
                 .filter { $0.par == hole.par }
-                .map { .init(grossRelativeToPar: $0.relative, weight: 3) })
+                .map {
+                    .init(
+                        sourceID: $0.sourceID,
+                        grossRelativeToPar: $0.relative,
+                        weight: 3
+                    )
+                })
 
             let strokesReceived = ScoringEngine.strokesReceived(
                 handicap: participant.lockedHandicapAllowance,
@@ -5247,6 +5538,13 @@ final class LiveRoundViewModel: ObservableObject, Loggable {
                 par: hole.par,
                 strokesReceived: strokesReceived,
                 recordedGross: grossStrokes(for: participant.id, holeNumber: holeNumber),
+                isUnresolvedPickup: scoreEntry(
+                    for: participant.id,
+                    holeNumber: holeNumber
+                )?.pickedUp == true && grossStrokes(
+                    for: participant.id,
+                    holeNumber: holeNumber
+                ) == nil,
                 historicalSamples: samples
             )
         }
@@ -5257,6 +5555,15 @@ final class LiveRoundViewModel: ObservableObject, Loggable {
             handicapAllowance: participant.lockedHandicapAllowance,
             holes: holes
         )
+    }
+
+    private func unresolvedPickupHoleNumbers(for participant: RoundParticipant) -> Set<Int> {
+        Set(courseOrderHoleNumbers.filter { holeNumber in
+            guard scoreEntry(for: participant.id, holeNumber: holeNumber)?.pickedUp == true else {
+                return false
+            }
+            return grossStrokes(for: participant.id, holeNumber: holeNumber) == nil
+        })
     }
 
     private var currentPredictionCourseID: String? {

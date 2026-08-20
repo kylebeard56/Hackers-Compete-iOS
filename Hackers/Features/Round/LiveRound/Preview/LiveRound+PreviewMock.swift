@@ -52,6 +52,7 @@ extension LiveRound {
     @MainActor
     struct ImmediatePreview: View {
         @StateObject private var appSession: AppSession
+        @StateObject private var liveRoundCompanion: LiveRoundCompanionCoordinator = .init()
         @StateObject private var locationService: LocationService = .init()
         @StateObject private var roundSession: RoundSession
         @StateObject private var viewModel: LiveRoundViewModel
@@ -82,6 +83,7 @@ extension LiveRound {
         var body: some View {
             LiveRound(viewModel: viewModel)
                 .environmentObject(appSession)
+                .environmentObject(liveRoundCompanion)
                 .environmentObject(locationService)
                 .environmentObject(roundSession)
         }
@@ -91,6 +93,7 @@ extension LiveRound {
     @MainActor
     struct DelayedHydrationPreview: View {
         @StateObject private var appSession: AppSession
+        @StateObject private var liveRoundCompanion: LiveRoundCompanionCoordinator = .init()
         @StateObject private var locationService: LocationService = .init()
         @StateObject private var roundSession: RoundSession = .init()
         @StateObject private var viewModel: LiveRoundViewModel = .init()
@@ -112,6 +115,7 @@ extension LiveRound {
         var body: some View {
             LiveRound(viewModel: viewModel)
                 .environmentObject(appSession)
+                .environmentObject(liveRoundCompanion)
                 .environmentObject(locationService)
                 .environmentObject(roundSession)
                 .task {

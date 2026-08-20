@@ -5,10 +5,7 @@
 //  Created by Kyle Beard on 10/23/22.
 //
 
-import LocalConsole
 import SwiftUI
-
-let localConsole = LCManager.shared
 
 /**
  Test how we can add/remove subscription from App Store so that a user doesn't change it and come back and it's weird.
@@ -66,11 +63,6 @@ struct HackersAppV2: App, WindowPresentable {
             }
             .onChange(of: scenePhase, perform: { phase in
                 handleApp(for: phase)
-            })
-            .onTapGesture(count: 3, perform: {
-                if adminMode {
-                    localConsole.isVisible.toggle()
-                }
             })
         }
     }

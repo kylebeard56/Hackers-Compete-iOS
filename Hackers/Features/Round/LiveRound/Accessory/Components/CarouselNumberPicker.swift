@@ -41,20 +41,23 @@ struct CarouselNumberPicker: View {
         self.leadingSignFontScale = leadingSignFontScale
         self.onChange = onChange
         self._selectedValue = State(initialValue: initialValue)
+        self._scrollPosition = State(initialValue: initialValue)
     }
     
     var body: some View {
         ScrollView(.horizontal) {
             LazyHStack(spacing: itemSpacing) {
                 ForEach(values, id: \.self) { value in
-                    numberItem(for: value)
-                    .frame(width: itemWidth)
-                    .id(value)
-                    .onTapGesture {
+                    Button {
                         withAnimation(.easeInOut(duration: 0.25)) {
                             scrollPosition = value
                         }
+                    } label: {
+                        numberItem(for: value)
                     }
+                    .buttonStyle(.plain)
+                    .frame(width: itemWidth)
+                    .id(value)
                 }
             }
             .scrollTargetLayout()
@@ -67,16 +70,14 @@ struct CarouselNumberPicker: View {
             guard let newValue else { return }
             
             if newValue != selectedValue {
-                withAnimation(.easeInOut(duration: 0.25)) {
-                    selectedValue = newValue
-                }
+                selectedValue = newValue
             }
             onChange(newValue)
         }
-        .task(id: initialValue) {
-            // Delay to ensure ScrollView is fully laid out before setting position
-            try? await Task.sleep(for: .milliseconds(50))
-            scrollPosition = initialValue
+        .onChange(of: initialValue) { _, newValue in
+            guard values.contains(newValue), newValue != scrollPosition else { return }
+            selectedValue = newValue
+            scrollPosition = newValue
         }
     }
     

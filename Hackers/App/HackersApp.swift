@@ -15,6 +15,7 @@ struct HackersApp: App, Loggable {
     @StateObject var appSession = AppSession()
     @StateObject var locationService = LocationService()
     @StateObject var roundSession = RoundSession()
+    @StateObject var liveRoundCompanion = LiveRoundCompanionCoordinator()
     
     var body: some Scene {
         WindowGroup {
@@ -27,6 +28,10 @@ struct HackersApp: App, Loggable {
             .environmentObject(appSession)
             .environmentObject(locationService)
             .environmentObject(roundSession)
+            .environmentObject(liveRoundCompanion)
+            .task {
+                await liveRoundCompanion.start(appSession: appSession)
+            }
             .task {
                 /// Ensure app version is sufficient, will route automatically if not.
                 await FirebaseService.shared.observeMinimumAppVersion()
@@ -42,13 +47,21 @@ struct HackersApp: App, Loggable {
             }
             .onReceive(HackersNotification.triggerLogout.publisher()) { _ in
                 roundSession.stop()
+                liveRoundCompanion.resetSelections()
                 appSession.reset()
             }
             .onChange(of: scenePhase) { old, new in
+                liveRoundCompanion.handleScenePhase(new)
                 handleApp(for: new)
             }
             .onOpenURL(perform: { url in
                 addBreadcrumb(message: "onOpenURL: \(url.absoluteString)")
+                if let payload = url.liveRoundDeepLinkPayload {
+                    Task {
+                        await openLiveRoundDeepLink(payload)
+                    }
+                    return
+                }
                 addEvent(
                     "join.deep_link_opened",
                     eventProps: ["url": url.absoluteString]
@@ -91,6 +104,31 @@ struct HackersApp: App, Loggable {
                 }
                 HackersNotification.joinFromDeepLink.send()
             })
+        }
+    }
+
+    @MainActor
+    private func openLiveRoundDeepLink(_ payload: LiveRoundDeepLinkPayload) async {
+        guard case .success(let round) = await FirebaseService.shared.getRoundDocument(byID: payload.roundID) else {
+            appSession.routeTo(.dashboard)
+            return
+        }
+        appSession.activeRoundID = round.id
+        switch RoundResumeRouter.resolve(status: round.status) {
+        case .lobby:
+            appSession.routeTo(.lobby)
+        case .liveRound:
+            appSession.persistRoundResume(
+                destination: .liveRound,
+                selectedHole: payload.holeNumber,
+                selectedTab: .scoring
+            )
+            appSession.routeTo(.liveRound)
+        case .outcome:
+            appSession.roundOutcomeAllowsEditing = true
+            appSession.routeTo(.roundOutcome)
+        case .discard:
+            appSession.routeTo(.dashboard)
         }
     }
     

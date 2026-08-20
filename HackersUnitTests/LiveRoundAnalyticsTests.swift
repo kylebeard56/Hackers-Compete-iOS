@@ -111,6 +111,7 @@ final class RoundProjectionSimulatorTests: XCTestCase {
         XCTAssertEqual(first.projection, retry.projection)
         XCTAssertEqual(first.finishScenarios, retry.finishScenarios)
         XCTAssertEqual(first.projection.holesCompleted, 3)
+        XCTAssertEqual(first.projection.sampleCount, 3)
         XCTAssertEqual(
             first.projection.actualTrend,
             [
@@ -158,18 +159,36 @@ final class RoundProjectionSimulatorTests: XCTestCase {
         XCTAssertEqual(high.projection.confidence, .high)
     }
 
+    func testWiderHistoricalStandardDeviationProducesWiderFinishBand() async throws {
+        let lowVariance = try await RoundProjectionSimulator.shared.simulate(
+            input: dispersionInput(relativeScores: [0, 0, 0, 0, 0, 0]),
+            iterations: 2_000,
+            seed: 81
+        )
+        let highVariance = try await RoundProjectionSimulator.shared.simulate(
+            input: dispersionInput(relativeScores: [-2, -1, 0, 2, 4, 6]),
+            iterations: 2_000,
+            seed: 81
+        )
+
+        let lowWidth = lowVariance.projection.upperFinish - lowVariance.projection.lowerFinish
+        let highWidth = highVariance.projection.upperFinish - highVariance.projection.lowerFinish
+        XCTAssertGreaterThan(highWidth, lowWidth)
+    }
+
     private func projectionInput(
         scoreBasis: ScoreBasis,
         sampleMultiplier: Int = 1
     ) -> PlayerProjectionInput {
         let baseSamples = [
-            ProjectionHistoricalSample(grossRelativeToPar: 0, weight: 8),
-            ProjectionHistoricalSample(grossRelativeToPar: 1, weight: 5),
-            ProjectionHistoricalSample(grossRelativeToPar: 2, weight: 2),
+            ProjectionHistoricalSample(sourceID: "sample-0", grossRelativeToPar: 0, weight: 8),
+            ProjectionHistoricalSample(sourceID: "sample-1", grossRelativeToPar: 1, weight: 5),
+            ProjectionHistoricalSample(sourceID: "sample-2", grossRelativeToPar: 2, weight: 2),
         ]
         let samples = (0..<sampleMultiplier).flatMap { offset in
             baseSamples.map {
                 ProjectionHistoricalSample(
+                    sourceID: "\($0.sourceID)-\(offset)",
                     grossRelativeToPar: $0.grossRelativeToPar + (offset % 2),
                     weight: $0.weight + Double(offset) / 100
                 )
@@ -180,23 +199,194 @@ final class RoundProjectionSimulatorTests: XCTestCase {
             scoreBasis: scoreBasis,
             handicapAllowance: 6,
             holes: [
-                .init(holeNumber: 1, par: 4, strokesReceived: 1, recordedGross: 4, historicalSamples: samples),
-                .init(holeNumber: 2, par: 4, strokesReceived: 1, recordedGross: 5, historicalSamples: samples),
-                .init(holeNumber: 3, par: 3, strokesReceived: 1, recordedGross: 2, historicalSamples: samples),
-                .init(holeNumber: 4, par: 5, strokesReceived: 0, recordedGross: nil, historicalSamples: samples),
-                .init(holeNumber: 5, par: 4, strokesReceived: 0, recordedGross: nil, historicalSamples: samples),
-                .init(holeNumber: 6, par: 4, strokesReceived: 0, recordedGross: nil, historicalSamples: samples),
+                .init(holeNumber: 1, par: 4, strokesReceived: 1, recordedGross: 4, isUnresolvedPickup: false, historicalSamples: samples),
+                .init(holeNumber: 2, par: 4, strokesReceived: 1, recordedGross: 5, isUnresolvedPickup: false, historicalSamples: samples),
+                .init(holeNumber: 3, par: 3, strokesReceived: 1, recordedGross: 2, isUnresolvedPickup: false, historicalSamples: samples),
+                .init(holeNumber: 4, par: 5, strokesReceived: 0, recordedGross: nil, isUnresolvedPickup: false, historicalSamples: samples),
+                .init(holeNumber: 5, par: 4, strokesReceived: 0, recordedGross: nil, isUnresolvedPickup: false, historicalSamples: samples),
+                .init(holeNumber: 6, par: 4, strokesReceived: 0, recordedGross: nil, isUnresolvedPickup: false, historicalSamples: samples),
             ]
+        )
+    }
+
+    private func dispersionInput(relativeScores: [Int]) -> PlayerProjectionInput {
+        let samples = relativeScores.enumerated().map { index, score in
+            ProjectionHistoricalSample(
+                sourceID: "dispersion-\(index)",
+                grossRelativeToPar: score,
+                weight: 1
+            )
+        }
+        return PlayerProjectionInput(
+            participantID: "dispersion-player",
+            scoreBasis: .gross,
+            handicapAllowance: 0,
+            holes: (1...18).map { holeNumber in
+                ProjectionHoleInput(
+                    holeNumber: holeNumber,
+                    par: 4,
+                    strokesReceived: 0,
+                    recordedGross: nil,
+                    isUnresolvedPickup: false,
+                    historicalSamples: samples
+                )
+            }
         )
     }
 }
 
 final class MatchupProbabilitySimulatorTests: XCTestCase {
+    func testTargetedSimulationOnlyRequiresPlayersFromRequestedMatchup() async throws {
+        let snapshot = MockLobbySixteenWithTeams.snapshotWithMatchups
+        let participantIDs = Set(snapshot.participants.compactMap { participant in
+            participant.teamID == "team_red" || participant.teamID == "team_blue"
+                ? participant.id
+                : nil
+        })
+        let targetedSimulations = simulations(for: snapshot).filter {
+            participantIDs.contains($0.key)
+        }
+
+        let values = try await MatchupProbabilitySimulator.shared.simulate(
+            snapshot: snapshot,
+            scoreBasis: .gross,
+            playerSimulations: targetedSimulations,
+            matchupIDs: ["m1"],
+            participantIDs: participantIDs
+        )
+
+        XCTAssertEqual(Set(values.keys), ["m1"])
+        XCTAssertEqual(values["m1"]?.isSupported, true)
+    }
+
     func testBestTwoTeamScenariosFlowThroughScoringEngine() async throws {
         let snapshot = MockLiveRoundBest2of4Matchup.snapshot
+        let simulations = simulations(for: snapshot)
+
+        let values = try await MatchupProbabilitySimulator.shared.simulate(
+            snapshot: snapshot,
+            scoreBasis: .gross,
+            playerSimulations: simulations
+        )
+        let probability = try XCTUnwrap(values["m1"])
+
+        XCTAssertTrue(probability.isSupported)
+        XCTAssertEqual(probability.leftWin, 100)
+        XCTAssertEqual(probability.tie, 0)
+        XCTAssertEqual(probability.rightWin, 0)
+        XCTAssertEqual(probability.leftWin + probability.tie + probability.rightWin, 100)
+        XCTAssertEqual(probability.participantCountingProbabilities["p01"], 100)
+        XCTAssertEqual(probability.participantCountingProbabilities["p02"], 100)
+        XCTAssertEqual(probability.participantCountingProbabilities["p05"], 0)
+        XCTAssertEqual(
+            probability.participantCountingProbabilities.values.reduce(0, +),
+            400
+        )
+    }
+
+    func testNoShowsAreExcludedWhileUnequalBestTwoSidesRemainSupported() async throws {
+        var snapshot = MockLiveRoundBest2of4Matchup.snapshot
+        snapshot.round.configuration.attendanceConfirmationEnabled = true
+        snapshot.participants = snapshot.participants.map { participant in
+            var copy = participant
+            if participant.id == "p01" || participant.id == "p02" {
+                copy.presenceStatus = .noShow
+            } else {
+                copy.presenceStatus = .active
+            }
+            return copy
+        }
+        let eligibleIDs = Set(
+            ScoringEngine.scoringEligibleParticipants(
+                snapshot.participants,
+                substitutesScore: snapshot.configuration.substitutesScore,
+                attendanceConfirmationEnabled: true
+            ).map(\.id)
+        )
+        let simulations = simulations(for: snapshot).filter { eligibleIDs.contains($0.key) }
+
+        let values = try await MatchupProbabilitySimulator.shared.simulate(
+            snapshot: snapshot,
+            scoreBasis: .gross,
+            playerSimulations: simulations
+        )
+        let probability = try XCTUnwrap(values["m1"])
+
+        XCTAssertEqual(eligibleIDs.count, 6)
+        XCTAssertTrue(probability.isSupported)
+        XCTAssertEqual(probability.leftWin, 100)
+    }
+
+    func testBestTwoTreatsUnresolvedPickupAsNonCounting() async throws {
+        let snapshot = MockLiveRoundBest2of4Matchup.snapshot
+        let simulations = simulations(
+            for: snapshot,
+            unresolvedPickups: ["p01": [1]]
+        )
+
+        let values = try await MatchupProbabilitySimulator.shared.simulate(
+            snapshot: snapshot,
+            scoreBasis: .gross,
+            playerSimulations: simulations
+        )
+        let probability = try XCTUnwrap(values["m1"])
+
+        XCTAssertTrue(probability.isSupported)
+        XCTAssertEqual(probability.leftWin, 100)
+    }
+
+    func testAggregateStrokePlayRequiresUnresolvedPickupToBeResolved() async throws {
+        var snapshot = MockLiveRoundBest2of4Matchup.snapshot
+        snapshot.round.configuration.teamScoring = .init(mode: .all, count: 2, scope: .perRound)
+        let simulations = simulations(
+            for: snapshot,
+            unresolvedPickups: ["p01": [1]]
+        )
+
+        let values = try await MatchupProbabilitySimulator.shared.simulate(
+            snapshot: snapshot,
+            scoreBasis: .gross,
+            playerSimulations: simulations
+        )
+        let probability = try XCTUnwrap(values["m1"])
+
+        XCTAssertFalse(probability.isSupported)
+        XCTAssertEqual(
+            probability.unsupportedReason,
+            "Resolve picked-up holes before estimating this matchup."
+        )
+    }
+
+    func testStablefordTreatsUnresolvedPickupAsZeroContribution() async throws {
+        var snapshot = MockLiveRoundBest2of4Matchup.snapshot
+        snapshot.round.configuration.formatSummary = RoundFormatSummary(
+            from: FormatTemplateRegistry.stableford
+        )
+        snapshot.round.configuration.teamScoring = .init(mode: .all, count: 2, scope: .perRound)
+        snapshot.segments[0].templateID = FormatTemplateRegistry.stableford.id
+        let simulations = simulations(
+            for: snapshot,
+            unresolvedPickups: ["p01": [1]]
+        )
+
+        let values = try await MatchupProbabilitySimulator.shared.simulate(
+            snapshot: snapshot,
+            scoreBasis: .gross,
+            playerSimulations: simulations
+        )
+        let probability = try XCTUnwrap(values["m1"])
+
+        XCTAssertTrue(probability.isSupported)
+        XCTAssertNil(probability.unsupportedReason)
+    }
+
+    private func simulations(
+        for snapshot: RoundSnapshot,
+        unresolvedPickups: [String: Set<Int>] = [:]
+    ) -> [String: PlayerProjectionSimulation] {
         let holeCount = snapshot.roundSegment?.holeRange.count ?? 18
         let runCount = 100
-        let simulations = Dictionary(uniqueKeysWithValues: snapshot.participants.map { participant in
+        return Dictionary(uniqueKeysWithValues: snapshot.participants.map { participant in
             let isRed = participant.teamID == "team_red"
             let grossHoles = Array(repeating: isRed ? 0 : 1, count: holeCount)
             let finish = grossHoles.reduce(0, +)
@@ -218,23 +408,130 @@ final class MatchupProbabilitySimulatorTests: XCTestCase {
                     projection: projection,
                     finishScenarios: Array(repeating: finish, count: runCount),
                     holeScenarios: Array(repeating: grossHoles, count: runCount),
-                    grossHoleScenarios: Array(repeating: grossHoles, count: runCount)
+                    grossHoleScenarios: Array(repeating: grossHoles, count: runCount),
+                    unresolvedPickupHoleNumbers: unresolvedPickups[participant.id] ?? []
                 )
             )
         })
+    }
+}
 
-        let values = try await MatchupProbabilitySimulator.shared.simulate(
-            snapshot: snapshot,
-            scoreBasis: .gross,
-            playerSimulations: simulations
+final class LiveRoundProjectionIntegrationTests: XCTestCase {
+    @MainActor
+    func testMatchupRevisionOnlyChangesForMatchupContainingScoredPlayer() throws {
+        var snapshot = MockLobbySixteenWithTeams.snapshotWithMatchups
+        let viewModel = LiveRoundViewModel()
+        viewModel.set(snapshot: snapshot)
+
+        let matchups = try XCTUnwrap(snapshot.roundSegment?.matchups)
+        let firstMatchup = try XCTUnwrap(matchups.first { $0.id == "m1" })
+        let secondMatchup = try XCTUnwrap(matchups.first { $0.id == "m2" })
+        let scoredParticipant = try XCTUnwrap(snapshot.participants.first { $0.id == "p01" })
+        let unaffectedParticipant = try XCTUnwrap(snapshot.participants.first { $0.id == "p03" })
+        let segment = try XCTUnwrap(snapshot.roundSegment)
+
+        let firstRevisionBefore = viewModel.matchupProbabilityRevision(for: firstMatchup, scoreBasis: .gross)
+        let secondRevisionBefore = viewModel.matchupProbabilityRevision(for: secondMatchup, scoreBasis: .gross)
+        let playerRevisionBefore = viewModel.playerProjectionRevision(
+            for: unaffectedParticipant,
+            scoreBasis: .gross
         )
-        let probability = try XCTUnwrap(values["m1"])
 
-        XCTAssertTrue(probability.isSupported)
-        XCTAssertEqual(probability.leftWin, 100)
-        XCTAssertEqual(probability.tie, 0)
-        XCTAssertEqual(probability.rightWin, 0)
-        XCTAssertEqual(probability.leftWin + probability.tie + probability.rightWin, 100)
+        snapshot.scoring.append(ScoreEntry(
+            id: ScoreEntry.makeID(hole: 1, segment: segment.id, scoringUnit: scoredParticipant.id),
+            holeNumber: 1,
+            segmentID: segment.id,
+            groupID: scoredParticipant.groupID ?? "",
+            scoringUnitID: scoredParticipant.id,
+            participantIDs: [scoredParticipant.id],
+            strokes: 4,
+            pickedUp: false,
+            entryID: scoredParticipant.id,
+            parentID: snapshot.round.id
+        ))
+        viewModel.set(snapshot: snapshot)
+
+        XCTAssertNotEqual(
+            viewModel.matchupProbabilityRevision(for: firstMatchup, scoreBasis: .gross),
+            firstRevisionBefore
+        )
+        XCTAssertEqual(
+            viewModel.matchupProbabilityRevision(for: secondMatchup, scoreBasis: .gross),
+            secondRevisionBefore
+        )
+        XCTAssertEqual(
+            viewModel.playerProjectionRevision(for: unaffectedParticipant, scoreBasis: .gross),
+            playerRevisionBefore
+        )
+    }
+
+    func testQualityRadarOrderPlacesBetterOutcomesAboveWorseOutcomes() {
+        XCTAssertEqual(
+            GrossScoreOutcomeBucket.qualityRadarOrder,
+            [.birdieOrBetter, .par, .doubleBogey, .fourOrWorse, .tripleBogey, .bogey]
+        )
+    }
+
+    @MainActor
+    func testGrossAndNetUseTheSameProductionGrossScenarios() async throws {
+        var snapshot = MockLiveRoundBest2of4Matchup.snapshot
+        snapshot.round.configuration.handicapsEnabled = true
+        let participant = try XCTUnwrap(snapshot.participants.first)
+        let viewModel = LiveRoundViewModel()
+        viewModel.set(snapshot: snapshot)
+
+        let grossResult = await viewModel.playerSimulation(for: participant, scoreBasis: .gross)
+        let netResult = await viewModel.playerSimulation(for: participant, scoreBasis: .net)
+        let gross = try XCTUnwrap(grossResult)
+        let net = try XCTUnwrap(netResult)
+
+        XCTAssertEqual(gross.grossHoleScenarios, net.grossHoleScenarios)
+        XCTAssertTrue(gross.finishScenarios.isEmpty)
+        XCTAssertTrue(net.finishScenarios.isEmpty)
+        XCTAssertNotEqual(gross.projection.medianFinish, net.projection.medianFinish)
+        XCTAssertNotEqual(
+            viewModel.projectionRevision(scoreBasis: .gross),
+            viewModel.projectionRevision(scoreBasis: .net)
+        )
+    }
+
+    @MainActor
+    func testUnresolvedPickupExplainsWhyPlayerFinishIsUnavailable() throws {
+        var snapshot = MockLiveRoundBest2of4Matchup.snapshot
+        let participant = try XCTUnwrap(snapshot.participants.first)
+        let scoredIndex = try XCTUnwrap(
+            snapshot.scoring.firstIndex {
+                $0.scoringUnitID == participant.id && $0.holeNumber == 1
+            }
+        )
+        snapshot.scoring[scoredIndex].strokes = nil
+        snapshot.scoring[scoredIndex].relativeToPar = nil
+        snapshot.scoring[scoredIndex].pickedUp = true
+        let viewModel = LiveRoundViewModel()
+        viewModel.set(snapshot: snapshot)
+
+        XCTAssertEqual(
+            viewModel.playerProjectionUnavailableReason(for: participant),
+            "Finish projection needs a resolved score for each picked-up hole."
+        )
+    }
+
+    @MainActor
+    func testPickupWithRecordedMaximumDoesNotBlockPlayerFinish() throws {
+        var snapshot = MockLiveRoundBest2of4Matchup.snapshot
+        let participant = try XCTUnwrap(snapshot.participants.first)
+        let scoredIndex = try XCTUnwrap(
+            snapshot.scoring.firstIndex {
+                $0.scoringUnitID == participant.id && $0.holeNumber == 1
+            }
+        )
+        snapshot.scoring[scoredIndex].strokes = 8
+        snapshot.scoring[scoredIndex].relativeToPar = nil
+        snapshot.scoring[scoredIndex].pickedUp = true
+        let viewModel = LiveRoundViewModel()
+        viewModel.set(snapshot: snapshot)
+
+        XCTAssertNil(viewModel.playerProjectionUnavailableReason(for: participant))
     }
 }
 

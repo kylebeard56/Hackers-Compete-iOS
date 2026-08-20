@@ -19,6 +19,8 @@ private enum SeriesIndividualStatsSort: String, CaseIterable {
     case averageDifferential = "Avg Diff"
     case handicapIndex = "Handicap Index"
     case roundsPlayed = "Rounds Played"
+    case averageGross = "Gross Avg"
+    case averageNet = "Net Avg"
 
     var label: String {
         rawValue
@@ -32,6 +34,10 @@ private enum SeriesIndividualStatsSort: String, CaseIterable {
             return Self.handicapIndexSubtitle(config: config)
         case .roundsPlayed:
             return nil
+        case .averageGross:
+            return "Average gross strokes across completed rounds"
+        case .averageNet:
+            return "Average gross strokes less current handicap index"
         }
     }
 
@@ -380,10 +386,16 @@ struct SeriesLeaderboardView: View {
             )
             .frame(minHeight: 200)
         } else {
-            individualStatsHeader
-            ForEach(Array(rows.enumerated()), id: \.element.id) { index, row in
-                individualStatsRow(row, rank: index + 1)
+            ScrollView(.horizontal) {
+                VStack(spacing: 0) {
+                    individualStatsHeader
+                    ForEach(Array(rows.enumerated()), id: \.element.id) { index, row in
+                        individualStatsRow(row, rank: index + 1)
+                    }
+                }
+                .frame(width: 416)
             }
+            .scrollIndicators(.hidden)
         }
     }
 
@@ -451,12 +463,16 @@ struct SeriesLeaderboardView: View {
             Text("#")
                 .frame(width: 28, alignment: .center)
             Text("Name")
-                .alignLeading()
+                .frame(width: 128, alignment: .leading)
             Text("Diff")
                 .frame(width: 52, alignment: .trailing)
             Text("HCP")
                 .frame(width: 48, alignment: .trailing)
             Text("Played")
+                .frame(width: 52, alignment: .trailing)
+            Text("Gross")
+                .frame(width: 56, alignment: .trailing)
+            Text("Net")
                 .frame(width: 52, alignment: .trailing)
         }
         .fontStyle(kFontName, size: 12, weight: .semibold)
@@ -477,6 +493,14 @@ struct SeriesLeaderboardView: View {
             case .roundsPlayed:
                 if lhs.roundsPlayed != rhs.roundsPlayed {
                     return lhs.roundsPlayed > rhs.roundsPlayed
+                }
+            case .averageGross:
+                if let result = compareFiniteAscending(lhs.averageGross, rhs.averageGross) {
+                    return result
+                }
+            case .averageNet:
+                if let result = compareFiniteAscending(lhs.averageNet, rhs.averageNet) {
+                    return result
                 }
             }
 
@@ -611,7 +635,7 @@ struct SeriesLeaderboardView: View {
                 .fontStyle(kFontName, size: 14, weight: .medium)
                 .foregroundStyle(palette.foregroundColor)
                 .lineLimit(1)
-                .alignLeading()
+                .frame(width: 128, alignment: .leading)
 
             Text(differentialDisplay(row.averageDifferential))
                 .frame(width: 52, alignment: .trailing)
@@ -627,8 +651,22 @@ struct SeriesLeaderboardView: View {
                 .frame(width: 52, alignment: .trailing)
                 .fontStyle(kFontName, size: 13, weight: .regular)
                 .foregroundStyle(Color.neutral)
+
+            Text(scoreAverageDisplay(row.averageGross))
+                .frame(width: 56, alignment: .trailing)
+                .fontStyle(kFontName, size: 13, weight: .regular)
+                .foregroundStyle(Color.neutral)
+                .monospacedDigit()
+
+            Text(scoreAverageDisplay(row.averageNet))
+                .frame(width: 52, alignment: .trailing)
+                .fontStyle(kFontName, size: 13, weight: .regular)
+                .foregroundStyle(Color.neutral)
+                .monospacedDigit()
         }
         .padding(.vertical, 6)
+        .accessibilityElement(children: .ignore)
+        .accessibilityLabel(individualStatsAccessibilityLabel(row, rank: rank))
     }
 
     private func differentialDisplay(_ value: Double?) -> String {
@@ -641,6 +679,15 @@ struct SeriesLeaderboardView: View {
     private func handicapDisplay(_ value: Double?) -> String {
         guard let value, value.isFinite else { return "--" }
         return String(format: "%.1f", value)
+    }
+
+    private func scoreAverageDisplay(_ value: Double?) -> String {
+        guard let value, value.isFinite else { return "--" }
+        return value.formatted(.number.precision(.fractionLength(1)))
+    }
+
+    private func individualStatsAccessibilityLabel(_ row: SeriesIndividualStatsRow, rank: Int) -> String {
+        "Rank \(rank), \(row.name), average differential \(differentialDisplay(row.averageDifferential)), handicap index \(handicapDisplay(row.currentHandicap)), \(row.roundsPlayed) rounds played, gross average \(scoreAverageDisplay(row.averageGross)), net average \(scoreAverageDisplay(row.averageNet))"
     }
 
     private func roundHistoryRow(_ round: SeriesRound) -> some View {

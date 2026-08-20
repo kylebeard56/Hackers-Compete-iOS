@@ -46,6 +46,8 @@
 	</dict>
 	<key>OPENAI_API_KEY</key>
 	<string>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</string>
+	<key>NSSupportsLiveActivities</key>
+	<true/>
 	<key>POSTHOG_API_KEY</key>
 	<string>phc_bmAUbhr501AMk7iEYgqUT0Dhn1X2o8CYpknl2itjFJN</string>
 	<key>POSTHOG_GROUPS_ENABLED</key>

@@ -97,6 +97,7 @@ enum LiveRoundEntryMethod: String {
     case customPrompt = "custom_prompt"
     case clear
     case maxScoreFill = "max_score_fill"
+    case appleWatch = "apple_watch"
 }
 
 enum TelemetryHoleTransition: Equatable {

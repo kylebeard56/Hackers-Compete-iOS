@@ -41,7 +41,7 @@ struct SearchBar: View {
         self.initialValue = initialValue
         self.autocapitalization = autocapitalization
         self.debounceMilliseconds = milliseconds
-        self.text = .init(value: initialValue, milliseconds: milliseconds)
+        _text = State(initialValue: .init(value: initialValue, milliseconds: milliseconds))
         self.theme = theme
         self.onDebounce = onDebounce
         self.onTextChange = onTextChange

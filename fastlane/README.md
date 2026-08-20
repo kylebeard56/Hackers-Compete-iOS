@@ -21,7 +21,7 @@ For _fastlane_ installation instructions, see [Installing _fastlane_](https://do
 [bundle exec] fastlane ios deploy_testflight
 ```
 
-Archive, upload to TestFlight, set compliance, and distribute to Beta Testers
+Archive Sandbox or Production and optionally upload it to TestFlight
 
 ----
 

@@ -12,6 +12,7 @@ struct DashboardView: View, Loggable {
     @Environment(\.colorScheme) var colorScheme
     @EnvironmentObject var appSession: AppSession
     @EnvironmentObject var roundSession: RoundSession
+    @EnvironmentObject var liveRoundCompanion: LiveRoundCompanionCoordinator
     
     @StateObject var viewModel = DashboardViewModel()
     @StateObject private var homeViewModel = DashboardHomeViewModel()
@@ -52,6 +53,11 @@ struct DashboardView: View, Loggable {
             !round.completedPlayers.contains { $0.playerID == playerID }
         }
     }
+
+    private var companionEligibilityKey: String {
+        ([viewModel.currentPlayerID ?? ""] + activeRounds.map(\.id).sorted())
+            .joined(separator: "|")
+    }
     
     var body: some View {
         ZStack {
@@ -77,6 +83,12 @@ struct DashboardView: View, Loggable {
         }
         .task(id: viewModel.currentPlayerID) {
             await homeViewModel.load(primaryPlayerID: viewModel.currentPlayerID)
+        }
+        .task(id: companionEligibilityKey) {
+            liveRoundCompanion.reconcileEligibleRounds(
+                activeRounds,
+                currentPlayerID: viewModel.currentPlayerID
+            )
         }
         .onChange(of: appSession.rounds) { _, _ in
             viewModel.checkForStalledCompletions(in: sortedRounds)
@@ -375,4 +387,5 @@ extension Time {
     DashboardView()
         .environmentObject(AppSession.forPreview())
         .environmentObject(RoundSession())
+        .environmentObject(LiveRoundCompanionCoordinator())
 }

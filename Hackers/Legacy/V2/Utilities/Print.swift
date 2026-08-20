@@ -6,7 +6,6 @@
 //
 
 import Foundation
-import LocalConsole
 import SwiftPrettyPrint
 
 /// If not in Admin mode, we want to limit prints to preserve performance.
@@ -16,7 +15,6 @@ public func print(_ object: Any...) {
     if !adminMode { return }
     for item in object {
         Swift.print(item)
-        localConsole.print(item)
     }
     //#endif
 }
@@ -25,14 +23,12 @@ public func print(_ object: Any) {
     //#if DEBUG
     if !adminMode { return }
     Swift.print(object)
-    localConsole.print(object)
     //#endif
 }
 
 func printPretty(_ a: Any) {
     //#if DEBUG
     if !adminMode { return }
-    localConsole.print(a)
     Pretty.prettyPrint(a)
     //#endif
 }

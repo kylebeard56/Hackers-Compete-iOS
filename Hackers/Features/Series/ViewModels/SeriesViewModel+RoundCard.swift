@@ -233,6 +233,13 @@ extension SeriesViewModel {
         } ?? plans[0]
 
         if preferred.validTeamPairing {
+            let teeGroupLabelsByMemberID = seriesRound.plannedTeeGroups
+                .sorted { $0.index < $1.index }
+                .reduce(into: [String: String]()) { labels, group in
+                    for memberID in group.memberIDs where labels[memberID] == nil {
+                        labels[memberID] = "G\(group.index + 1)"
+                    }
+                }
             return [preferred.teamAID, preferred.teamBID].compactMap { teamID in
                 guard let team = teams.first(where: { $0.id == teamID }) else { return nil }
                 let roster = activeMembers
@@ -249,11 +256,16 @@ extension SeriesViewModel {
                     scoreLabel: nil,
                     result: .none,
                     contributors: roster.map { member in
-                        contributor(
+                        let handicapLabel = effectiveHandicap(for: member.id).map(Self.handicapLabel)
+                        return contributor(
                             member: member,
                             role: .leaderOnly,
                             scoreLabel: nil,
-                            handicapLabel: effectiveHandicap(for: member.id).map(Self.handicapLabel)
+                            handicapLabel: handicapLabel,
+                            preRoundMetadataLabel: SeriesRoundCardFormatting.preRoundMetadataLabel(
+                                handicap: handicapLabel,
+                                teeGroup: teeGroupLabelsByMemberID[member.id]
+                            )
                         )
                     },
                     hiddenContributorCount: 0
@@ -325,7 +337,8 @@ extension SeriesViewModel {
         member: SeriesMember,
         role: SeriesRoundCardContributorRole,
         scoreLabel: String?,
-        handicapLabel: String?
+        handicapLabel: String?,
+        preRoundMetadataLabel: String? = nil
     ) -> SeriesRoundCardContributor {
         .init(
             id: member.id,
@@ -333,6 +346,7 @@ extension SeriesViewModel {
             scoreLabel: scoreLabel,
             handicapLabel: handicapLabel,
             progressLabel: nil,
+            preRoundMetadataLabel: preRoundMetadataLabel,
             role: role,
             isViewer: member.id == currentMemberID,
             isSubstitute: member.role == .substitute

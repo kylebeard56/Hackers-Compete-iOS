@@ -221,6 +221,102 @@ final class SeriesRoundCardPresentationTests: XCTestCase {
         XCTAssertEqual(SeriesRoundCardFormatting.playerName(""), "")
     }
 
+    func testPreRoundMetadataCombinesHandicapAndTeeGroup() {
+        XCTAssertEqual(
+            SeriesRoundCardFormatting.preRoundMetadataLabel(
+                handicap: "7",
+                teeGroup: "G7"
+            ),
+            "7 HCP · G7"
+        )
+        XCTAssertEqual(
+            SeriesRoundCardFormatting.preRoundMetadataLabel(
+                handicap: "7.2",
+                teeGroup: nil
+            ),
+            "7.2 HCP"
+        )
+        XCTAssertEqual(
+            SeriesRoundCardFormatting.preRoundMetadataLabel(
+                handicap: nil,
+                teeGroup: "G2"
+            ),
+            "G2"
+        )
+        XCTAssertNil(
+            SeriesRoundCardFormatting.preRoundMetadataLabel(
+                handicap: nil,
+                teeGroup: nil
+            )
+        )
+    }
+
+    @MainActor
+    func testUpcomingTeamCardProjectsHandicapAndTeeGroupMetadata() throws {
+        var settings = SeriesSettings()
+        settings.handicapConfig = SeriesHandicapConfig(isEnabled: true, config: .league2025)
+
+        let viewModel = SeriesViewModel()
+        viewModel.series = Series(id: "series", settings: settings)
+        viewModel.teams = [
+            SeriesTeam(id: "team_a", name: "Team A", index: 0, parentID: "series"),
+            SeriesTeam(id: "team_b", name: "Team B", index: 1, parentID: "series")
+        ]
+        viewModel.members = [
+            SeriesMember(
+                id: "alice",
+                name: Name("Alice", "Adams"),
+                teamID: "team_a",
+                parentID: "series"
+            ),
+            SeriesMember(
+                id: "bob",
+                name: Name("Bob", "Brown"),
+                teamID: "team_b",
+                parentID: "series"
+            )
+        ]
+        viewModel.memberHandicaps = [
+            "alice": SeriesMemberHandicap(
+                id: "alice",
+                memberID: "alice",
+                computedIndex: 7
+            )
+        ]
+        let round = SeriesRound(
+            id: "round_15",
+            title: "Round 15",
+            status: .planned,
+            roundConfig: .init(
+                formatTemplateID: FormatTemplateRegistry.bestBall.id,
+                competitionScope: .matchup,
+                scoreBasisOverride: .net
+            ),
+            matchupPlans: [
+                .init(id: "matchup", teamAID: "team_a", teamBID: "team_b")
+            ],
+            plannedTeeGroups: [
+                .init(
+                    id: "group_7",
+                    index: 6,
+                    seats: [
+                        .init(memberID: "alice", teeOrder: 1),
+                        .init(memberID: "bob", teeOrder: 2)
+                    ]
+                )
+            ],
+            parentID: "series"
+        )
+
+        let state = viewModel.baseRoundCardViewState(for: round)
+        let alice = try XCTUnwrap(
+            state.sides.flatMap(\.contributors).first { $0.id == "alice" }
+        )
+
+        XCTAssertEqual(state.lifecycle, .upcoming)
+        XCTAssertEqual(alice.preRoundMetadataLabel, "7 HCP · G7")
+    }
+
     func testBestNCardShowsEveryPlayerInScoreOrderAndMarksCountingScores() throws {
         var snapshot = MockLiveRoundBest2of4Matchup.snapshot
         snapshot.participants[7].isSubstitute = true

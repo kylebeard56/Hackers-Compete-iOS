@@ -89,6 +89,7 @@ struct LiveRound: View, Loggable {
     @CappedScaledMetric(relativeTo: .body) var leaderboardScrollMaxHeight: CGFloat = 360
     
     @EnvironmentObject var appSession: AppSession
+    @EnvironmentObject var liveRoundCompanion: LiveRoundCompanionCoordinator
     @EnvironmentObject var locationService: LocationService
     @EnvironmentObject var roundSession: RoundSession
     
@@ -181,7 +182,7 @@ struct LiveRound: View, Loggable {
                     .padding(.horizontal, 16)
                     .alignTop()
             }
-            
+
             if visibleTabs.count > 1 && showsLiveRoundChrome {
                 HStack(spacing: 8) {
                     liveTabStrip
@@ -222,8 +223,10 @@ struct LiveRound: View, Loggable {
             if let id = appSession.activeRoundID {
                 await roundSession.activate(roundID: id, profile: .liveRound)
             }
+            activateCompanionsIfPossible()
             print(roundSession.snapshot.round.id)
             viewModel.bind(appSession: appSession, roundSession: roundSession)
+            synchronizeCompanionMatchupBasis()
             viewModel.startMatchupProbabilityPrecomputation()
             restoreDurableRoundContextIfNeeded()
             trackLiveRoundViewedIfNeeded(snapshot: roundSession.snapshot)
@@ -249,6 +252,9 @@ struct LiveRound: View, Loggable {
                 tablePresentationState.resetForTabExit()
             }
             persistDurableRoundContext(hole: scoringPageHole)
+        }
+        .onChange(of: viewModel.matchupScoreBasis) { _, _ in
+            synchronizeCompanionMatchupBasis()
         }
         .onChange(of: viewModel.visibleGroupSwitchRequest?.revisionID) { _, _ in
             applyVisibleGroupSwitchIfNeeded()
@@ -498,7 +504,6 @@ extension LiveRound {
                             tablePresentationState.showPlayerVisibilitySheet = true
                         } label: {
                             Label("Visible players", systemImage: "person.2")
-                            Text(viewModel.visibleParticipantIDsLabel())
                         }
 
                         Button {
@@ -647,10 +652,9 @@ extension LiveRound {
                         Label(
                             "Show scoreless",
                             systemImage: viewModel.showScorelessLeaderboardRows
-                            ? "circle"
-                            : "checkmark.circle.fill"
+                            ? "checkmark.circle.fill"
+                            : "circle"
                         )
-                        Text("Choose leaderboard visibility for those who have no scores")
                     }
                     .menuActionDismissBehavior(.disabled)
                 } label: {
@@ -660,7 +664,7 @@ extension LiveRound {
                 .onTapGesture {
                     Haptics.fire(.light)
                 }
-                
+
                 Button {
                     Haptics.fire(.light)
                     viewModel.autoAdvanceWhenHoleComplete.toggle()
@@ -707,6 +711,21 @@ extension LiveRound {
     
     private var effectiveAccent: Color {
         viewModel.theme.color
+    }
+
+    private func activateCompanionsIfPossible() {
+        let roundID = snapshot.round.id
+        guard roundID.isPopulated else { return }
+        liveRoundCompanion.select(roundID: roundID)
+    }
+
+    private func synchronizeCompanionMatchupBasis() {
+        let roundID = snapshot.round.id
+        guard roundID.isPopulated else { return }
+        liveRoundCompanion.synchronizeMatchupScoreBasis(
+            viewModel.matchupScoreBasis,
+            roundID: roundID
+        )
     }
 
     @ViewBuilder
