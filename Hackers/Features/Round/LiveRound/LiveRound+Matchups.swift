@@ -45,7 +45,7 @@ extension LiveRound {
     }
 
     private var matchupProjectionTaskID: String {
-        viewModel.projectionRevision(scoreBasis: viewModel.matchupScoreBasis)
+        viewModel.projectionRevision(scoreBasis: viewModel.matchupProbabilityScoreBasis)
     }
 
     @ViewBuilder
@@ -140,7 +140,13 @@ private struct MatchupTileView: View {
     }
 
     private var probability: MatchupProbability? {
-        viewModel.matchupProbabilities[section.matchup.id]
+        viewModel.matchupProbabilities[section.matchup.id].flatMap {
+            $0.scoreBasis == viewModel.matchupProbabilityScoreBasis ? $0 : nil
+        }
+    }
+
+    private var probabilityBasisLabel: String {
+        viewModel.matchupProbabilityScoreBasis == .net ? "Net" : "Gross"
     }
 
     private var isProbabilityLoading: Bool {
@@ -206,7 +212,7 @@ private struct MatchupTileView: View {
             } else if let probability, probability.isSupported {
                 VStack(alignment: .leading, spacing: 7) {
                     HStack {
-                        Text("Win probability")
+                        Text("\(probabilityBasisLabel) win probability")
                         Spacer(minLength: 8)
                         Text(probability.confidence.rawValue.capitalized)
                     }
@@ -256,7 +262,7 @@ private struct MatchupTileView: View {
                 .animation(accessibilityReduceMotion ? nil : .easeInOut(duration: 0.25), value: probability)
                 .accessibilityElement(children: .ignore)
                 .accessibilityLabel(
-                    "Win probability: left side \(probability.leftWin) percent, tie \(probability.tie) percent, right side \(probability.rightWin) percent, \(probability.confidence.rawValue) confidence"
+                    "\(probabilityBasisLabel) win probability: left side \(probability.leftWin) percent, tie \(probability.tie) percent, right side \(probability.rightWin) percent, \(probability.confidence.rawValue) confidence"
                 )
             } else if let reason = probability?.unsupportedReason {
                 Label(reason, systemImage: "chart.bar.xaxis")
@@ -285,7 +291,7 @@ private struct MatchupTileView: View {
             )
             .frame(height: 8)
             .padding(.top, 14)
-            .accessibilityLabel("Estimating matchup win probability")
+            .accessibilityLabel("Estimating \(probabilityBasisLabel.lowercased()) matchup win probability")
     }
 
     private var leftProbabilityColor: Color {

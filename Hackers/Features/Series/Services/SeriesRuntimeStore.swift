@@ -585,6 +585,7 @@ struct PlayerFinishProjection: Hashable, Sendable {
 
 struct MatchupProbability: Hashable, Sendable {
     let matchupID: String
+    let scoreBasis: ScoreBasis
     let leftWin: Int
     let tie: Int
     let rightWin: Int
@@ -593,9 +594,14 @@ struct MatchupProbability: Hashable, Sendable {
     let isSupported: Bool
     let unsupportedReason: String?
 
-    static func unsupported(matchupID: String, reason: String) -> Self {
+    static func unsupported(
+        matchupID: String,
+        scoreBasis: ScoreBasis,
+        reason: String
+    ) -> Self {
         .init(
             matchupID: matchupID,
+            scoreBasis: scoreBasis,
             leftWin: 0,
             tie: 0,
             rightWin: 0,
@@ -895,6 +901,7 @@ actor MatchupProbabilitySimulator {
             return unsupportedProbabilities(
                 snapshot: sourceSnapshot,
                 matchups: requestedMatchups,
+                scoreBasis: scoreBasis,
                 reason: "Odds aren’t available for custom or shared-score formats."
             )
         }
@@ -903,6 +910,7 @@ actor MatchupProbabilitySimulator {
             return unsupportedProbabilities(
                 snapshot: sourceSnapshot,
                 matchups: requestedMatchups,
+                scoreBasis: scoreBasis,
                 reason: "Course scoring context is incomplete."
             )
         }
@@ -923,6 +931,7 @@ actor MatchupProbabilitySimulator {
             return unsupportedProbabilities(
                 snapshot: sourceSnapshot,
                 matchups: requestedMatchups,
+                scoreBasis: scoreBasis,
                 reason: "Not enough scoring context is available yet."
             )
         }
@@ -940,6 +949,7 @@ actor MatchupProbabilitySimulator {
             return unsupportedProbabilities(
                 snapshot: sourceSnapshot,
                 matchups: requestedMatchups,
+                scoreBasis: scoreBasis,
                 reason: "Resolve picked-up holes before estimating this matchup."
             )
         }
@@ -1007,6 +1017,7 @@ actor MatchupProbabilitySimulator {
                         matchup.id,
                         .unsupported(
                             matchupID: matchup.id,
+                            scoreBasis: scoreBasis,
                             reason: "This matchup’s aggregation can’t be reproduced from player strokes."
                         )
                     )
@@ -1020,6 +1031,7 @@ actor MatchupProbabilitySimulator {
                     matchup.id,
                     MatchupProbability(
                         matchupID: matchup.id,
+                        scoreBasis: scoreBasis,
                         leftWin: left,
                         tie: tie,
                         rightWin: max(0, 100 - left - tie),
@@ -1150,10 +1162,11 @@ actor MatchupProbabilitySimulator {
     private func unsupportedProbabilities(
         snapshot: RoundSnapshot,
         matchups: [TeamMatchup]? = nil,
+        scoreBasis: ScoreBasis,
         reason: String
     ) -> [String: MatchupProbability] {
         Dictionary(uniqueKeysWithValues: (matchups ?? snapshot.roundSegment?.matchups ?? []).map {
-            ($0.id, .unsupported(matchupID: $0.id, reason: reason))
+            ($0.id, .unsupported(matchupID: $0.id, scoreBasis: scoreBasis, reason: reason))
         })
     }
 

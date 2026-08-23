@@ -191,16 +191,19 @@ final class LiveRoundViewModel: ObservableObject, Loggable {
     /// source of truth for "which hole is being viewed."
     @Published var currentHoleIndex: Int = 0
     @Published var scoreBasis: ScoreBasis = .gross
-    @Published var matchupScoreBasis: ScoreBasis = .gross {
-        didSet {
-            guard matchupScoreBasis != oldValue else { return }
-            scheduleMatchupProbabilityRefresh()
-        }
-    }
+    /// Presentation basis for matchup scores. Probability always follows the configured
+    /// competition basis and is intentionally independent from this display control.
+    @Published var matchupScoreBasis: ScoreBasis = .gross
     @Published var leaderboardMode: LeaderboardMode = .individual
     
     var handicapsEnabled: Bool {
         snapshot.configuration.useHandicaps
+    }
+
+    /// Matchup odds describe the actual competition. In a handicapped round that is always Net,
+    /// even while the user temporarily views Gross scores for context.
+    var matchupProbabilityScoreBasis: ScoreBasis {
+        handicapsEnabled ? .net : .gross
     }
 
     var isAttendanceConfirmationEnabled: Bool {
@@ -5118,6 +5121,13 @@ final class LiveRoundViewModel: ObservableObject, Loggable {
         ].joined(separator: "|")
     }
 
+    func matchupProbabilityRevision(for matchup: TeamMatchup) -> String {
+        matchupProbabilityRevision(
+            for: matchup,
+            scoreBasis: matchupProbabilityScoreBasis
+        )
+    }
+
     private var projectionConfigurationRevision: String {
         let encoder = JSONEncoder()
         encoder.outputFormatting = [.sortedKeys]
@@ -5208,8 +5218,9 @@ final class LiveRoundViewModel: ObservableObject, Loggable {
             let matchupID = matchup.id
             guard !loadingMatchupProbabilityIDs.contains(matchupID),
                   matchupProbabilityResultRevisions[matchupID]
-                    == matchupProbabilityRevision(for: matchup, scoreBasis: matchupScoreBasis),
-                  let probability = matchupProbabilities[matchupID] else {
+                    == matchupProbabilityRevision(for: matchup),
+                  let probability = matchupProbabilities[matchupID],
+                  probability.scoreBasis == matchupProbabilityScoreBasis else {
                 return nil
             }
             return (matchupID, probability)
@@ -5258,7 +5269,7 @@ final class LiveRoundViewModel: ObservableObject, Loggable {
         loadingMatchupProbabilityIDs.formIntersection(validMatchupIDs)
 
         let currentRevisions = Dictionary(uniqueKeysWithValues: validMatchups.map {
-            ($0.id, matchupProbabilityRevision(for: $0, scoreBasis: matchupScoreBasis))
+            ($0.id, matchupProbabilityRevision(for: $0))
         })
         let targetRevisions = currentRevisions.filter {
             matchupProbabilityResultRevisions[$0.key] != $0.value
@@ -5314,16 +5325,19 @@ final class LiveRoundViewModel: ObservableObject, Loggable {
 
     private func computeMatchupProbabilities(targetRevisions: [String: String]) async {
         guard !Task.isCancelled else { return }
+        let probabilityBasis = matchupProbabilityScoreBasis
         let template = snapshot.resolvedActiveTemplate
         guard template.inputMode == .strokes, template.scoreSource == .individual else {
             for (matchupID, revision) in targetRevisions {
                 applyMatchupProbability(
                     .unsupported(
                         matchupID: matchupID,
+                        scoreBasis: probabilityBasis,
                         reason: "Odds aren’t available for custom or shared-score formats."
                     ),
                     matchupID: matchupID,
-                    revision: revision
+                    revision: revision,
+                    scoreBasis: probabilityBasis
                 )
             }
             return
@@ -5341,7 +5355,7 @@ final class LiveRoundViewModel: ObservableObject, Loggable {
         let targetMatchups = targetRevisions.keys.compactMap { matchupID -> TeamMatchup? in
             guard let matchup = matchupsByID[matchupID],
                   let revision = targetRevisions[matchupID],
-                  matchupProbabilityRevision(for: matchup, scoreBasis: matchupScoreBasis) == revision else {
+                  matchupProbabilityRevision(for: matchup, scoreBasis: probabilityBasis) == revision else {
                 return nil
             }
             return matchup
@@ -5365,14 +5379,14 @@ final class LiveRoundViewModel: ObservableObject, Loggable {
             if Task.isCancelled { return }
             simulations[participant.id] = await playerSimulation(
                 for: participant,
-                scoreBasis: matchupScoreBasis
+                scoreBasis: probabilityBasis
             )
         }
         guard !Task.isCancelled else { return }
 
         let currentMatchupIDs = Set(targetMatchups.compactMap { matchup -> String? in
             guard let revision = targetRevisions[matchup.id],
-                  matchupProbabilityRevision(for: matchup, scoreBasis: matchupScoreBasis) == revision else {
+                  matchupProbabilityRevision(for: matchup, scoreBasis: probabilityBasis) == revision else {
                 return nil
             }
             return matchup.id
@@ -5385,7 +5399,7 @@ final class LiveRoundViewModel: ObservableObject, Loggable {
         do {
             let values = try await MatchupProbabilitySimulator.shared.simulate(
                 snapshot: snapshot,
-                scoreBasis: matchupScoreBasis,
+                scoreBasis: probabilityBasis,
                 playerSimulations: simulations,
                 matchupIDs: currentMatchupIDs,
                 participantIDs: participantIDs,
@@ -5398,7 +5412,8 @@ final class LiveRoundViewModel: ObservableObject, Loggable {
                 applyMatchupProbability(
                     probability,
                     matchupID: matchupID,
-                    revision: revision
+                    revision: revision,
+                    scoreBasis: probabilityBasis
                 )
             }
         } catch {
@@ -5413,10 +5428,13 @@ final class LiveRoundViewModel: ObservableObject, Loggable {
     private func applyMatchupProbability(
         _ probability: MatchupProbability,
         matchupID: String,
-        revision: String
+        revision: String,
+        scoreBasis: ScoreBasis
     ) {
-        guard let matchup = snapshot.roundSegment?.matchups?.first(where: { $0.id == matchupID }),
-              matchupProbabilityRevision(for: matchup, scoreBasis: matchupScoreBasis) == revision else {
+        guard scoreBasis == matchupProbabilityScoreBasis,
+              probability.scoreBasis == scoreBasis,
+              let matchup = snapshot.roundSegment?.matchups?.first(where: { $0.id == matchupID }),
+              matchupProbabilityRevision(for: matchup, scoreBasis: scoreBasis) == revision else {
             return
         }
         matchupProbabilities[matchupID] = probability

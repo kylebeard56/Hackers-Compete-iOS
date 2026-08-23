@@ -418,6 +418,43 @@ final class MatchupProbabilitySimulatorTests: XCTestCase {
 
 final class LiveRoundProjectionIntegrationTests: XCTestCase {
     @MainActor
+    func testHandicappedMatchupProbabilityRemainsNetWhileGrossScoresAreDisplayed() async throws {
+        var snapshot = MockLiveRoundBest2of4Matchup.snapshot
+        snapshot.round.configuration.handicapsEnabled = true
+        let viewModel = LiveRoundViewModel()
+        viewModel.set(snapshot: snapshot)
+        viewModel.matchupScoreBasis = .gross
+
+        let matchup = try XCTUnwrap(snapshot.roundSegment?.matchups?.first)
+        XCTAssertEqual(viewModel.matchupProbabilityScoreBasis, .net)
+        XCTAssertEqual(
+            viewModel.matchupProbabilityRevision(for: matchup),
+            viewModel.matchupProbabilityRevision(for: matchup, scoreBasis: .net)
+        )
+
+        await viewModel.refreshMatchupProbabilities()
+
+        let probabilities = viewModel.publishableMatchupProbabilities
+        XCTAssertFalse(probabilities.isEmpty)
+        XCTAssertTrue(probabilities.values.allSatisfy { $0.scoreBasis == .net })
+
+        let originalProbabilities = viewModel.matchupProbabilities
+        viewModel.matchupScoreBasis = .net
+        XCTAssertEqual(viewModel.matchupProbabilities, originalProbabilities)
+    }
+
+    @MainActor
+    func testNonHandicappedMatchupProbabilityUsesGrossCompetitionBasis() {
+        var snapshot = MockLiveRoundBest2of4Matchup.snapshot
+        snapshot.round.configuration.handicapsEnabled = false
+        let viewModel = LiveRoundViewModel()
+        viewModel.set(snapshot: snapshot)
+        viewModel.matchupScoreBasis = .net
+
+        XCTAssertEqual(viewModel.matchupProbabilityScoreBasis, .gross)
+    }
+
+    @MainActor
     func testMatchupRevisionOnlyChangesForMatchupContainingScoredPlayer() throws {
         var snapshot = MockLobbySixteenWithTeams.snapshotWithMatchups
         let viewModel = LiveRoundViewModel()

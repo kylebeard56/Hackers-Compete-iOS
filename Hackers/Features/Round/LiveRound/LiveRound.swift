@@ -226,7 +226,6 @@ struct LiveRound: View, Loggable {
             activateCompanionsIfPossible()
             print(roundSession.snapshot.round.id)
             viewModel.bind(appSession: appSession, roundSession: roundSession)
-            synchronizeCompanionMatchupBasis()
             viewModel.startMatchupProbabilityPrecomputation()
             restoreDurableRoundContextIfNeeded()
             trackLiveRoundViewedIfNeeded(snapshot: roundSession.snapshot)
@@ -252,9 +251,6 @@ struct LiveRound: View, Loggable {
                 tablePresentationState.resetForTabExit()
             }
             persistDurableRoundContext(hole: scoringPageHole)
-        }
-        .onChange(of: viewModel.matchupScoreBasis) { _, _ in
-            synchronizeCompanionMatchupBasis()
         }
         .onChange(of: viewModel.visibleGroupSwitchRequest?.revisionID) { _, _ in
             applyVisibleGroupSwitchIfNeeded()
@@ -717,15 +713,6 @@ extension LiveRound {
         let roundID = snapshot.round.id
         guard roundID.isPopulated else { return }
         liveRoundCompanion.select(roundID: roundID)
-    }
-
-    private func synchronizeCompanionMatchupBasis() {
-        let roundID = snapshot.round.id
-        guard roundID.isPopulated else { return }
-        liveRoundCompanion.synchronizeMatchupScoreBasis(
-            viewModel.matchupScoreBasis,
-            roundID: roundID
-        )
     }
 
     @ViewBuilder

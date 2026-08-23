@@ -32,7 +32,6 @@ final class LiveRoundCompanionCoordinator: ObservableObject, Loggable {
     private var activityProjectionTask: Task<Void, Never>?
     private var watchPublishGeneration = 0
     private var activityPublishGeneration = 0
-    private var matchupScoreBasisByRoundID: [String: ScoreBasis] = [:]
     private var isAppActive = true
     private var didStart = false
 
@@ -175,25 +174,6 @@ final class LiveRoundCompanionCoordinator: ObservableObject, Loggable {
         selectionStore.select(nil)
     }
 
-    func synchronizeMatchupScoreBasis(_ basis: ScoreBasis, roundID: String) {
-        guard roundID.isPopulated else { return }
-        matchupScoreBasisByRoundID[roundID] = basis
-        if liveRoundViewModel.snapshot.round.id == roundID,
-           liveRoundViewModel.matchupScoreBasis != basis {
-            liveRoundViewModel.matchupScoreBasis = basis
-        }
-        if activityViewModel.snapshot.round.id == roundID,
-           activityViewModel.matchupScoreBasis != basis {
-            activityViewModel.matchupScoreBasis = basis
-        }
-        if selectedRoundID == roundID {
-            scheduleWatchProjectionPublish()
-        }
-        if liveActivityRoundID == roundID {
-            scheduleActivityProjectionPublish()
-        }
-    }
-
     func handleScenePhase(_ phase: ScenePhase) {
         isAppActive = phase == .active
         switch phase {
@@ -293,7 +273,7 @@ final class LiveRoundCompanionCoordinator: ObservableObject, Loggable {
             return
         }
         do {
-            let basis = matchupScoreBasis(for: companionRoundSession.snapshot)
+            let basis = competitionScoreBasis(for: companionRoundSession.snapshot)
             if liveRoundViewModel.matchupScoreBasis != basis {
                 liveRoundViewModel.matchupScoreBasis = basis
             }
@@ -345,7 +325,7 @@ final class LiveRoundCompanionCoordinator: ObservableObject, Loggable {
                 participantID: participantID,
                 acknowledgedMutationIDs: processedMutations.acceptedMutationIDs(for: liveActivityRoundID)
             )
-            let basis = matchupScoreBasis(for: activityRoundSession.snapshot)
+            let basis = competitionScoreBasis(for: activityRoundSession.snapshot)
             if liveRoundViewModel.matchupScoreBasis != basis {
                 liveRoundViewModel.matchupScoreBasis = basis
             }
@@ -383,9 +363,8 @@ final class LiveRoundCompanionCoordinator: ObservableObject, Loggable {
         }
     }
 
-    private func matchupScoreBasis(for snapshot: RoundSnapshot) -> ScoreBasis {
-        matchupScoreBasisByRoundID[snapshot.round.id]
-            ?? (snapshot.configuration.useHandicaps ? .net : .gross)
+    private func competitionScoreBasis(for snapshot: RoundSnapshot) -> ScoreBasis {
+        snapshot.configuration.useHandicaps ? .net : .gross
     }
 
     private func handle(_ mutation: WatchScoreMutation) async -> WatchScoreAcknowledgement {
