@@ -1,0 +1,21 @@
+{
+  "indexes": [
+    {
+      "collectionGroup": "rounds-v2",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "series_context.series_id", "order": "ASCENDING" },
+        { "fieldPath": "status", "order": "ASCENDING" }
+      ]
+    },
+    {
+      "collectionGroup": "series-memberships-v2",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "player_id", "order": "ASCENDING" },
+        { "fieldPath": "is_active", "order": "ASCENDING" }
+      ]
+    }
+  ],
+  "fieldOverrides": []
+}

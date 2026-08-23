@@ -1,0 +1,61 @@
+//
+//  GameFormat.swift
+//  Hackers
+//
+//  Created by Kyle Beard on 9/2/25.
+//
+
+import Foundation
+
+/// @deprecated: Use GameTemplate + FormatTemplateRegistry instead.
+/// Retained for backward compatibility with existing Firestore documents.
+/// Will be removed in a future migration after all rounds use templateID.
+struct GameFormat: Hashable, Codable {
+    var type: GameFormatType = .strokePlay
+    var configuration: GameConfiguration = .init()
+    
+//    init(
+//        type: GameFormatType = .strokePlay,
+//        configuration: GameConfiguration = .init()
+//    ) {
+//        self.type = type
+//        self.configuration = configuration
+//    }
+    
+//    enum CodingKeys: String, CodingKey {
+//        case type, configuration
+//    }
+}
+
+extension GameFormat {
+    static var strokePlay = GameFormat(type: .strokePlay, configuration: GameConfiguration.strokePlay)
+    static var matchPlay = GameFormat(type: .matchPlay, configuration: GameConfiguration.matchPlay)
+}
+
+enum GameFormatType: String, CaseIterable, Codable {
+    case strokePlay = "stroke_play"
+    case matchPlay = "match_play"
+    
+    var displayName: String {
+        switch self {
+        case .strokePlay:       return "Stroke Play"
+        case .matchPlay:        return "Match Play"
+        }
+    }
+    
+    var icon: String {
+        switch self {
+        case .strokePlay:       return "f450"  // golf-ball-tee
+        case .matchPlay:        return "e4e6"  // swords
+        }
+    }
+    
+    var summaryText: String {
+        switch self {
+        case .strokePlay:       return "Lowest total strokes wins"
+        case .matchPlay:        return "Win holes, not strokes"
+        }
+    }
+}
+
+

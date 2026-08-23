@@ -1,0 +1,7 @@
+{
+  "projects": {
+    "default": "hackers-compete-sandbox",
+    "sandbox": "hackers-compete-sandbox",
+    "production": "hackers-compete"
+  }
+}

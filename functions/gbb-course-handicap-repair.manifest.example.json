@@ -1,0 +1,43 @@
+{
+  "schema": 1,
+  "target": {
+    "projectId": "hackers-compete",
+    "seriesId": "REPLACE_WITH_GE_LEAGUE_SERIES_ID",
+    "seriesRoundId": "REPLACE_WITH_WEEK_11_SERIES_ROUND_ID",
+    "roundId": "REPLACE_WITH_GBB_ROUND_ID",
+    "shareCode": "GBB"
+  },
+  "expected": {
+    "participantCount": 33,
+    "scoreDocumentCount": 297,
+    "scoresPerParticipant": 9,
+    "roundRevision": 0,
+    "seriesRoundRevision": 0,
+    "canonicalGenerationId": "REPLACE_WITH_CURRENT_GENERATION_ID"
+  },
+  "course": {
+    "courseId": "REPLACE_WITH_COURSE_ID",
+    "courseName": "REPLACE_WITH_COURSE_NAME",
+    "holeSegment": "front9",
+    "handicapStrokeBasis": "nine_hole",
+    "maximumHandicap": null,
+    "completeAuthoritativeTeeMetadata": false,
+    "tees": [
+      {
+        "teeBoxId": "red_female",
+        "name": "Red",
+        "gender": "female",
+        "ratingFront": null,
+        "slopeFront": null
+      }
+    ]
+  },
+  "karis": {
+    "participantId": "REPLACE_WITH_KARIS_PARTICIPANT_ID",
+    "teeBoxId": "red_female"
+  },
+  "auditReason": "GBB Week 11 repair using authoritative pre-play roster Course HCP values",
+  "holeScoresVerifiedFromPhysicalCards": false,
+  "scoringUnitAllowances": {},
+  "players": []
+}

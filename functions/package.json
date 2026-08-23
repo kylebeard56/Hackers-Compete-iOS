@@ -1,0 +1,32 @@
+{
+  "name": "functions",
+  "description": "Cloud Functions for Firebase",
+  "scripts": {
+    "serve": "firebase emulators:start --only functions",
+    "shell": "firebase functions:shell",
+    "start": "npm run shell",
+    "deploy": "firebase deploy --only functions",
+    "deploy:sandbox": "firebase deploy --only functions --project hackers-compete-sandbox",
+    "deploy:production": "firebase deploy --only functions --project hackers-compete",
+    "deploy:all": "npm run deploy:sandbox && npm run deploy:production",
+    "logs": "firebase functions:log",
+    "repair:gbb-course-handicaps": "node repair-gbb-course-handicaps.js",
+    "repair:segment-range": "node repair-round-segment-hole-range.js",
+    "migrate:series-v2": "node migrate-series-v1-to-v2.js",
+    "test:v2": "node --test test/series-round-v2.test.js",
+    "test:gbb-repair": "node --test test/repair-gbb-course-handicaps.test.js"
+  },
+  "engines": {
+    "node": "22"
+  },
+  "main": "index.js",
+  "dependencies": {
+    "firebase-admin": "^12.6.0",
+    "firebase-functions": "^5.1.1",
+    "firebase-tools": "^14.18.0"
+  },
+  "devDependencies": {
+    "firebase-functions-test": "^3.1.0"
+  },
+  "private": true
+}

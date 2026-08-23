@@ -1,0 +1,135 @@
+require "json"
+require "fileutils"
+require "shellwords"
+
+DEPLOYMENTS = {
+  "sandbox" => {
+    scheme: "Sandbox",
+    app_identifier: "com.tigermindlabs.hackers.compete.sandbox",
+    output_name: "Hackers-Sandbox.ipa"
+  },
+  "production" => {
+    scheme: "Production",
+    app_identifier: "com.tigermindlabs.hackers.compete",
+    output_name: "Hackers-Production.ipa"
+  }
+}.freeze
+
+def next_local_build_number(cache_path)
+  date_key = Time.now.strftime("%Y-%m-%d")
+  build_prefix = Time.now.strftime("%Y.%m.%d")
+
+  FileUtils.mkdir_p(File.dirname(cache_path))
+
+  File.open(cache_path, File::RDWR | File::CREAT, 0o600) do |file|
+    file.flock(File::LOCK_EX)
+    file.rewind
+    contents = file.read
+    attempts_by_date = contents.to_s.strip.empty? ? {} : JSON.parse(contents)
+    UI.user_error!("Build number cache must be a JSON object: #{cache_path}") unless attempts_by_date.is_a?(Hash)
+
+    attempt_number = attempts_by_date.fetch(date_key, 0).to_i + 1
+    attempts_by_date[date_key] = attempt_number
+
+    file.rewind
+    file.write(JSON.pretty_generate(attempts_by_date))
+    file.truncate(file.pos)
+    file.flush
+    file.fsync
+
+    "#{build_prefix}.#{attempt_number}"
+  rescue JSON::ParserError => error
+    UI.user_error!("Build number cache is not valid JSON: #{cache_path} (#{error.message})")
+  end
+end
+
+def deployment_build_number
+  manual_build_number = ENV["HACKERS_BUILD_NUMBER"].to_s.strip
+  return manual_build_number unless manual_build_number.empty?
+
+  cache_path = ENV["BUILD_NUMBER_CACHE"].to_s.strip
+  cache_path = File.expand_path(".build-number-cache.json", __dir__) if cache_path.empty?
+  next_local_build_number(cache_path)
+end
+
+default_platform(:ios)
+
+platform :ios do
+  desc "Archive Sandbox or Production and optionally upload it to TestFlight"
+  lane :deploy_testflight do
+    environment = ENV["HACKERS_ENVIRONMENT"].to_s.downcase
+    deployment = DEPLOYMENTS[environment]
+    UI.user_error!("Set HACKERS_ENVIRONMENT to sandbox or production.") unless deployment
+
+    group = ENV["EXTERNAL_GROUP"] || "Beta Testers"
+    changelog = ENV["CHANGELOG"]
+    api_key_path = ENV["APP_STORE_CONNECT_API_KEY_PATH"] || ENV["APP_STORE_CONNECT_API_KEY_P8"]
+    key_id = ENV["APP_STORE_CONNECT_KEY_ID"] || ENV["KEY_ID"]
+    issuer_id = ENV["APP_STORE_CONNECT_ISSUER_ID"] || ENV["ISSUER_ID"]
+    build_number = deployment_build_number
+    provisioning_xcargs = ["-allowProvisioningUpdates"]
+
+    if api_key_path && File.extname(api_key_path).downcase != ".json"
+      UI.user_error!("Missing KEY_ID/ISSUER_ID for App Store Connect API key (.p8).") if key_id.to_s.empty? || issuer_id.to_s.empty?
+
+      provisioning_xcargs.concat([
+        "-authenticationKeyPath", Shellwords.escape(File.expand_path(api_key_path)),
+        "-authenticationKeyID", Shellwords.escape(key_id),
+        "-authenticationKeyIssuerID", Shellwords.escape(issuer_id)
+      ])
+    end
+
+    build_xcargs = (provisioning_xcargs + ["CURRENT_PROJECT_VERSION=#{Shellwords.escape(build_number)}"]).join(" ")
+    ipa_path = File.expand_path("../build/#{deployment[:output_name]}", __dir__)
+
+    UI.message("Building #{environment} with build number #{build_number}")
+
+    export_opts = {
+      method: "app-store",
+      teamID: "28EF5GR4R6",
+      signingStyle: "automatic",
+      manageAppVersionAndBuildNumber: false
+    }
+
+    gym(
+      scheme: deployment[:scheme],
+      # Fastlane 2.230 requires the legacy alias; Xcode 27 still accepts it.
+      export_method: "app-store",
+      export_options: export_opts,
+      xcargs: build_xcargs,
+      output_directory: "./build",
+      output_name: deployment[:output_name],
+      clean: true
+    )
+
+    if ENV["SKIP_TESTFLIGHT_UPLOAD"] == "1"
+      UI.success("Built #{ipa_path}; TestFlight upload skipped.")
+      next
+    end
+
+    upload_params = {
+      app_identifier: deployment[:app_identifier],
+      ipa: ipa_path,
+      skip_waiting_for_build_processing: false,
+      uses_non_exempt_encryption: false,
+      distribute_external: true,
+      groups: [group],
+      submit_beta_review: true,
+      changelog: changelog
+    }
+
+    if api_key_path
+      if File.extname(api_key_path).downcase == ".json"
+        upload_params[:api_key_path] = api_key_path
+      else
+        upload_params[:api_key] = app_store_connect_api_key(
+          key_id: key_id,
+          issuer_id: issuer_id,
+          key_filepath: api_key_path
+        )
+      end
+    end
+
+    upload_to_testflight(upload_params)
+  end
+end

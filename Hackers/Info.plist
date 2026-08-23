@@ -2,20 +2,99 @@
 <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
 <plist version="1.0">
 <dict>
+	<key>ANTHROPIC_API_KEY</key>
+	<string>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</string>
+	<key>CFBundleIconName</key>
+	<string>$(APP_ICON_NAME)</string>
+	<key>CFBundleURLTypes</key>
+	<array>
+		<dict>
+			<key>CFBundleTypeRole</key>
+			<string>Editor</string>
+			<key>CFBundleURLName</key>
+			<string>Google Service Sandbox</string>
+			<key>CFBundleURLSchemes</key>
+			<array>
+				<string>com.googleusercontent.apps.75387746846-ltfae970qvcr3l3bivfeolncbtc09p7h</string>
+			</array>
+		</dict>
+		<dict>
+			<key>CFBundleTypeRole</key>
+			<string>Editor</string>
+			<key>CFBundleURLName</key>
+			<string>Google Service Production</string>
+			<key>CFBundleURLSchemes</key>
+			<array>
+				<string>com.googleusercontent.apps.96125314746-43pe1kbkcon9firnhbrovd1shuq90c3l</string>
+			</array>
+		</dict>
+		<dict>
+			<key>CFBundleTypeRole</key>
+			<string>Editor</string>
+			<key>CFBundleURLName</key>
+			<string>Hackers Compete Deep Link</string>
+			<key>CFBundleURLSchemes</key>
+			<array>
+				<string>$(DEEP_LINK_URL_SCHEME)</string>
+			</array>
+		</dict>
+	</array>
+	<key>Configuration properties</key>
+	<dict>
+		<key>Environment mode</key>
+		<string>$(ENVIRONMENT_NAME)</string>
+	</dict>
+	<key>OPENAI_API_KEY</key>
+	<string>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</string>
+	<key>NSSupportsLiveActivities</key>
+	<true/>
+	<key>POSTHOG_API_KEY</key>
+	<string>phc_bmAUbhr501AMk7iEYgqUT0Dhn1X2o8CYpknl2itjFJN</string>
+	<key>POSTHOG_GROUPS_ENABLED</key>
+	<false/>
+	<key>POSTHOG_HOST</key>
+	<string>https://us.i.posthog.com</string>
+	<key>POSTHOG_SESSION_REPLAY_ENABLED</key>
+	<false/>
+	<key>SENTRY_DSN</key>
+	<string>https://06c09f6fc6ec44949250d33033d1255e@o1318782.ingest.sentry.io/4504035028303872</string>
+	<key>SENTRY_ENVIRONMENT</key>
+	<string>$(SENTRY_ENVIRONMENT)</string>
+	<key>SENTRY_TRACES_SAMPLE_RATE</key>
+	<string>0.69</string>
 	<key>UIAppFonts</key>
 	<array>
-		<string>font-awesome-6-brands.otf</string>
-		<string>font-awesome-6-regular.otf</string>
-		<string>font-awesome-6-duotone.otf</string>
-		<string>font-awesome-6-thin.otf</string>
-		<string>font-awesome-6-light.otf</string>
-		<string>font-awesome-6-solid.otf</string>
-		<string>DMSans-Bold.ttf</string>
-		<string>DMSans-BoldItalic.ttf</string>
-		<string>DMSans-Medium.ttf</string>
-		<string>DMSans-MediumItalic.ttf</string>
-		<string>DMSans-Regular.ttf</string>
-		<string>DMSans-RegularItalic.ttf</string>
+		<string>FugazOne-Regular.ttf</string>
+		<string>fa-thin-100.otf</string>
+		<string>fa-light-300.otf</string>
+		<string>fa-regular-400.otf</string>
+		<string>fa-solid-900.otf</string>
+		<string>fa-brands-400.otf</string>
+		<string>Quicksand-Light.ttf</string>
+		<string>Quicksand-Regular.ttf</string>
+		<string>Quicksand-Medium.ttf</string>
+		<string>Quicksand-SemiBold.ttf</string>
+		<string>Quicksand-Bold.ttf</string>
+		<string>Poppins-Light.ttf</string>
+		<string>Poppins-LightItalic.ttf</string>
+		<string>Poppins-Regular.ttf</string>
+		<string>Poppins-Italic.ttf</string>
+		<string>Poppins-Medium.ttf</string>
+		<string>Poppins-MediumItalic.ttf</string>
+		<string>Poppins-SemiBold.ttf</string>
+		<string>Poppins-SemiBoldItalic.ttf</string>
+		<string>Poppins-Bold.ttf</string>
+		<string>Poppins-BoldItalic.ttf</string>
+		<string>OpenSans-Light.ttf</string>
+		<string>OpenSans-LightItalic.ttf</string>
+		<string>OpenSans-Regular.ttf</string>
+		<string>OpenSans-Italic.ttf</string>
+		<string>OpenSans-Medium.ttf</string>
+		<string>OpenSans-MediumItalic.ttf</string>
+		<string>OpenSans-SemiBold.ttf</string>
+		<string>OpenSans-SemiBoldItalic.ttf</string>
+		<string>OpenSans-Bold.ttf</string>
+		<string>OpenSans-BoldItalic.ttf</string>
 	</array>
 </dict>
 </plist>

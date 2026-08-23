@@ -1,0 +1,13 @@
+{
+  "plugins": {
+    "sentry": {
+      "enabled": true
+    },
+    "posthog": {
+      "enabled": true
+    },
+    "firebase": {
+      "enabled": true
+    }
+  }
+}

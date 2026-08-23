@@ -1,0 +1,37 @@
+{
+    "applinks": {
+        "details": [
+            {
+                "appIDs": [
+                    "28EF5GR4R6.com.tigermindlabs.hackers",
+                    "28EF5GR4R6.com.tigermindlabs.hackers.sandbox"
+                ],
+                "components": [
+                    {
+                        "/": "/",
+                        "comment": "Home"
+                    },
+                    {
+                        "#": "desktop",
+                        "exclude": true,
+                        "comment": "Matches any URL with a fragment that equals desktop and instructs the system not to open it as a universal link."
+                    },
+                    {
+                        "/": "/join",
+                        "?": {
+                            "round_id": "?*"
+                        },
+                        "comment": "Join round with code"
+                    },
+                    {
+                        "/": "/join",
+                        "?": {
+                            "test_round_id": "?*"
+                        },
+                        "comment": "Join round with test code"
+                    }
+                ]
+            }
+        ]
+    }
+}

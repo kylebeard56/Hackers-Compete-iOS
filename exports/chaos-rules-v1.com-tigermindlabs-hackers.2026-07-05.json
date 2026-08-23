@@ -1,0 +1,2780 @@
+{
+  "projectId": "com-tigermindlabs-hackers",
+  "databaseId": "default",
+  "collectionId": "chaos-rules-v1",
+  "exportedAt": "2026-07-05T20:56:55.051Z",
+  "documentCount": 111,
+  "documents": [
+    {
+      "id": "1h4Mm0bNjXD9HjnyZwN4",
+      "path": "chaos-rules-v1/1h4Mm0bNjXD9HjnyZwN4",
+      "createTime": "2023-08-12T15:38:06.145213Z",
+      "updateTime": "2023-08-12T15:38:06.145213Z",
+      "data": {
+        "icon": "f546",
+        "id": "1h4Mm0bNjXD9HjnyZwN4",
+        "type": "player",
+        "last_updated_at": {
+          "iso": "2023-03-12T23:43:35Z",
+          "unix": 1678664615.358192
+        },
+        "name": "Anti-Gimme",
+        "conditions": [],
+        "description": "<player-name>[-b] must move their ball on the green to outside of gimme distance (putter length) if their ball is within gimme distance. In effect until putt is made.",
+        "difficulty": "challenge",
+        "packID": "chaos",
+        "par": [
+          3,
+          4,
+          5
+        ]
+      }
+    },
+    {
+      "id": "1VVoGSCSadqhsxshGWyt",
+      "path": "chaos-rules-v1/1VVoGSCSadqhsxshGWyt",
+      "createTime": "2024-06-28T14:43:22.816195Z",
+      "updateTime": "2024-07-08T20:10:16.819953Z",
+      "data": {
+        "conditions": [],
+        "name": "Stairway To Heaven",
+        "last_updated_at": {
+          "iso": "2024-07-08T20:10:16Z",
+          "unix": 1720469416.591134
+        },
+        "type": "player",
+        "difficulty": "challenge",
+        "description": "<player-name>[-b] must continually club up on their next shot from the previously used club. In effect until lying par.",
+        "packID": "chaos",
+        "par": [
+          3,
+          4,
+          5
+        ],
+        "icon": "e289",
+        "id": "1VVoGSCSadqhsxshGWyt"
+      }
+    },
+    {
+      "id": "236vuGBWTNODcVBNeAPk",
+      "path": "chaos-rules-v1/236vuGBWTNODcVBNeAPk",
+      "createTime": "2024-06-27T03:00:29.628372Z",
+      "updateTime": "2024-06-27T03:00:29.628372Z",
+      "data": {
+        "description": "<player-name>[-b] must hit one flop shot on this hole.",
+        "difficulty": "challenge",
+        "type": "player",
+        "last_updated_at": {
+          "iso": "2024-06-27T03:00:29Z",
+          "unix": 1719457229.293264
+        },
+        "name": "Floppy Disk",
+        "conditions": [],
+        "par": [
+          3,
+          4,
+          5
+        ],
+        "packID": "chaos",
+        "icon": "f0c7",
+        "id": "236vuGBWTNODcVBNeAPk"
+      }
+    },
+    {
+      "id": "2ksbUgHLK0Wy6bLwxzLI",
+      "path": "chaos-rules-v1/2ksbUgHLK0Wy6bLwxzLI",
+      "createTime": "2023-08-12T15:38:05.642955Z",
+      "updateTime": "2024-06-27T01:32:34.676752Z",
+      "data": {
+        "id": "2ksbUgHLK0Wy6bLwxzLI",
+        "icon": "f06b",
+        "par": [
+          4,
+          5,
+          3
+        ],
+        "packID": "chaos",
+        "description": "<player-name>[-b] must gift one mulligan to another player on this hole.",
+        "difficulty": "favor",
+        "last_updated_at": {
+          "iso": "2024-06-27T01:32:34Z",
+          "unix": 1719451954.600385
+        },
+        "type": "player",
+        "conditions": [],
+        "name": "The Gift Of Giving"
+      }
+    },
+    {
+      "id": "2rySXHaDnYo2FE5FwQRm",
+      "path": "chaos-rules-v1/2rySXHaDnYo2FE5FwQRm",
+      "createTime": "2024-06-27T13:06:50.277213Z",
+      "updateTime": "2024-06-27T13:06:50.277213Z",
+      "data": {
+        "name": "Choke Up",
+        "conditions": [],
+        "type": "player",
+        "last_updated_at": {
+          "iso": "2024-06-27T13:06:50Z",
+          "unix": 1719493610.047495
+        },
+        "difficulty": "challenge",
+        "description": "<player-name>[-b] has to hit every shot while choking up on the club.",
+        "packID": "chaos",
+        "par": [
+          3,
+          4
+        ],
+        "icon": "f451",
+        "id": "2rySXHaDnYo2FE5FwQRm"
+      }
+    },
+    {
+      "id": "2sEQ1EHo09ug87wxAAJt",
+      "path": "chaos-rules-v1/2sEQ1EHo09ug87wxAAJt",
+      "createTime": "2024-06-28T22:06:12.635931Z",
+      "updateTime": "2024-07-08T20:10:36.760433Z",
+      "data": {
+        "id": "2sEQ1EHo09ug87wxAAJt",
+        "icon": "e469",
+        "par": [
+          3,
+          4,
+          5
+        ],
+        "packID": "chaos",
+        "difficulty": "challenge",
+        "description": "Everyone in the party[-b] must mimic whoever arrived first to the course by using the same club per shot as them. In effect until lying par.",
+        "name": "Early Bird",
+        "conditions": [],
+        "type": "team",
+        "last_updated_at": {
+          "unix": 1720469436.679311,
+          "iso": "2024-07-08T20:10:36Z"
+        }
+      }
+    },
+    {
+      "id": "39ThyfXls19DZn2nz6u4",
+      "path": "chaos-rules-v1/39ThyfXls19DZn2nz6u4",
+      "createTime": "2023-08-12T15:38:08.867351Z",
+      "updateTime": "2024-06-27T02:31:07.236574Z",
+      "data": {
+        "id": "39ThyfXls19DZn2nz6u4",
+        "icon": "f06b",
+        "par": [
+          4,
+          5,
+          3
+        ],
+        "packID": "chaos",
+        "description": "Each player[-b] has earned one mulligan to gift to another player on this hole.",
+        "difficulty": "favor",
+        "last_updated_at": {
+          "iso": "2024-06-27T02:31:06Z",
+          "unix": 1719455466.968427
+        },
+        "type": "team",
+        "conditions": [],
+        "name": "The Gift Of Giving"
+      }
+    },
+    {
+      "id": "3BUOwwn3UNtJbyDPdFfS",
+      "path": "chaos-rules-v1/3BUOwwn3UNtJbyDPdFfS",
+      "createTime": "2023-08-12T15:38:05.252203Z",
+      "updateTime": "2023-08-12T15:38:05.252203Z",
+      "data": {
+        "icon": "f2fe",
+        "id": "3BUOwwn3UNtJbyDPdFfS",
+        "type": "player",
+        "last_updated_at": {
+          "iso": "2023-04-14T17:16:27Z",
+          "unix": 1681492587.134769
+        },
+        "conditions": [],
+        "name": "Bulls**t",
+        "description": "<player-name>[-b] can make any person hit their shot again. Same lie, but the first shot is nullified. Can only be used once.",
+        "difficulty": "favor",
+        "packID": "chaos",
+        "par": [
+          3,
+          4,
+          5
+        ]
+      }
+    },
+    {
+      "id": "3R8Md3gDkmJXNfNi1v7h",
+      "path": "chaos-rules-v1/3R8Md3gDkmJXNfNi1v7h",
+      "createTime": "2024-06-27T01:54:57.257089Z",
+      "updateTime": "2024-06-27T02:10:28.300777Z",
+      "data": {
+        "id": "3R8Md3gDkmJXNfNi1v7h",
+        "icon": "f2a7",
+        "par": [
+          3,
+          4,
+          5
+        ],
+        "packID": "chaos",
+        "difficulty": "challenge",
+        "description": "<player-name>[-b] must putt one handed and change hands after each missed attempt.",
+        "conditions": [],
+        "name": "Pesky Putting",
+        "last_updated_at": {
+          "unix": 1719454228.217544,
+          "iso": "2024-06-27T02:10:28Z"
+        },
+        "type": "player"
+      }
+    },
+    {
+      "id": "54gbe1zpGSLnVrk6mudV",
+      "path": "chaos-rules-v1/54gbe1zpGSLnVrk6mudV",
+      "createTime": "2023-08-12T15:38:05.090243Z",
+      "updateTime": "2024-06-27T00:44:16.091015Z",
+      "data": {
+        "id": "54gbe1zpGSLnVrk6mudV",
+        "icon": "e3ac",
+        "par": [
+          3,
+          4,
+          5
+        ],
+        "packID": "chaos",
+        "difficulty": "challenge",
+        "description": "<player-name>[-b] must be closest to the pin after two strokes. If not, the party gets to choose one club for <player-name> to finish the hole with.",
+        "conditions": [],
+        "name": "Duel of Duals",
+        "type": "player",
+        "last_updated_at": {
+          "unix": 1719449056.017987,
+          "iso": "2024-06-27T00:44:16Z"
+        }
+      }
+    },
+    {
+      "id": "5FGUGdC6eRuf8L3FFIvT",
+      "path": "chaos-rules-v1/5FGUGdC6eRuf8L3FFIvT",
+      "createTime": "2023-08-12T15:38:08.488769Z",
+      "updateTime": "2023-08-12T15:38:08.488769Z",
+      "data": {
+        "packID": "chaos",
+        "par": [
+          3,
+          4,
+          5
+        ],
+        "type": "player",
+        "last_updated_at": {
+          "unix": 1668798198.9365249,
+          "iso": "2022-11-18T19:03:18Z"
+        },
+        "conditions": [],
+        "name": "Foot Wedge",
+        "description": "<player-name>[-b] get one stroke-free use of their foot to advance their ball by kicking it in any way. ",
+        "difficulty": "favor",
+        "id": "5FGUGdC6eRuf8L3FFIvT",
+        "icon": "f782"
+      }
+    },
+    {
+      "id": "6oJQHc2jfe7G9hahIxJt",
+      "path": "chaos-rules-v1/6oJQHc2jfe7G9hahIxJt",
+      "createTime": "2023-08-12T15:38:06.417739Z",
+      "updateTime": "2024-06-28T22:10:25.362348Z",
+      "data": {
+        "packID": "chaos",
+        "par": [
+          3,
+          4,
+          5
+        ],
+        "conditions": [],
+        "name": "Copycat",
+        "last_updated_at": {
+          "iso": "2024-06-28T22:10:25Z",
+          "unix": 1719612625.191504
+        },
+        "type": "player",
+        "difficulty": "challenge",
+        "description": "<player-name>[-b] can only use clubs that other players have or are about to use on this hole.",
+        "id": "6oJQHc2jfe7G9hahIxJt",
+        "icon": "f6be"
+      }
+    },
+    {
+      "id": "6rk38LDoHIl6t3FCAfEH",
+      "path": "chaos-rules-v1/6rk38LDoHIl6t3FCAfEH",
+      "createTime": "2023-08-12T15:38:05.989958Z",
+      "updateTime": "2024-06-27T02:03:52.498414Z",
+      "data": {
+        "par": [
+          3,
+          4,
+          5
+        ],
+        "packID": "chaos",
+        "difficulty": "favor",
+        "description": "Whoever in the party[-b] has the next upcoming birthday gets one mulligan and one anti-mulligan for this hole.",
+        "conditions": [],
+        "name": "Happy Birthday",
+        "last_updated_at": {
+          "iso": "2024-06-27T02:03:52Z",
+          "unix": 1719453832.189289
+        },
+        "type": "team",
+        "id": "6rk38LDoHIl6t3FCAfEH",
+        "icon": "f1fd"
+      }
+    },
+    {
+      "id": "6YnUre3vyaugo0Y6aYNF",
+      "path": "chaos-rules-v1/6YnUre3vyaugo0Y6aYNF",
+      "createTime": "2023-08-12T15:38:08.565099Z",
+      "updateTime": "2024-06-27T02:11:42.801550Z",
+      "data": {
+        "conditions": [],
+        "name": "Quarterback",
+        "last_updated_at": {
+          "iso": "2024-06-27T02:11:42Z",
+          "unix": 1719454302.738604
+        },
+        "type": "player",
+        "difficulty": "favor",
+        "description": "<player-name>[-b] gets one stroke-free toss of their ball with their non-dominant arm. ",
+        "packID": "chaos",
+        "par": [
+          3,
+          4,
+          5
+        ],
+        "icon": "f44e",
+        "id": "6YnUre3vyaugo0Y6aYNF"
+      }
+    },
+    {
+      "id": "7oU6Ql3eVk4pY13GZpAs",
+      "path": "chaos-rules-v1/7oU6Ql3eVk4pY13GZpAs",
+      "createTime": "2023-08-12T15:38:05.549212Z",
+      "updateTime": "2024-06-27T02:38:48.441174Z",
+      "data": {
+        "id": "7oU6Ql3eVk4pY13GZpAs",
+        "icon": "f6da",
+        "par": [
+          3,
+          4,
+          5
+        ],
+        "packID": "chaos",
+        "description": "<player-name>[-b] has the choice to skip teeing off and instead steal any tee shot as their own. If a shot is stolen, the victim can hit again or steal a different tee shot. Cannot steal same shot twice.",
+        "difficulty": "favor",
+        "type": "player",
+        "last_updated_at": {
+          "unix": 1719455928.240748,
+          "iso": "2024-06-27T02:38:48Z"
+        },
+        "name": "White Elephant",
+        "conditions": []
+      }
+    },
+    {
+      "id": "7u0B5PCVH3oeWImotgca",
+      "path": "chaos-rules-v1/7u0B5PCVH3oeWImotgca",
+      "createTime": "2023-08-12T15:38:08.715193Z",
+      "updateTime": "2024-06-27T01:56:40.526486Z",
+      "data": {
+        "packID": "chaos",
+        "par": [
+          4,
+          5,
+          3
+        ],
+        "type": "team",
+        "last_updated_at": {
+          "unix": 1719453400.456798,
+          "iso": "2024-06-27T01:56:40Z"
+        },
+        "name": "Blind Finish",
+        "conditions": [],
+        "description": "Each player[-b] must take their first putt with their eyes closed or blindfolded.",
+        "difficulty": "challenge",
+        "id": "7u0B5PCVH3oeWImotgca",
+        "icon": "e481"
+      }
+    },
+    {
+      "id": "7W39lyOLV1wljmt6hL0V",
+      "path": "chaos-rules-v1/7W39lyOLV1wljmt6hL0V",
+      "createTime": "2024-06-27T02:56:07.773558Z",
+      "updateTime": "2024-07-08T20:12:32.576497Z",
+      "data": {
+        "id": "7W39lyOLV1wljmt6hL0V",
+        "icon": "e33e",
+        "packID": "chaos",
+        "par": [
+          3,
+          4,
+          5
+        ],
+        "last_updated_at": {
+          "unix": 1720469552.499539,
+          "iso": "2024-07-08T20:12:32Z"
+        },
+        "type": "player",
+        "conditions": [],
+        "name": "Anti-Deja Vu",
+        "description": "<player-name>[-b] cannot use any clubs that they used on the last hole.",
+        "difficulty": "challenge"
+      }
+    },
+    {
+      "id": "859Ly4h9RegcseNhR7b7",
+      "path": "chaos-rules-v1/859Ly4h9RegcseNhR7b7",
+      "createTime": "2024-06-28T19:52:52.605038Z",
+      "updateTime": "2024-06-28T19:52:52.605038Z",
+      "data": {
+        "conditions": [],
+        "name": "Tree Monkey",
+        "type": "player",
+        "last_updated_at": {
+          "unix": 1719604372.470603,
+          "iso": "2024-06-28T19:52:52Z"
+        },
+        "difficulty": "favor",
+        "description": "<player-name>[-b] gets one free drop if they lose a ball into the woods (no water).",
+        "packID": "chaos",
+        "par": [
+          3,
+          4,
+          5
+        ],
+        "icon": "f6fb",
+        "id": "859Ly4h9RegcseNhR7b7"
+      }
+    },
+    {
+      "id": "a7yCc9nVSbo8JJhl30yA",
+      "path": "chaos-rules-v1/a7yCc9nVSbo8JJhl30yA",
+      "createTime": "2023-08-12T15:38:06.294191Z",
+      "updateTime": "2024-06-27T00:43:27.628502Z",
+      "data": {
+        "id": "a7yCc9nVSbo8JJhl30yA",
+        "icon": "e3c5",
+        "packID": "chaos",
+        "par": [
+          3,
+          4,
+          5
+        ],
+        "type": "player",
+        "last_updated_at": {
+          "unix": 1719449007.550286,
+          "iso": "2024-06-27T00:43:27Z"
+        },
+        "name": "Crazy 8's",
+        "conditions": [],
+        "description": "<player-name>[-b] must hit 8 iron for at least two shots.",
+        "difficulty": "challenge"
+      }
+    },
+    {
+      "id": "afe0IY4oj5ii3PLyGCUi",
+      "path": "chaos-rules-v1/afe0IY4oj5ii3PLyGCUi",
+      "createTime": "2024-06-28T20:08:54.907003Z",
+      "updateTime": "2024-06-28T20:10:00.654671Z",
+      "data": {
+        "type": "player",
+        "last_updated_at": {
+          "iso": "2024-06-28T20:10:00Z",
+          "unix": 1719605400.460628
+        },
+        "name": "Line Of Sight",
+        "conditions": [],
+        "description": "<player-name>[-b] can move their ball (no closer to the hole) to ensure they always have clear line of sight to the flag.",
+        "difficulty": "favor",
+        "packID": "chaos",
+        "par": [
+          3,
+          4,
+          5
+        ],
+        "icon": "f892",
+        "id": "afe0IY4oj5ii3PLyGCUi"
+      }
+    },
+    {
+      "id": "an5PA3hRPwNhSGBV9ZKX",
+      "path": "chaos-rules-v1/an5PA3hRPwNhSGBV9ZKX",
+      "createTime": "2023-08-12T15:38:08.625705Z",
+      "updateTime": "2024-06-27T02:02:37.178759Z",
+      "data": {
+        "icon": "f782",
+        "id": "an5PA3hRPwNhSGBV9ZKX",
+        "conditions": [],
+        "name": "Foot Wedge",
+        "type": "team",
+        "last_updated_at": {
+          "iso": "2024-06-27T02:02:37Z",
+          "unix": 1719453757.103839
+        },
+        "difficulty": "favor",
+        "description": "Each player[-b] get one stroke-free use of their foot to advance their ball by kicking it in any way. ",
+        "packID": "chaos",
+        "par": [
+          3,
+          4,
+          5
+        ]
+      }
+    },
+    {
+      "id": "aoxamFlFH6uttxbtq1ah",
+      "path": "chaos-rules-v1/aoxamFlFH6uttxbtq1ah",
+      "createTime": "2023-08-12T15:38:07.698531Z",
+      "updateTime": "2023-08-12T15:38:07.698531Z",
+      "data": {
+        "par": [
+          3,
+          4,
+          5
+        ],
+        "packID": "chaos",
+        "difficulty": "favor",
+        "description": "<player-name>[-b] gets two shots off the tee and can select which ball to play from.",
+        "name": "Breakfast Ball",
+        "conditions": [],
+        "type": "player",
+        "last_updated_at": {
+          "iso": "2022-12-01T22:47:11Z",
+          "unix": 1669934831.198316
+        },
+        "id": "aoxamFlFH6uttxbtq1ah",
+        "icon": "f7fc"
+      }
+    },
+    {
+      "id": "BFKH0hIrjp6Pm18jkyL2",
+      "path": "chaos-rules-v1/BFKH0hIrjp6Pm18jkyL2",
+      "createTime": "2023-08-12T15:38:07.631909Z",
+      "updateTime": "2024-06-28T14:47:17.290059Z",
+      "data": {
+        "packID": "chaos",
+        "par": [
+          3,
+          4,
+          5
+        ],
+        "conditions": [],
+        "name": "Beach Bonus",
+        "last_updated_at": {
+          "unix": 1719586037.216214,
+          "iso": "2024-06-28T14:47:17Z"
+        },
+        "type": "player",
+        "difficulty": "favor",
+        "description": "<player-name>[-b] gets 1 free stroke out of any bunker. ",
+        "id": "BFKH0hIrjp6Pm18jkyL2",
+        "icon": "f5ca"
+      }
+    },
+    {
+      "id": "bLaAaBgYOVhBkgJ4rI7R",
+      "path": "chaos-rules-v1/bLaAaBgYOVhBkgJ4rI7R",
+      "createTime": "2024-06-27T02:52:02.830869Z",
+      "updateTime": "2024-06-27T02:52:02.830869Z",
+      "data": {
+        "conditions": [],
+        "name": "Club Down",
+        "type": "player",
+        "last_updated_at": {
+          "unix": 1719456722.722615,
+          "iso": "2024-06-27T02:52:02Z"
+        },
+        "difficulty": "challenge",
+        "description": "<player-name>[-b] must club down 2 clubs for their tee shot.",
+        "packID": "chaos",
+        "par": [
+          3,
+          4,
+          5
+        ],
+        "icon": "f309",
+        "id": "bLaAaBgYOVhBkgJ4rI7R"
+      }
+    },
+    {
+      "id": "Bnpxwl5BKe8HKWIk7jMe",
+      "path": "chaos-rules-v1/Bnpxwl5BKe8HKWIk7jMe",
+      "createTime": "2024-06-27T02:01:18.942457Z",
+      "updateTime": "2024-06-27T02:01:18.942457Z",
+      "data": {
+        "type": "team",
+        "last_updated_at": {
+          "iso": "2024-06-27T02:01:18Z",
+          "unix": 1719453678.727158
+        },
+        "conditions": [],
+        "name": "Even Or Odd",
+        "description": "Each player[-b] can only use even or odd irons depending on whether their last name has an even or odd amount of letters.",
+        "difficulty": "challenge",
+        "packID": "chaos",
+        "par": [
+          3,
+          4,
+          5
+        ],
+        "icon": "f64c",
+        "id": "Bnpxwl5BKe8HKWIk7jMe"
+      }
+    },
+    {
+      "id": "BXhvbAxPjNl2eu29KhDf",
+      "path": "chaos-rules-v1/BXhvbAxPjNl2eu29KhDf",
+      "createTime": "2024-06-28T19:57:50.461435Z",
+      "updateTime": "2024-06-28T20:58:55.837229Z",
+      "data": {
+        "difficulty": "favor",
+        "description": "<player-name>[-b] gets a free drop alongside another player's tee shot if <player-name> keeps their tee shot in-bounds.",
+        "conditions": [],
+        "name": "Tee Box Ticket",
+        "type": "player",
+        "last_updated_at": {
+          "unix": 1719608335.737699,
+          "iso": "2024-06-28T20:58:55Z"
+        },
+        "par": [
+          3,
+          4,
+          5
+        ],
+        "packID": "chaos",
+        "icon": "f145",
+        "id": "BXhvbAxPjNl2eu29KhDf"
+      }
+    },
+    {
+      "id": "CANNESg1wGdlnnSdoF2I",
+      "path": "chaos-rules-v1/CANNESg1wGdlnnSdoF2I",
+      "createTime": "2024-06-27T03:17:59.626538Z",
+      "updateTime": "2024-06-27T03:17:59.626538Z",
+      "data": {
+        "par": [
+          3,
+          4,
+          5
+        ],
+        "packID": "chaos",
+        "difficulty": "favor",
+        "description": "<player-name>[-b] can move their ball within a club length before each shot to give themselves a more favorable lie or angle.",
+        "name": "Magic Moves",
+        "conditions": [],
+        "type": "player",
+        "last_updated_at": {
+          "unix": 1719458279.358217,
+          "iso": "2024-06-27T03:17:59Z"
+        },
+        "id": "CANNESg1wGdlnnSdoF2I",
+        "icon": "e2ca"
+      }
+    },
+    {
+      "id": "CDQTwdVEXKSSr8tPLKYB",
+      "path": "chaos-rules-v1/CDQTwdVEXKSSr8tPLKYB",
+      "createTime": "2023-08-12T15:38:08.835520Z",
+      "updateTime": "2024-06-27T01:56:21.238251Z",
+      "data": {
+        "id": "CDQTwdVEXKSSr8tPLKYB",
+        "icon": "e05d",
+        "packID": "chaos",
+        "par": [
+          3,
+          4,
+          5
+        ],
+        "name": "Ambidextrous",
+        "conditions": [],
+        "type": "team",
+        "last_updated_at": {
+          "unix": 1719453381.170137,
+          "iso": "2024-06-27T01:56:21Z"
+        },
+        "difficulty": "favor",
+        "description": "Each player[-b] gets one stroke-free attempt swinging their club backwards. Good luck!!"
+      }
+    },
+    {
+      "id": "CMPpKP0dLTdJIrwYw5ID",
+      "path": "chaos-rules-v1/CMPpKP0dLTdJIrwYw5ID",
+      "createTime": "2024-06-27T02:48:01.176658Z",
+      "updateTime": "2024-06-27T03:23:01.128512Z",
+      "data": {
+        "id": "CMPpKP0dLTdJIrwYw5ID",
+        "icon": "f14e",
+        "par": [
+          3,
+          4,
+          5
+        ],
+        "packID": "chaos",
+        "description": "<player-name>[-b] cannot use any aids on this hole such as tees, gloves, or range finders.",
+        "difficulty": "challenge",
+        "type": "player",
+        "last_updated_at": {
+          "unix": 1719458580.967442,
+          "iso": "2024-06-27T03:23:00Z"
+        },
+        "conditions": [],
+        "name": "Boy Scout"
+      }
+    },
+    {
+      "id": "CMZmEMwdRC30WWALgtt3",
+      "path": "chaos-rules-v1/CMZmEMwdRC30WWALgtt3",
+      "createTime": "2023-08-12T15:38:08.595837Z",
+      "updateTime": "2024-06-27T02:11:05.037349Z",
+      "data": {
+        "type": "team",
+        "last_updated_at": {
+          "unix": 1719454264.9624438,
+          "iso": "2024-06-27T02:11:04Z"
+        },
+        "name": "Power Putting",
+        "conditions": [],
+        "description": "Each player[-b] must putt with their driver or furthest hitting club.",
+        "difficulty": "challenge",
+        "packID": "chaos",
+        "par": [
+          3,
+          4,
+          5
+        ],
+        "icon": "f011",
+        "id": "CMZmEMwdRC30WWALgtt3"
+      }
+    },
+    {
+      "id": "cpFqyxqLzqPn3GCiwYvB",
+      "path": "chaos-rules-v1/cpFqyxqLzqPn3GCiwYvB",
+      "createTime": "2023-08-12T15:38:08.806108Z",
+      "updateTime": "2024-06-27T02:27:38.516909Z",
+      "data": {
+        "id": "cpFqyxqLzqPn3GCiwYvB",
+        "icon": "e551",
+        "par": [
+          3,
+          4,
+          5
+        ],
+        "packID": "chaos",
+        "difficulty": "challenge",
+        "description": "<player-name>[-b] must tee off from the next tee box backwards.",
+        "name": "Tee Box Demotion",
+        "conditions": [],
+        "type": "player",
+        "last_updated_at": {
+          "unix": 1719455258.244653,
+          "iso": "2024-06-27T02:27:38Z"
+        }
+      }
+    },
+    {
+      "id": "cy3uzwR9vPtNs8k7eEeF",
+      "path": "chaos-rules-v1/cy3uzwR9vPtNs8k7eEeF",
+      "createTime": "2023-08-12T15:38:05.146590Z",
+      "updateTime": "2024-06-27T01:57:09.675086Z",
+      "data": {
+        "name": "Bombs Away",
+        "conditions": [],
+        "type": "team",
+        "last_updated_at": {
+          "unix": 1719453429.594341,
+          "iso": "2024-06-27T01:57:09Z"
+        },
+        "difficulty": "challenge",
+        "description": "Whoever in the party[-b] hits the furthest tee shot (or closest to pin) can make the player with the shortest tee shot hit any club for one shot.",
+        "packID": "chaos",
+        "par": [
+          3,
+          4,
+          5
+        ],
+        "icon": "f1e2",
+        "id": "cy3uzwR9vPtNs8k7eEeF"
+      }
+    },
+    {
+      "id": "cYX7CAc21QCq9fiXlWDg",
+      "path": "chaos-rules-v1/cYX7CAc21QCq9fiXlWDg",
+      "createTime": "2024-06-27T02:20:44.529566Z",
+      "updateTime": "2024-06-27T02:20:44.529566Z",
+      "data": {
+        "description": "Closest player to the pin[-b] from their off-green approach gets a free read by hand rolling a ball towards the hole.",
+        "difficulty": "favor",
+        "type": "team",
+        "last_updated_at": {
+          "iso": "2024-06-27T02:20:44Z",
+          "unix": 1719454844.452423
+        },
+        "name": "Sniper",
+        "conditions": [],
+        "par": [
+          3,
+          4,
+          5
+        ],
+        "packID": "chaos",
+        "icon": "f601",
+        "id": "cYX7CAc21QCq9fiXlWDg"
+      }
+    },
+    {
+      "id": "D19sfhXft83sLW5AWPa4",
+      "path": "chaos-rules-v1/D19sfhXft83sLW5AWPa4",
+      "createTime": "2024-06-27T03:30:47.692931Z",
+      "updateTime": "2024-06-27T03:30:47.692931Z",
+      "data": {
+        "icon": "e136",
+        "id": "D19sfhXft83sLW5AWPa4",
+        "description": "Anyone in the party[-b] who doesn't have their shirt currently tucked in cannot hit their odd irons on this hole.",
+        "difficulty": "challenge",
+        "last_updated_at": {
+          "iso": "2024-06-27T03:30:47Z",
+          "unix": 1719459047.5383492
+        },
+        "type": "team",
+        "conditions": [],
+        "name": "Luck Tucked",
+        "par": [
+          3,
+          4,
+          5
+        ],
+        "packID": "chaos"
+      }
+    },
+    {
+      "id": "DrXVMQU9xKFPcTAsPaXg",
+      "path": "chaos-rules-v1/DrXVMQU9xKFPcTAsPaXg",
+      "createTime": "2024-06-27T01:56:04.013291Z",
+      "updateTime": "2024-06-28T14:49:12.606911Z",
+      "data": {
+        "id": "DrXVMQU9xKFPcTAsPaXg",
+        "icon": "e481",
+        "par": [
+          4,
+          5,
+          3
+        ],
+        "packID": "chaos",
+        "description": "<player-name>[-b] can pick any one player to take their first putt with their eyes closed or blindfolded.",
+        "difficulty": "favor",
+        "last_updated_at": {
+          "unix": 1719586152.533968,
+          "iso": "2024-06-28T14:49:12Z"
+        },
+        "type": "player",
+        "conditions": [],
+        "name": "Blind Finish"
+      }
+    },
+    {
+      "id": "e5Jef66cF5KSqgDbCZsC",
+      "path": "chaos-rules-v1/e5Jef66cF5KSqgDbCZsC",
+      "createTime": "2023-08-12T15:38:08.032596Z",
+      "updateTime": "2024-06-27T02:09:19.315375Z",
+      "data": {
+        "difficulty": "favor",
+        "description": "<player-name>[-b] can take a stroke off their score on this hole if they one putt or hole-out.",
+        "conditions": [],
+        "name": "One Putt Wonder",
+        "type": "player",
+        "last_updated_at": {
+          "iso": "2024-06-27T02:09:19Z",
+          "unix": 1719454159.22434
+        },
+        "par": [
+          3,
+          4,
+          5
+        ],
+        "packID": "chaos",
+        "icon": "f762",
+        "id": "e5Jef66cF5KSqgDbCZsC"
+      }
+    },
+    {
+      "id": "EophCxKkxlm60njgyJjc",
+      "path": "chaos-rules-v1/EophCxKkxlm60njgyJjc",
+      "createTime": "2024-06-27T02:19:51.783411Z",
+      "updateTime": "2024-06-27T02:19:51.783411Z",
+      "data": {
+        "name": "Second Chance",
+        "conditions": [],
+        "type": "team",
+        "last_updated_at": {
+          "unix": 1719454791.469521,
+          "iso": "2024-06-27T02:19:51Z"
+        },
+        "difficulty": "favor",
+        "description": "Each player[-b] gets a free drop in the fairway if they hit their tee shot out of bounds.",
+        "packID": "chaos",
+        "par": [
+          3,
+          4,
+          5
+        ],
+        "icon": "f779",
+        "id": "EophCxKkxlm60njgyJjc"
+      }
+    },
+    {
+      "id": "FhgMp7LZBgdCZN6G6a83",
+      "path": "chaos-rules-v1/FhgMp7LZBgdCZN6G6a83",
+      "createTime": "2024-06-28T14:37:46.619215Z",
+      "updateTime": "2024-06-28T14:37:46.619215Z",
+      "data": {
+        "icon": "f7fb",
+        "id": "FhgMp7LZBgdCZN6G6a83",
+        "description": "Whoever in the party[-b] finds the most lost balls on this hole gets a free mulligan on the green.",
+        "difficulty": "favor",
+        "last_updated_at": {
+          "iso": "2024-06-28T14:37:46Z",
+          "unix": 1719585466.298986
+        },
+        "type": "team",
+        "conditions": [],
+        "name": "Easter Egg Hunt",
+        "par": [
+          3,
+          4,
+          5
+        ],
+        "packID": "chaos"
+      }
+    },
+    {
+      "id": "FOYEgoP3yT4IRc3enNTl",
+      "path": "chaos-rules-v1/FOYEgoP3yT4IRc3enNTl",
+      "createTime": "2023-08-12T15:38:06.752139Z",
+      "updateTime": "2024-07-08T19:01:44.365327Z",
+      "data": {
+        "id": "FOYEgoP3yT4IRc3enNTl",
+        "icon": "f135",
+        "packID": "chaos",
+        "par": [
+          3,
+          4,
+          5
+        ],
+        "last_updated_at": {
+          "unix": 1720465304.2678561,
+          "iso": "2024-07-08T19:01:44Z"
+        },
+        "type": "player",
+        "conditions": [],
+        "name": "Apollo 11",
+        "description": "<player-name>[-b] must tee off with a wedge. To the moon!",
+        "difficulty": "challenge"
+      }
+    },
+    {
+      "id": "FPoKIwHz6XKpw3jYUIAh",
+      "path": "chaos-rules-v1/FPoKIwHz6XKpw3jYUIAh",
+      "createTime": "2023-08-12T15:38:07.496946Z",
+      "updateTime": "2024-06-27T02:36:58.316128Z",
+      "data": {
+        "par": [
+          3,
+          4,
+          5
+        ],
+        "packID": "chaos",
+        "difficulty": "challenge",
+        "description": "Each player[-b] must hit two different wedges on this hole.",
+        "conditions": [],
+        "name": "Wedge Salad",
+        "type": "team",
+        "last_updated_at": {
+          "unix": 1719455818.238493,
+          "iso": "2024-06-27T02:36:58Z"
+        },
+        "id": "FPoKIwHz6XKpw3jYUIAh",
+        "icon": "f81e"
+      }
+    },
+    {
+      "id": "FuKB2mahajj6FcXxE8UW",
+      "path": "chaos-rules-v1/FuKB2mahajj6FcXxE8UW",
+      "createTime": "2023-08-12T15:38:06.720060Z",
+      "updateTime": "2024-07-08T20:53:28.683160Z",
+      "data": {
+        "conditions": [],
+        "name": "Cloud Nine",
+        "last_updated_at": {
+          "iso": "2024-07-08T20:53:28Z",
+          "unix": 1720472008.609797
+        },
+        "type": "player",
+        "difficulty": "challenge",
+        "description": "<player-name>[-b] must use their 9 iron for all shots and putts once within 100 yards.",
+        "packID": "chaos",
+        "par": [
+          3,
+          4,
+          5
+        ],
+        "icon": "f0c2",
+        "id": "FuKB2mahajj6FcXxE8UW"
+      }
+    },
+    {
+      "id": "g8iSaeK858oY8YhphGQq",
+      "path": "chaos-rules-v1/g8iSaeK858oY8YhphGQq",
+      "createTime": "2024-06-27T02:49:48.707044Z",
+      "updateTime": "2024-06-27T02:49:48.707044Z",
+      "data": {
+        "icon": "f54b",
+        "id": "g8iSaeK858oY8YhphGQq",
+        "difficulty": "challenge",
+        "description": "Everyone in the party[-b] must each tee off with their feet touching together.",
+        "conditions": [],
+        "name": "Fixed Feet",
+        "last_updated_at": {
+          "iso": "2024-06-27T02:49:48Z",
+          "unix": 1719456588.2740269
+        },
+        "type": "team",
+        "par": [
+          3,
+          4,
+          5
+        ],
+        "packID": "chaos"
+      }
+    },
+    {
+      "id": "G8KZ0qm8MvqERCyc7SVA",
+      "path": "chaos-rules-v1/G8KZ0qm8MvqERCyc7SVA",
+      "createTime": "2024-06-27T03:32:30.742145Z",
+      "updateTime": "2024-06-28T21:08:56.539809Z",
+      "data": {
+        "type": "team",
+        "last_updated_at": {
+          "unix": 1719608936.2918491,
+          "iso": "2024-06-28T21:08:56Z"
+        },
+        "conditions": [],
+        "name": "Tall Tees",
+        "description": "Everyone in the party[-b] must tee the ball up as high as possible.",
+        "difficulty": "challenge",
+        "packID": "chaos",
+        "par": [
+          3,
+          4,
+          5
+        ],
+        "icon": "f548",
+        "id": "G8KZ0qm8MvqERCyc7SVA"
+      }
+    },
+    {
+      "id": "gJfaNHbXLoYbsSEro7Tm",
+      "path": "chaos-rules-v1/gJfaNHbXLoYbsSEro7Tm",
+      "createTime": "2024-06-28T14:39:39.660136Z",
+      "updateTime": "2024-07-08T20:31:32.504977Z",
+      "data": {
+        "id": "gJfaNHbXLoYbsSEro7Tm",
+        "icon": "f7c0",
+        "packID": "chaos",
+        "par": [
+          3,
+          4,
+          5
+        ],
+        "last_updated_at": {
+          "unix": 1720470692.31184,
+          "iso": "2024-07-08T20:31:32Z"
+        },
+        "type": "player",
+        "conditions": [],
+        "name": "Fairway Finder",
+        "description": "<player-name>[-b] must hit the fairway (or green) or else each player can eliminate one club from their bag.",
+        "difficulty": "challenge"
+      }
+    },
+    {
+      "id": "GjyB2yQmizeGiSTejAyg",
+      "path": "chaos-rules-v1/GjyB2yQmizeGiSTejAyg",
+      "createTime": "2024-06-27T04:02:19.621921Z",
+      "updateTime": "2024-06-28T20:04:15.388438Z",
+      "data": {
+        "par": [
+          3,
+          4,
+          5
+        ],
+        "packID": "chaos",
+        "difficulty": "favor",
+        "description": "Whoever in the party[-b] is currently in last place scoring-wise gets one mulligan on or around the green.",
+        "name": "Comeback Kid",
+        "conditions": [],
+        "type": "team",
+        "last_updated_at": {
+          "unix": 1719605055.21507,
+          "iso": "2024-06-28T20:04:15Z"
+        },
+        "id": "GjyB2yQmizeGiSTejAyg",
+        "icon": "e561"
+      }
+    },
+    {
+      "id": "GzeyHV5nIHTS9qvOiQX5",
+      "path": "chaos-rules-v1/GzeyHV5nIHTS9qvOiQX5",
+      "createTime": "2024-06-27T02:16:46.694927Z",
+      "updateTime": "2024-06-28T14:47:05.293711Z",
+      "data": {
+        "icon": "f5ca",
+        "id": "GzeyHV5nIHTS9qvOiQX5",
+        "description": "All players[-b] get 1 free stroke out of any bunker.",
+        "difficulty": "favor",
+        "type": "team",
+        "last_updated_at": {
+          "iso": "2024-06-28T14:47:05Z",
+          "unix": 1719586025.228013
+        },
+        "conditions": [],
+        "name": "Beach Bonus",
+        "par": [
+          3,
+          4,
+          5
+        ],
+        "packID": "chaos"
+      }
+    },
+    {
+      "id": "Hec0OEn5WiT446vI2L8W",
+      "path": "chaos-rules-v1/Hec0OEn5WiT446vI2L8W",
+      "createTime": "2024-06-27T02:32:08.961282Z",
+      "updateTime": "2024-06-27T02:32:08.961282Z",
+      "data": {
+        "conditions": [],
+        "name": "Thieves In The Night",
+        "last_updated_at": {
+          "iso": "2024-06-27T02:32:08Z",
+          "unix": 1719455528.725686
+        },
+        "type": "team",
+        "difficulty": "favor",
+        "description": "Each player[-b] can swap lies with any other player, only once. Swap must occur on same stroke and prior to shot. Cannot swap back.",
+        "packID": "chaos",
+        "par": [
+          3,
+          4,
+          5
+        ],
+        "icon": "f504",
+        "id": "Hec0OEn5WiT446vI2L8W"
+      }
+    },
+    {
+      "id": "HmRYKvwhOfOjHFQZD6T1",
+      "path": "chaos-rules-v1/HmRYKvwhOfOjHFQZD6T1",
+      "createTime": "2023-08-12T15:38:08.304416Z",
+      "updateTime": "2024-06-27T02:34:40.516433Z",
+      "data": {
+        "par": [
+          4,
+          5
+        ],
+        "packID": "chaos",
+        "difficulty": "challenge",
+        "description": "Anyone in the party[-b] hitting from the fairway must continue using the club that got them there.",
+        "name": "Unfairway",
+        "conditions": [],
+        "type": "team",
+        "last_updated_at": {
+          "unix": 1719455680.222791,
+          "iso": "2024-06-27T02:34:40Z"
+        },
+        "id": "HmRYKvwhOfOjHFQZD6T1",
+        "icon": "f451"
+      }
+    },
+    {
+      "id": "hxYcN8kbTMySNloNvi0S",
+      "path": "chaos-rules-v1/hxYcN8kbTMySNloNvi0S",
+      "createTime": "2023-08-12T15:38:07.403389Z",
+      "updateTime": "2024-06-27T02:18:45.741750Z",
+      "data": {
+        "icon": "f6bc",
+        "id": "hxYcN8kbTMySNloNvi0S",
+        "difficulty": "challenge",
+        "description": "First person in the party[-b] to say something negative must putt with the club they just used at the time of the comment.",
+        "conditions": [],
+        "name": "Scrooge",
+        "type": "team",
+        "last_updated_at": {
+          "unix": 1719454725.523433,
+          "iso": "2024-06-27T02:18:45Z"
+        },
+        "par": [
+          3,
+          4,
+          5
+        ],
+        "packID": "chaos"
+      }
+    },
+    {
+      "id": "IB10DpbXk2m1MY777I4g",
+      "path": "chaos-rules-v1/IB10DpbXk2m1MY777I4g",
+      "createTime": "2024-06-28T14:33:27.853600Z",
+      "updateTime": "2024-06-28T19:51:31.141466Z",
+      "data": {
+        "type": "player",
+        "last_updated_at": {
+          "iso": "2024-06-28T19:51:30Z",
+          "unix": 1719604290.9144058
+        },
+        "name": "Bambi",
+        "conditions": [],
+        "description": "<player-name>[-b] must hit their first or second shot standing on one leg. Choose wisely!",
+        "difficulty": "challenge",
+        "packID": "chaos",
+        "par": [
+          3,
+          4,
+          5
+        ],
+        "icon": "f78e",
+        "id": "IB10DpbXk2m1MY777I4g"
+      }
+    },
+    {
+      "id": "IIExnZEZHGItKx60rffp",
+      "path": "chaos-rules-v1/IIExnZEZHGItKx60rffp",
+      "createTime": "2023-08-12T15:38:07.346001Z",
+      "updateTime": "2023-08-12T15:58:47.588733Z",
+      "data": {
+        "difficulty": "challenge",
+        "description": "<player-name>[-b] must hit 5 iron for at least two shots.",
+        "conditions": [],
+        "name": "Cinco De Golf",
+        "last_updated_at": {
+          "unix": 1691855927.499308,
+          "iso": "2023-08-12T15:58:47Z"
+        },
+        "type": "player",
+        "par": [
+          3,
+          4,
+          5
+        ],
+        "packID": "chaos",
+        "icon": "f816",
+        "id": "IIExnZEZHGItKx60rffp"
+      }
+    },
+    {
+      "id": "jFUjnWBkWqCf18oApIjh",
+      "path": "chaos-rules-v1/jFUjnWBkWqCf18oApIjh",
+      "createTime": "2024-06-28T19:55:55.166641Z",
+      "updateTime": "2024-06-28T19:55:55.166641Z",
+      "data": {
+        "difficulty": "favor",
+        "description": "<player-name>[-b] can hijack any other player's shot once (if lying same strokes). The victim must then re-hit.",
+        "name": "Party Pirate",
+        "conditions": [],
+        "type": "player",
+        "last_updated_at": {
+          "unix": 1719604554.999827,
+          "iso": "2024-06-28T19:55:55Z"
+        },
+        "par": [
+          3,
+          4,
+          5
+        ],
+        "packID": "chaos",
+        "icon": "f714",
+        "id": "jFUjnWBkWqCf18oApIjh"
+      }
+    },
+    {
+      "id": "jpxbH9Q8ymKEdW1zKv4T",
+      "path": "chaos-rules-v1/jpxbH9Q8ymKEdW1zKv4T",
+      "createTime": "2023-08-12T15:38:05.429492Z",
+      "updateTime": "2024-06-27T02:20:12.840046Z",
+      "data": {
+        "packID": "chaos",
+        "par": [
+          3,
+          4,
+          5
+        ],
+        "last_updated_at": {
+          "unix": 1719454812.752955,
+          "iso": "2024-06-27T02:20:12Z"
+        },
+        "type": "team",
+        "conditions": [],
+        "name": "Skittles",
+        "description": "Whoever in the party[-b] has the most colorful outfit has to tee off from the tips.",
+        "difficulty": "challenge",
+        "id": "jpxbH9Q8ymKEdW1zKv4T",
+        "icon": "e424"
+      }
+    },
+    {
+      "id": "jYPFhdlgkb1MkLGc9Qvt",
+      "path": "chaos-rules-v1/jYPFhdlgkb1MkLGc9Qvt",
+      "createTime": "2024-06-27T03:37:50.644460Z",
+      "updateTime": "2024-06-27T03:37:50.644460Z",
+      "data": {
+        "id": "jYPFhdlgkb1MkLGc9Qvt",
+        "icon": "f713",
+        "par": [
+          3,
+          4,
+          5
+        ],
+        "packID": "chaos",
+        "description": "Anyone in the party[-b] who hits a shot that leaves a divot (whether clean or fat) has the option to redo once penalty-free. Don't forgot to repair it!!",
+        "difficulty": "favor",
+        "last_updated_at": {
+          "iso": "2024-06-27T03:37:50Z",
+          "unix": 1719459470.396481
+        },
+        "type": "team",
+        "conditions": [],
+        "name": "Divot Digger"
+      }
+    },
+    {
+      "id": "jzqGOEm1HgpMMvfnmOGs",
+      "path": "chaos-rules-v1/jzqGOEm1HgpMMvfnmOGs",
+      "createTime": "2023-08-12T15:38:06.262852Z",
+      "updateTime": "2024-06-27T02:29:42.718480Z",
+      "data": {
+        "id": "jzqGOEm1HgpMMvfnmOGs",
+        "icon": "f8ea",
+        "par": [
+          3,
+          4,
+          5
+        ],
+        "packID": "chaos",
+        "difficulty": "favor",
+        "description": "<player-name>[-b] gets one free use of their putter to help them advance their ball.",
+        "conditions": [],
+        "name": "Texas Wedge",
+        "last_updated_at": {
+          "unix": 1719455382.650035,
+          "iso": "2024-06-27T02:29:42Z"
+        },
+        "type": "player"
+      }
+    },
+    {
+      "id": "K6Q9uQBwF3FYfLiRUBgW",
+      "path": "chaos-rules-v1/K6Q9uQBwF3FYfLiRUBgW",
+      "createTime": "2024-06-28T20:01:04.726994Z",
+      "updateTime": "2024-06-28T20:01:04.726994Z",
+      "data": {
+        "icon": "f52e",
+        "id": "K6Q9uQBwF3FYfLiRUBgW",
+        "type": "player",
+        "last_updated_at": {
+          "unix": 1719604864.5236979,
+          "iso": "2024-06-28T20:01:04Z"
+        },
+        "conditions": [],
+        "name": "Leap Frog",
+        "description": "<player-name>[-b] has the choice to jump ahead to the next tee box. If <player-name> ends up having the furthest drive, their tee shot was a free stroke.",
+        "difficulty": "favor",
+        "packID": "chaos",
+        "par": [
+          3,
+          4,
+          5
+        ]
+      }
+    },
+    {
+      "id": "kcefpo83vzXQwQFLUazd",
+      "path": "chaos-rules-v1/kcefpo83vzXQwQFLUazd",
+      "createTime": "2024-06-27T03:33:26.750566Z",
+      "updateTime": "2024-06-27T03:33:26.750566Z",
+      "data": {
+        "packID": "chaos",
+        "par": [
+          3,
+          4,
+          5
+        ],
+        "type": "team",
+        "last_updated_at": {
+          "iso": "2024-06-27T03:33:26Z",
+          "unix": 1719459206.555326
+        },
+        "name": "Tee Free",
+        "conditions": [],
+        "description": "Nobody in the party[-b] can use a tee.",
+        "difficulty": "challenge",
+        "id": "kcefpo83vzXQwQFLUazd",
+        "icon": "f450"
+      }
+    },
+    {
+      "id": "KcqpGceuwPc4F1FnAK8l",
+      "path": "chaos-rules-v1/KcqpGceuwPc4F1FnAK8l",
+      "createTime": "2024-06-27T13:10:00.975156Z",
+      "updateTime": "2024-06-27T13:10:00.975156Z",
+      "data": {
+        "icon": "e0a3",
+        "id": "KcqpGceuwPc4F1FnAK8l",
+        "type": "player",
+        "last_updated_at": {
+          "unix": 1719493800.53657,
+          "iso": "2024-06-27T13:10:00Z"
+        },
+        "conditions": [],
+        "name": "Green Mirror",
+        "description": "<player-name>[-b] has the option to move their ball to the exact opposite side of the hole once on the green keeping same distance. ",
+        "difficulty": "favor",
+        "packID": "chaos",
+        "par": [
+          3,
+          4,
+          5
+        ]
+      }
+    },
+    {
+      "id": "KhkfynX3MeGKJydslufe",
+      "path": "chaos-rules-v1/KhkfynX3MeGKJydslufe",
+      "createTime": "2023-08-12T15:38:07.729043Z",
+      "updateTime": "2024-06-27T01:57:33.360349Z",
+      "data": {
+        "difficulty": "favor",
+        "description": "Each player[-b] gets two shots off the tee and can select which ball to play from.",
+        "conditions": [],
+        "name": "Breakfast Ball",
+        "last_updated_at": {
+          "unix": 1719453453.2921882,
+          "iso": "2024-06-27T01:57:33Z"
+        },
+        "type": "team",
+        "par": [
+          3,
+          4,
+          5
+        ],
+        "packID": "chaos",
+        "icon": "f7fc",
+        "id": "KhkfynX3MeGKJydslufe"
+      }
+    },
+    {
+      "id": "leqh4A0EfoUIDo8TiXCz",
+      "path": "chaos-rules-v1/leqh4A0EfoUIDo8TiXCz",
+      "createTime": "2023-08-12T15:38:07.463855Z",
+      "updateTime": "2024-06-27T00:50:47.875465Z",
+      "data": {
+        "id": "leqh4A0EfoUIDo8TiXCz",
+        "icon": "f81e",
+        "par": [
+          3,
+          4,
+          5
+        ],
+        "packID": "chaos",
+        "description": "<player-name>[-b] must hit two different wedges on this hole.",
+        "difficulty": "challenge",
+        "type": "player",
+        "last_updated_at": {
+          "iso": "2024-06-27T00:50:47Z",
+          "unix": 1719449447.72044
+        },
+        "conditions": [],
+        "name": "Wedge Salad"
+      }
+    },
+    {
+      "id": "LIplzhAvIg0vmDCwlu3U",
+      "path": "chaos-rules-v1/LIplzhAvIg0vmDCwlu3U",
+      "createTime": "2024-06-28T14:48:46.762111Z",
+      "updateTime": "2024-06-28T14:48:46.762111Z",
+      "data": {
+        "description": "<player-name>[-b] can pick any one player to take their tee shot with their eyes closed or blindfolded.",
+        "difficulty": "favor",
+        "last_updated_at": {
+          "iso": "2024-06-28T14:48:46Z",
+          "unix": 1719586126.687335
+        },
+        "type": "player",
+        "conditions": [],
+        "name": "Blind Start",
+        "par": [
+          3,
+          4,
+          5
+        ],
+        "packID": "chaos",
+        "icon": "e481",
+        "id": "LIplzhAvIg0vmDCwlu3U"
+      }
+    },
+    {
+      "id": "Ls2fxSbnCU9lt3lLo9hj",
+      "path": "chaos-rules-v1/Ls2fxSbnCU9lt3lLo9hj",
+      "createTime": "2024-06-27T02:41:20.405073Z",
+      "updateTime": "2024-06-27T02:41:20.405073Z",
+      "data": {
+        "icon": "f017",
+        "id": "Ls2fxSbnCU9lt3lLo9hj",
+        "difficulty": "challenge",
+        "description": "Whoever in the party[-b] arrived last to the course cannot use their wedges on this hole.",
+        "conditions": [],
+        "name": "Late Arrival",
+        "last_updated_at": {
+          "iso": "2024-06-27T02:41:20Z",
+          "unix": 1719456080.247128
+        },
+        "type": "team",
+        "par": [
+          3,
+          4,
+          5
+        ],
+        "packID": "chaos"
+      }
+    },
+    {
+      "id": "M60QeG6aVJaqLxZCbJSp",
+      "path": "chaos-rules-v1/M60QeG6aVJaqLxZCbJSp",
+      "createTime": "2023-08-12T15:38:05.764877Z",
+      "updateTime": "2023-08-12T15:38:05.764877Z",
+      "data": {
+        "par": [
+          3,
+          4,
+          5
+        ],
+        "packID": "chaos",
+        "description": "<player-name>[-b] must take their shot within 3 seconds of addressing their ball for the entire hole.",
+        "difficulty": "challenge",
+        "last_updated_at": {
+          "unix": 1678667240.224712,
+          "iso": "2023-03-13T00:27:20Z"
+        },
+        "type": "player",
+        "conditions": [],
+        "name": "Fairway Is Lava",
+        "id": "M60QeG6aVJaqLxZCbJSp",
+        "icon": "f770"
+      }
+    },
+    {
+      "id": "mANkeNQDQUJZa6pOEqaE",
+      "path": "chaos-rules-v1/mANkeNQDQUJZa6pOEqaE",
+      "createTime": "2024-06-27T02:54:58.734523Z",
+      "updateTime": "2024-07-08T20:12:12.050193Z",
+      "data": {
+        "icon": "e33b",
+        "id": "mANkeNQDQUJZa6pOEqaE",
+        "difficulty": "challenge",
+        "description": "<player-name>[-b] can only use clubs that they used on the previous hole.",
+        "conditions": [],
+        "name": "Deja Vu",
+        "type": "player",
+        "last_updated_at": {
+          "unix": 1720469531.856147,
+          "iso": "2024-07-08T20:12:11Z"
+        },
+        "par": [
+          3,
+          4,
+          5
+        ],
+        "packID": "chaos"
+      }
+    },
+    {
+      "id": "MaY4PPYH0HRGvkFQZZEq",
+      "path": "chaos-rules-v1/MaY4PPYH0HRGvkFQZZEq",
+      "createTime": "2023-08-12T15:38:06.598680Z",
+      "updateTime": "2024-06-27T02:04:04.529443Z",
+      "data": {
+        "icon": "f6e2",
+        "id": "MaY4PPYH0HRGvkFQZZEq",
+        "description": "Anyone in the party[-b] whose ball disappears gets a free drop, only once.",
+        "difficulty": "favor",
+        "type": "team",
+        "last_updated_at": {
+          "iso": "2024-06-27T02:04:04Z",
+          "unix": 1719453844.450393
+        },
+        "conditions": [],
+        "name": "Happy Ghosting",
+        "par": [
+          3,
+          4,
+          5
+        ],
+        "packID": "chaos"
+      }
+    },
+    {
+      "id": "mJ18nEstMWun5LadJ11C",
+      "path": "chaos-rules-v1/mJ18nEstMWun5LadJ11C",
+      "createTime": "2023-08-12T15:38:05.377276Z",
+      "updateTime": "2024-06-27T01:58:37.253512Z",
+      "data": {
+        "par": [
+          3,
+          4,
+          5
+        ],
+        "packID": "chaos",
+        "description": "Each player[-b] must hit driver (or furthest distance club) from tee.",
+        "difficulty": "challenge",
+        "type": "team",
+        "last_updated_at": {
+          "iso": "2024-06-27T01:58:37Z",
+          "unix": 1719453517.081575
+        },
+        "name": "Drive For Show",
+        "conditions": [],
+        "id": "mJ18nEstMWun5LadJ11C",
+        "icon": "f753"
+      }
+    },
+    {
+      "id": "MnzYD1X9RQr57IPgiwn8",
+      "path": "chaos-rules-v1/MnzYD1X9RQr57IPgiwn8",
+      "createTime": "2024-06-27T03:25:19.118909Z",
+      "updateTime": "2024-06-27T03:25:19.118909Z",
+      "data": {
+        "id": "MnzYD1X9RQr57IPgiwn8",
+        "icon": "f1bb",
+        "par": [
+          3,
+          4,
+          5
+        ],
+        "packID": "chaos",
+        "description": "Anyone in the party[-b] that hits a tree or branch gets a free stroke for their next shot.",
+        "difficulty": "favor",
+        "type": "team",
+        "last_updated_at": {
+          "iso": "2024-06-27T03:25:18Z",
+          "unix": 1719458718.9698482
+        },
+        "conditions": [],
+        "name": "Tree Trouble"
+      }
+    },
+    {
+      "id": "nF30NeThDCtqgpUH3Vb3",
+      "path": "chaos-rules-v1/nF30NeThDCtqgpUH3Vb3",
+      "createTime": "2024-06-27T02:51:52.602147Z",
+      "updateTime": "2024-06-27T02:51:52.602147Z",
+      "data": {
+        "icon": "f309",
+        "id": "nF30NeThDCtqgpUH3Vb3",
+        "description": "Each player[-b] must club down 2 clubs for their tee shot.",
+        "difficulty": "challenge",
+        "last_updated_at": {
+          "iso": "2024-06-27T02:51:52Z",
+          "unix": 1719456712.302506
+        },
+        "type": "team",
+        "conditions": [],
+        "name": "Club Down",
+        "par": [
+          3,
+          4,
+          5
+        ],
+        "packID": "chaos"
+      }
+    },
+    {
+      "id": "nMjRHsQHaPd9qRoyHDkv",
+      "path": "chaos-rules-v1/nMjRHsQHaPd9qRoyHDkv",
+      "createTime": "2023-08-12T15:38:05.027287Z",
+      "updateTime": "2023-08-12T15:38:05.027287Z",
+      "data": {
+        "icon": "f21b",
+        "id": "nMjRHsQHaPd9qRoyHDkv",
+        "last_updated_at": {
+          "unix": 1685815820.450048,
+          "iso": "2023-06-03T18:10:20Z"
+        },
+        "type": "player",
+        "conditions": [],
+        "name": "The Dodfather",
+        "description": "<player-name>[-b] has to hit driver off the deck at least once.",
+        "difficulty": "challenge",
+        "packID": "chaos",
+        "par": [
+          4,
+          5,
+          3
+        ]
+      }
+    },
+    {
+      "id": "NN9CpVk2wRLYSbx9O4zt",
+      "path": "chaos-rules-v1/NN9CpVk2wRLYSbx9O4zt",
+      "createTime": "2023-08-12T15:38:06.324730Z",
+      "updateTime": "2024-06-27T02:07:02.978011Z",
+      "data": {
+        "id": "NN9CpVk2wRLYSbx9O4zt",
+        "icon": "f890",
+        "packID": "chaos",
+        "par": [
+          3,
+          4,
+          5
+        ],
+        "name": "Newest Sticks",
+        "conditions": [],
+        "type": "team",
+        "last_updated_at": {
+          "iso": "2024-06-27T02:07:02Z",
+          "unix": 1719454022.893229
+        },
+        "difficulty": "challenge",
+        "description": "Whoever in the party[-b] has the newest set of irons can only use irons on this hole (includes putts)."
+      }
+    },
+    {
+      "id": "npIZJogCqwMFau9lFtmF",
+      "path": "chaos-rules-v1/npIZJogCqwMFau9lFtmF",
+      "createTime": "2024-06-28T20:06:42.597707Z",
+      "updateTime": "2024-06-28T20:06:42.597707Z",
+      "data": {
+        "description": "<player-name>[-b] must tee off with their 7 iron and then use it on every alternate shot.",
+        "difficulty": "challenge",
+        "type": "player",
+        "last_updated_at": {
+          "iso": "2024-06-28T20:06:42Z",
+          "unix": 1719605202.406824
+        },
+        "name": "Seven Up",
+        "conditions": [],
+        "par": [
+          3,
+          4,
+          5
+        ],
+        "packID": "chaos",
+        "icon": "e25c",
+        "id": "npIZJogCqwMFau9lFtmF"
+      }
+    },
+    {
+      "id": "odiei8UgRxbkJV14LDbD",
+      "path": "chaos-rules-v1/odiei8UgRxbkJV14LDbD",
+      "createTime": "2024-06-28T14:35:26.731202Z",
+      "updateTime": "2024-06-28T14:35:26.731202Z",
+      "data": {
+        "difficulty": "challenge",
+        "description": "<player-name>[-b] must putt holding their putter like a hockey stick.",
+        "name": "Slapshot",
+        "conditions": [],
+        "type": "player",
+        "last_updated_at": {
+          "unix": 1719585326.474184,
+          "iso": "2024-06-28T14:35:26Z"
+        },
+        "par": [
+          3,
+          4,
+          5
+        ],
+        "packID": "chaos",
+        "icon": "e3ae",
+        "id": "odiei8UgRxbkJV14LDbD"
+      }
+    },
+    {
+      "id": "OgXoGLzVHdxSxz8RpGBG",
+      "path": "chaos-rules-v1/OgXoGLzVHdxSxz8RpGBG",
+      "createTime": "2024-06-27T02:58:38.510181Z",
+      "updateTime": "2024-06-27T02:58:38.510181Z",
+      "data": {
+        "description": "<player-name>[-b] must use at least 2 clubs from other party member's bags (if allowed).",
+        "difficulty": "challenge",
+        "last_updated_at": {
+          "iso": "2024-06-27T02:58:38Z",
+          "unix": 1719457118.1673331
+        },
+        "type": "player",
+        "conditions": [],
+        "name": "Thrift Shop",
+        "par": [
+          3,
+          4,
+          5
+        ],
+        "packID": "chaos",
+        "icon": "f54f",
+        "id": "OgXoGLzVHdxSxz8RpGBG"
+      }
+    },
+    {
+      "id": "ONvbRSfKlRqEBHhfpHOF",
+      "path": "chaos-rules-v1/ONvbRSfKlRqEBHhfpHOF",
+      "createTime": "2023-08-12T15:38:08.171014Z",
+      "updateTime": "2024-06-27T02:07:46.548173Z",
+      "data": {
+        "icon": "f366",
+        "id": "ONvbRSfKlRqEBHhfpHOF",
+        "name": "One Club Swap",
+        "conditions": [],
+        "type": "team",
+        "last_updated_at": {
+          "unix": 1719454066.475512,
+          "iso": "2024-06-27T02:07:46Z"
+        },
+        "difficulty": "challenge",
+        "description": "Each player[-b] can only use two clubs for this hole. Once you change from one club to the next, you must finish hole with that club.",
+        "packID": "chaos",
+        "par": [
+          3,
+          4,
+          5
+        ]
+      }
+    },
+    {
+      "id": "OOUrVBsquR4DqYkQ3LZA",
+      "path": "chaos-rules-v1/OOUrVBsquR4DqYkQ3LZA",
+      "createTime": "2023-08-12T15:38:06.968991Z",
+      "updateTime": "2024-06-27T02:13:45.528627Z",
+      "data": {
+        "icon": "f257",
+        "id": "OOUrVBsquR4DqYkQ3LZA",
+        "description": "<player-name>[-b] gets one challenge against any other player to RPS. Winner can swap lies with loser (only if lying same strokes).",
+        "difficulty": "favor",
+        "last_updated_at": {
+          "iso": "2024-06-27T02:13:45Z",
+          "unix": 1719454425.451951
+        },
+        "type": "player",
+        "conditions": [],
+        "name": "Rock Paper Scissors",
+        "par": [
+          3,
+          4,
+          5
+        ],
+        "packID": "chaos"
+      }
+    },
+    {
+      "id": "oyKbB1nrZ35vOfo3OhPx",
+      "path": "chaos-rules-v1/oyKbB1nrZ35vOfo3OhPx",
+      "createTime": "2024-06-27T02:21:43.599468Z",
+      "updateTime": "2024-06-27T02:22:01.600525Z",
+      "data": {
+        "packID": "chaos",
+        "par": [
+          3,
+          4,
+          5
+        ],
+        "conditions": [],
+        "name": "Solo Club",
+        "type": "player",
+        "last_updated_at": {
+          "unix": 1719454921.528868,
+          "iso": "2024-06-27T02:22:01Z"
+        },
+        "difficulty": "challenge",
+        "description": "<player-name>[-b] must pick one club and use it for the entire hole (including putts).",
+        "id": "oyKbB1nrZ35vOfo3OhPx",
+        "icon": "e256"
+      }
+    },
+    {
+      "id": "Oz4UFTEaxVCHzrhVJeXn",
+      "path": "chaos-rules-v1/Oz4UFTEaxVCHzrhVJeXn",
+      "createTime": "2024-06-28T14:46:28.338133Z",
+      "updateTime": "2024-06-28T14:46:28.338133Z",
+      "data": {
+        "par": [
+          3,
+          4,
+          5
+        ],
+        "packID": "chaos",
+        "difficulty": "favor",
+        "description": "<player-name>[-b] gets free relief back into the fairway for the entire hole.",
+        "name": "Lawn Of The Month",
+        "conditions": [],
+        "type": "player",
+        "last_updated_at": {
+          "iso": "2024-06-28T14:46:28Z",
+          "unix": 1719585988.092421
+        },
+        "id": "Oz4UFTEaxVCHzrhVJeXn",
+        "icon": "f4d8"
+      }
+    },
+    {
+      "id": "pCsTvAUpL7VRMuvaYSOM",
+      "path": "chaos-rules-v1/pCsTvAUpL7VRMuvaYSOM",
+      "createTime": "2023-08-12T15:38:05.827868Z",
+      "updateTime": "2024-06-27T02:23:04.919010Z",
+      "data": {
+        "id": "pCsTvAUpL7VRMuvaYSOM",
+        "icon": "f553",
+        "packID": "chaos",
+        "par": [
+          3,
+          4,
+          5
+        ],
+        "conditions": [],
+        "name": "Swag Drag",
+        "last_updated_at": {
+          "unix": 1719454984.6138,
+          "iso": "2024-06-27T02:23:04Z"
+        },
+        "type": "team",
+        "difficulty": "challenge",
+        "description": "Anyone in the party[-b] currently wearing branded apparel from a club, course, or tournament can only use 2 clubs on this hole."
+      }
+    },
+    {
+      "id": "pN5psHZhju6aMHzPqUAF",
+      "path": "chaos-rules-v1/pN5psHZhju6aMHzPqUAF",
+      "createTime": "2023-08-12T15:38:07.565017Z",
+      "updateTime": "2024-06-27T01:58:19.433027Z",
+      "data": {
+        "packID": "chaos",
+        "par": [
+          3,
+          4,
+          5
+        ],
+        "type": "team",
+        "last_updated_at": {
+          "unix": 1719453499.3651319,
+          "iso": "2024-06-27T01:58:19Z"
+        },
+        "name": "Crazy 8's",
+        "conditions": [],
+        "description": "Each player[-b] must hit 8 iron for at least two shots.",
+        "difficulty": "challenge",
+        "id": "pN5psHZhju6aMHzPqUAF",
+        "icon": "e3c5"
+      }
+    },
+    {
+      "id": "pnpbnqSCOij6hgDmyO9y",
+      "path": "chaos-rules-v1/pnpbnqSCOij6hgDmyO9y",
+      "createTime": "2023-08-12T15:38:06.086078Z",
+      "updateTime": "2024-06-27T01:57:20.546995Z",
+      "data": {
+        "id": "pnpbnqSCOij6hgDmyO9y",
+        "icon": "f5d8",
+        "par": [
+          3,
+          4,
+          5
+        ],
+        "packID": "chaos",
+        "description": "Nobody in the party[-b] can't use their driver or putter on this hole.",
+        "difficulty": "challenge",
+        "type": "team",
+        "last_updated_at": {
+          "unix": 1719453440.478482,
+          "iso": "2024-06-27T01:57:20Z"
+        },
+        "name": "Break A Leg",
+        "conditions": []
+      }
+    },
+    {
+      "id": "qBwFCf01Hjk2md1ZrUIs",
+      "path": "chaos-rules-v1/qBwFCf01Hjk2md1ZrUIs",
+      "createTime": "2024-06-28T20:02:08.829207Z",
+      "updateTime": "2024-06-28T20:02:08.829207Z",
+      "data": {
+        "conditions": [],
+        "name": "Rags To Riches",
+        "type": "team",
+        "last_updated_at": {
+          "unix": 1719604928.631813,
+          "iso": "2024-06-28T20:02:08Z"
+        },
+        "difficulty": "favor",
+        "description": "Whoever in the party[-b] has the roughest looking golf bag can hit two off the tee and pick the best penalty-free.",
+        "packID": "chaos",
+        "par": [
+          3,
+          4,
+          5
+        ],
+        "icon": "f81d",
+        "id": "qBwFCf01Hjk2md1ZrUIs"
+      }
+    },
+    {
+      "id": "QJsAcuhuI08JF4XmhP3X",
+      "path": "chaos-rules-v1/QJsAcuhuI08JF4XmhP3X",
+      "createTime": "2024-06-27T02:29:09.809192Z",
+      "updateTime": "2024-06-27T02:29:09.809192Z",
+      "data": {
+        "type": "team",
+        "last_updated_at": {
+          "iso": "2024-06-27T02:29:09Z",
+          "unix": 1719455349.73237
+        },
+        "conditions": [],
+        "name": "Texas Wedge",
+        "description": "Each player[-b] gets one free use of their putter to help them advance their ball.",
+        "difficulty": "favor",
+        "packID": "chaos",
+        "par": [
+          3,
+          4,
+          5
+        ],
+        "icon": "f8ea",
+        "id": "QJsAcuhuI08JF4XmhP3X"
+      }
+    },
+    {
+      "id": "QTXnYS9Ak0JJbYpP9N2Z",
+      "path": "chaos-rules-v1/QTXnYS9Ak0JJbYpP9N2Z",
+      "createTime": "2024-06-27T01:55:29.001866Z",
+      "updateTime": "2024-06-27T02:10:51.459640Z",
+      "data": {
+        "conditions": [],
+        "name": "Pesky Putting",
+        "type": "team",
+        "last_updated_at": {
+          "iso": "2024-06-27T02:10:51Z",
+          "unix": 1719454251.39321
+        },
+        "difficulty": "challenge",
+        "description": "Each player[-b] must putt one handed and change hands after each missed attempt.",
+        "packID": "chaos",
+        "par": [
+          3,
+          4,
+          5
+        ],
+        "icon": "f2a7",
+        "id": "QTXnYS9Ak0JJbYpP9N2Z"
+      }
+    },
+    {
+      "id": "qwMGgN15DNfZSEug06mZ",
+      "path": "chaos-rules-v1/qwMGgN15DNfZSEug06mZ",
+      "createTime": "2023-08-12T15:38:07.293607Z",
+      "updateTime": "2024-06-27T01:57:56.144532Z",
+      "data": {
+        "difficulty": "challenge",
+        "description": "Each player[-b] must hit 5 iron for at least two shots.",
+        "conditions": [],
+        "name": "Cinco De Golf",
+        "type": "team",
+        "last_updated_at": {
+          "unix": 1719453476.0751219,
+          "iso": "2024-06-27T01:57:56Z"
+        },
+        "par": [
+          3,
+          4,
+          5
+        ],
+        "packID": "chaos",
+        "icon": "f816",
+        "id": "qwMGgN15DNfZSEug06mZ"
+      }
+    },
+    {
+      "id": "RkRBiKSZHR2bIjs4mYOo",
+      "path": "chaos-rules-v1/RkRBiKSZHR2bIjs4mYOo",
+      "createTime": "2023-08-12T15:38:08.238466Z",
+      "updateTime": "2024-06-27T01:27:20.945448Z",
+      "data": {
+        "name": "Thief In The Night",
+        "conditions": [],
+        "type": "player",
+        "last_updated_at": {
+          "unix": 1719451640.713932,
+          "iso": "2024-06-27T01:27:20Z"
+        },
+        "difficulty": "favor",
+        "description": "<player-name>[-b] can swap lies with any player, only once. Swap must occur on same stroke and prior to shot.",
+        "packID": "chaos",
+        "par": [
+          3,
+          4,
+          5
+        ],
+        "icon": "f504",
+        "id": "RkRBiKSZHR2bIjs4mYOo"
+      }
+    },
+    {
+      "id": "roZlX3haXihYfAl6hatF",
+      "path": "chaos-rules-v1/roZlX3haXihYfAl6hatF",
+      "createTime": "2023-08-12T15:38:08.683350Z",
+      "updateTime": "2024-06-27T01:56:57.226378Z",
+      "data": {
+        "id": "roZlX3haXihYfAl6hatF",
+        "icon": "e481",
+        "packID": "chaos",
+        "par": [
+          4,
+          5,
+          3
+        ],
+        "last_updated_at": {
+          "unix": 1719453417.140199,
+          "iso": "2024-06-27T01:56:57Z"
+        },
+        "type": "team",
+        "conditions": [],
+        "name": "Blind Start",
+        "description": "Each player[-b] must take their tee shot with their eyes closed or blindfolded.",
+        "difficulty": "challenge"
+      }
+    },
+    {
+      "id": "rWoXgR7OIk0NaEOkNKro",
+      "path": "chaos-rules-v1/rWoXgR7OIk0NaEOkNKro",
+      "createTime": "2023-08-12T15:38:05.490188Z",
+      "updateTime": "2023-08-12T15:38:05.490188Z",
+      "data": {
+        "icon": "f753",
+        "id": "rWoXgR7OIk0NaEOkNKro",
+        "difficulty": "challenge",
+        "description": "<player-name>[-b] must hit driver (or furthest distance club) from tee.",
+        "conditions": [],
+        "name": "Drive For Show",
+        "type": "player",
+        "last_updated_at": {
+          "iso": "2023-04-05T01:47:56Z",
+          "unix": 1680659276.47313
+        },
+        "par": [
+          3,
+          4,
+          5
+        ],
+        "packID": "chaos"
+      }
+    },
+    {
+      "id": "Sps1y2cKemGjNVZbf2fY",
+      "path": "chaos-rules-v1/Sps1y2cKemGjNVZbf2fY",
+      "createTime": "2023-08-12T15:38:06.815907Z",
+      "updateTime": "2024-06-27T01:06:02.607801Z",
+      "data": {
+        "difficulty": "challenge",
+        "description": "<player-name>[-b] is not allowed to take any practice swings for any shot or putt on this hole. If they do, they can no longer use the club.",
+        "conditions": [],
+        "name": "One Take",
+        "last_updated_at": {
+          "iso": "2024-06-27T01:06:02Z",
+          "unix": 1719450362.53562
+        },
+        "type": "player",
+        "par": [
+          3,
+          4,
+          5
+        ],
+        "packID": "chaos",
+        "icon": "f8a9",
+        "id": "Sps1y2cKemGjNVZbf2fY"
+      }
+    },
+    {
+      "id": "SyVxxrbnwTeXh0bpyb0g",
+      "path": "chaos-rules-v1/SyVxxrbnwTeXh0bpyb0g",
+      "createTime": "2023-08-12T15:38:08.776116Z",
+      "updateTime": "2023-08-12T15:38:08.776116Z",
+      "data": {
+        "icon": "f545",
+        "id": "SyVxxrbnwTeXh0bpyb0g",
+        "conditions": [],
+        "name": "Double Gimme",
+        "type": "player",
+        "last_updated_at": {
+          "iso": "2022-11-17T23:50:00Z",
+          "unix": 1668729000.8581629
+        },
+        "difficulty": "favor",
+        "description": "<player-name>[-b] gets two putter lengths for a gimme putt.",
+        "packID": "chaos",
+        "par": [
+          3,
+          4,
+          5
+        ]
+      }
+    },
+    {
+      "id": "toQtO9mNfOmlVJhBLYFJ",
+      "path": "chaos-rules-v1/toQtO9mNfOmlVJhBLYFJ",
+      "createTime": "2023-08-12T15:38:06.479537Z",
+      "updateTime": "2023-08-12T15:38:06.479537Z",
+      "data": {
+        "id": "toQtO9mNfOmlVJhBLYFJ",
+        "icon": "f5d8",
+        "packID": "chaos",
+        "par": [
+          3,
+          4,
+          5
+        ],
+        "type": "player",
+        "last_updated_at": {
+          "unix": 1669944579.880611,
+          "iso": "2022-12-02T01:29:39Z"
+        },
+        "conditions": [],
+        "name": "Break A Leg",
+        "description": "<player-name>[-b] can't use their driver or putter on this hole.",
+        "difficulty": "challenge"
+      }
+    },
+    {
+      "id": "TrjoirC6dIuAKwWrk2tP",
+      "path": "chaos-rules-v1/TrjoirC6dIuAKwWrk2tP",
+      "createTime": "2024-06-28T19:59:37.710575Z",
+      "updateTime": "2024-06-28T19:59:37.710575Z",
+      "data": {
+        "id": "TrjoirC6dIuAKwWrk2tP",
+        "icon": "e362",
+        "par": [
+          3,
+          4,
+          5
+        ],
+        "packID": "chaos",
+        "description": "<player-name>[-b] must predict the number of players who will get a GIR. Correctly guess and the rest of the party cannot use their putter.",
+        "difficulty": "favor",
+        "last_updated_at": {
+          "iso": "2024-06-28T19:59:37Z",
+          "unix": 1719604777.499001
+        },
+        "type": "player",
+        "conditions": [],
+        "name": "Fortune Teller"
+      }
+    },
+    {
+      "id": "Ucg3krNopo1iqL2mQwLI",
+      "path": "chaos-rules-v1/Ucg3krNopo1iqL2mQwLI",
+      "createTime": "2023-08-12T15:38:06.178050Z",
+      "updateTime": "2024-06-27T01:56:30.271151Z",
+      "data": {
+        "difficulty": "challenge",
+        "description": "Each player[-b] must move their ball on the green to outside of gimme distance (putter length) if their ball is within gimme distance. In effect until putt is made.",
+        "conditions": [],
+        "name": "Anti-Gimme",
+        "last_updated_at": {
+          "iso": "2024-06-27T01:56:30Z",
+          "unix": 1719453390.202557
+        },
+        "type": "team",
+        "par": [
+          3,
+          4,
+          5
+        ],
+        "packID": "chaos",
+        "icon": "f546",
+        "id": "Ucg3krNopo1iqL2mQwLI"
+      }
+    },
+    {
+      "id": "UD1nPtSP0WqNzx7E2yeb",
+      "path": "chaos-rules-v1/UD1nPtSP0WqNzx7E2yeb",
+      "createTime": "2023-08-12T15:38:05.313594Z",
+      "updateTime": "2024-06-27T02:09:58.927483Z",
+      "data": {
+        "id": "UD1nPtSP0WqNzx7E2yeb",
+        "icon": "f8a9",
+        "packID": "chaos",
+        "par": [
+          3,
+          4,
+          5
+        ],
+        "name": "One Take",
+        "conditions": [],
+        "type": "team",
+        "last_updated_at": {
+          "unix": 1719454198.848757,
+          "iso": "2024-06-27T02:09:58Z"
+        },
+        "difficulty": "challenge",
+        "description": "Nobody in the party[-b] can take practice swings for any shots or putts on this hole. If they do, they can no longer use the club."
+      }
+    },
+    {
+      "id": "ugT2IqK75Jfi4gXpN9r1",
+      "path": "chaos-rules-v1/ugT2IqK75Jfi4gXpN9r1",
+      "createTime": "2023-08-12T15:38:08.064658Z",
+      "updateTime": "2024-06-27T02:09:01.749208Z",
+      "data": {
+        "last_updated_at": {
+          "iso": "2024-06-27T02:09:01Z",
+          "unix": 1719454141.4510121
+        },
+        "type": "team",
+        "conditions": [],
+        "name": "One Putt Wonder",
+        "description": "Anyone in the party[-b] who one putts this hole gets to deduct a stroke from their score.",
+        "difficulty": "favor",
+        "packID": "chaos",
+        "par": [
+          3,
+          4,
+          5
+        ],
+        "icon": "f762",
+        "id": "ugT2IqK75Jfi4gXpN9r1"
+      }
+    },
+    {
+      "id": "UwUPKDIBgJp2LtVf73Xa",
+      "path": "chaos-rules-v1/UwUPKDIBgJp2LtVf73Xa",
+      "createTime": "2023-08-12T15:38:08.746170Z",
+      "updateTime": "2023-08-12T15:38:08.746170Z",
+      "data": {
+        "icon": "e05d",
+        "id": "UwUPKDIBgJp2LtVf73Xa",
+        "last_updated_at": {
+          "iso": "2022-11-18T18:29:32Z",
+          "unix": 1668796172.0006309
+        },
+        "type": "player",
+        "conditions": [],
+        "name": "Ambidextrous",
+        "description": "<player-name>[-b] gets one stroke-free attempt swinging their club backwards. Good luck!!",
+        "difficulty": "favor",
+        "packID": "chaos",
+        "par": [
+          3,
+          4,
+          5
+        ]
+      }
+    },
+    {
+      "id": "vcSkCjVCdIqwLK7XqWAs",
+      "path": "chaos-rules-v1/vcSkCjVCdIqwLK7XqWAs",
+      "createTime": "2023-08-12T15:38:06.902745Z",
+      "updateTime": "2024-06-27T02:13:25.677659Z",
+      "data": {
+        "par": [
+          3,
+          4,
+          5
+        ],
+        "packID": "chaos",
+        "description": "Each player[-b] gets one challenge against another player to RPS. Winner can swap lies with loser (only if lying same strokes).",
+        "difficulty": "favor",
+        "type": "team",
+        "last_updated_at": {
+          "iso": "2024-06-27T02:13:25Z",
+          "unix": 1719454405.337162
+        },
+        "conditions": [],
+        "name": "Rock Paper Scissors",
+        "id": "vcSkCjVCdIqwLK7XqWAs",
+        "icon": "f257"
+      }
+    },
+    {
+      "id": "Vdcp7mlK3R0fdDpuOHTe",
+      "path": "chaos-rules-v1/Vdcp7mlK3R0fdDpuOHTe",
+      "createTime": "2024-06-27T01:26:02.108917Z",
+      "updateTime": "2024-06-27T02:30:02.891429Z",
+      "data": {
+        "packID": "chaos",
+        "par": [
+          3,
+          4,
+          5
+        ],
+        "type": "team",
+        "last_updated_at": {
+          "unix": 1719455402.8182979,
+          "iso": "2024-06-27T02:30:02Z"
+        },
+        "conditions": [],
+        "name": "The Dodfather",
+        "description": "Each player[-b] has to hit driver off the deck at least once.",
+        "difficulty": "challenge",
+        "id": "Vdcp7mlK3R0fdDpuOHTe",
+        "icon": "f21b"
+      }
+    },
+    {
+      "id": "vLUjiFpzrjcSm90fbCx8",
+      "path": "chaos-rules-v1/vLUjiFpzrjcSm90fbCx8",
+      "createTime": "2023-08-12T15:38:08.433363Z",
+      "updateTime": "2024-06-27T02:11:19.842340Z",
+      "data": {
+        "id": "vLUjiFpzrjcSm90fbCx8",
+        "icon": "f44e",
+        "packID": "chaos",
+        "par": [
+          3,
+          4,
+          5
+        ],
+        "type": "team",
+        "last_updated_at": {
+          "iso": "2024-06-27T02:11:19Z",
+          "unix": 1719454279.7736259
+        },
+        "conditions": [],
+        "name": "Quarterback",
+        "description": "Every player in your party[-b] gets one stroke-free toss of the ball with their non-dominant arm. ",
+        "difficulty": "favor"
+      }
+    },
+    {
+      "id": "vSbr5uPJLiNDNPib9i5h",
+      "path": "chaos-rules-v1/vSbr5uPJLiNDNPib9i5h",
+      "createTime": "2023-08-12T15:38:08.368435Z",
+      "updateTime": "2024-06-27T02:20:59.114482Z",
+      "data": {
+        "difficulty": "challenge",
+        "description": "Each player[-b] must pick one club and use it for the entire hole (including putts).",
+        "name": "Solo Club",
+        "conditions": [],
+        "type": "team",
+        "last_updated_at": {
+          "unix": 1719454859.038657,
+          "iso": "2024-06-27T02:20:59Z"
+        },
+        "par": [
+          3,
+          5,
+          4
+        ],
+        "packID": "chaos",
+        "icon": "e256",
+        "id": "vSbr5uPJLiNDNPib9i5h"
+      }
+    },
+    {
+      "id": "VuvWbSlaqoFWzn3d6eQ6",
+      "path": "chaos-rules-v1/VuvWbSlaqoFWzn3d6eQ6",
+      "createTime": "2023-08-12T15:38:08.336936Z",
+      "updateTime": "2024-06-27T02:27:59.962067Z",
+      "data": {
+        "par": [
+          3,
+          4,
+          5
+        ],
+        "packID": "chaos",
+        "difficulty": "favor",
+        "description": "<player-name>[-b] has the option to tee off from the next forward tee box.",
+        "conditions": [],
+        "name": "Tee Box Promotion",
+        "last_updated_at": {
+          "iso": "2024-06-27T02:27:59Z",
+          "unix": 1719455279.8915992
+        },
+        "type": "player",
+        "id": "VuvWbSlaqoFWzn3d6eQ6",
+        "icon": "e552"
+      }
+    },
+    {
+      "id": "We3Y7l8bIUVaU4FWyaaX",
+      "path": "chaos-rules-v1/We3Y7l8bIUVaU4FWyaaX",
+      "createTime": "2024-07-08T20:37:31.329911Z",
+      "updateTime": "2024-07-08T20:37:31.329911Z",
+      "data": {
+        "par": [
+          3,
+          4,
+          5
+        ],
+        "packID": "chaos",
+        "difficulty": "favor",
+        "description": "<player-name>[-b] gets a single free attempt to advance their ball by topping it. Flight cannot exceed shoulder height.",
+        "conditions": [],
+        "name": "Worm Burner",
+        "type": "player",
+        "last_updated_at": {
+          "unix": 1720471051.1287389,
+          "iso": "2024-07-08T20:37:31Z"
+        },
+        "id": "We3Y7l8bIUVaU4FWyaaX",
+        "icon": "e599"
+      }
+    },
+    {
+      "id": "WX9HgG593mtESE8hTf5p",
+      "path": "chaos-rules-v1/WX9HgG593mtESE8hTf5p",
+      "createTime": "2023-08-12T15:38:06.052734Z",
+      "updateTime": "2024-06-27T01:31:44.534618Z",
+      "data": {
+        "icon": "f091",
+        "id": "WX9HgG593mtESE8hTf5p",
+        "description": "The best score on the previous hole[-b] gets to choose the tee box on this hole. If hole 1, the player with the most colorful golf bag gets to pick.",
+        "difficulty": "favor",
+        "type": "team",
+        "last_updated_at": {
+          "iso": "2024-06-27T01:31:44Z",
+          "unix": 1719451904.4579902
+        },
+        "name": "Winner's Choice",
+        "conditions": [],
+        "par": [
+          3
+        ],
+        "packID": "chaos"
+      }
+    },
+    {
+      "id": "X82reOKLp3wSJqRFARtY",
+      "path": "chaos-rules-v1/X82reOKLp3wSJqRFARtY",
+      "createTime": "2023-08-12T15:38:06.355766Z",
+      "updateTime": "2024-06-27T02:04:28.754696Z",
+      "data": {
+        "packID": "chaos",
+        "par": [
+          3,
+          4,
+          5
+        ],
+        "conditions": [],
+        "name": "Lemon",
+        "type": "team",
+        "last_updated_at": {
+          "unix": 1719453868.702642,
+          "iso": "2024-06-27T02:04:28Z"
+        },
+        "difficulty": "favor",
+        "description": "Whoever in the party[-b] is playing the cheapest golf ball gets two shots off the tee stroke-free.",
+        "id": "X82reOKLp3wSJqRFARtY",
+        "icon": "f094"
+      }
+    },
+    {
+      "id": "xDMAVTVtE4xxXiqCnG1W",
+      "path": "chaos-rules-v1/xDMAVTVtE4xxXiqCnG1W",
+      "createTime": "2023-08-12T15:38:05.703449Z",
+      "updateTime": "2024-06-27T02:02:22.550461Z",
+      "data": {
+        "par": [
+          3,
+          4,
+          5
+        ],
+        "packID": "chaos",
+        "difficulty": "challenge",
+        "description": "Each player[-b] must take their shot within 3 seconds of addressing their ball for the entire hole.",
+        "conditions": [],
+        "name": "Fairway Is Lava",
+        "type": "team",
+        "last_updated_at": {
+          "unix": 1719453742.472085,
+          "iso": "2024-06-27T02:02:22Z"
+        },
+        "id": "xDMAVTVtE4xxXiqCnG1W",
+        "icon": "f770"
+      }
+    },
+    {
+      "id": "xYUWLneopvMaypHpflmY",
+      "path": "chaos-rules-v1/xYUWLneopvMaypHpflmY",
+      "createTime": "2024-06-27T03:21:43.391586Z",
+      "updateTime": "2024-07-08T20:33:44.570300Z",
+      "data": {
+        "id": "xYUWLneopvMaypHpflmY",
+        "icon": "f624",
+        "par": [
+          3,
+          4,
+          5
+        ],
+        "packID": "chaos",
+        "description": "Everyone in the party[-b] gets a mulligan to use on a wedge shot.",
+        "difficulty": "favor",
+        "type": "team",
+        "last_updated_at": {
+          "unix": 1720470824.273216,
+          "iso": "2024-07-08T20:33:44Z"
+        },
+        "conditions": [],
+        "name": "Dialed Wedges"
+      }
+    },
+    {
+      "id": "y7CRjVXip4uhOU5s032X",
+      "path": "chaos-rules-v1/y7CRjVXip4uhOU5s032X",
+      "createTime": "2024-07-08T20:40:04.226647Z",
+      "updateTime": "2024-07-08T20:40:04.226647Z",
+      "data": {
+        "icon": "e22d",
+        "id": "y7CRjVXip4uhOU5s032X",
+        "type": "player",
+        "last_updated_at": {
+          "iso": "2024-07-08T20:40:04Z",
+          "unix": 1720471204.0708919
+        },
+        "name": "Clear For Takeoff",
+        "conditions": [],
+        "description": "<player-name>[-b] must play aggressive and go for maximum distance on each shot. No laying up.",
+        "difficulty": "challenge",
+        "packID": "chaos",
+        "par": [
+          3,
+          4,
+          5
+        ]
+      }
+    },
+    {
+      "id": "Y8jGSkCMba80aEAZpaCA",
+      "path": "chaos-rules-v1/Y8jGSkCMba80aEAZpaCA",
+      "createTime": "2023-08-12T15:38:06.386989Z",
+      "updateTime": "2024-06-27T02:20:39.921938Z",
+      "data": {
+        "icon": "f601",
+        "id": "Y8jGSkCMba80aEAZpaCA",
+        "type": "team",
+        "last_updated_at": {
+          "iso": "2024-06-27T02:20:39Z",
+          "unix": 1719454839.8413
+        },
+        "conditions": [],
+        "name": "Sniper",
+        "description": "Closest player to the pin[-b] from their off green approach gets a free read by hand rolling a ball towards the hole.",
+        "difficulty": "favor",
+        "packID": "chaos",
+        "par": [
+          3,
+          4,
+          5
+        ]
+      }
+    },
+    {
+      "id": "YPECdFCmY9JJGswVDgXw",
+      "path": "chaos-rules-v1/YPECdFCmY9JJGswVDgXw",
+      "createTime": "2024-06-27T02:50:59.351467Z",
+      "updateTime": "2024-06-27T02:50:59.351467Z",
+      "data": {
+        "id": "YPECdFCmY9JJGswVDgXw",
+        "icon": "f30c",
+        "packID": "chaos",
+        "par": [
+          3,
+          4,
+          5
+        ],
+        "name": "Club Up",
+        "conditions": [],
+        "type": "player",
+        "last_updated_at": {
+          "iso": "2024-06-27T02:50:59Z",
+          "unix": 1719456659.198007
+        },
+        "difficulty": "challenge",
+        "description": "<player-name>[-b] must club up 2 clubs for their tee shot."
+      }
+    },
+    {
+      "id": "yZjCeyfwnF7mWVVYlX2A",
+      "path": "chaos-rules-v1/yZjCeyfwnF7mWVVYlX2A",
+      "createTime": "2023-08-12T15:38:07.259273Z",
+      "updateTime": "2023-08-12T15:38:07.259273Z",
+      "data": {
+        "description": "<player-name>[-b] gets a free drop in the fairway if they hit their tee shot out of bounds.",
+        "difficulty": "favor",
+        "type": "player",
+        "last_updated_at": {
+          "iso": "2022-12-01T23:55:10Z",
+          "unix": 1669938910.7046509
+        },
+        "conditions": [],
+        "name": "Second Chance",
+        "par": [
+          3,
+          4,
+          5
+        ],
+        "packID": "chaos",
+        "icon": "f779",
+        "id": "yZjCeyfwnF7mWVVYlX2A"
+      }
+    },
+    {
+      "id": "yzl1X3TAufTBWWRjvwSF",
+      "path": "chaos-rules-v1/yzl1X3TAufTBWWRjvwSF",
+      "createTime": "2024-07-08T20:42:04.811953Z",
+      "updateTime": "2024-07-08T20:42:04.811953Z",
+      "data": {
+        "description": "<player-name>[-b] must hold their breath on each shot once they address the ball up until they hit.",
+        "difficulty": "challenge",
+        "last_updated_at": {
+          "iso": "2024-07-08T20:42:04Z",
+          "unix": 1720471324.636043
+        },
+        "type": "player",
+        "conditions": [],
+        "name": "Iron Lungs",
+        "par": [
+          3,
+          4,
+          5
+        ],
+        "packID": "chaos",
+        "icon": "f604",
+        "id": "yzl1X3TAufTBWWRjvwSF"
+      }
+    },
+    {
+      "id": "ZQhRpqrPwbzap1bpHDvp",
+      "path": "chaos-rules-v1/ZQhRpqrPwbzap1bpHDvp",
+      "createTime": "2024-06-27T02:51:09.385720Z",
+      "updateTime": "2024-06-27T02:51:09.385720Z",
+      "data": {
+        "id": "ZQhRpqrPwbzap1bpHDvp",
+        "icon": "f30c",
+        "par": [
+          3,
+          4,
+          5
+        ],
+        "packID": "chaos",
+        "difficulty": "challenge",
+        "description": "Each player[-b] must club up 2 clubs for their tee shot.",
+        "name": "Club Up",
+        "conditions": [],
+        "type": "team",
+        "last_updated_at": {
+          "iso": "2024-06-27T02:51:09Z",
+          "unix": 1719456669.301769
+        }
+      }
+    }
+  ]
+}

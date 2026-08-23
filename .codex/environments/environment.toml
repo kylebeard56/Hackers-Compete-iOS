@@ -1,0 +1,26 @@
+version = 1
+name = "Hackers-Compete-iOS"
+
+[setup]
+script = ""
+
+[[actions]]
+name = "Run iOS Simulator"
+icon = "run"
+command = '''
+npm run sim:run
+'''
+
+[[actions]]
+name = "Serve Simulator"
+icon = "run"
+command = '''
+npm run sim:serve
+'''
+
+[[actions]]
+name = "Run + Serve Simulator"
+icon = "run"
+command = '''
+npm run sim:preview
+'''
