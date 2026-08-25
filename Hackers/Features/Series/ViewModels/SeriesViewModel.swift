@@ -1,0 +1,9390 @@
+//
+//  SeriesViewModel.swift
+//  Hackers
+//
+
+import SwiftUI
+
+struct SeriesScoreCorrectionChange: Identifiable, Hashable {
+    let participantID: String
+    let holeNumber: Int
+    let strokes: Int?
+
+    var id: String { "\(participantID)_\(holeNumber)" }
+}
+
+struct SeriesParticipantHandicapCorrectionChange: Identifiable, Hashable {
+    let participantID: String
+    let teeBoxID: String
+    let handicapIndex: Double?
+    let courseHandicap: Int
+    let snapshot: RoundParticipantHandicapSnapshot
+
+    var id: String { participantID }
+}
+
+struct SeriesScoreCorrectionBatch: Hashable {
+    let seriesRoundID: String
+    let changes: [SeriesScoreCorrectionChange]
+    let participantChanges: [SeriesParticipantHandicapCorrectionChange]
+    let reason: String
+    let expectedRoundRevision: Double
+}
+
+enum SeriesScoreCorrectionBatchFailure: Error, LocalizedError {
+    case staleRound
+    case noChanges
+    case tooManyChanges(Int)
+    case sourceWriteFailed
+    case derivedPublicationFailed
+
+    var errorDescription: String? {
+        switch self {
+        case .staleRound:
+            return "This round changed after the correction sheet opened. Reload it and review the scores before retrying."
+        case .noChanges:
+            return "No score changes were found."
+        case .tooManyChanges(let count):
+            return "A correction batch supports at most 499 score documents plus its audit update; received \(count) score changes."
+        case .sourceWriteFailed:
+            return "The score batch was not written. No derived results were published."
+        case .derivedPublicationFailed:
+            return "The scores were saved, but handicap, award, or canonical publication failed. The previous leaderboard remains published and reconciliation will retry."
+        }
+    }
+}
+
+struct SeriesRoundCorrectionContext {
+    let seriesRound: SeriesRound
+    let snapshot: RoundSnapshot
+    let holes: [Hole]
+    let entriesByParticipantID: [String: [Int: ScoreEntry]]
+
+    var supportsTotalGrossCorrection: Bool {
+        snapshot.resolvedActiveTemplate.supportsTotalGrossCorrection
+    }
+}
+
+enum SeriesCSVExportSection: String, CaseIterable, Identifiable {
+    case leaderboard
+    case holeScores = "hole_scores"
+    case matchups
+    case teeGroups = "tee_groups"
+
+    var id: String { rawValue }
+
+    var displayName: String {
+        switch self {
+        case .leaderboard:
+            return "Leaderboard"
+        case .holeScores:
+            return "Hole scores"
+        case .matchups:
+            return "Matchups"
+        case .teeGroups:
+            return "Tee groups"
+        }
+    }
+}
+
+struct SeriesCSVExportOptions: Equatable {
+    var selectedRoundIDs: Set<String>
+    var selectedTeamIDs: Set<String>
+    var selectedMemberIDs: Set<String>
+    var selectedSections: Set<SeriesCSVExportSection>
+
+    init(
+        selectedRoundIDs: Set<String> = [],
+        selectedTeamIDs: Set<String> = [],
+        selectedMemberIDs: Set<String> = [],
+        selectedSections: Set<SeriesCSVExportSection> = Set(SeriesCSVExportSection.allCases)
+    ) {
+        self.selectedRoundIDs = selectedRoundIDs
+        self.selectedTeamIDs = selectedTeamIDs
+        self.selectedMemberIDs = selectedMemberIDs
+        self.selectedSections = selectedSections
+    }
+
+    static func defaults(for rounds: [SeriesRound]) -> SeriesCSVExportOptions {
+        SeriesCSVExportOptions(
+            selectedRoundIDs: Set(rounds.filter { $0.roundID != nil }.map(\.id)),
+            selectedTeamIDs: [],
+            selectedMemberIDs: [],
+            selectedSections: Set(SeriesCSVExportSection.allCases)
+        )
+    }
+}
+
+struct SeriesCSVExportBuildResult: Equatable {
+    var document: SeriesCSVExportDocument?
+    var skippedRoundTitles: [String]
+}
+
+struct SeriesCSVExportDocument: Equatable {
+    var header: String
+    var rows: [String]
+
+    var content: String {
+        ([header] + rows).joined(separator: "\n")
+    }
+}
+
+struct SeriesIndividualStatsRow: Identifiable, Equatable {
+    let memberID: String
+    let name: String
+    let averageDifferential: Double?
+    let averageGross: Double?
+    let averageNet: Double?
+    let currentHandicap: Double?
+    let roundsPlayed: Int
+
+    var id: String { memberID }
+}
+
+enum SeriesCSVExporter {
+    typealias SnapshotProvider = (SeriesRound) async -> RoundSnapshot?
+
+    static let headerColumns = [
+        "row_type",
+        "series_round_id",
+        "series_round_title",
+        "series_round_index",
+        "round_id",
+        "competitor_type",
+        "competitor_id",
+        "participant_id",
+        "series_member_id",
+        "player_id",
+        "player_name",
+        "team_id",
+        "team_name",
+        "tee_group_id",
+        "tee_group_name",
+        "tee_group_index",
+        "tee_time",
+        "starting_hole",
+        "tee_order",
+        "tee_box_id",
+        "matchup_id",
+        "matchup_index",
+        "matchup_side",
+        "matchup_side_id",
+        "matchup_side_name",
+        "opponent_name",
+        "is_winner",
+        "is_tie",
+        "score_label",
+        "leaderboard_rank",
+        "place_label",
+        "leaderboard_score",
+        "gross_strokes",
+        "net_strokes",
+        "actual_strokes_used",
+        "handicap_strokes_used",
+        "handicap_strokes",
+        "holes_played",
+        "hole_number",
+        "par",
+        "raw_strokes",
+        "net_strokes_hole",
+        "handicap_stroke_delta",
+        "gross_to_par",
+        "net_to_par",
+        "picked_up",
+        "counts_for_score",
+        "notes"
+    ]
+
+    static func build(
+        series: Series,
+        rounds: [SeriesRound],
+        members: [SeriesMember],
+        teams: [SeriesTeam],
+        options: SeriesCSVExportOptions,
+        snapshotProvider: SnapshotProvider
+    ) async -> SeriesCSVExportBuildResult {
+        var rows: [String] = []
+        var skipped: [String] = []
+        let selectedRounds = rounds
+            .filter { $0.roundID != nil && options.selectedRoundIDs.contains($0.id) }
+            .sorted { $0.index < $1.index }
+
+        for seriesRound in selectedRounds {
+            guard let snapshot = await snapshotProvider(seriesRound) else {
+                skipped.append(displayTitle(for: seriesRound))
+                continue
+            }
+            rows += csvRows(
+                series: series,
+                seriesRound: seriesRound,
+                snapshot: snapshot,
+                members: members,
+                seriesTeams: teams,
+                options: options
+            )
+        }
+
+        let document = rows.isEmpty ? nil : SeriesCSVExportDocument(
+            header: headerColumns.joined(separator: ","),
+            rows: rows
+        )
+        return SeriesCSVExportBuildResult(document: document, skippedRoundTitles: skipped)
+    }
+
+    static func document(
+        series: Series = .init(),
+        seriesRound: SeriesRound,
+        snapshot: RoundSnapshot,
+        members: [SeriesMember],
+        teams: [SeriesTeam] = [],
+        options: SeriesCSVExportOptions? = nil
+    ) -> SeriesCSVExportDocument {
+        let resolvedOptions = options ?? SeriesCSVExportOptions(
+            selectedRoundIDs: [seriesRound.id],
+            selectedTeamIDs: [],
+            selectedMemberIDs: [],
+            selectedSections: Set(SeriesCSVExportSection.allCases)
+        )
+        return SeriesCSVExportDocument(
+            header: headerColumns.joined(separator: ","),
+            rows: csvRows(
+                series: series,
+                seriesRound: seriesRound,
+                snapshot: snapshot,
+                members: members,
+                seriesTeams: teams,
+                options: resolvedOptions
+            )
+        )
+    }
+
+    struct ParticipantCSVContext {
+        var matchupIndex: Int?
+        var matchupID: String
+        var matchupSide: String
+        var matchupSideID: String
+        var teeGroupIndex: Int?
+        var teeGroupID: String
+        var teeGroupName: String
+        var teeTime: String
+        var startingHole: Int?
+        var teamName: String
+    }
+
+    private static func csvRows(
+        series: Series,
+        seriesRound: SeriesRound,
+        snapshot: RoundSnapshot,
+        members: [SeriesMember],
+        seriesTeams: [SeriesTeam],
+        options: SeriesCSVExportOptions
+    ) -> [String] {
+        let teamsByID = Dictionary(uniqueKeysWithValues: snapshot.teams.map { ($0.id, $0) })
+        let groupsByID = Dictionary(uniqueKeysWithValues: snapshot.teeGroups.map { ($0.id, $0) })
+        let contexts = participantContexts(snapshot: snapshot, teamsByID: teamsByID, groupsByID: groupsByID)
+        let memberByID = Dictionary(uniqueKeysWithValues: members.map { ($0.id, $0) })
+        let memberByPlayerID = Dictionary(uniqueKeysWithValues: members.compactMap { member in
+            member.playerID.map { ($0, member) }
+        })
+        let holes = scoringHoles(in: snapshot)
+        let holesByNumber = Dictionary(uniqueKeysWithValues: holes.map { ($0.number, $0) })
+        let segment = snapshot.roundSegment
+        let result = segment.map {
+            ScoringEngine.computeSnapshotResult(
+                snapshot: snapshot,
+                segment: $0,
+                holes: holes,
+                basis: snapshot.configuration.primaryFormat.configuration.basis,
+                scoreLookupSegmentIDs: snapshot.segmentScoreLookupSegmentIDs
+            )
+        }
+        let includedParticipants = filteredParticipants(
+            snapshot: snapshot,
+            membersByID: memberByID,
+            membersByPlayerID: memberByPlayerID,
+            options: options
+        )
+        let includedParticipantIDs = Set(includedParticipants.map(\.id))
+        var rows: [String] = []
+
+        if let result, options.selectedSections.contains(.leaderboard) {
+            rows += leaderboardRows(
+                series: series,
+                seriesRound: seriesRound,
+                snapshot: snapshot,
+                result: result,
+                participants: includedParticipants,
+                contexts: contexts,
+                membersByID: memberByID,
+                membersByPlayerID: memberByPlayerID,
+                teamsByID: teamsByID,
+                groupsByID: groupsByID,
+                options: options
+            )
+        }
+
+        if options.selectedSections.contains(.holeScores) {
+            rows += holeScoreRows(
+                series: series,
+                seriesRound: seriesRound,
+                snapshot: snapshot,
+                participants: includedParticipants,
+                contexts: contexts,
+                membersByID: memberByID,
+                membersByPlayerID: memberByPlayerID,
+                teamsByID: teamsByID,
+                groupsByID: groupsByID,
+                holesByNumber: holesByNumber
+            )
+        }
+
+        if let result, options.selectedSections.contains(.matchups) {
+            rows += matchupRows(
+                series: series,
+                seriesRound: seriesRound,
+                snapshot: snapshot,
+                result: result,
+                includedParticipantIDs: includedParticipantIDs,
+                contexts: contexts,
+                membersByID: memberByID,
+                membersByPlayerID: memberByPlayerID,
+                teamsByID: teamsByID,
+                groupsByID: groupsByID
+            )
+        }
+
+        if options.selectedSections.contains(.teeGroups) {
+            rows += teeGroupRows(
+                series: series,
+                seriesRound: seriesRound,
+                snapshot: snapshot,
+                participants: includedParticipants,
+                contexts: contexts,
+                membersByID: memberByID,
+                membersByPlayerID: memberByPlayerID,
+                teamsByID: teamsByID,
+                groupsByID: groupsByID,
+                selectedTeamIDs: options.selectedTeamIDs,
+                seriesTeams: seriesTeams
+            )
+        }
+
+        return rows
+    }
+
+    private static func leaderboardRows(
+        series: Series,
+        seriesRound: SeriesRound,
+        snapshot: RoundSnapshot,
+        result: ScoringResult,
+        participants: [RoundParticipant],
+        contexts: [String: ParticipantCSVContext],
+        membersByID: [String: SeriesMember],
+        membersByPlayerID: [String: SeriesMember],
+        teamsByID: [String: RoundTeam],
+        groupsByID: [String: TeeTimeGroup],
+        options: SeriesCSVExportOptions
+    ) -> [String] {
+        let includedParticipantIDs = Set(participants.map(\.id))
+        let rows = result.rows.filter { row in
+            switch row.owner {
+            case .participant:
+                return includedParticipantIDs.contains(row.scoringUnitID)
+            case .team, .scoreOwner:
+                let rowParticipantIDs = Set(row.participantIDs)
+                return rowParticipantIDs.isEmpty || rowParticipantIDs.intersection(includedParticipantIDs).isPopulated
+            }
+        }.filter { row in
+            guard row.owner == .team, options.selectedTeamIDs.isPopulated else { return true }
+            if options.selectedTeamIDs.contains(row.scoringUnitID) { return true }
+            return row.participantIDs.contains { participantID in
+                guard let participant = snapshot.participants.first(where: { $0.id == participantID }) else { return false }
+                return participantMatchesSelectedTeam(
+                    participant,
+                    membersByID: membersByID,
+                    membersByPlayerID: membersByPlayerID,
+                    selectedTeamIDs: options.selectedTeamIDs
+                )
+            }
+        }
+        let sortedRows = rows.sorted {
+            if abs($0.total - $1.total) > 0.0001 {
+                return result.template.leaderboardSort == .highestWins ? $0.total > $1.total : $0.total < $1.total
+            }
+            return $0.scoringUnitID < $1.scoringUnitID
+        }
+
+        return sortedRows.enumerated().map { index, row in
+            let primaryParticipant = row.participantIDs.compactMap { id in
+                snapshot.participants.first { $0.id == id }
+            }.first
+            let participantContext = primaryParticipant.flatMap { contexts[$0.id] }
+            var data = baseData(
+                rowType: "leaderboard",
+                series: series,
+                seriesRound: seriesRound,
+                snapshot: snapshot
+            )
+            data["competitor_type"] = row.owner.rawValue
+            data["competitor_id"] = row.scoringUnitID
+            data["player_name"] = leaderboardName(row: row, snapshot: snapshot)
+            data["team_id"] = leaderboardTeamID(row: row, participant: primaryParticipant)
+            data["team_name"] = data["team_id"].flatMap { teamsByID[$0]?.name } ?? participantContext?.teamName ?? ""
+            applyParticipant(primaryParticipant, to: &data, context: participantContext, membersByID: membersByID, membersByPlayerID: membersByPlayerID, groupsByID: groupsByID)
+            data["leaderboard_rank"] = String(index + 1)
+            data["place_label"] = String(index + 1)
+            data["leaderboard_score"] = formatScore(row.total, isPointsFormat: result.template.leaderboardSort == .highestWins)
+            data["score_label"] = data["leaderboard_score"]
+            data["gross_strokes"] = total(row: row, keyPath: \.rawStrokes)
+            data["net_strokes"] = total(row: row, keyPath: \.netStrokes)
+            data["actual_strokes_used"] = data["gross_strokes"]
+            data["handicap_strokes_used"] = handicapUsed(row: row)
+            data["handicap_strokes"] = primaryParticipant.map { String($0.adjustedHandicap) } ?? ""
+            data["holes_played"] = String(row.holesPlayed)
+            return csvLine(data)
+        }
+    }
+
+    private static func holeScoreRows(
+        series: Series,
+        seriesRound: SeriesRound,
+        snapshot: RoundSnapshot,
+        participants: [RoundParticipant],
+        contexts: [String: ParticipantCSVContext],
+        membersByID: [String: SeriesMember],
+        membersByPlayerID: [String: SeriesMember],
+        teamsByID: [String: RoundTeam],
+        groupsByID: [String: TeeTimeGroup],
+        holesByNumber: [Int: Hole]
+    ) -> [String] {
+        let scoreEntriesByParticipant = Dictionary(grouping: snapshot.scoring, by: \.scoringUnitID)
+        return participants.sorted { participantSort($0, $1, contexts: contexts) }.flatMap { participant in
+            let context = contexts[participant.id]
+            let entries = Dictionary(uniqueKeysWithValues: (scoreEntriesByParticipant[participant.id] ?? []).map { ($0.holeNumber, $0) })
+            let tee = snapshot.courseSegment?.tee(from: participant.teeBoxID)
+                ?? snapshot.courseSegment?.tee(from: snapshot.courseSegment?.defaultTee ?? "")
+                ?? snapshot.courseSegment?.courseInfo.tees.first
+            let teeHoles = Dictionary(uniqueKeysWithValues: (tee?.holes ?? []).map { ($0.number, $0) })
+            let holeNumbers = (snapshot.holeRange?.holeNumbers ?? snapshot.holeSegment.holeRange.holeNumbers).sorted()
+
+            return holeNumbers.map { holeNumber in
+                let entry = entries[holeNumber]
+                let par = teeHoles[holeNumber]?.par ?? holesByNumber[holeNumber]?.par ?? 4
+                let raw = entry?.strokes
+                let handicapDelta = handicapStrokeDelta(participant: participant, holeNumber: holeNumber, snapshot: snapshot)
+                let net = raw.map { max(1, $0 - handicapDelta) }
+                var data = baseData(rowType: "hole_score", series: series, seriesRound: seriesRound, snapshot: snapshot)
+                applyParticipant(participant, to: &data, context: context, membersByID: membersByID, membersByPlayerID: membersByPlayerID, groupsByID: groupsByID)
+                data["team_name"] = participant.teamID.flatMap { teamsByID[$0]?.name } ?? context?.teamName ?? ""
+                data["hole_number"] = String(holeNumber)
+                data["par"] = String(par)
+                data["raw_strokes"] = raw.map(String.init) ?? ""
+                data["net_strokes_hole"] = net.map(String.init) ?? ""
+                data["handicap_stroke_delta"] = raw == nil ? "" : String(handicapDelta)
+                data["gross_to_par"] = raw.map { String($0 - par) } ?? ""
+                data["net_to_par"] = net.map { String($0 - par) } ?? ""
+                data["picked_up"] = String(entry?.pickedUp ?? false)
+                data["actual_strokes_used"] = raw.map(String.init) ?? ""
+                data["handicap_strokes_used"] = raw == nil ? "" : String(handicapDelta)
+                data["handicap_strokes"] = String(participant.adjustedHandicap)
+                return csvLine(data)
+            }
+        }
+    }
+
+    private static func matchupRows(
+        series: Series,
+        seriesRound: SeriesRound,
+        snapshot: RoundSnapshot,
+        result: ScoringResult,
+        includedParticipantIDs: Set<String>,
+        contexts: [String: ParticipantCSVContext],
+        membersByID: [String: SeriesMember],
+        membersByPlayerID: [String: SeriesMember],
+        teamsByID: [String: RoundTeam],
+        groupsByID: [String: TeeTimeGroup]
+    ) -> [String] {
+        result.matchupResults.enumerated().flatMap { index, matchupResult -> [String] in
+            guard matchupResult.matchup.isValid else { return [] }
+            let presentation = MatchupResultPresentationBuilder.build(
+                snapshot: snapshot,
+                result: result,
+                matchupResult: matchupResult
+            )
+            let visibleSides = presentation.sides.filter { side in
+                side.participants.contains { includedParticipantIDs.contains($0.id) }
+            }
+            guard visibleSides.isPopulated else { return [] }
+            var rows: [String] = []
+
+            for (sideOffset, side) in visibleSides.enumerated() {
+                let opponentName = presentation.sides.first { $0.id != side.id }?.title ?? ""
+                var sideData = baseData(rowType: "matchup_side", series: series, seriesRound: seriesRound, snapshot: snapshot)
+                sideData["matchup_id"] = matchupResult.matchup.id
+                sideData["matchup_index"] = String(index + 1)
+                sideData["matchup_side"] = sideOffset == 0 ? "A" : "B"
+                sideData["matchup_side_id"] = side.id
+                sideData["matchup_side_name"] = side.title
+                sideData["opponent_name"] = opponentName
+                sideData["is_winner"] = String(presentation.winningSideID == side.id)
+                sideData["is_tie"] = String(presentation.isTie)
+                sideData["score_label"] = side.scoreLabel
+                sideData["leaderboard_score"] = side.total.map { formatScore($0, isPointsFormat: presentation.isPointsFormat) } ?? ""
+                sideData["counts_for_score"] = "true"
+                rows.append(csvLine(sideData))
+
+                for participant in side.participants.filter({ includedParticipantIDs.contains($0.id) }).sorted(by: { participantSort($0, $1, contexts: contexts) }) {
+                    let context = contexts[participant.id]
+                    var playerData = baseData(rowType: "matchup_player", series: series, seriesRound: seriesRound, snapshot: snapshot)
+                    applyParticipant(participant, to: &playerData, context: context, membersByID: membersByID, membersByPlayerID: membersByPlayerID, groupsByID: groupsByID)
+                    playerData["team_name"] = participant.teamID.flatMap { teamsByID[$0]?.name } ?? context?.teamName ?? ""
+                    playerData["matchup_id"] = matchupResult.matchup.id
+                    playerData["matchup_index"] = String(index + 1)
+                    playerData["matchup_side"] = sideOffset == 0 ? "A" : "B"
+                    playerData["matchup_side_id"] = side.id
+                    playerData["matchup_side_name"] = side.title
+                    playerData["opponent_name"] = opponentName
+                    playerData["is_winner"] = String(presentation.winningSideID == side.id)
+                    playerData["is_tie"] = String(presentation.isTie)
+                    playerData["score_label"] = side.scoreLabel
+                    playerData["gross_strokes"] = participantStrokeTotal(participant.id, snapshot: snapshot, basis: .gross)
+                    playerData["net_strokes"] = participantStrokeTotal(participant.id, snapshot: snapshot, basis: .net)
+                    playerData["actual_strokes_used"] = playerData["gross_strokes"]
+                    playerData["handicap_strokes_used"] = strokeDifference(gross: playerData["gross_strokes"], net: playerData["net_strokes"])
+                    playerData["handicap_strokes"] = String(participant.adjustedHandicap)
+                    playerData["counts_for_score"] = String(side.isParticipantActive(participant))
+                    rows.append(csvLine(playerData))
+                }
+            }
+            return rows
+        }
+    }
+
+    private static func teeGroupRows(
+        series: Series,
+        seriesRound: SeriesRound,
+        snapshot: RoundSnapshot,
+        participants: [RoundParticipant],
+        contexts: [String: ParticipantCSVContext],
+        membersByID: [String: SeriesMember],
+        membersByPlayerID: [String: SeriesMember],
+        teamsByID: [String: RoundTeam],
+        groupsByID: [String: TeeTimeGroup],
+        selectedTeamIDs: Set<String>,
+        seriesTeams: [SeriesTeam]
+    ) -> [String] {
+        let participantsByGroupID = Dictionary(grouping: participants) { $0.groupID ?? "" }
+        let visibleGroupIDs = Set(participants.map { $0.groupID ?? "" })
+        let selectedSeriesTeamNames = Set(seriesTeams.filter { selectedTeamIDs.contains($0.id) }.map(\.name))
+
+        return snapshot.teeGroups
+            .filter { visibleGroupIDs.contains($0.id) || (selectedTeamIDs.isEmpty && participantsByGroupID[$0.id] != nil) }
+            .sorted { lhs, rhs in
+                if lhs.index != rhs.index { return lhs.index < rhs.index }
+                return lhs.id < rhs.id
+            }
+            .flatMap { group -> [String] in
+                let groupParticipants = (participantsByGroupID[group.id] ?? []).sorted { participantSort($0, $1, contexts: contexts) }
+                guard groupParticipants.isPopulated else { return [] }
+                var groupData = baseData(rowType: "tee_group", series: series, seriesRound: seriesRound, snapshot: snapshot)
+                groupData["tee_group_id"] = group.id
+                groupData["tee_group_name"] = group.name
+                groupData["tee_group_index"] = String(group.index + 1)
+                groupData["tee_time"] = group.teeTime ?? ""
+                groupData["starting_hole"] = String(group.startingHole)
+                groupData["notes"] = selectedSeriesTeamNames.isPopulated ? selectedSeriesTeamNames.sorted().joined(separator: "; ") : ""
+                let playerRows = groupParticipants.map { participant in
+                    let context = contexts[participant.id]
+                    var data = baseData(rowType: "tee_group_player", series: series, seriesRound: seriesRound, snapshot: snapshot)
+                    applyParticipant(participant, to: &data, context: context, membersByID: membersByID, membersByPlayerID: membersByPlayerID, groupsByID: groupsByID)
+                    data["team_name"] = participant.teamID.flatMap { teamsByID[$0]?.name } ?? context?.teamName ?? ""
+                    data["tee_group_id"] = group.id
+                    data["tee_group_name"] = group.name
+                    data["tee_group_index"] = String(group.index + 1)
+                    data["tee_time"] = group.teeTime ?? ""
+                    data["starting_hole"] = String(group.startingHole)
+                    return csvLine(data)
+                }
+                return [csvLine(groupData)] + playerRows
+            }
+    }
+
+    static func participantContexts(
+        snapshot: RoundSnapshot,
+        teamsByID: [String: RoundTeam],
+        groupsByID: [String: TeeTimeGroup]
+    ) -> [String: ParticipantCSVContext] {
+        var contexts: [String: ParticipantCSVContext] = [:]
+        let scoringGroupsByID = Dictionary(uniqueKeysWithValues: snapshot.scoringGroups.map { ($0.id, $0) })
+        let matchups = snapshot.roundSegment?.matchups ?? []
+
+        for participant in snapshot.participants {
+            let teeGroup = participant.groupID.flatMap { groupsByID[$0] }
+            let matchupContext = matchups.enumerated().compactMap { index, matchup -> (Int, String, String, String)? in
+                let sideIDs = matchup.pairingIDs()
+                for (sideIndex, sideID) in sideIDs.enumerated() {
+                    let contains: Bool
+                    switch matchup.effectiveMode {
+                    case .team:
+                        contains = participant.teamID == sideID
+                    case .individual:
+                        contains = participant.id == sideID
+                    case .partnership, .teeGroup, .scoreOwner:
+                        contains = scoringGroupsByID[sideID]?.memberIDs.contains(participant.id) == true
+                    }
+                    if contains {
+                        return (index, matchup.id, sideIndex == 0 ? "A" : "B", sideID)
+                    }
+                }
+                return nil
+            }.first
+
+            contexts[participant.id] = ParticipantCSVContext(
+                matchupIndex: matchupContext?.0,
+                matchupID: matchupContext?.1 ?? "",
+                matchupSide: matchupContext?.2 ?? "",
+                matchupSideID: matchupContext?.3 ?? "",
+                teeGroupIndex: teeGroup?.index,
+                teeGroupID: teeGroup?.id ?? participant.groupID ?? "",
+                teeGroupName: teeGroup?.name ?? "",
+                teeTime: teeGroup?.teeTime ?? "",
+                startingHole: teeGroup?.startingHole,
+                teamName: participant.teamID.flatMap { teamsByID[$0]?.name } ?? ""
+            )
+        }
+        return contexts
+    }
+
+    private static func baseData(
+        rowType: String,
+        series _: Series,
+        seriesRound: SeriesRound,
+        snapshot: RoundSnapshot
+    ) -> [String: String] {
+        [
+            "row_type": rowType,
+            "series_round_id": seriesRound.id,
+            "series_round_title": displayTitle(for: seriesRound),
+            "series_round_index": String(seriesRound.index + 1),
+            "round_id": snapshot.round.id
+        ]
+    }
+
+    private static func applyParticipant(
+        _ participant: RoundParticipant?,
+        to data: inout [String: String],
+        context: ParticipantCSVContext?,
+        membersByID: [String: SeriesMember],
+        membersByPlayerID: [String: SeriesMember],
+        groupsByID: [String: TeeTimeGroup]
+    ) {
+        guard let participant else { return }
+        let member = participant.seriesMemberID.flatMap { membersByID[$0] }
+            ?? participant.playerID.flatMap { membersByPlayerID[$0] }
+        data["participant_id"] = participant.id
+        data["series_member_id"] = member?.id ?? participant.seriesMemberID ?? ""
+        data["player_id"] = participant.playerID ?? ""
+        data["player_name"] = participant.name.fullName
+        data["team_id"] = participant.teamID ?? ""
+        data["tee_group_id"] = context?.teeGroupID ?? participant.groupID ?? ""
+        data["tee_group_name"] = context?.teeGroupName ?? participant.groupID.flatMap { groupsByID[$0]?.name } ?? ""
+        data["tee_group_index"] = context?.teeGroupIndex.map { String($0 + 1) } ?? ""
+        data["tee_time"] = context?.teeTime ?? ""
+        data["starting_hole"] = context?.startingHole.map(String.init) ?? ""
+        data["tee_order"] = participant.teeOrder.map(String.init) ?? ""
+        data["tee_box_id"] = participant.teeBoxID
+        data["matchup_id"] = context?.matchupID ?? ""
+        data["matchup_index"] = context?.matchupIndex.map { String($0 + 1) } ?? ""
+        data["matchup_side"] = context?.matchupSide ?? ""
+        data["matchup_side_id"] = context?.matchupSideID ?? ""
+    }
+
+    private static func csvLine(_ data: [String: String]) -> String {
+        headerColumns
+            .map { escapedCSV(data[$0] ?? "") }
+            .joined(separator: ",")
+    }
+
+    static func escapedCSV(_ value: String) -> String {
+        let escaped = value.replacingOccurrences(of: "\"", with: "\"\"")
+        return "\"\(escaped)\""
+    }
+
+    private static func filteredParticipants(
+        snapshot: RoundSnapshot,
+        membersByID: [String: SeriesMember],
+        membersByPlayerID: [String: SeriesMember],
+        options: SeriesCSVExportOptions
+    ) -> [RoundParticipant] {
+        snapshot.participants.filter { participant in
+            if options.selectedMemberIDs.isPopulated && !participantMatchesSelectedMember(participant, membersByID: membersByID, membersByPlayerID: membersByPlayerID, selectedMemberIDs: options.selectedMemberIDs) {
+                return false
+            }
+            if options.selectedTeamIDs.isPopulated && !participantMatchesSelectedTeam(participant, membersByID: membersByID, membersByPlayerID: membersByPlayerID, selectedTeamIDs: options.selectedTeamIDs) {
+                return false
+            }
+            return true
+        }
+    }
+
+    private static func participantMatchesSelectedMember(
+        _ participant: RoundParticipant,
+        membersByID: [String: SeriesMember],
+        membersByPlayerID: [String: SeriesMember],
+        selectedMemberIDs: Set<String>
+    ) -> Bool {
+        let member = participant.seriesMemberID.flatMap { membersByID[$0] }
+            ?? participant.playerID.flatMap { membersByPlayerID[$0] }
+        guard let member else {
+            return participant.playerID.map { selectedMemberIDs.contains($0) } ?? false
+        }
+        return selectedMemberIDs.contains(member.id) || member.playerID.map { selectedMemberIDs.contains($0) } == true
+    }
+
+    private static func participantMatchesSelectedTeam(
+        _ participant: RoundParticipant,
+        membersByID: [String: SeriesMember],
+        membersByPlayerID: [String: SeriesMember],
+        selectedTeamIDs: Set<String>
+    ) -> Bool {
+        let member = participant.seriesMemberID.flatMap { membersByID[$0] }
+            ?? participant.playerID.flatMap { membersByPlayerID[$0] }
+        if let teamID = member?.teamID, selectedTeamIDs.contains(teamID) { return true }
+        return participant.teamID.map { selectedTeamIDs.contains($0) } ?? false
+    }
+
+    private static func participantSort(
+        _ lhs: RoundParticipant,
+        _ rhs: RoundParticipant,
+        contexts: [String: ParticipantCSVContext]
+    ) -> Bool {
+        let lc = contexts[lhs.id]
+        let rc = contexts[rhs.id]
+        if (lc?.matchupIndex ?? Int.max) != (rc?.matchupIndex ?? Int.max) {
+            return (lc?.matchupIndex ?? Int.max) < (rc?.matchupIndex ?? Int.max)
+        }
+        if (lc?.teeGroupIndex ?? Int.max) != (rc?.teeGroupIndex ?? Int.max) {
+            return (lc?.teeGroupIndex ?? Int.max) < (rc?.teeGroupIndex ?? Int.max)
+        }
+        if (lhs.teeOrder ?? Int.max) != (rhs.teeOrder ?? Int.max) {
+            return (lhs.teeOrder ?? Int.max) < (rhs.teeOrder ?? Int.max)
+        }
+        return lhs.name.fullName.localizedCaseInsensitiveCompare(rhs.name.fullName) == .orderedAscending
+    }
+
+    private static func scoringHoles(in snapshot: RoundSnapshot) -> [Hole] {
+        let preferredTeeID = snapshot.courseSegment?.defaultTee
+        let tee = preferredTeeID.flatMap { snapshot.courseSegment?.tee(from: $0) }
+            ?? snapshot.courseSegment?.courseInfo.tees.first
+        let allHoles = tee?.holes ?? []
+        let sliced = Array(allHoles.slice(for: snapshot.holeSegment))
+        return sliced.isEmpty ? allHoles : sliced
+    }
+
+    private static func total(row: ScoringRow, keyPath: KeyPath<ScoringRow.HoleValue, Int?>) -> String {
+        let values = row.holeValues.values.compactMap { $0[keyPath: keyPath] }
+        guard values.isPopulated else { return "" }
+        return String(values.reduce(0, +))
+    }
+
+    private static func handicapUsed(row: ScoringRow) -> String {
+        let values = row.holeValues.values.compactMap { value -> Int? in
+            guard let raw = value.rawStrokes, let net = value.netStrokes else { return nil }
+            return raw - net
+        }
+        guard values.isPopulated else { return "" }
+        return String(values.reduce(0, +))
+    }
+
+    private static func participantStrokeTotal(_ participantID: String, snapshot: RoundSnapshot, basis: ScoreBasis) -> String {
+        let entries = snapshot.scoring.filter { $0.scoringUnitID == participantID }
+        guard entries.contains(where: { $0.strokes != nil }) else { return "" }
+        let total = entries.reduce(0) { partial, entry in
+            guard let raw = entry.strokes else { return partial }
+            if basis == .gross { return partial + raw }
+            let participant = snapshot.participants.first { $0.id == participantID }
+            let delta = participant.map { handicapStrokeDelta(participant: $0, holeNumber: entry.holeNumber, snapshot: snapshot) } ?? 0
+            return partial + max(1, raw - delta)
+        }
+        return String(total)
+    }
+
+    private static func strokeDifference(gross: String?, net: String?) -> String {
+        guard let gross, let net, let grossValue = Int(gross), let netValue = Int(net) else { return "" }
+        return String(grossValue - netValue)
+    }
+
+    private static func handicapStrokeDelta(participant: RoundParticipant, holeNumber: Int, snapshot: RoundSnapshot) -> Int {
+        guard snapshot.configuration.useHandicaps else { return 0 }
+        let holeCount = snapshot.holeRange?.count ?? snapshot.holeSegment.holeCount
+        guard holeCount > 0 else { return 0 }
+        let tee = snapshot.courseSegment?.tee(from: participant.teeBoxID)
+            ?? snapshot.courseSegment?.tee(from: snapshot.courseSegment?.defaultTee ?? "")
+            ?? snapshot.courseSegment?.courseInfo.tees.first
+        guard let strokeIndex = tee?.holes.first(where: { $0.number == holeNumber })?.handicap else { return 0 }
+        let handicap = max(0, participant.adjustedHandicap)
+        let base = handicap / holeCount
+        let remainder = handicap % holeCount
+        let orderedIndex = max(1, min(holeCount, strokeIndex))
+        return base + (orderedIndex <= remainder ? 1 : 0)
+    }
+
+    private static func leaderboardName(row: ScoringRow, snapshot: RoundSnapshot) -> String {
+        switch row.owner {
+        case .participant:
+            return snapshot.participants.first { $0.id == row.scoringUnitID }?.name.fullName ?? row.scoringUnitID
+        case .team:
+            return snapshot.teams.first { $0.id == row.scoringUnitID }?.name ?? row.scoringUnitID
+        case .scoreOwner:
+            if let group = snapshot.scoringGroup(id: row.scoringUnitID),
+               let label = group.label,
+               label.isPopulated {
+                return label
+            }
+            let names = row.participantIDs
+                .compactMap { participantID in
+                    snapshot.participants.first { $0.id == participantID }?.name.fullName
+                }
+                .filter(\.isPopulated)
+            return names.isPopulated ? names.joined(separator: " + ") : row.scoringUnitID
+        }
+    }
+
+    private static func leaderboardTeamID(row: ScoringRow, participant: RoundParticipant?) -> String {
+        if row.owner == .team { return row.scoringUnitID }
+        return participant?.teamID ?? ""
+    }
+
+    private static func formatScore(_ total: Double, isPointsFormat: Bool) -> String {
+        MatchupResultPresentationBuilder.scoreLabel(for: total, isPointsFormat: isPointsFormat)
+    }
+
+    private static func displayTitle(for seriesRound: SeriesRound) -> String {
+        seriesRound.title.isPopulated ? seriesRound.title : "Round \(seriesRound.index + 1)"
+    }
+}
+
+enum SeriesRoundCSVExporter {
+    static func document(seriesRound: SeriesRound, snapshot: RoundSnapshot, members: [SeriesMember]) -> SeriesCSVExportDocument {
+        SeriesCSVExporter.document(seriesRound: seriesRound, snapshot: snapshot, members: members)
+    }
+}
+
+struct SeriesRoundOutcomeNarrative: Equatable {
+    let markdown: String
+
+    var paragraph: String { markdown }
+
+    init(markdown: String) {
+        self.markdown = markdown
+    }
+
+    init(paragraph: String) {
+        self.markdown = paragraph
+    }
+}
+
+enum SeriesRoundOutcomeNarrativeBuilder {
+    struct PriorRoundSnapshot {
+        let seriesRound: SeriesRound
+        let snapshot: RoundSnapshot
+    }
+
+    private struct PlayerResult {
+        let participant: RoundParticipant
+        let memberID: String?
+        let name: String
+        let grossStrokes: Int
+        let grossToPar: Int
+        let netStrokes: Int
+        let netToPar: Int
+        let handicapUsed: Int
+        let currentHandicap: Double?
+        let nextHandicap: Double?
+        let teamName: String?
+    }
+
+    static func build(
+        seriesRound: SeriesRound,
+        snapshot: RoundSnapshot,
+        priorRoundSnapshots: [PriorRoundSnapshot],
+        members: [SeriesMember],
+        handicapScores _: [SeriesHandicapScore],
+        memberHandicaps: [String: SeriesMemberHandicap],
+        pointAwards: [SeriesPointAward] = [],
+        standings: [SeriesStanding] = [],
+        teams: [SeriesTeam] = []
+    ) -> SeriesRoundOutcomeNarrative? {
+        let results = playerResults(
+            snapshot: snapshot,
+            members: members,
+            memberHandicaps: memberHandicaps,
+            teams: teams
+        )
+        guard results.isPopulated else { return nil }
+
+        let ordered = results.sorted {
+            if $0.netStrokes != $1.netStrokes { return $0.netStrokes < $1.netStrokes }
+            if $0.grossStrokes != $1.grossStrokes { return $0.grossStrokes < $1.grossStrokes }
+            return $0.name.localizedCaseInsensitiveCompare($1.name) == .orderedAscending
+        }
+
+        let title = seriesRound.title.isPopulated ? seriesRound.title : "Round \(seriesRound.index + 1)"
+        let placeLabels = placementLabels(for: ordered)
+        let leaderboard = ordered.enumerated().map { offset, result in
+            let teamSuffix = result.teamName.map { ", \($0)" } ?? ""
+            return """
+            **\(placeLabels[offset]) - \(markdownEscaped(result.name))\(teamSuffix)**
+            Score: \(scoreToParLabel(result.netToPar)) (Net \(result.netStrokes) / Gross \(result.grossStrokes))
+            \(handicapLine(
+                participant: result.participant,
+                currentHandicap: result.currentHandicap,
+                currentCourseHandicap: result.handicapUsed,
+                nextHandicap: result.nextHandicap,
+                snapshot: snapshot
+            ))
+            """
+        }.joined(separator: "\n\n")
+
+        let scoreHighlights = birdieAndEagleHighlights(snapshot: snapshot)
+        let scoreHighlightsText = scoreHighlights.isEmpty
+            ? "No birdies or eagles were recorded."
+            : scoreHighlights.joined(separator: "\n")
+        let absentText = absentPlayerLines(
+            snapshot: snapshot,
+            members: members,
+            memberHandicaps: memberHandicaps
+        )
+        let teamContext = teamContextParagraph(
+            seriesRound: seriesRound,
+            pointAwards: pointAwards,
+            standings: standings,
+            teams: teams
+        )
+
+        let best = ordered[0]
+        var highlights = ["Best round: **\(markdownEscaped(best.name))** with net \(best.netStrokes) (\(scoreToParLabel(best.netToPar)))."]
+
+        if let bounceBack = bounceBackResult(
+            currentResults: results,
+            priorRoundSnapshots: priorRoundSnapshots,
+            members: members,
+            memberHandicaps: memberHandicaps,
+            teams: teams
+        ) {
+            highlights.append("Bounce-back player: **\(markdownEscaped(bounceBack.name))**, improving \(bounceBack.improvement) \(strokeUnit(bounceBack.improvement)) from the prior Series round.")
+        }
+
+        if let strongestFinish = strongestFinishResult(snapshot: snapshot) {
+            let names = strongestFinish.names.map { "**\(markdownEscaped($0))**" }.joined(separator: ", ")
+            highlights.append("Strongest finish: \(names) at \(scoreToParLabel(strongestFinish.netToPar)) over the final four holes.")
+        }
+
+        let teamContextBlock = teamContext.map { "\n\n**Team context**\n\($0)" } ?? ""
+        let absentBlock = absentText.isEmpty ? "" : "\n\n**Absent players**\n\(absentText.joined(separator: "\n"))"
+
+        return SeriesRoundOutcomeNarrative(
+            markdown: """
+            **\(markdownEscaped(title)) is scored.**
+
+            **Leaderboard (low-to-high net)**
+            \(leaderboard)
+
+            **Birdies and Eagles**
+            \(scoreHighlightsText)\(absentBlock)\(teamContextBlock)
+
+            **Highlights**
+            \(highlights.joined(separator: "\n"))
+            """
+        )
+    }
+
+    private static func playerResults(
+        snapshot: RoundSnapshot,
+        members: [SeriesMember],
+        memberHandicaps: [String: SeriesMemberHandicap],
+        teams: [SeriesTeam]
+    ) -> [PlayerResult] {
+        let teamsByID = Dictionary(uniqueKeysWithValues: teams.map { ($0.id, $0.name) })
+        let roundTeamsByID = Dictionary(uniqueKeysWithValues: snapshot.teams.map { ($0.id, $0.name) })
+        return snapshot.participants
+            .filter(\.isPresenceActive)
+            .compactMap { participant -> PlayerResult? in
+                guard let totals = totals(for: participant, snapshot: snapshot) else { return nil }
+                let memberID = memberID(for: participant, members: members)
+                let nextHandicap = memberID.flatMap { memberHandicaps[$0]?.effectiveIndex }
+                let teamName = participant.teamID.flatMap { teamsByID[$0] ?? roundTeamsByID[$0] }
+                return PlayerResult(
+                    participant: participant,
+                    memberID: memberID,
+                    name: displayName(for: participant),
+                    grossStrokes: totals.gross,
+                    grossToPar: totals.grossToPar,
+                    netStrokes: totals.gross - participant.adjustedHandicap,
+                    netToPar: totals.grossToPar - participant.adjustedHandicap,
+                    handicapUsed: participant.adjustedHandicap,
+                    currentHandicap: participant.handicapIndex ?? participant.leagueHandicapStrokesAtCreation.map(Double.init),
+                    nextHandicap: nextHandicap,
+                    teamName: teamName
+                )
+            }
+    }
+
+    private static func totals(
+        for participant: RoundParticipant,
+        snapshot: RoundSnapshot
+    ) -> (gross: Int, grossToPar: Int)? {
+        let entriesByHole = Dictionary(
+            grouping: snapshot.scoring.filter { $0.scoringUnitID == participant.id },
+            by: \.holeNumber
+        ).compactMapValues(\.first)
+        guard entriesByHole.isPopulated else { return nil }
+
+        let tee = playedTee(for: participant, snapshot: snapshot)
+        var gross = 0
+        var grossToPar = 0
+        var hasScore = false
+
+        for holeNumber in holeNumbers(for: snapshot) {
+            guard let entry = entriesByHole[holeNumber],
+                  let par = par(for: holeNumber, tee: tee),
+                  let strokes = grossStrokes(from: entry, par: par) else {
+                continue
+            }
+            hasScore = true
+            gross += strokes
+            grossToPar += strokes - par
+        }
+
+        return hasScore ? (gross, grossToPar) : nil
+    }
+
+    private static func birdieAndEagleHighlights(snapshot: RoundSnapshot) -> [String] {
+        snapshot.participants
+            .filter(\.isPresenceActive)
+            .flatMap { participant -> [String] in
+                let tee = playedTee(for: participant, snapshot: snapshot)
+                let entries = snapshot.scoring.filter { $0.scoringUnitID == participant.id }
+                let entriesByHole = Dictionary(grouping: entries, by: \.holeNumber).compactMapValues(\.first)
+                let highlights = holeNumbers(for: snapshot).compactMap { holeNumber -> (hole: Int, label: String)? in
+                    guard let entry = entriesByHole[holeNumber],
+                          let par = par(for: holeNumber, tee: tee),
+                          let strokes = grossStrokes(from: entry, par: par) else {
+                        return nil
+                    }
+                    let diff = strokes - par
+                    if diff <= -2 { return (holeNumber, "eagle") }
+                    if diff == -1 { return (holeNumber, "birdie") }
+                    return nil
+                }
+                guard highlights.isPopulated else { return [] }
+                let name = displayName(for: participant)
+                let eagleHoles = highlights.filter { $0.label == "eagle" }.map { "#\($0.hole)" }
+                let birdieHoles = highlights.filter { $0.label == "birdie" }.map { "#\($0.hole)" }
+                var lines: [String] = []
+                if eagleHoles.isPopulated {
+                    lines.append("**\(markdownEscaped(name))** eagle-or-better on \(eagleHoles.joined(separator: ", "))")
+                }
+                if birdieHoles.isPopulated {
+                    lines.append("**\(markdownEscaped(name))** birdie on \(birdieHoles.joined(separator: ", "))")
+                }
+                return lines
+            }
+            .sorted()
+    }
+
+    private static func bounceBackResult(
+        currentResults: [PlayerResult],
+        priorRoundSnapshots: [PriorRoundSnapshot],
+        members: [SeriesMember],
+        memberHandicaps: [String: SeriesMemberHandicap],
+        teams: [SeriesTeam]
+    ) -> (name: String, improvement: Int)? {
+        let priorByMemberID = priorRoundSnapshots
+            .sorted { $0.seriesRound.index > $1.seriesRound.index }
+            .reduce(into: [String: PlayerResult]()) { result, prior in
+                for playerResult in playerResults(
+                    snapshot: prior.snapshot,
+                    members: members,
+                    memberHandicaps: memberHandicaps,
+                    teams: teams
+                ) {
+                    guard let memberID = playerResult.memberID,
+                          result[memberID] == nil else { continue }
+                    result[memberID] = playerResult
+                }
+            }
+
+        return currentResults
+            .compactMap { current -> (name: String, improvement: Int, netToPar: Int)? in
+                guard let memberID = current.memberID,
+                      let prior = priorByMemberID[memberID] else { return nil }
+                let improvement = prior.netToPar - current.netToPar
+                guard improvement > 0 else { return nil }
+                return (current.name, improvement, current.netToPar)
+            }
+            .sorted {
+                if $0.improvement != $1.improvement { return $0.improvement > $1.improvement }
+                if $0.netToPar != $1.netToPar { return $0.netToPar < $1.netToPar }
+                return $0.name.localizedCaseInsensitiveCompare($1.name) == .orderedAscending
+            }
+            .first
+            .map { ($0.name, $0.improvement) }
+    }
+
+    private static func memberID(for participant: RoundParticipant, members: [SeriesMember]) -> String? {
+        if let memberID = participant.seriesMemberID, memberID.isPopulated {
+            return memberID
+        }
+        guard let playerID = participant.playerID else { return nil }
+        return members.first { $0.playerID == playerID }?.id
+    }
+
+    private static func playedTee(for participant: RoundParticipant, snapshot: RoundSnapshot) -> Tee? {
+        if participant.teeBoxID.isPopulated,
+           let tee = snapshot.courseSegment?.tee(from: participant.teeBoxID) ?? snapshot.tees.first(where: { $0.id == participant.teeBoxID }) {
+            return tee
+        }
+        return snapshot.defaultTee ?? snapshot.tees.first
+    }
+
+    private static func holeNumbers(for snapshot: RoundSnapshot) -> [Int] {
+        snapshot.holeRange?.holeNumbers ?? snapshot.holeSegment.holeRange.holeNumbers
+    }
+
+    private static func par(for holeNumber: Int, tee: Tee?) -> Int? {
+        tee?.holes.first { $0.number == holeNumber }?.par
+    }
+
+    private static func grossStrokes(from entry: ScoreEntry, par: Int) -> Int? {
+        if let strokes = entry.strokes { return strokes }
+        if let relative = entry.relativeToPar { return par + relative }
+        return nil
+    }
+
+    private static func displayName(for participant: RoundParticipant) -> String {
+        let fullName = participant.name.fullName.trimmingCharacters(in: .whitespacesAndNewlines)
+        return fullName.isPopulated ? fullName : "Player"
+    }
+
+    private static func scoreToParLabel(_ value: Int) -> String {
+        if value == 0 { return "E" }
+        if value > 0 { return "+\(value)" }
+        return "\(value)"
+    }
+
+    private static func handicapLabel(_ value: Double?) -> String {
+        guard let value else { return "unavailable" }
+        let rounded = (value * 10).rounded() / 10
+        if abs(rounded - rounded.rounded(.towardZero)) < 0.000_001 {
+            return "\(Int(rounded.rounded(.towardZero)))"
+        }
+        return String(format: "%.1f", rounded)
+    }
+
+    private static func placementLabels(for ordered: [PlayerResult]) -> [String] {
+        var labels = Array(repeating: "", count: ordered.count)
+        var index = 0
+        var place = 1
+
+        while index < ordered.count {
+            let net = ordered[index].netStrokes
+            let start = index
+            while index < ordered.count, ordered[index].netStrokes == net {
+                index += 1
+            }
+            let tied = index - start > 1
+            let label = "\(tied ? "T-" : "")\(ordinal(place))"
+            for i in start..<index {
+                labels[i] = label
+            }
+            place += index - start
+        }
+
+        return labels
+    }
+
+    private static func ordinal(_ value: Int) -> String {
+        let ones = value % 10
+        let tens = (value / 10) % 10
+        let suffix: String
+        if tens == 1 {
+            suffix = "th"
+        } else {
+            switch ones {
+            case 1: suffix = "st"
+            case 2: suffix = "nd"
+            case 3: suffix = "rd"
+            default: suffix = "th"
+            }
+        }
+        return "\(value)\(suffix)"
+    }
+
+    private static func absentPlayerLines(
+        snapshot: RoundSnapshot,
+        members: [SeriesMember],
+        memberHandicaps: [String: SeriesMemberHandicap]
+    ) -> [String] {
+        snapshot.participants
+            .filter { !$0.isPresenceActive }
+            .sorted { displayName(for: $0) < displayName(for: $1) }
+            .map { participant in
+                let memberID = memberID(for: participant, members: members)
+                let next = memberID.flatMap { memberHandicaps[$0]?.effectiveIndex }
+                let current = participant.handicapIndex ?? participant.leagueHandicapStrokesAtCreation.map(Double.init) ?? Double(participant.adjustedHandicap)
+                let line = handicapLine(
+                    participant: participant,
+                    currentHandicap: current,
+                    currentCourseHandicap: participant.adjustedHandicap,
+                    nextHandicap: next,
+                    snapshot: snapshot
+                )
+                return "**\(markdownEscaped(displayName(for: participant)))** - \(line)"
+            }
+    }
+
+    private static func handicapLine(
+        participant: RoundParticipant,
+        currentHandicap: Double?,
+        currentCourseHandicap: Int,
+        nextHandicap: Double?,
+        snapshot: RoundSnapshot
+    ) -> String {
+        if snapshot.configuration.handicapEntryFormat == .courseHandicap {
+            let nextCourseHandicap = nextHandicap.flatMap {
+                HandicapCalculator.courseHandicap(
+                    index: $0,
+                    participant: participant,
+                    courseSegment: snapshot.courseSegment,
+                    handicapStrokeBasis: snapshot.handicapStrokeBasis
+                )
+            }
+            return "Course HCP: \(currentCourseHandicap) -> \(courseHandicapLabel(nextCourseHandicap)) next week"
+        }
+
+        return "HCP: \(handicapLabel(currentHandicap ?? Double(currentCourseHandicap))) -> \(handicapLabel(nextHandicap)) next week"
+    }
+
+    private static func courseHandicapLabel(_ value: Int?) -> String {
+        value.map(String.init) ?? "unavailable"
+    }
+
+    private static func strongestFinishResult(snapshot: RoundSnapshot) -> (names: [String], netToPar: Int)? {
+        let finalHoles = Array(holeNumbers(for: snapshot).suffix(4))
+        guard finalHoles.isPopulated else { return nil }
+
+        let results = snapshot.participants
+            .filter(\.isPresenceActive)
+            .compactMap { participant -> (name: String, netToPar: Int)? in
+                let tee = playedTee(for: participant, snapshot: snapshot)
+                let entriesByHole = Dictionary(
+                    grouping: snapshot.scoring.filter { $0.scoringUnitID == participant.id },
+                    by: \.holeNumber
+                ).compactMapValues(\.first)
+                var total = 0
+
+                for holeNumber in finalHoles {
+                    guard let entry = entriesByHole[holeNumber],
+                          let par = par(for: holeNumber, tee: tee),
+                          let strokes = grossStrokes(from: entry, par: par) else {
+                        return nil
+                    }
+                    let received = ScoringEngine.strokesReceived(
+                        handicap: participant.adjustedHandicap,
+                        holeNumber: holeNumber,
+                        holes: tee?.holes ?? [],
+                        playedHoleNumbers: holeNumbers(for: snapshot),
+                        useHandicaps: true,
+                        handicapStrokeBasis: snapshot.handicapStrokeBasis
+                    )
+                    total += strokes - par - received
+                }
+
+                return (displayName(for: participant), total)
+            }
+
+        guard let best = results.map(\.netToPar).min() else { return nil }
+        let names = results
+            .filter { $0.netToPar == best }
+            .map(\.name)
+            .sorted()
+        return (names, best)
+    }
+
+    private static func teamContextParagraph(
+        seriesRound: SeriesRound,
+        pointAwards: [SeriesPointAward],
+        standings: [SeriesStanding],
+        teams: [SeriesTeam]
+    ) -> String? {
+        let currentAwards = pointAwards.filter { $0.seriesRoundID == seriesRound.id && $0.awardTrack == .team }
+        let teamStandings = standings.filter { $0.awardTrack == .team }
+        guard currentAwards.isPopulated, teamStandings.isPopulated else { return nil }
+
+        let awardPoints = Dictionary(grouping: currentAwards, by: \.competitorID)
+            .mapValues { $0.reduce(0.0) { $0 + $1.totalPoints } }
+        let awardsByTeam = Dictionary(grouping: currentAwards, by: \.competitorID)
+        let teamNames = Dictionary(uniqueKeysWithValues: teams.map { ($0.id, $0.name) })
+
+        struct StandingContext {
+            let id: String
+            let name: String
+            let before: Double
+            let after: Double
+            let beforeRank: Int
+            let afterRank: Int
+            let roundPoints: Double
+            let result: String
+        }
+
+        let beforeEntries = teamStandings.map {
+            ($0.competitorID, max(0, $0.totalPoints - (awardPoints[$0.competitorID] ?? 0)), $0.competitorName)
+        }
+        let afterEntries = teamStandings.map {
+            ($0.competitorID, $0.totalPoints, $0.competitorName)
+        }
+        let beforeRanks = ranks(for: beforeEntries)
+        let afterRanks = ranks(for: afterEntries)
+
+        let contexts = teamStandings.map { standing in
+            let awards = awardsByTeam[standing.competitorID] ?? []
+            let result: String
+            if awards.contains(where: { ($0.tieGroupSize ?? 1) > 1 }) {
+                result = "tied"
+            } else if awards.contains(where: { $0.placement == 1 }) {
+                result = "won"
+            } else if awards.contains(where: { $0.placement == 2 }) {
+                result = "lost"
+            } else if let placement = awards.compactMap(\.placement).min() {
+                result = "placed \(ordinal(placement))"
+            } else {
+                result = "earned points"
+            }
+
+            return StandingContext(
+                id: standing.competitorID,
+                name: teamNames[standing.competitorID] ?? standing.competitorName,
+                before: max(0, standing.totalPoints - (awardPoints[standing.competitorID] ?? 0)),
+                after: standing.totalPoints,
+                beforeRank: beforeRanks[standing.competitorID] ?? standing.rank ?? 0,
+                afterRank: afterRanks[standing.competitorID] ?? standing.rank ?? 0,
+                roundPoints: awardPoints[standing.competitorID] ?? 0,
+                result: result
+            )
+        }
+
+        guard contexts.isPopulated else { return nil }
+
+        let leaderBefore = contexts.sorted {
+            if $0.before != $1.before { return $0.before > $1.before }
+            return $0.name < $1.name
+        }.first
+        let leadersAfter = contexts
+            .filter { context in
+                guard let maxAfter = contexts.map(\.after).max() else { return false }
+                return abs(context.after - maxAfter) < 0.000_001
+            }
+            .sorted { $0.name < $1.name }
+
+        var sentences: [String] = []
+        if let leaderBefore, let firstAfter = leadersAfter.first {
+            if leadersAfter.contains(where: { $0.id == leaderBefore.id }) && leadersAfter.count == 1 {
+                sentences.append("**\(markdownEscaped(leaderBefore.name))** stayed on top after \(leaderBefore.result) and adding \(leaderBefore.roundPoints.seriesPointsDisplayString) points.")
+            } else if leadersAfter.count == 1 {
+                sentences.append("**\(markdownEscaped(firstAfter.name))** moved into first after \(firstAfter.result), while **\(markdownEscaped(leaderBefore.name))** slipped from the lead.")
+            } else {
+                let names = leadersAfter.map { "**\(markdownEscaped($0.name))**" }.joined(separator: ", ")
+                sentences.append("\(names) now share first place after this round.")
+            }
+        }
+
+        let movers = contexts
+            .filter { $0.beforeRank != $0.afterRank }
+            .sorted { lhs, rhs in
+                let lhsMove = abs(lhs.beforeRank - lhs.afterRank)
+                let rhsMove = abs(rhs.beforeRank - rhs.afterRank)
+                if lhsMove != rhsMove { return lhsMove > rhsMove }
+                return lhs.afterRank < rhs.afterRank
+            }
+        if let mover = movers.first {
+            let direction = mover.afterRank < mover.beforeRank ? "climbed" : "dropped"
+            sentences.append("**\(markdownEscaped(mover.name))** \(direction) from \(ordinal(mover.beforeRank)) to \(ordinal(mover.afterRank)) with a \(mover.result) worth \(mover.roundPoints.seriesPointsDisplayString) points.")
+        }
+
+        return sentences.isPopulated ? sentences.joined(separator: " ") : nil
+    }
+
+    private static func ranks(for entries: [(id: String, points: Double, name: String)]) -> [String: Int] {
+        let ordered = entries.sorted {
+            if $0.points != $1.points { return $0.points > $1.points }
+            return $0.name < $1.name
+        }
+        var ranks: [String: Int] = [:]
+        var index = 0
+        var rank = 1
+        while index < ordered.count {
+            let points = ordered[index].points
+            let start = index
+            while index < ordered.count, abs(ordered[index].points - points) < 0.000_001 {
+                index += 1
+            }
+            for i in start..<index {
+                ranks[ordered[i].id] = rank
+            }
+            rank += index - start
+        }
+        return ranks
+    }
+
+    private static func markdownEscaped(_ value: String) -> String {
+        value
+            .replacingOccurrences(of: "\\", with: "\\\\")
+            .replacingOccurrences(of: "*", with: "\\*")
+            .replacingOccurrences(of: "_", with: "\\_")
+            .replacingOccurrences(of: "[", with: "\\[")
+            .replacingOccurrences(of: "]", with: "\\]")
+    }
+
+    private static func strokeUnit(_ count: Int) -> String {
+        count == 1 ? "stroke" : "strokes"
+    }
+}
+
+struct SeriesRoundMatchupMemberOption: Identifiable, Hashable {
+    let memberID: String
+    let teamID: String?
+    let title: String
+    let subtitle: String?
+
+    var id: String { memberID }
+}
+
+struct SeriesRoundMatchupMemberOptionSection: Identifiable, Hashable {
+    let id: String
+    let title: String
+    let options: [SeriesRoundMatchupMemberOption]
+}
+
+enum SeriesRoundMatchupMemberOptionBuilder {
+    static func sortedMembers(
+        _ members: [SeriesMember],
+        handicapFor: (String) -> Double?
+    ) -> [SeriesMember] {
+        members.sorted { lhs, rhs in
+            let leftHandicap = handicapFor(lhs.id)
+            let rightHandicap = handicapFor(rhs.id)
+
+            switch (leftHandicap, rightHandicap) {
+            case let (left?, right?) where abs(left - right) > 0.000_001:
+                return left < right
+            case (_?, nil):
+                return true
+            case (nil, _?):
+                return false
+            default:
+                let byName = lhs.name.fullName.localizedCaseInsensitiveCompare(rhs.name.fullName)
+                if byName != .orderedSame { return byName == .orderedAscending }
+                return lhs.id < rhs.id
+            }
+        }
+    }
+
+    static func sections(
+        members: [SeriesMember],
+        teams: [SeriesTeam],
+        usesTeams: Bool,
+        handicapFor: (String) -> Double?
+    ) -> [SeriesRoundMatchupMemberOptionSection] {
+        let sorted = sortedMembers(members, handicapFor: handicapFor)
+        guard usesTeams else {
+            return [
+                SeriesRoundMatchupMemberOptionSection(
+                    id: "all-members",
+                    title: "Players",
+                    options: sorted.map { option(for: $0, handicapFor: handicapFor) }
+                ),
+            ]
+        }
+
+        let membersByTeamID = Dictionary(grouping: sorted) { member in
+            guard let teamID = member.teamID, teamID.isPopulated else { return "no-team" }
+            return teamID
+        }
+
+        var sections: [SeriesRoundMatchupMemberOptionSection] = teams.compactMap { team in
+            guard let members = membersByTeamID[team.id], members.isPopulated else { return nil }
+            return SeriesRoundMatchupMemberOptionSection(
+                id: team.id,
+                title: team.name,
+                options: members.map { option(for: $0, handicapFor: handicapFor) }
+            )
+        }
+
+        if let unassigned = membersByTeamID["no-team"], unassigned.isPopulated {
+            sections.append(
+                SeriesRoundMatchupMemberOptionSection(
+                    id: "no-team",
+                    title: "No team",
+                    options: unassigned.map { option(for: $0, handicapFor: handicapFor) }
+                )
+            )
+        }
+
+        return sections
+    }
+
+    static func handicapText(for handicap: Double?) -> String? {
+        guard let handicap else { return nil }
+        return String(format: "%.1f HCP", handicap)
+    }
+
+    private static func option(
+        for member: SeriesMember,
+        handicapFor: (String) -> Double?
+    ) -> SeriesRoundMatchupMemberOption {
+        SeriesRoundMatchupMemberOption(
+            memberID: member.id,
+            teamID: member.teamID,
+            title: member.name.fullName,
+            subtitle: handicapText(for: handicapFor(member.id))
+        )
+    }
+}
+
+enum SeriesLeagueRulesConfirmationState {
+    case notConfirmed
+    case confirmed(Time)
+    case needsReconfirmation(Time?)
+}
+
+private struct SeriesLeagueRulesSignaturePayload: Codable, Hashable {
+    var formatTemplateID: String
+    var competitionScope: CompetitionScope?
+    var teamScoring: RoundTeamScoringConfiguration
+    var matchupResolutionStyle: RoundMatchupResolutionStyle
+    var sequentialTeeStartsEnabled: Bool
+    var sharedScoreHandicapConfig: HandicapConfiguration?
+    var maxScoreOverPar: MaxScoreOverPar
+    var defaultTeamScoringProfileID: String?
+    var defaultIndividualScoringProfileID: String?
+    var handicapConfig: SeriesHandicapConfig
+    var allowRoundEditsAfterLobbyCreation: Bool
+    var allowManualAwardOverrides: Bool
+    var attendanceDefault: SeriesRoundAttendanceStatus
+    var podGroupingDefault: SeriesPodGroupingStrategy
+    var useTeams: Bool
+    var useIndividualStandings: Bool
+    var useTeamStandings: Bool
+    var substitutesScore: Bool
+
+    init(settings: SeriesSettings) {
+        formatTemplateID = settings.defaultRoundConfig.formatTemplateID
+        competitionScope = settings.defaultRoundConfig.competitionScope
+        teamScoring = settings.defaultRoundConfig.teamScoring
+        matchupResolutionStyle = settings.defaultRoundConfig.matchupResolutionStyle
+        sequentialTeeStartsEnabled = settings.defaultRoundConfig.sequentialTeeStartsEnabled ?? false
+        sharedScoreHandicapConfig = settings.defaultRoundConfig.sharedScoreHandicapConfig
+        maxScoreOverPar = settings.defaultRoundConfig.maxScoreOverPar ?? .quad
+        defaultTeamScoringProfileID = settings.defaultTeamScoringProfileID
+        defaultIndividualScoringProfileID = settings.defaultIndividualScoringProfileID
+        handicapConfig = settings.handicapConfig
+        allowRoundEditsAfterLobbyCreation = settings.allowRoundEditsAfterLobbyCreation
+        allowManualAwardOverrides = settings.allowManualAwardOverrides
+        attendanceDefault = settings.attendanceDefault
+        podGroupingDefault = settings.podGroupingDefault
+        useTeams = settings.useTeams
+        useIndividualStandings = settings.useIndividualStandings
+        useTeamStandings = settings.useTeamStandings
+        substitutesScore = settings.substitutesScore
+    }
+}
+
+struct SeriesHandicapRoundUsage: Hashable {
+    let courseHandicap: Int
+    let handicapIndex: Double?
+    let teeName: String?
+}
+
+@MainActor
+final class SeriesViewModel: ObservableObject, Loggable {
+    nonisolated static let currentAutomaticAwardsEngineVersion = 4
+
+    @Published var series: Series = .init()
+    @Published var members: [SeriesMember] = []
+    @Published var invites: [SeriesInvite] = []
+    @Published var teams: [SeriesTeam] = []
+    @Published var pods: [SeriesTeamPod] = []
+    @Published var rounds: [SeriesRound] = []
+    @Published var announcements: [SeriesAnnouncement] = []
+    @Published var scoringProfiles: [SeriesScoringProfile] = []
+    @Published var pointAwards: [SeriesPointAward] = []
+    @Published var standings: [SeriesStanding] = []
+    @Published private(set) var standingsReadSource: SeriesStandingsReadSource = .legacy
+    @Published var handicapScores: [SeriesHandicapScore] = []
+    @Published var handicapOverrides: [SeriesHandicapOverride] = []
+    @Published var memberHandicaps: [String: SeriesMemberHandicap] = [:]
+    /// Score row IDs: rolling pool vs scores that count toward the computed index (handicap enabled).
+    @Published var memberHandicapScoreSelections: [String: (poolIDs: Set<String>, countingIDs: Set<String>)] = [:]
+    @Published var attendanceByMember: [String: SeriesRoundAttendance] = [:]
+    @Published var attendanceByRound: [String: [SeriesRoundAttendance]] = [:]
+    @Published var linkedRounds: [String: Round] = [:]
+    @Published private(set) var linkedConfigurationDivergences: [String: SeriesRoundConfigurationDivergence] = [:]
+    private let snapshotRepository: SeriesRoundSnapshotRepository
+    private let standingsPublicationService: SeriesStandingsPublicationService
+    private var canonicalProcessingStates: [String: SeriesRoundProcessingState] = [:]
+    private(set) var canonicalRoundResults: [String: SeriesRoundResult] = [:]
+    private var legacyStandings: [SeriesStanding] = []
+    private var canonicalRetryRoundIDs = Set<String>()
+    @Published var isLoading = true
+    @Published var isEnriching = false
+    @Published var isSaving = false
+    @Published var creatingRoundID: String?
+    @Published var roundCreationErrorMessage: String?
+    @Published var correctingRoundID: String?
+    @Published var scoreCorrectionErrorMessage: String?
+    @Published var exportingRoundID: String?
+    @Published var exportedCSVURL: URL?
+    @Published var skippedCSVExportRoundTitles: [String] = []
+    @Published var seriesCourseTeesByCourseID: [String: [Tee]] = [:]
+    @Published var isRebuildingIndividualStandings = false
+    @Published var isRebuildingAutomaticAwards = false
+    @Published private(set) var isSavingStandingsPolicy = false
+    @Published private(set) var isAssessingStandingsMigration = false
+    @Published private(set) var isPreparingCanonicalStandings = false
+    @Published private(set) var standingsRolloutProgress: SeriesStandingsRolloutProgress?
+    @Published private(set) var standingsMigrationAssessment: SeriesStandingsMigrationAssessment?
+
+    nonisolated static let standingsMigrationBatchSize = 5
+
+    var seriesID: String { series.id }
+    var currentUserID: String?
+    var currentPlayerID: String?
+    private var isHydratingHandicapScoreMetadata = false
+    private lazy var realtimeSourceStore = SeriesRealtimeSourceStore(
+        callbacks: SeriesRealtimeSourceStore.Callbacks(
+            didReceiveSeries: { [weak self] updated in
+                await self?.applyRealtimeSeries(updated)
+            },
+            didReceiveRounds: { [weak self] updated in
+                await self?.applyRealtimeSeriesRounds(updated)
+            },
+            didReceiveCanonicalStates: { [weak self] states in
+                self?.applyRealtimeCanonicalStates(states)
+            },
+            didReceiveCanonicalResults: { [weak self] results in
+                self?.applyRealtimeCanonicalResults(results)
+            },
+            didReceiveLinkedRound: { [weak self] round in
+                await self?.applyFreshLinkedRound(round)
+            },
+            didFail: { [weak self] message, error in
+                self?.addBreadcrumb(level: .error, message: message, error: error)
+            }
+        )
+    )
+
+    private var activeRealtimeListenerCount: Int {
+        realtimeSourceStore.activeListenerCount
+    }
+
+    init(
+        snapshotRepository: SeriesRoundSnapshotRepository? = nil,
+        standingsPublicationService: SeriesStandingsPublicationService? = nil
+    ) {
+        self.snapshotRepository = snapshotRepository ?? SeriesRoundSnapshotRepository()
+        self.standingsPublicationService = standingsPublicationService ?? SeriesStandingsPublicationService()
+    }
+
+    var isCommissioner: Bool {
+        guard let userID = currentUserID else { return false }
+        if series.commissionerUserID == userID { return true }
+        guard let playerID = currentPlayerID else { return false }
+        return activeMembers.first { $0.playerID == playerID }?.role == .commissioner
+    }
+
+    var currentMemberID: String? {
+        guard let playerID = currentPlayerID else { return nil }
+        return activeMembers.first { $0.playerID == playerID }?.id
+    }
+
+    /// Roster row for the signed-in player, if they are on the series.
+    var currentMemberRecord: SeriesMember? {
+        guard let playerID = currentPlayerID else { return nil }
+        return activeMembers.first { $0.playerID == playerID }
+    }
+
+    /// Stored role on the roster; series owner with a non-commissioner row is still covered by `isCommissioner`.
+    var isCaptain: Bool {
+        currentMemberRecord?.role == .captain
+    }
+
+    var activeMembers: [SeriesMember] {
+        members
+            .filter(\.isActive)
+            .sorted { $0.name.fullName.localizedCaseInsensitiveCompare($1.name.fullName) == .orderedAscending }
+    }
+
+    var eligibleMembers: [SeriesMember] {
+        activeMembers.filter { $0.role != .spectator }
+    }
+
+    var sortedTeams: [SeriesTeam] {
+        teams.sorted { a, b in
+            let byName = a.name.localizedCaseInsensitiveCompare(b.name)
+            if byName != .orderedSame { return byName == .orderedAscending }
+            return a.index < b.index
+        }
+    }
+
+    var sortedPods: [SeriesTeamPod] {
+        pods.sorted {
+            if $0.teamID != $1.teamID { return $0.teamID < $1.teamID }
+            return $0.index < $1.index
+        }
+    }
+
+    var activeAnnouncements: [SeriesAnnouncement] {
+        announcements
+            .filter { $0.isActive() }
+            .sorted {
+                if $0.startsAt.unix != $1.startsAt.unix { return $0.startsAt.unix > $1.startsAt.unix }
+                return $0.createdAt.unix > $1.createdAt.unix
+            }
+    }
+
+    private func sortRoundsByScheduleThenIndex(_ lhs: SeriesRound, _ rhs: SeriesRound) -> Bool {
+        let lhsT = lhs.scheduledAt?.unix ?? .greatestFiniteMagnitude
+        let rhsT = rhs.scheduledAt?.unix ?? .greatestFiniteMagnitude
+        if lhsT != rhsT { return lhsT < rhsT }
+        return lhs.index < rhs.index
+    }
+
+    var inProgressRounds: [SeriesRound] {
+        rounds
+            .filter {
+                let status = effectiveStatus(for: $0)
+                return status == .lobby || status == .live
+            }
+            .sorted(by: sortRoundsByScheduleThenIndex)
+    }
+
+    var plannedRounds: [SeriesRound] {
+        rounds
+            .filter { effectiveStatus(for: $0) == .planned }
+            .sorted(by: sortRoundsByScheduleThenIndex)
+    }
+
+    var completedRounds: [SeriesRound] {
+        rounds
+            .filter { effectiveStatus(for: $0) == .complete }
+            .sorted { ($0.completedAt?.unix ?? 0) > ($1.completedAt?.unix ?? 0) }
+    }
+
+    var canceledRounds: [SeriesRound] {
+        rounds
+            .filter { effectiveStatus(for: $0) == .canceled }
+            .sorted { ($0.scheduledAt?.unix ?? 0) > ($1.scheduledAt?.unix ?? 0) }
+    }
+
+    var teamStandings: [SeriesStanding] {
+        let canonicalTeamIDs = Set(teams.map(\.id))
+        return standings
+            .filter {
+                $0.awardTrack == .team
+                    && canonicalTeamIDs.contains($0.competitorID)
+            }
+            .sorted(by: Self.standingsSort)
+    }
+
+    var individualStandings: [SeriesStanding] {
+        standings
+            .filter { $0.awardTrack == .individual }
+            .sorted(by: Self.standingsSort)
+    }
+
+    var individualStatsRows: [SeriesIndividualStatsRow] {
+        Self.individualStatsRows(
+            members: eligibleMembers,
+            handicapScores: handicapScores,
+            completedRounds: completedRounds,
+            handicaps: memberHandicaps
+        )
+    }
+
+    var hasIndividualPlacementConfigured: Bool {
+        guard series.settings.useIndividualStandings else { return false }
+        let profileIDs = Set(([series.settings.defaultIndividualScoringProfileID] + rounds.map(\.individualScoringProfileID)).compactMap { $0 })
+        return profileIDs.contains { profileID in
+            guard let profile = scoringProfile(id: profileID) else { return false }
+            return profile.kind == .placement && profile.outcomeSource == .roundIndividualLeaderboard
+        }
+    }
+
+    var canRebuildIndividualStandings: Bool {
+        isCommissioner
+            && completedRounds.contains(where: hasMissingIndividualPlacementAwards)
+    }
+
+    var canRebuildAutomaticAwards: Bool {
+        isCommissioner
+            && completedRounds.contains(where: needsAutomaticAwardsEngineRefresh)
+    }
+
+    var hasTeams: Bool {
+        series.settings.useTeams || !teams.isEmpty
+    }
+
+    var usesTeams: Bool {
+        series.settings.useTeams
+    }
+
+    /// League default uses fixed pairs for pod-aligned grouping instead of fully manual tee-group suggestions.
+    var isPodPairGroupingEnabled: Bool {
+        series.settings.podGroupingDefault.usesPodAlignment
+    }
+
+    var hasPlayers: Bool { eligibleMembers.count > 2 }
+    var hasScheduledRound: Bool { rounds.isPopulated }
+
+    nonisolated static func individualStatsRows(
+        members: [SeriesMember],
+        handicapScores: [SeriesHandicapScore],
+        completedRounds: [SeriesRound],
+        handicaps: [String: SeriesMemberHandicap]
+    ) -> [SeriesIndividualStatsRow] {
+        let completedRoundIDs = Set(completedRounds.compactMap(\.roundID))
+        let roundScores = handicapScores.filter { score in
+            score.source == .round
+                && score.sourceRoundID.map { completedRoundIDs.contains($0) } == true
+        }
+        let scoresByMemberID = Dictionary(grouping: roundScores, by: \.memberID)
+
+        let rows = members.map { member -> SeriesIndividualStatsRow in
+            let scores = scoresByMemberID[member.id] ?? []
+            let differentials = scores.compactMap { roundDifferential(for: $0) }
+            let averageDifferential = differentials.isEmpty
+                ? nil
+                : differentials.reduce(0, +) / Double(differentials.count)
+            let grossScores = scores.map(\.score).filter(\.isFinite)
+            let averageGross = grossScores.isEmpty
+                ? nil
+                : grossScores.reduce(0, +) / Double(grossScores.count)
+            let currentHandicap = handicaps[member.id]?.effectiveIndex.flatMap { handicap in
+                handicap.isFinite ? handicap : nil
+            }
+            let averageNet = averageGross.flatMap { gross in
+                currentHandicap.map { gross - $0 }
+            }
+            return SeriesIndividualStatsRow(
+                memberID: member.id,
+                name: member.name.fullName,
+                averageDifferential: averageDifferential,
+                averageGross: averageGross,
+                averageNet: averageNet,
+                currentHandicap: currentHandicap,
+                roundsPlayed: Set(scores.compactMap(\.sourceRoundID)).count
+            )
+        }
+
+        return rows.sorted { lhs, rhs in
+            switch (lhs.averageDifferential, rhs.averageDifferential) {
+            case let (l?, r?) where l != r:
+                return l < r
+            case (.some, nil):
+                return true
+            case (nil, .some):
+                return false
+            default:
+                return lhs.name.localizedCaseInsensitiveCompare(rhs.name) == .orderedAscending
+            }
+        }
+    }
+
+    private nonisolated static func roundDifferential(for score: SeriesHandicapScore) -> Double? {
+        guard score.score.isFinite else { return nil }
+        if let rating = score.courseRating,
+           let slope = score.courseSlope,
+           rating.isFinite,
+           slope > 0 {
+            return (score.score - rating) * 113.0 / Double(slope)
+        }
+        guard score.par.isFinite else { return nil }
+        return score.score - score.par
+    }
+
+    var hasScoringRules: Bool { isLeagueRulesConfirmed(for: series.settings) }
+    var hasDefaultCourse: Bool { series.settings.defaultCourse?.isConfigured == true }
+    var isSeriesScoreboardEligible: Bool {
+        SeriesScoreboardEligibility.isEligible(teams: teams)
+    }
+    var scoreboardSnapshot: SeriesScoreboardSnapshot? {
+        guard series.settings.showScoreboardTile, isSeriesScoreboardEligible else { return nil }
+        return SeriesScoreboardCalculator.snapshot(
+            series: series,
+            rounds: rounds,
+            scoringProfiles: scoringProfiles,
+            pointAwards: pointAwards,
+            teams: teams,
+            members: members
+        )
+    }
+    var skippedDefaultCourse: Bool { false }
+    var checklistComplete: Bool { hasPlayers && hasScheduledRound && hasScoringRules }
+
+    /// Common PostHog props for `series.*` events (no PII).
+    private func seriesTelemetryProps(_ extra: [String: Any] = [:]) -> [String: Any] {
+        var props: [String: Any] = ["series_id": seriesID, "is_commissioner": isCommissioner]
+        extra.forEach { props[$0.key] = $0.value }
+        return props
+    }
+
+    var leagueRulesConfirmationState: SeriesLeagueRulesConfirmationState {
+        leagueRulesConfirmationState(for: series.settings)
+    }
+
+    func materialLeagueRulesSignature(for settings: SeriesSettings) -> String {
+        let payload = SeriesLeagueRulesSignaturePayload(settings: settings)
+        let encoder = JSONEncoder()
+        encoder.outputFormatting = [.sortedKeys]
+        guard let data = try? encoder.encode(payload),
+              let signature = String(data: data, encoding: .utf8) else {
+            return ""
+        }
+        return signature
+    }
+
+    func isLeagueRulesConfirmed(for settings: SeriesSettings) -> Bool {
+        guard series.leagueRulesConfirmedAt != nil else { return false }
+        return series.leagueRulesSignature == materialLeagueRulesSignature(for: settings)
+    }
+
+    func leagueRulesConfirmationState(for settings: SeriesSettings) -> SeriesLeagueRulesConfirmationState {
+        guard let confirmedAt = series.leagueRulesConfirmedAt else { return .notConfirmed }
+        let signature = materialLeagueRulesSignature(for: settings)
+        return series.leagueRulesSignature == signature ? .confirmed(confirmedAt) : .needsReconfirmation(confirmedAt)
+    }
+
+    func effectiveStatus(for seriesRound: SeriesRound) -> SeriesRoundStatus {
+        guard let roundID = seriesRound.roundID,
+              let linkedRound = linkedRounds[roundID] else { return seriesRound.status }
+        return Self.resolvedLinkedRoundStatus(
+            previousStatus: seriesRound.status,
+            linkedRoundStatus: linkedRound.status
+        )
+    }
+
+    func effectiveRoundConfig(for seriesRound: SeriesRound) -> SeriesRoundConfiguration {
+        seriesRound.roundConfig
+    }
+
+    func standingsPolicyCompatibility(for seriesRound: SeriesRound) -> [SeriesStandingsRuleCompatibility] {
+        SeriesStandingsPolicyResolver.compatibility(for: seriesRound, in: series)
+    }
+
+    func shouldUseLinkedRoundConfiguration(for seriesRound: SeriesRound, linkedRound: Round) -> Bool {
+        false
+    }
+
+    func linkedConfigurationDivergence(for seriesRound: SeriesRound) -> SeriesRoundConfigurationDivergence? {
+        linkedConfigurationDivergences[seriesRound.id]
+    }
+
+    private func refreshLinkedConfigurationDivergences() {
+        linkedConfigurationDivergences = Dictionary(
+            uniqueKeysWithValues: rounds.compactMap { seriesRound in
+                guard let roundID = seriesRound.roundID,
+                      let linkedRound = linkedRounds[roundID],
+                      let divergence = SeriesRoundConfigurationReconciler.divergence(
+                        series: series,
+                        seriesRound: seriesRound,
+                        linkedRound: linkedRound
+                      ) else { return nil }
+                return (seriesRound.id, divergence)
+            }
+        )
+    }
+
+    private func shouldPreserveSeriesMatchupConfig(for seriesRound: SeriesRound, linkedRound: Round) -> Bool {
+        linkedRound.configuration.resolvedCompetitionScope != .matchup
+            && SeriesRoundCreationMapping.resolvedCompetitionScope(for: seriesRound) == .matchup
+    }
+
+    func roundTileFormatCaption(for seriesRound: SeriesRound) -> String {
+        SeriesRoundTileCopy.formatCaption(
+            config: effectiveRoundConfig(for: seriesRound),
+            series: series
+        )
+    }
+
+    func roundTileOpponentSummary(for seriesRound: SeriesRound) -> SeriesRoundTileOpponentSummary? {
+        SeriesRoundTileCopy.opponentSummary(
+            seriesRound: seriesRound,
+            configuration: effectiveRoundConfig(for: seriesRound),
+            currentMemberID: currentMemberID,
+            members: activeMembers,
+            teams: teams,
+            pods: sortedPods,
+            hasTeamsInLeague: hasTeams
+        )
+    }
+
+    func roundTileTeeGroupContext(for seriesRound: SeriesRound) -> String? {
+        guard seriesRound.plannedTeeGroups.isPopulated,
+              let memberID = currentMemberID else { return nil }
+
+        guard let group = seriesRound.plannedTeeGroups.first(where: { $0.memberIDs.contains(memberID) })
+        else { return nil }
+
+        var parts: [String] = []
+
+        if let teeTime = group.teeTime, !teeTime.isEmpty {
+            parts.append(teeTime)
+        }
+        if group.startingHole > 0 {
+            parts.append("Hole \(group.startingHole)")
+        }
+
+        let partnerNames = group.memberIDs
+            .filter { $0 != memberID }
+            .compactMap { id in activeMembers.first(where: { $0.id == id })?.name.givenName }
+            .filter { !$0.isEmpty }
+
+        if !partnerNames.isEmpty {
+            parts.append("with \(partnerNames.joined(separator: ", "))")
+        }
+
+        return parts.isEmpty ? nil : parts.joined(separator: " \(kDot) ")
+    }
+
+    func handicapParticipationMembers(for seriesRound: SeriesRound?) -> [SeriesMember] {
+        guard let seriesRound,
+              let linked = linkedRound(for: seriesRound),
+              linked.players.isPopulated else {
+            return eligibleMembers
+        }
+
+        let playerIDs = Set(linked.players)
+        let linkedMembers = eligibleMembers.filter { member in
+            guard let playerID = member.playerID else { return false }
+            return playerIDs.contains(playerID)
+        }
+        return linkedMembers.isPopulated ? linkedMembers : eligibleMembers
+    }
+
+    /// Returns `true` when all participants in the linked round have submitted completion entries.
+    func allScoresComplete(for seriesRound: SeriesRound) -> Bool {
+        guard let roundID = seriesRound.roundID,
+              let linked = linkedRounds[roundID],
+              linked.players.isPopulated else { return false }
+        let completedIDs = Set(linked.completedPlayers.map(\.playerID))
+        return linked.players.allSatisfy { completedIDs.contains($0) }
+    }
+
+    /// Returns `true` once a live linked round has at least one completed player available for score review.
+    func canReviewScores(for seriesRound: SeriesRound) -> Bool {
+        guard effectiveStatus(for: seriesRound) == .live,
+              let roundID = seriesRound.roundID,
+              let linked = linkedRounds[roundID] else { return false }
+        return linked.completedPlayers.contains { $0.playerID.isPopulated }
+    }
+
+    /// Linked round for a given series round, if available.
+    func linkedRound(for seriesRound: SeriesRound) -> Round? {
+        guard let roundID = seriesRound.roundID else { return nil }
+        return linkedRounds[roundID]
+    }
+
+    /// Series list navigation target for a linked round (aligned with `DashboardView.handleRoundTap`).
+    enum LinkedRoundNavigationTarget {
+        case lobby
+        case liveRound
+        case roundOutcome
+    }
+
+    func linkedRoundNavigationTarget(for seriesRound: SeriesRound) -> LinkedRoundNavigationTarget {
+        guard let roundID = seriesRound.roundID else {
+            return .lobby
+        }
+        guard let linked = linkedRounds[roundID] else {
+            switch seriesRound.status {
+            case .complete:
+                return .roundOutcome
+            case .live:
+                return .liveRound
+            case .planned, .lobby, .canceled:
+                return .lobby
+            }
+        }
+        if linked.status == .paused {
+            return .roundOutcome
+        }
+        switch effectiveStatus(for: seriesRound) {
+        case .complete:
+            return .roundOutcome
+        case .live:
+            if allScoresComplete(for: seriesRound) { return .roundOutcome }
+            if let pid = currentPlayerID,
+               linked.completedPlayers.contains(where: { $0.playerID == pid }) {
+                return .roundOutcome
+            }
+            return .liveRound
+        case .planned, .lobby:
+            return .lobby
+        case .canceled:
+            return .lobby
+        }
+    }
+
+    func openLinkedRoundButtonTitle(for seriesRound: SeriesRound) -> String {
+        switch linkedRoundNavigationTarget(for: seriesRound) {
+        case .roundOutcome:
+            return "View results"
+        case .liveRound:
+            return "Continue playing"
+        case .lobby:
+            return "Open lobby"
+        }
+    }
+
+    func openLinkedRoundButtonColor(for seriesRound: SeriesRound) -> Color {
+        switch linkedRoundNavigationTarget(for: seriesRound) {
+        case .roundOutcome:
+            return .accentYellow
+        case .liveRound:
+            return .accentPurple
+        case .lobby:
+            return .accentGreen
+        }
+    }
+
+    func isRSVPEligible(for seriesRound: SeriesRound) -> Bool {
+        guard series.settings.isAttendanceEnabled else { return false }
+        let status = effectiveStatus(for: seriesRound)
+        return status == .planned && seriesRound.roundID == nil
+    }
+
+    /// Returns whether the current user participated in the linked round and their score label.
+    /// Score label is the gross total relative to par (e.g. "+5", "E", "-2").
+    /// Returns `nil` when there is no linked round or the current player cannot be identified.
+    func currentUserScoreContext(for seriesRound: SeriesRound) -> (played: Bool, scoreLabel: String?)? {
+        guard let roundID = seriesRound.roundID,
+              let playerID = currentPlayerID else { return nil }
+        let linked = linkedRounds[roundID]
+        let persistedScore = currentMemberID.flatMap { memberID in
+            handicapScores.first { $0.sourceRoundID == roundID && $0.memberID == memberID }
+        }
+
+        guard let linked else {
+            guard seriesRound.status == .complete, let persistedScore else { return nil }
+            return (played: true, scoreLabel: scoreLabel(for: persistedScore))
+        }
+
+        let played = linked.players.contains(playerID)
+
+        guard played, let persistedScore else { return (played: played, scoreLabel: nil) }
+        return (played: true, scoreLabel: scoreLabel(for: persistedScore))
+    }
+
+    private func scoreLabel(for handicapScore: SeriesHandicapScore) -> String {
+        let diff = Int(handicapScore.score) - Int(handicapScore.par)
+        let label = diff == 0 ? "E" : diff > 0 ? "+\(diff)" : "\(diff)"
+        return label
+    }
+
+    /// Force-completes all remaining players for a live round (commissioner action).
+    func forceCompleteRound(_ seriesRound: SeriesRound) async {
+        guard isCommissioner,
+              let roundID = seriesRound.roundID,
+              let linked = linkedRounds[roundID] else { return }
+
+        let completedIDs = Set(linked.completedPlayers.map(\.playerID))
+        let remaining = linked.players.filter { !completedIDs.contains($0) }
+
+        guard remaining.isPopulated else {
+            await refreshLinkedRoundState()
+            return
+        }
+
+        let entries = remaining.map { playerID in
+            CompletedPlayer(
+                playerID: playerID,
+                completedAt: .init(),
+                type: .commissionerOverride,
+                scorecardStorageID: nil
+            )
+        }
+
+        do {
+            try await FirebaseService.shared.markPlayersComplete(roundID: roundID, completedPlayers: entries)
+        } catch {
+            addBreadcrumb(level: .error, message: "forceCompleteRound batch mark failed", error: error)
+            return
+        }
+
+        addEvent(
+            "series.round_force_completed",
+            eventProps: seriesTelemetryProps([
+                "series_round_id": seriesRound.id,
+                "round_id": roundID,
+                "players_marked_complete": entries.count
+            ])
+        )
+
+        if case .success(let refreshed) = await FirebaseService.shared.getRoundByID(roundID) {
+            linkedRounds[roundID] = refreshed
+        }
+
+        await refreshLinkedRoundState()
+    }
+
+    func suggestedCourseSelectionForNextRound() -> SeriesCourseSelection? {
+        resolvedDefaultCourseSelection(forRoundIndex: rounds.nextIndex)
+    }
+
+    func suggestedCourseSelection(forRoundIndex roundIndex: Int) -> SeriesCourseSelection? {
+        resolvedDefaultCourseSelection(forRoundIndex: roundIndex)
+    }
+
+    func suggestedMatchupPlans(
+        pairGroupingStrategy: SeriesPodGroupingStrategy? = nil,
+        preserving existingPlans: [SeriesRoundMatchupPlan] = []
+    ) -> [SeriesRoundMatchupPlan] {
+        guard usesTeams else { return [] }
+
+        let orderedTeams = sortedTeams
+        var plans: [SeriesRoundMatchupPlan] = []
+        var pairIndex = 0
+        var teamCursor = 0
+
+        while teamCursor + 1 < orderedTeams.count {
+            let teamAID = orderedTeams[teamCursor].id
+            let teamBID = orderedTeams[teamCursor + 1].id
+            let existing = existingPlans.first {
+                Set([$0.teamAID, $0.teamBID]) == Set([teamAID, teamBID])
+            }
+
+            plans.append(
+                SeriesRoundMatchupPlan(
+                    id: existing?.id ?? HackersID.string(),
+                    teamAID: teamAID,
+                    teamBID: teamBID,
+                    index: pairIndex,
+                    podGroupingStrategy: existing?.podGroupingStrategy ?? pairGroupingStrategy ?? series.settings.podGroupingDefault,
+                    notes: existing?.notes,
+                    isLocked: existing?.isLocked ?? false,
+                    createdAt: existing?.createdAt ?? .init(),
+                    lastUpdatedAt: .init()
+                )
+            )
+
+            pairIndex += 1
+            teamCursor += 2
+        }
+
+        return plans
+    }
+
+    func pairGroupingTitle(
+        for strategy: SeriesPodGroupingStrategy,
+        matchupPlans: [SeriesRoundMatchupPlan]? = nil
+    ) -> String {
+        switch strategy {
+        case .disabled:
+            return "Manual"
+        case .alignByIndex:
+            return "Align pairs"
+        case .swapPairs:
+            return shouldPresentRotatePairs(for: matchupPlans) ? "Rotate pairs" : "Swap pairs"
+        }
+    }
+
+    func pairGroupingSubtitle(
+        for strategy: SeriesPodGroupingStrategy,
+        matchupPlans: [SeriesRoundMatchupPlan]? = nil
+    ) -> String {
+        switch strategy {
+        case .disabled:
+            return "Pairs do not affect tee-group suggestions."
+        case .alignByIndex:
+            return "Team 1 A vs Team 2 A, Team 1 B vs Team 2 B."
+        case .swapPairs:
+            if shouldPresentRotatePairs(for: matchupPlans) {
+                return "Each Team 1 pair shifts to the next Team 2 pair, wrapping at the end."
+            }
+            return "Team 1 A vs Team 2 B, Team 1 B vs Team 2 A."
+        }
+    }
+
+    private func shouldPresentRotatePairs(for matchupPlans: [SeriesRoundMatchupPlan]? = nil) -> Bool {
+        let relevantPlans: [SeriesRoundMatchupPlan]
+        if let matchupPlans, matchupPlans.isPopulated {
+            relevantPlans = matchupPlans.filter { $0.teamAID.isPopulated && $0.teamBID.isPopulated }
+        } else {
+            let orderedTeams = sortedTeams
+            var plans: [SeriesRoundMatchupPlan] = []
+            var teamCursor = 0
+            var index = 0
+            while teamCursor + 1 < orderedTeams.count {
+                plans.append(
+                    SeriesRoundMatchupPlan(
+                        teamAID: orderedTeams[teamCursor].id,
+                        teamBID: orderedTeams[teamCursor + 1].id,
+                        index: index,
+                        podGroupingStrategy: .swapPairs
+                    )
+                )
+                teamCursor += 2
+                index += 1
+            }
+            relevantPlans = plans
+        }
+
+        guard relevantPlans.isPopulated else { return false }
+        let podsByTeam = Dictionary(grouping: pods.filter(\.isSchedulable)) { $0.teamID }
+
+        return relevantPlans.contains { plan in
+            let podsA = (podsByTeam[plan.teamAID] ?? []).count
+            let podsB = (podsByTeam[plan.teamBID] ?? []).count
+            return podsA == podsB && podsA > 2
+        }
+    }
+
+    func suggestedIndividualMatchupPlans(
+        preserving existingPlans: [SeriesRoundMatchupPlan] = []
+    ) -> [SeriesRoundMatchupPlan] {
+        let orderedMembers = eligibleMembers.filter(SeriesRoundParticipationPolicy.isAutomaticPlayer)
+        guard usesTeams else {
+            return sequentialIndividualMatchupPlans(
+                orderedMembers: orderedMembers,
+                preserving: existingPlans
+            )
+        }
+
+        let sortedMembers = SeriesRoundMatchupMemberOptionBuilder.sortedMembers(orderedMembers) { [weak self] memberID in
+            self?.effectiveHandicap(for: memberID)
+        }
+        let membersByTeamID = Dictionary(grouping: sortedMembers) { $0.teamID ?? "" }
+        let orderedTeamIDs = sortedTeams.map(\.id).filter { membersByTeamID[$0]?.isPopulated == true }
+
+        guard orderedTeamIDs.count >= 2 else {
+            return sequentialIndividualMatchupPlans(
+                orderedMembers: sortedMembers,
+                preserving: existingPlans
+            )
+        }
+
+        var remainingByTeamID = Dictionary(uniqueKeysWithValues: orderedTeamIDs.map { teamID in
+            (teamID, membersByTeamID[teamID] ?? [])
+        })
+        var plans: [SeriesRoundMatchupPlan] = []
+        var matchupIndex = 0
+
+        while true {
+            let availableTeamIDs = orderedTeamIDs.filter { remainingByTeamID[$0]?.isPopulated == true }
+            guard availableTeamIDs.count >= 2 else { break }
+            let teamAID = availableTeamIDs[0]
+            let teamBID = availableTeamIDs[1]
+            guard let memberA = remainingByTeamID[teamAID]?.first,
+                  let memberB = remainingByTeamID[teamBID]?.first else {
+                break
+            }
+            remainingByTeamID[teamAID]?.removeFirst()
+            remainingByTeamID[teamBID]?.removeFirst()
+
+            let memberAID = memberA.id
+            let memberBID = memberB.id
+            let existing = existingPlans.first {
+                Set([$0.memberAID ?? "", $0.memberBID ?? ""]) == Set([memberAID, memberBID])
+            }
+
+            plans.append(
+                SeriesRoundMatchupPlan(
+                    id: existing?.id ?? HackersID.string(),
+                    memberAID: memberAID,
+                    memberBID: memberBID,
+                    index: matchupIndex,
+                    podGroupingStrategy: .disabled,
+                    notes: existing?.notes,
+                    isLocked: existing?.isLocked ?? false,
+                    createdAt: existing?.createdAt ?? .init(),
+                    lastUpdatedAt: .init()
+                )
+            )
+
+            matchupIndex += 1
+        }
+
+        return plans
+    }
+
+    private func sequentialIndividualMatchupPlans(
+        orderedMembers: [SeriesMember],
+        preserving existingPlans: [SeriesRoundMatchupPlan]
+    ) -> [SeriesRoundMatchupPlan] {
+        var plans: [SeriesRoundMatchupPlan] = []
+        var matchupIndex = 0
+        var memberCursor = 0
+
+        while memberCursor + 1 < orderedMembers.count {
+            let memberAID = orderedMembers[memberCursor].id
+            let memberBID = orderedMembers[memberCursor + 1].id
+            let existing = existingPlans.first {
+                Set([$0.memberAID ?? "", $0.memberBID ?? ""]) == Set([memberAID, memberBID])
+            }
+
+            plans.append(
+                SeriesRoundMatchupPlan(
+                    id: existing?.id ?? HackersID.string(),
+                    memberAID: memberAID,
+                    memberBID: memberBID,
+                    index: matchupIndex,
+                    podGroupingStrategy: .disabled,
+                    notes: existing?.notes,
+                    isLocked: existing?.isLocked ?? false,
+                    createdAt: existing?.createdAt ?? .init(),
+                    lastUpdatedAt: .init()
+                )
+            )
+
+            matchupIndex += 1
+            memberCursor += 2
+        }
+
+        return plans
+    }
+
+    func effectiveHandicap(for memberID: String) -> Double? {
+        memberHandicaps[memberID]?.effectiveIndex
+    }
+
+    // MARK: - Loading
+
+    func load(seriesID: String) async {
+        let fullLoadStartedAt = ContinuousClock.now
+        let coreLoadStartedAt = fullLoadStartedAt
+        if realtimeSourceStore.currentSeriesID != seriesID {
+            stopRealtimeSourceListeners()
+        }
+        isLoading = true
+        isEnriching = false
+        defer {
+            isLoading = false
+            isEnriching = false
+        }
+
+        if let user = await AppData.shared.user {
+            currentUserID = user.id
+        }
+        if let player = await AppData.shared.getPrimaryPlayer() {
+            currentPlayerID = player.id
+        }
+
+        switch await FirebaseService.shared.fetchSeries(id: seriesID) {
+        case .success(let loadedSeries):
+            series = loadedSeries
+        case .failure(let error):
+            addBreadcrumb(level: .error, message: "Failed to load series", error: error)
+            return
+        }
+
+        async let membersTask = FirebaseService.shared.fetchSeriesMembers(seriesID: seriesID)
+        async let invitesTask = FirebaseService.shared.fetchSeriesInvites(seriesID: seriesID)
+        async let teamsTask = FirebaseService.shared.fetchSeriesTeams(seriesID: seriesID)
+        async let podsTask = FirebaseService.shared.fetchSeriesPods(seriesID: seriesID)
+        async let roundsTask = FirebaseService.shared.fetchSeriesRounds(seriesID: seriesID)
+        async let announcementsTask = FirebaseService.shared.fetchSeriesAnnouncements(seriesID: seriesID)
+        async let profilesTask = FirebaseService.shared.fetchScoringProfiles(seriesID: seriesID)
+        async let pointAwardsTask = FirebaseService.shared.fetchPointAwardsResult(seriesID: seriesID)
+        async let standingsTask = FirebaseService.shared.fetchStandingsResult(seriesID: seriesID)
+        async let scoresTask = FirebaseService.shared.fetchHandicapScores(seriesID: seriesID)
+        async let overridesTask = FirebaseService.shared.fetchHandicapOverrides(seriesID: seriesID)
+        async let canonicalStatesTask = FirebaseService.shared.fetchCanonicalRoundProcessingStates(seriesID: seriesID)
+        async let canonicalResultsTask = series.settings.standingsReadAuthority == .canonicalWhenReady
+            ? FirebaseService.shared.fetchCanonicalRoundResults(seriesID: seriesID)
+            : .success([])
+
+        members = await membersTask
+        invites = await invitesTask
+        teams = await teamsTask
+        pods = await podsTask
+        rounds = await roundsTask
+        announcements = await announcementsTask
+        scoringProfiles = await profilesTask
+        switch await pointAwardsTask {
+        case .success(let loadedPointAwards):
+            pointAwards = loadedPointAwards
+        case .failure(let error):
+            addBreadcrumb(level: .error, message: "Failed to load point awards", error: error)
+        }
+        switch await standingsTask {
+        case .success(let loadedStandings):
+            legacyStandings = loadedStandings
+            standings = loadedStandings
+        case .failure(let error):
+            legacyStandings = []
+            standings = []
+            addBreadcrumb(level: .error, message: "Failed to load standings", error: error)
+        }
+        handicapScores = await scoresTask
+        handicapOverrides = await overridesTask
+        switch await canonicalStatesTask {
+        case .success(let states):
+            canonicalProcessingStates = Dictionary(uniqueKeysWithValues: states.map { ($0.id, $0) })
+        case .failure(let error):
+            canonicalProcessingStates = [:]
+            addBreadcrumb(level: .error, message: "Failed to load canonical processing states", error: error)
+        }
+        switch await canonicalResultsTask {
+        case .success(let results):
+            canonicalRoundResults = Dictionary(uniqueKeysWithValues: results.map { ($0.id, $0) })
+        case .failure(let error):
+            canonicalRoundResults = [:]
+            addBreadcrumb(level: .error, message: "Failed to load canonical round results", error: error)
+        }
+        standings = resolvedStandings(legacyStandings: legacyStandings)
+        startRealtimeSourceListeners(for: seriesID)
+        SeriesPerformanceRecorder.shared.record(
+            .coreLoad,
+            startedAt: coreLoadStartedAt,
+            logicalReadCount: 13 + (series.settings.standingsReadAuthority == .canonicalWhenReady ? 1 : 0),
+            activeListenerCount: activeRealtimeListenerCount,
+            itemCount: members.count
+                + invites.count
+                + teams.count
+                + pods.count
+                + rounds.count
+                + announcements.count
+                + scoringProfiles.count
+                + pointAwards.count
+                + standings.count
+                + handicapScores.count
+                + handicapOverrides.count
+                + canonicalProcessingStates.count
+                + canonicalRoundResults.count,
+            context: seriesID
+        )
+
+        isLoading = false
+        isEnriching = true
+
+        let refreshedRoundIDs = await loadLinkedRounds()
+        await syncLinkedRoundState(persistingStatusesFor: refreshedRoundIDs)
+        await loadAttendanceForRSVPEligibleRounds()
+        recomputeAllHandicaps()
+        await backfillOfflineMemberUserIDs()
+        await createBuiltInScoringProfilesIfNeeded()
+        SeriesPerformanceRecorder.shared.record(
+            .fullLoad,
+            startedAt: fullLoadStartedAt,
+            activeListenerCount: activeRealtimeListenerCount,
+            itemCount: rounds.count,
+            context: seriesID
+        )
+    }
+
+    private func startRealtimeSourceListeners(for seriesID: String) {
+        realtimeSourceStore.start(
+            seriesID: seriesID,
+            canonicalStandingsEnabled: series.settings.standingsReadAuthority == .canonicalWhenReady
+        )
+    }
+
+    private func configureCanonicalSourceListeners(for _: String) {
+        let canonicalEnabled = series.settings.standingsReadAuthority == .canonicalWhenReady
+        realtimeSourceStore.configureCanonicalListeners(enabled: canonicalEnabled)
+        if !canonicalEnabled {
+            standings = legacyStandings
+            standingsReadSource = .legacy
+        }
+    }
+
+    private func stopRealtimeSourceListeners() {
+        realtimeSourceStore.stop()
+        stopLinkedRoundListeners()
+    }
+
+    private func applyRealtimeSeries(_ updated: Series) async {
+        let previousSettings = series.settings
+        series = updated
+
+        if previousSettings != updated.settings {
+            standingsMigrationAssessment = nil
+            refreshLinkedConfigurationDivergences()
+            configureCanonicalSourceListeners(for: updated.id)
+            standings = resolvedStandings(legacyStandings: legacyStandings)
+        }
+        if previousSettings.handicapConfig != updated.settings.handicapConfig {
+            recomputeAllHandicaps()
+        }
+        if previousSettings.isAttendanceEnabled != updated.settings.isAttendanceEnabled {
+            await loadAttendanceForRSVPEligibleRounds()
+        }
+    }
+
+    private func applyRealtimeCanonicalStates(_ states: [SeriesRoundProcessingState]) {
+        canonicalProcessingStates = Dictionary(uniqueKeysWithValues: states.map { ($0.id, $0) })
+        standingsMigrationAssessment = nil
+        standings = resolvedStandings(legacyStandings: legacyStandings)
+    }
+
+    private func applyRealtimeCanonicalResults(_ results: [SeriesRoundResult]) {
+        canonicalRoundResults = Dictionary(uniqueKeysWithValues: results.map { ($0.id, $0) })
+        standingsMigrationAssessment = nil
+        standings = resolvedStandings(legacyStandings: legacyStandings)
+    }
+
+    private func applyRealtimeSeriesRounds(_ updated: [SeriesRound]) async {
+        let startedAt = ContinuousClock.now
+        let plan = SeriesRuntimeSubscriptionPolicy.invalidationPlan(
+            previous: rounds,
+            updated: updated,
+            attendanceEnabled: series.settings.isAttendanceEnabled
+        )
+        defer {
+            SeriesPerformanceRecorder.shared.record(
+                .roundsInvalidation,
+                startedAt: startedAt,
+                activeListenerCount: activeRealtimeListenerCount,
+                itemCount: updated.count,
+                context: plan.hasSemanticChanges ? "changed" : "no_op"
+            )
+        }
+        guard plan.hasSemanticChanges else { return }
+
+        standingsMigrationAssessment = nil
+        rounds = updated
+
+        if plan.addedActiveLinkedRoundIDs.isPopulated || plan.removedActiveLinkedRoundIDs.isPopulated {
+            let refreshedRoundIDs = await loadLinkedRounds(for: plan.activeLinkedRoundIDs)
+            await syncLinkedRoundState(persistingStatusesFor: refreshedRoundIDs)
+        } else if plan.shouldRefreshConfigurationDivergences {
+            refreshLinkedConfigurationDivergences()
+        }
+
+        for roundID in plan.removedAttendanceRoundIDs {
+            attendanceByRound[roundID] = nil
+        }
+        if plan.addedAttendanceRoundIDs.isPopulated {
+            await loadAttendanceForRSVPEligibleRounds(roundIDs: plan.addedAttendanceRoundIDs)
+        }
+        if plan.shouldResolveStandings {
+            standings = resolvedStandings(legacyStandings: legacyStandings)
+        }
+    }
+
+    private func backfillOfflineMemberUserIDs() async {
+        let offlineIDs = members.enumerated().compactMap { (i, m) -> (Int, String)? in
+            guard m.userID == nil, let pid = m.playerID, pid.isPopulated else { return nil }
+            return (i, pid)
+        }
+        guard offlineIDs.isPopulated else { return }
+
+        let playerIDs = offlineIDs.map(\.1)
+        guard case .success(let players) = await FirebaseService.shared.getPlayersByIDs(playerIDs) else { return }
+
+        let userIDByPlayerID = Dictionary(
+            uniqueKeysWithValues: players.compactMap { p -> (String, String)? in
+                guard let uid = p.userID, uid.isPopulated else { return nil }
+                return (p.id, uid)
+            }
+        )
+        for (index, playerID) in offlineIDs {
+            guard let uid = userIDByPlayerID[playerID] else { continue }
+            members[index].userID = uid
+            members[index].lastUpdatedAt = .init()
+            _ = await FirebaseService.shared.updateSeriesMember(members[index])
+        }
+    }
+
+    @discardableResult
+    private func loadLinkedRounds() async -> Set<String> {
+        await loadLinkedRounds(for: SeriesRuntimeSubscriptionPolicy.activeLinkedRoundIDs(in: rounds))
+    }
+
+    @discardableResult
+    private func loadLinkedRounds(for roundIDs: Set<String>) async -> Set<String> {
+        let startedAt = ContinuousClock.now
+        reconcileLinkedRoundListeners(for: roundIDs)
+
+        guard roundIDs.isPopulated else {
+            linkedRounds = [:]
+            linkedConfigurationDivergences = [:]
+            snapshotRepository.invalidateAll()
+            SeriesPerformanceRecorder.shared.record(
+                .linkedRoundRootsLoad,
+                startedAt: startedAt,
+                activeListenerCount: activeRealtimeListenerCount,
+                context: seriesID
+            )
+            return []
+        }
+
+        let fetched = await FirebaseService.shared.getRoundsByIDs(Array(roundIDs))
+        let fetchedByID = Dictionary(uniqueKeysWithValues: fetched.map { ($0.id, $0) })
+        var nextLinkedRounds = linkedRounds.filter { roundIDs.contains($0.key) }
+        nextLinkedRounds.merge(fetchedByID) { _, fresh in fresh }
+        linkedRounds = nextLinkedRounds
+        refreshLinkedConfigurationDivergences()
+        snapshotRepository.retain(roundIDs: roundIDs)
+        SeriesPerformanceRecorder.shared.record(
+            .linkedRoundRootsLoad,
+            startedAt: startedAt,
+            logicalReadCount: 1,
+            activeListenerCount: activeRealtimeListenerCount,
+            itemCount: fetchedByID.count,
+            context: seriesID
+        )
+        return Set(fetchedByID.keys)
+    }
+
+    private func reconcileLinkedRoundListeners(for roundIDs: Set<String>) {
+        let staleRoundIDs = realtimeSourceStore.reconcileLinkedRoundListeners(roundIDs: roundIDs)
+        for staleRoundID in staleRoundIDs {
+            linkedRounds[staleRoundID] = nil
+            snapshotRepository.invalidate(roundID: staleRoundID)
+        }
+    }
+
+    private func stopLinkedRoundListeners() {
+        _ = realtimeSourceStore.reconcileLinkedRoundListeners(roundIDs: [])
+        linkedRounds = [:]
+        linkedConfigurationDivergences = [:]
+        snapshotRepository.invalidateAll()
+    }
+
+    private func applyFreshLinkedRound(_ linkedRound: Round) async {
+        guard rounds.contains(where: { $0.roundID == linkedRound.id }) else { return }
+        standingsMigrationAssessment = nil
+        linkedRounds[linkedRound.id] = linkedRound
+        refreshLinkedConfigurationDivergences()
+        snapshotRepository.invalidate(roundID: linkedRound.id)
+        await syncLinkedRoundState(persistingStatusesFor: [linkedRound.id])
+    }
+
+    func shouldPreloadAttendance(for seriesRound: SeriesRound) -> Bool {
+        isRSVPEligible(for: seriesRound)
+    }
+
+    func loadAttendanceForRSVPEligibleRounds(roundIDs requestedRoundIDs: Set<String>? = nil) async {
+        let startedAt = ContinuousClock.now
+        guard series.settings.isAttendanceEnabled else {
+            attendanceByRound = [:]
+            SeriesPerformanceRecorder.shared.record(
+                .attendancePreload,
+                startedAt: startedAt,
+                context: seriesID
+            )
+            return
+        }
+
+        let eligibleRounds = rounds.filter(shouldPreloadAttendance)
+        let eligibleRoundIDs = Set(eligibleRounds.map(\.id))
+        let roundsToLoad = eligibleRounds.filter { requestedRoundIDs?.contains($0.id) ?? true }
+        var dictionary = attendanceByRound.filter { eligibleRoundIDs.contains($0.key) }
+        for round in roundsToLoad {
+            dictionary[round.id] = await FirebaseService.shared.fetchSeriesRoundAttendance(
+                seriesID: seriesID,
+                seriesRoundID: round.id
+            )
+        }
+        attendanceByRound = dictionary
+        SeriesPerformanceRecorder.shared.record(
+            .attendancePreload,
+            startedAt: startedAt,
+            logicalReadCount: roundsToLoad.count,
+            itemCount: dictionary.values.reduce(0) { $0 + $1.count },
+            context: seriesID
+        )
+    }
+
+    func loadAttendance(for seriesRoundID: String) async {
+        let list = await FirebaseService.shared.fetchSeriesRoundAttendance(seriesID: seriesID, seriesRoundID: seriesRoundID)
+        attendanceByRound[seriesRoundID] = list
+        attendanceByMember = Dictionary(uniqueKeysWithValues: list.map { ($0.memberID, $0) })
+    }
+
+    private func refreshSeriesCachesIfNeeded() async {
+        let newRoundCount = rounds.count
+        let newCompletedCount = rounds.filter { effectiveStatus(for: $0) == .complete }.count
+        let newAnnouncementCount = activeAnnouncements.count
+        let newStatus: SeriesStatus = {
+            if rounds.contains(where: { effectiveStatus(for: $0) == .live || effectiveStatus(for: $0) == .lobby }) {
+                return .active
+            }
+            if newRoundCount > 0 && newRoundCount == newCompletedCount {
+                return .completed
+            }
+            if newRoundCount > 0 { return .active }
+            return .draft
+        }()
+
+        guard series.roundCount != newRoundCount
+                || series.completedRoundCount != newCompletedCount
+                || series.activeAnnouncementCount != newAnnouncementCount
+                || series.status != newStatus else { return }
+
+        series.roundCount = newRoundCount
+        series.completedRoundCount = newCompletedCount
+        series.activeAnnouncementCount = newAnnouncementCount
+        series.status = newStatus
+        series.lastUpdatedAt = .init()
+        _ = await FirebaseService.shared.updateSeries(series)
+    }
+
+    // MARK: - Series Mutations
+
+    func updateName(_ newName: String) async {
+        series.name = newName
+        series.lastUpdatedAt = .init()
+        _ = await FirebaseService.shared.updateSeries(series)
+        addEvent("series.name_updated", eventProps: seriesTelemetryProps())
+    }
+
+    func saveLeagueDetailsAndSettings(name: String, description: String, settings: SeriesSettings) async -> Bool {
+        let trimmedName = name.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard trimmedName.isPopulated else { return false }
+
+        let previousSettings = series.settings
+        let sanitized = sanitizedLeagueSettings(settings)
+        let trimmedDescription = description.trimmingCharacters(in: .whitespacesAndNewlines)
+
+        series.name = trimmedName
+        series.description = trimmedDescription.isPopulated ? trimmedDescription : nil
+        series.settings = sanitized
+        invalidateLeagueRulesConfirmationIfNeeded(previousSettings: previousSettings, newSettings: sanitized)
+        series.lastUpdatedAt = .init()
+        _ = await FirebaseService.shared.updateSeries(series)
+        await createBuiltInScoringProfilesIfNeeded()
+        await refreshSeriesCachesIfNeeded()
+        addEvent("series.league_details_saved", eventProps: seriesTelemetryProps([
+            "has_description": trimmedDescription.isPopulated
+        ]))
+        return true
+    }
+
+    func standingsRolloutPreview() -> SeriesStandingsRolloutPreview? {
+        guard let revision = series.settings.standingsPolicyRevision else { return nil }
+        return SeriesStandingsRollout.preview(
+            series: series,
+            completedRounds: completedRounds,
+            revision: revision
+        )
+    }
+
+    func saveStandingsTiebreakPolicy(
+        _ draft: SeriesStandingsTiebreakDraft
+    ) async -> Result<SeriesPolicyRevision, Error> {
+        guard isCommissioner else {
+            return .failure(SeriesStandingsRolloutOperationError.commissionerRequired)
+        }
+        guard !isSavingStandingsPolicy, !isAssessingStandingsMigration, !isPreparingCanonicalStandings else {
+            return .failure(SeriesStandingsRolloutOperationError.operationInProgress)
+        }
+
+        let revision: SeriesPolicyRevision
+        switch SeriesStandingsRollout.makeRevision(
+            settings: series.settings,
+            draft: draft,
+            id: "standings_\(HackersID.string())"
+        ) {
+        case .success(let value):
+            revision = value
+        case .failure(let error):
+            return .failure(error)
+        }
+
+        isSavingStandingsPolicy = true
+        defer { isSavingStandingsPolicy = false }
+
+        var updated = series
+        updated.settings.standingsPolicyRevision = revision
+        updated.settings.standingsReadAuthority = .legacy
+        updated.lastUpdatedAt = .init()
+        switch await FirebaseService.shared.updateSeries(updated) {
+        case .success(let saved):
+            series = saved
+            standingsMigrationAssessment = nil
+            standings = legacyStandings
+            standingsReadSource = .legacy
+            configureCanonicalSourceListeners(for: saved.id)
+            addEvent(
+                "series.standings_policy_saved",
+                eventProps: seriesTelemetryProps([
+                    "policy_revision": revision.sequence,
+                    "team_tiebreak_enabled": draft.team.isEnabled,
+                    "individual_tiebreak_enabled": draft.individual.isEnabled
+                ])
+            )
+            return .success(revision)
+        case .failure(let error):
+            addBreadcrumb(level: .error, message: "Standings policy write failed", error: error)
+            return .failure(error)
+        }
+    }
+
+    private struct StandingsMigrationContext {
+        let revision: SeriesPolicyRevision
+        let targetRounds: [SeriesRound]
+        let snapshotsBySeriesRoundID: [String: RoundSnapshot]
+        let mappingsByRound: [String: [SeriesRoundMapping]]
+        let awardsByRound: [String: [SeriesPointAward]]
+        let processingStates: [SeriesRoundProcessingState]
+        let results: [SeriesRoundResult]
+        let legacyStandings: [SeriesStanding]
+        let assessment: SeriesStandingsMigrationAssessment
+        let projection: SeriesCanonicalStandingsProjection?
+    }
+
+    func refreshStandingsMigrationAssessment() async -> Result<SeriesStandingsMigrationAssessment, Error> {
+        guard isCommissioner else {
+            return .failure(SeriesStandingsRolloutOperationError.commissionerRequired)
+        }
+        guard !isSavingStandingsPolicy, !isAssessingStandingsMigration, !isPreparingCanonicalStandings else {
+            return .failure(SeriesStandingsRolloutOperationError.operationInProgress)
+        }
+
+        let startedAt = ContinuousClock.now
+        isAssessingStandingsMigration = true
+        defer { isAssessingStandingsMigration = false }
+
+        switch await standingsMigrationContext() {
+        case .success(let context):
+            applyStandingsMigrationContext(context)
+            let comparison = context.assessment.comparison
+            addEvent(
+                "series.standings_migration_assessed",
+                eventProps: seriesTelemetryProps([
+                    "ready_round_count": context.assessment.plan.readyItems.count,
+                    "pending_round_count": context.assessment.plan.pendingItems.count,
+                    "blocked_round_count": context.assessment.plan.blockedItems.count,
+                    "unexplained_mismatch_count": comparison?.unexplainedMismatchCount ?? 0,
+                    "activation_ready": context.assessment.canActivate
+                ])
+            )
+            SeriesPerformanceRecorder.shared.record(
+                .standingsMigrationAssessment,
+                startedAt: startedAt,
+                logicalReadCount: 6,
+                itemCount: context.targetRounds.count,
+                context: seriesID
+            )
+            return .success(context.assessment)
+        case .failure(let error):
+            addBreadcrumb(level: .error, message: "Standings migration assessment failed", error: error)
+            return .failure(error)
+        }
+    }
+
+    func prepareNextCanonicalStandingsBatch(
+        limit: Int = SeriesViewModel.standingsMigrationBatchSize
+    ) async -> Result<SeriesStandingsMigrationAssessment, Error> {
+        guard isCommissioner else {
+            return .failure(SeriesStandingsRolloutOperationError.commissionerRequired)
+        }
+        guard !isSavingStandingsPolicy, !isAssessingStandingsMigration, !isPreparingCanonicalStandings else {
+            return .failure(SeriesStandingsRolloutOperationError.operationInProgress)
+        }
+        guard limit > 0 else {
+            return .failure(SeriesStandingsRolloutOperationError.operationInProgress)
+        }
+
+        let startedAt = ContinuousClock.now
+        isPreparingCanonicalStandings = true
+        defer {
+            isPreparingCanonicalStandings = false
+            standingsRolloutProgress = nil
+        }
+
+        let initialContext: StandingsMigrationContext
+        switch await standingsMigrationContext() {
+        case .success(let context):
+            initialContext = context
+            applyStandingsMigrationContext(context)
+        case .failure(let error):
+            return .failure(error)
+        }
+        let plan = initialContext.assessment.plan
+        guard plan.blockedItems.isEmpty else {
+            return .failure(SeriesStandingsRolloutOperationError.migrationBlocked(plan.blockedItems.count))
+        }
+        let batch = plan.nextBatch(limit: limit)
+        guard batch.isPopulated else { return .success(initialContext.assessment) }
+
+        let binding = SeriesStandingsPolicyResolver.binding(
+            for: initialContext.revision,
+            substitutesScore: series.settings.substitutesScore
+        )
+        standingsRolloutProgress = .init(
+            completedCount: plan.readyItems.count,
+            totalCount: plan.items.count
+        )
+        var awardsChanged = false
+        var awardsStatusesToPublish: [String: SeriesAwardsStatus] = [:]
+
+        for (offset, item) in batch.enumerated() {
+            if Task.isCancelled { return .failure(CancellationError()) }
+            guard series.settings.standingsPolicyRevision?.id == initialContext.revision.id else {
+                return .failure(SeriesStandingsRolloutOperationError.policyNotConfigured)
+            }
+            guard let sourceRound = initialContext.targetRounds.first(where: { $0.id == item.id }),
+                  let snapshot = initialContext.snapshotsBySeriesRoundID[item.id] else {
+                return .failure(SeriesStandingsRolloutOperationError.snapshotUnavailable(item.title))
+            }
+
+            var preparedRound = sourceRound
+            if preparedRound.policyBinding != binding {
+                preparedRound.policyBinding = binding
+                preparedRound.lastUpdatedAt = .init()
+                switch await FirebaseService.shared.updateSeriesRound(preparedRound) {
+                case .success(let saved):
+                    preparedRound = saved
+                    if let roundIndex = rounds.firstIndex(where: { $0.id == saved.id }) {
+                        rounds[roundIndex] = saved
+                    }
+                case .failure(let error):
+                    addBreadcrumb(level: .error, message: "Historical round policy binding failed", error: error)
+                    return .failure(SeriesStandingsRolloutOperationError.roundWriteFailed(item.title))
+                }
+            }
+
+            let processing = await processCompletedRound(
+                seriesRound: preparedRound,
+                snapshot: snapshot,
+                existingAwards: initialContext.awardsByRound[preparedRound.id] ?? [],
+                mappings: initialContext.mappingsByRound[preparedRound.id] ?? []
+            )
+            guard processing.derivedPublicationSucceeded,
+                  let proposedAwardsStatus = processing.proposedAwardsStatus else {
+                return .failure(SeriesStandingsRolloutOperationError.roundProcessingFailed(item.title))
+            }
+            awardsChanged = awardsChanged || processing.awardsChanged
+            awardsStatusesToPublish[preparedRound.id] = proposedAwardsStatus
+            standingsRolloutProgress = .init(
+                completedCount: min(plan.items.count, plan.readyItems.count + offset + 1),
+                totalCount: plan.items.count
+            )
+        }
+        if awardsChanged, !(await rebuildStandings()) {
+            return .failure(SeriesStandingsRolloutOperationError.seriesWriteFailed)
+        }
+        guard await persistAwardsStatuses(awardsStatusesToPublish) else {
+            return .failure(SeriesStandingsRolloutOperationError.seriesWriteFailed)
+        }
+
+        switch await standingsMigrationContext() {
+        case .success(let refreshedContext):
+            applyStandingsMigrationContext(refreshedContext)
+            addEvent(
+                "series.standings_migration_batch_completed",
+                eventProps: seriesTelemetryProps([
+                    "batch_size": batch.count,
+                    "remaining_round_count": refreshedContext.assessment.plan.pendingItems.count
+                ])
+            )
+            SeriesPerformanceRecorder.shared.record(
+                .standingsMigrationBatch,
+                startedAt: startedAt,
+                logicalReadCount: 12,
+                logicalWriteCount: batch.count,
+                itemCount: batch.count,
+                context: seriesID
+            )
+            return .success(refreshedContext.assessment)
+        case .failure(let error):
+            return .failure(error)
+        }
+    }
+
+    func activateCanonicalStandings() async -> Result<SeriesCanonicalStandingsProjection, Error> {
+        guard isCommissioner else {
+            return .failure(SeriesStandingsRolloutOperationError.commissionerRequired)
+        }
+        guard !isSavingStandingsPolicy, !isAssessingStandingsMigration, !isPreparingCanonicalStandings else {
+            return .failure(SeriesStandingsRolloutOperationError.operationInProgress)
+        }
+
+        isPreparingCanonicalStandings = true
+        defer { isPreparingCanonicalStandings = false }
+
+        let context: StandingsMigrationContext
+        switch await standingsMigrationContext() {
+        case .success(let value):
+            context = value
+            applyStandingsMigrationContext(value)
+        case .failure(let error):
+            return .failure(error)
+        }
+        let plan = context.assessment.plan
+        guard plan.blockedItems.isEmpty else {
+            return .failure(SeriesStandingsRolloutOperationError.migrationBlocked(plan.blockedItems.count))
+        }
+        guard plan.pendingItems.isEmpty else {
+            return .failure(SeriesStandingsRolloutOperationError.migrationIncomplete(plan.pendingItems.count))
+        }
+        guard let projection = context.projection else {
+            if let error = context.assessment.projectionError {
+                return .failure(SeriesStandingsRolloutOperationError.projectionFailed(error))
+            }
+            return .failure(SeriesStandingsRolloutOperationError.canonicalReadFailed)
+        }
+        guard let comparison = context.assessment.comparison, comparison.isActivationSafe else {
+            return .failure(SeriesStandingsRolloutOperationError.shadowMismatch(
+                context.assessment.comparison?.unexplainedMismatchCount ?? 1
+            ))
+        }
+        guard series.settings.standingsPolicyRevision?.id == context.revision.id else {
+            return .failure(SeriesStandingsRolloutOperationError.policyNotConfigured)
+        }
+
+        switch await FirebaseService.shared.updateSeriesStandingsAuthority(
+            seriesID: seriesID,
+            authority: .canonicalWhenReady,
+            expectedPolicyRevisionID: context.revision.id
+        ) {
+        case .success(let saved):
+            series = saved
+            standings = projection.standings
+            standingsReadSource = .canonical
+            configureCanonicalSourceListeners(for: saved.id)
+            addEvent(
+                "series.canonical_standings_activated",
+                eventProps: seriesTelemetryProps([
+                    "round_count": context.targetRounds.count,
+                    "generation_count": projection.generationIDs.count,
+                    "authority_changed_standing_count": comparison.authorityChangedStandingIDs.count,
+                    "ordering_changed_track_count": comparison.tracksWithOrderingChanges.count
+                ])
+            )
+            return .success(projection)
+        case .failure(let error):
+            addBreadcrumb(level: .error, message: "Canonical standings authority write failed", error: error)
+            return .failure(SeriesStandingsRolloutOperationError.seriesWriteFailed)
+        }
+    }
+
+    func repairLegacyStandingsForMigration() async -> Result<SeriesStandingsMigrationAssessment, Error> {
+        guard isCommissioner else {
+            return .failure(SeriesStandingsRolloutOperationError.commissionerRequired)
+        }
+        guard !isSavingStandingsPolicy, !isAssessingStandingsMigration, !isPreparingCanonicalStandings else {
+            return .failure(SeriesStandingsRolloutOperationError.operationInProgress)
+        }
+
+        isPreparingCanonicalStandings = true
+        defer { isPreparingCanonicalStandings = false }
+
+        let initialContext: StandingsMigrationContext
+        switch await standingsMigrationContext() {
+        case .success(let value):
+            initialContext = value
+            applyStandingsMigrationContext(value)
+        case .failure(let error):
+            return .failure(error)
+        }
+        guard initialContext.assessment.plan.blockedItems.isEmpty else {
+            return .failure(SeriesStandingsRolloutOperationError.migrationBlocked(
+                initialContext.assessment.plan.blockedItems.count
+            ))
+        }
+        guard initialContext.assessment.plan.pendingItems.isEmpty else {
+            return .failure(SeriesStandingsRolloutOperationError.migrationIncomplete(
+                initialContext.assessment.plan.pendingItems.count
+            ))
+        }
+        guard let comparison = initialContext.assessment.comparison else {
+            if let error = initialContext.assessment.projectionError {
+                return .failure(SeriesStandingsRolloutOperationError.projectionFailed(error))
+            }
+            return .failure(SeriesStandingsRolloutOperationError.canonicalReadFailed)
+        }
+        guard !comparison.isActivationSafe else {
+            return .success(initialContext.assessment)
+        }
+        guard await rebuildStandings() else {
+            return .failure(SeriesStandingsRolloutOperationError.seriesWriteFailed)
+        }
+
+        switch await standingsMigrationContext() {
+        case .success(let refreshedContext):
+            applyStandingsMigrationContext(refreshedContext)
+            addEvent(
+                "series.legacy_standings_migration_repaired",
+                eventProps: seriesTelemetryProps([
+                    "remaining_mismatch_count": refreshedContext.assessment.comparison?.unexplainedMismatchCount ?? 0
+                ])
+            )
+            return .success(refreshedContext.assessment)
+        case .failure(let error):
+            return .failure(error)
+        }
+    }
+
+    private func standingsMigrationContext() async -> Result<StandingsMigrationContext, Error> {
+        guard let revision = series.settings.standingsPolicyRevision else {
+            return .failure(SeriesStandingsRolloutOperationError.policyNotConfigured)
+        }
+        guard SeriesStandingsRollout.revisionMatchesCurrentScoringContract(
+            settings: series.settings,
+            revision: revision
+        ) else {
+            return .failure(SeriesStandingsRolloutOperationError.policyOutdated)
+        }
+        let targetRounds = completedRounds.sorted {
+            if $0.index != $1.index { return $0.index < $1.index }
+            return $0.id < $1.id
+        }
+        let linkedRoundIDs = targetRounds.compactMap(\.roundID).filter(\.isPopulated)
+
+        async let snapshotsTask = snapshotRepository.snapshots(
+            roundIDs: linkedRoundIDs,
+            policy: .reload
+        )
+        async let inputsTask = fetchDerivedInputs()
+        async let statesTask = FirebaseService.shared.fetchCanonicalRoundProcessingStates(seriesID: seriesID)
+        async let resultsTask = FirebaseService.shared.fetchCanonicalRoundResults(seriesID: seriesID)
+        async let legacyTask = FirebaseService.shared.fetchStandingsResult(seriesID: seriesID)
+        async let handicapScoresTask = FirebaseService.shared.fetchHandicapScores(seriesID: seriesID)
+
+        let snapshotResults = await snapshotsTask
+        let inputsResult = await inputsTask
+        let statesResult = await statesTask
+        let resultsResult = await resultsTask
+        let legacyResult = await legacyTask
+        let verifiedHandicapScores = await handicapScoresTask
+
+        guard series.settings.standingsPolicyRevision?.id == revision.id else {
+            return .failure(SeriesStandingsRolloutOperationError.policyOutdated)
+        }
+        let currentTargetRounds = completedRounds.sorted {
+            if $0.index != $1.index { return $0.index < $1.index }
+            return $0.id < $1.id
+        }
+        guard currentTargetRounds.map(\.id) == targetRounds.map(\.id),
+              zip(currentTargetRounds, targetRounds).allSatisfy({ $0.lastUpdatedAt == $1.lastUpdatedAt }) else {
+            return .failure(SeriesStandingsRolloutOperationError.sourceReadFailed)
+        }
+
+        let derivedInputs: SeriesDerivedInputs
+        switch inputsResult {
+        case .success(let value): derivedInputs = value
+        case .failure(let error):
+            addBreadcrumb(level: .error, message: "Standings migration source read failed", error: error)
+            return .failure(SeriesStandingsRolloutOperationError.sourceReadFailed)
+        }
+        let verifiedStates: [SeriesRoundProcessingState]
+        let verifiedResults: [SeriesRoundResult]
+        switch (statesResult, resultsResult) {
+        case (.success(let states), .success(let results)):
+            verifiedStates = states
+            verifiedResults = results
+        case (.failure(let error), _), (_, .failure(let error)):
+            addBreadcrumb(level: .error, message: "Canonical migration read failed", error: error)
+            return .failure(SeriesStandingsRolloutOperationError.canonicalReadFailed)
+        }
+        let verifiedLegacyStandings: [SeriesStanding]
+        switch legacyResult {
+        case .success(let values): verifiedLegacyStandings = values
+        case .failure(let error):
+            addBreadcrumb(level: .error, message: "Legacy standings comparison read failed", error: error)
+            return .failure(SeriesStandingsRolloutOperationError.sourceReadFailed)
+        }
+
+        let mappingsByRound = Dictionary(grouping: derivedInputs.mappings, by: \.seriesRoundID)
+        let awardsByRound = Dictionary(grouping: derivedInputs.awards, by: \.seriesRoundID)
+        let binding = SeriesStandingsPolicyResolver.binding(
+            for: revision,
+            substitutesScore: series.settings.substitutesScore
+        )
+        var snapshotsBySeriesRoundID: [String: RoundSnapshot] = [:]
+        var unavailableRoundIDs = Set<String>()
+        var expectedSourceRevisions: [String: String] = [:]
+
+        for sourceRound in targetRounds {
+            guard let linkedRoundID = sourceRound.roundID,
+                  let snapshotResult = snapshotResults[linkedRoundID],
+                  case .success(let snapshot) = snapshotResult else {
+                unavailableRoundIDs.insert(sourceRound.id)
+                continue
+            }
+            snapshotsBySeriesRoundID[sourceRound.id] = snapshot
+            var expectedRound = sourceRound
+            expectedRound.policyBinding = binding
+            let teamProfile = expectedRound.teamScoringProfileID.flatMap { scoringProfile(id: $0) }
+            let individualProfile = individualScoringProfile(for: expectedRound)
+            let processingInputs = SeriesRoundCanonicalBuilder.processingInputs(
+                teamProfile: teamProfile,
+                individualProfile: individualProfile,
+                handicapConfig: series.handicapConfig,
+                members: members,
+                teams: teams
+            )
+            let roundHandicapScores = series.handicapConfig.mode.allowsAccrual
+                ? verifiedHandicapScores.filter { $0.sourceRoundID == linkedRoundID }
+                : []
+            expectedSourceRevisions[sourceRound.id] = SeriesRoundCanonicalBuilder.sourceRevision(
+                seriesRound: expectedRound,
+                snapshot: snapshot,
+                mappings: mappingsByRound[sourceRound.id] ?? [],
+                processingInputs: processingInputs,
+                awards: awardsByRound[sourceRound.id] ?? [],
+                handicapScores: roundHandicapScores
+            )
+        }
+
+        let plan = SeriesStandingsMigrationPlanner.plan(
+            revision: revision,
+            substitutesScore: series.settings.substitutesScore,
+            completedRounds: targetRounds,
+            expectedSourceRevisions: expectedSourceRevisions,
+            unavailableRoundIDs: unavailableRoundIDs,
+            processingStates: verifiedStates,
+            results: verifiedResults
+        )
+        var projection: SeriesCanonicalStandingsProjection?
+        var projectionError: SeriesCanonicalStandingsProjectionError?
+        var comparison: SeriesStandingsMigrationComparison?
+        if plan.isReadyForActivation {
+            var candidateSeries = series
+            candidateSeries.settings.standingsReadAuthority = .canonicalWhenReady
+            switch SeriesCanonicalStandingsProjector.project(
+                series: candidateSeries,
+                completedRounds: targetRounds,
+                processingStates: verifiedStates,
+                results: verifiedResults
+            ) {
+            case .success(let value):
+                projection = value
+                let resultsByID = Dictionary(uniqueKeysWithValues: verifiedResults.map { ($0.id, $0) })
+                let orderedResults = plan.readyGenerationIDs.compactMap { resultsByID[$0] }
+                comparison = SeriesStandingsMigrationComparator.compare(
+                    legacyStandings: verifiedLegacyStandings,
+                    canonicalStandings: value.standings,
+                    orderedCanonicalResults: orderedResults,
+                    seriesID: seriesID
+                )
+            case .failure(let error):
+                projectionError = error
+            }
+        }
+        let assessment = SeriesStandingsMigrationAssessment(
+            plan: plan,
+            comparison: comparison,
+            projectionError: projectionError
+        )
+        return .success(StandingsMigrationContext(
+            revision: revision,
+            targetRounds: targetRounds,
+            snapshotsBySeriesRoundID: snapshotsBySeriesRoundID,
+            mappingsByRound: mappingsByRound,
+            awardsByRound: awardsByRound,
+            processingStates: verifiedStates,
+            results: verifiedResults,
+            legacyStandings: verifiedLegacyStandings,
+            assessment: assessment,
+            projection: projection
+        ))
+    }
+
+    private func applyStandingsMigrationContext(_ context: StandingsMigrationContext) {
+        canonicalProcessingStates = Dictionary(uniqueKeysWithValues: context.processingStates.map { ($0.id, $0) })
+        canonicalRoundResults = Dictionary(uniqueKeysWithValues: context.results.map { ($0.id, $0) })
+        legacyStandings = context.legacyStandings
+        standingsMigrationAssessment = context.assessment
+        standings = resolvedStandings(legacyStandings: context.legacyStandings)
+    }
+
+    func useLegacyStandings() async -> Result<SeriesStandingsReadAuthority, Error> {
+        guard isCommissioner else {
+            return .failure(SeriesStandingsRolloutOperationError.commissionerRequired)
+        }
+        guard !isPreparingCanonicalStandings, !isAssessingStandingsMigration, !isSavingStandingsPolicy else {
+            return .failure(SeriesStandingsRolloutOperationError.operationInProgress)
+        }
+        guard series.settings.standingsReadAuthority != .legacy else { return .success(.legacy) }
+
+        switch await FirebaseService.shared.updateSeriesStandingsAuthority(
+            seriesID: seriesID,
+            authority: .legacy,
+            expectedPolicyRevisionID: nil
+        ) {
+        case .success(let saved):
+            series = saved
+            standings = legacyStandings
+            standingsReadSource = .legacy
+            configureCanonicalSourceListeners(for: saved.id)
+            addEvent("series.legacy_standings_restored", eventProps: seriesTelemetryProps())
+            return .success(.legacy)
+        case .failure(let error):
+            addBreadcrumb(level: .error, message: "Legacy standings authority write failed", error: error)
+            return .failure(error)
+        }
+    }
+
+    func updateDefaultCourse(
+        courseID: String,
+        cachedName: String,
+        defaultTeeID: String?,
+        holeSegment: HoleSegment = .full18
+    ) async {
+        let resolvedHoleSegment: HoleSegment = {
+            if series.settings.defaultCourseRotationMode == .alternateFrontBack,
+               !holeSegment.isNineHoleLeagueSegment {
+                return .front9
+            }
+            return holeSegment
+        }()
+
+        let resolvedDefaultTee = defaultTeeID.flatMap { defaultTeeID in
+            seriesCourseTeesByCourseID[courseID]?.first { $0.id == defaultTeeID }
+        }
+        series.settings.defaultCourse = SeriesCourseSelection(
+            courseID: courseID,
+            cachedName: cachedName,
+            defaultTeeBoxID: defaultTeeID ?? "",
+            defaultTeeName: resolvedDefaultTee?.name,
+            defaultTeeGender: resolvedDefaultTee?.gender,
+            holeSegment: resolvedHoleSegment
+        )
+        series.lastUpdatedAt = .init()
+        _ = await FirebaseService.shared.updateSeries(series)
+        addEvent(
+            "series.default_course_set",
+            eventProps: seriesTelemetryProps([
+                "course_id": courseID,
+                "hole_segment": "\(resolvedHoleSegment)"
+            ])
+        )
+    }
+
+    func clearDefaultCourse() async {
+        series.settings.defaultCourse = nil
+        series.lastUpdatedAt = .init()
+        _ = await FirebaseService.shared.updateSeries(series)
+        addEvent("series.default_course_cleared", eventProps: seriesTelemetryProps())
+    }
+
+    func skipDefaultCourse() async {
+        await clearDefaultCourse()
+    }
+
+    func saveLeagueSettings(_ settings: SeriesSettings) async {
+        let previousSettings = series.settings
+        let sanitized = sanitizedLeagueSettings(settings)
+        series.settings = sanitized
+        invalidateLeagueRulesConfirmationIfNeeded(previousSettings: previousSettings, newSettings: sanitized)
+        series.lastUpdatedAt = .init()
+        _ = await FirebaseService.shared.updateSeries(series)
+        await createBuiltInScoringProfilesIfNeeded()
+        await refreshSeriesCachesIfNeeded()
+        addEvent("series.league_settings_saved", eventProps: seriesTelemetryProps())
+    }
+
+    func setScoreboardVisible(_ isVisible: Bool) async {
+        let resolvedVisibility = isSeriesScoreboardEligible ? isVisible : false
+        guard series.settings.showScoreboardTile != resolvedVisibility else { return }
+        let previousSettings = series.settings
+        series.settings.showScoreboardTile = resolvedVisibility
+        invalidateLeagueRulesConfirmationIfNeeded(previousSettings: previousSettings, newSettings: series.settings)
+        series.lastUpdatedAt = .init()
+        _ = await FirebaseService.shared.updateSeries(series)
+        addEvent(
+            "series.scoreboard_visibility_changed",
+            eventProps: seriesTelemetryProps(["visible": resolvedVisibility])
+        )
+    }
+
+    func confirmLeagueRules(_ settings: SeriesSettings) async {
+        let sanitized = sanitizedLeagueSettings(settings)
+        series.settings = sanitized
+        series.leagueRulesConfirmedAt = .init()
+        series.leagueRulesConfirmedByUserID = currentUserID ?? series.commissionerUserID
+        series.leagueRulesSignature = materialLeagueRulesSignature(for: sanitized)
+        series.lastUpdatedAt = .init()
+        _ = await FirebaseService.shared.updateSeries(series)
+        await createBuiltInScoringProfilesIfNeeded()
+        await refreshSeriesCachesIfNeeded()
+        addEvent("series.league_rules_confirmed", eventProps: seriesTelemetryProps())
+    }
+
+    func saveHandicapSettings(_ handicapConfig: SeriesHandicapConfig) async {
+        let previousSettings = series.settings
+        series.handicapConfig = handicapConfig
+        invalidateLeagueRulesConfirmationIfNeeded(previousSettings: previousSettings, newSettings: series.settings)
+        series.lastUpdatedAt = .init()
+        _ = await FirebaseService.shared.updateSeries(series)
+        await hydrateRoundHandicapScoreMetadataIfNeeded()
+        recomputeAllHandicaps()
+        await refreshSeriesCachesIfNeeded()
+        addEvent(
+            "series.handicap_settings_saved",
+            eventProps: seriesTelemetryProps([
+                "handicap_enabled": handicapConfig.isEnabled,
+                "handicap_mode": handicapConfig.mode.rawValue
+            ])
+        )
+    }
+
+    private func sanitizedLeagueSettings(_ settings: SeriesSettings) -> SeriesSettings {
+        var sanitized = SeriesStandingsRollout.preservingManagedSettings(
+            draft: settings,
+            current: series.settings
+        )
+        if sanitized.useTeams {
+            sanitized.defaultRoundConfig.teamAssignmentMode = .seriesTeams
+            sanitized.defaultRoundConfig.matchupMode = sanitized.defaultRoundConfig.resolvedCompetitionScope == .matchup ? .teamVsTeam : .field
+        } else {
+            sanitized.defaultRoundConfig.teamAssignmentMode = .manual
+            sanitized.defaultRoundConfig.matchupMode = sanitized.defaultRoundConfig.resolvedCompetitionScope == .matchup
+                ? .individualVsIndividual
+                : .field
+            sanitized.defaultRoundConfig.podGroupingStrategy = .disabled
+            sanitized.useTeamStandings = false
+        }
+        if sanitized.defaultCourseRotationMode == .alternateFrontBack,
+           let defaultCourse = sanitized.defaultCourse,
+           !defaultCourse.holeSegment.isNineHoleLeagueSegment {
+            sanitized.defaultCourse = defaultCourse.applying(holeSegment: .front9)
+        }
+        return sanitized
+    }
+
+    private func invalidateLeagueRulesConfirmationIfNeeded(previousSettings: SeriesSettings, newSettings: SeriesSettings) {
+        guard materialLeagueRulesSignature(for: previousSettings) != materialLeagueRulesSignature(for: newSettings) else { return }
+        series.leagueRulesConfirmedAt = nil
+        series.leagueRulesConfirmedByUserID = nil
+        series.leagueRulesSignature = nil
+    }
+
+    // MARK: - Member Mutations
+
+    func addMember(_ player: Player) async {
+        guard !hasActiveMember(for: player) else { return }
+
+        var member = SeriesMember(
+            id: HackersID.string(),
+            userID: player.userID,
+            playerID: player.id,
+            name: player.name,
+            role: .member,
+            defaultTeeBoxID: nil,
+            isActive: true,
+            joinedAt: .init(),
+            createdAt: .init(),
+            lastUpdatedAt: .init(),
+            parentID: seriesID
+        )
+
+        switch await FirebaseService.shared.addSeriesMember(member) {
+        case .success(let created):
+            member = created
+            members.append(member)
+            let matchingInviteIDs = invites.indices.filter { index in
+                let invite = invites[index]
+                guard invite.status == .pending else { return false }
+
+                let matchesPlayerID = player.id.isPopulated && invite.invitedPlayerID == player.id
+                let matchesUserID = (player.userID?.isPopulated == true) && invite.invitedUserID == player.userID
+                return matchesPlayerID || matchesUserID
+            }
+
+            for inviteIndex in matchingInviteIDs {
+                invites[inviteIndex].status = .accepted
+                invites[inviteIndex].respondedAt = .init()
+                invites[inviteIndex].resolvedMemberID = member.id
+                invites[inviteIndex].lastUpdatedAt = .init()
+                _ = await FirebaseService.shared.updateSeriesInvite(invites[inviteIndex])
+            }
+            if let playerID = member.playerID, playerID.isPopulated {
+                if !series.memberPlayerIDs.contains(playerID) {
+                    series.memberPlayerIDs.append(playerID)
+                    try? await FirebaseService.shared.addPlayerToSeries(seriesID: seriesID, playerID: playerID)
+                }
+            }
+            await seedAttendanceForFutureRounds(memberID: member.id)
+            recomputeAllHandicaps()
+            await refreshSeriesCachesIfNeeded()
+            addEvent(
+                "series.member_added",
+                eventProps: seriesTelemetryProps([
+                    "is_offline_profile": player.userID == nil,
+                    "member_role": member.role.rawValue
+                ])
+            )
+        case .failure(let error):
+            addBreadcrumb(level: .error, message: "Failed to add series member", error: error)
+        }
+    }
+
+    func addOfflineMember(name: Name) async {
+        guard !hasOfflineMember(named: name) else { return }
+
+        var player = Player(name: name)
+        player.userID = nil
+        player.lastUpdatedAt = .init()
+
+        let createdPlayer: Player
+        switch await player.post() {
+        case .success(let saved):
+            createdPlayer = saved
+        case .failure(let error):
+            addBreadcrumb(level: .error, message: "Failed to create offline player profile", error: error)
+            return
+        }
+
+        await addMember(createdPlayer)
+    }
+
+    /// Removes an active member from the series (commissioner only). Used from add-players sheet to undo a mistaken add.
+    func removeMember(playing player: Player) async {
+        guard isCommissioner else { return }
+        let resolvedPlayerID = player.playerID ?? player.id
+        guard let index = members.firstIndex(where: { member in
+            guard member.isActive else { return false }
+            if resolvedPlayerID.isPopulated { return member.playerID == resolvedPlayerID }
+            return member.playerID == nil
+                && normalizedName(member.name) == normalizedName(player.name)
+        }) else { return }
+
+        let member = members[index]
+        guard member.role != .commissioner else { return }
+
+        await removeActiveMember(member, fallbackPlayerID: resolvedPlayerID, selfInitiatedLeave: false)
+    }
+
+    /// Removes a roster member by id (commissioner only). Used from roster ellipsis menu.
+    func removeMember(_ member: SeriesMember) async {
+        guard isCommissioner else { return }
+        guard member.role != .commissioner else { return }
+        guard let current = members.first(where: { $0.id == member.id && $0.isActive }) else { return }
+        await removeActiveMember(current, fallbackPlayerID: member.playerID ?? "", selfInitiatedLeave: false)
+    }
+
+    /// Self-removal for non-commissioner members. Historical data is preserved.
+    func leaveLeague() async {
+        guard !isCommissioner else { return }
+        guard let playerID = currentPlayerID,
+              let member = members.first(where: { $0.playerID == playerID && $0.isActive }) else { return }
+        await removeActiveMember(member, fallbackPlayerID: playerID, selfInitiatedLeave: true)
+    }
+
+    private func removeActiveMember(_ member: SeriesMember, fallbackPlayerID: String, selfInitiatedLeave: Bool) async {
+        let podsToRemove = pods.filter { $0.isActive && $0.memberIDs.contains(member.id) }
+        for pod in podsToRemove {
+            await deletePod(pod)
+        }
+
+        var attendanceToDelete: [SeriesRoundAttendance] = []
+        for list in attendanceByRound.values {
+            attendanceToDelete.append(contentsOf: list.filter { $0.memberID == member.id })
+        }
+        for attendance in attendanceToDelete {
+            _ = await FirebaseService.shared.deleteSeriesRoundAttendance(attendance)
+        }
+        for roundID in attendanceByRound.keys {
+            attendanceByRound[roundID]?.removeAll { $0.memberID == member.id }
+        }
+        attendanceByMember.removeValue(forKey: member.id)
+        handicapOverrides.removeAll { $0.memberID == member.id }
+
+        switch await FirebaseService.shared.deleteSeriesMember(member) {
+        case .success:
+            members.removeAll { $0.id == member.id }
+            let pidToRemove = member.playerID ?? fallbackPlayerID
+            if pidToRemove.isPopulated {
+                series.memberPlayerIDs.removeAll { $0 == pidToRemove }
+                try? await FirebaseService.shared.removePlayerFromSeries(seriesID: seriesID, playerID: pidToRemove)
+            }
+            memberHandicaps.removeValue(forKey: member.id)
+            recomputeAllHandicaps()
+            await refreshSeriesCachesIfNeeded()
+            addEvent(
+                "series.member_removed",
+                eventProps: seriesTelemetryProps([
+                    "self_initiated_leave": selfInitiatedLeave,
+                    "removed_role": member.role.rawValue
+                ])
+            )
+        case .failure(let error):
+            addBreadcrumb(level: .error, message: "Failed to remove series member", error: error)
+        }
+    }
+
+    func updateMemberTeeBox(_ member: SeriesMember, teeBoxID: String?) async {
+        guard let index = members.firstIndex(where: { $0.id == member.id }) else { return }
+        members[index].defaultTeeBoxID = teeBoxID
+        members[index].lastUpdatedAt = .init()
+        _ = await FirebaseService.shared.updateSeriesMember(members[index])
+        addEvent(
+            "series.member_tee_updated",
+            eventProps: seriesTelemetryProps(["tee_box_id_set": teeBoxID != nil])
+        )
+    }
+
+    /// Roles the current user may assign to `member` (UI filtering). Commissioner-on-offline remains disabled in views.
+    func assignableRoles(for member: SeriesMember) -> [SeriesMemberRole] {
+        guard currentMemberID != nil else { return [] }
+
+        if member.id == currentMemberID {
+            let effectiveSelf: SeriesMemberRole = isCommissioner ? .commissioner : (currentMemberRecord?.role ?? .member)
+            return SeriesMemberRole.allCases.filter { $0.rank <= effectiveSelf.rank }
+        }
+
+        if isCommissioner {
+            return Array(SeriesMemberRole.allCases)
+        }
+        if isCaptain {
+            return [.captain, .member, .substitute, .spectator]
+        }
+        return []
+    }
+
+    /// Effective rank used for self role changes (owner counts as commissioner even if row role differs).
+    func effectiveSelfRole(for member: SeriesMember) -> SeriesMemberRole? {
+        guard member.id == currentMemberID else { return nil }
+        return isCommissioner ? .commissioner : (currentMemberRecord?.role ?? member.role)
+    }
+
+    /// True when changing own role to a strictly lower rank; show a confirmation first.
+    func shouldConfirmSelfRoleChange(member: SeriesMember, to newRole: SeriesMemberRole) -> Bool {
+        guard let from = effectiveSelfRole(for: member) else { return false }
+        return newRole.rank < from.rank
+    }
+
+    func canUpdateMemberRole(_ member: SeriesMember, to role: SeriesMemberRole) -> Bool {
+        guard let index = members.firstIndex(where: { $0.id == member.id }) else { return false }
+        if role == .commissioner, members[index].hasLinkedUserID == false { return false }
+
+        let isSelf = member.id == currentMemberID
+        if isSelf {
+            guard let effective = effectiveSelfRole(for: members[index]) else { return false }
+            return role.rank <= effective.rank
+        }
+
+        if isCommissioner { return true }
+        if isCaptain {
+            return [.captain, .member, .substitute, .spectator].contains(role)
+        }
+        return false
+    }
+
+    func updateMemberRole(_ member: SeriesMember, role: SeriesMemberRole) async {
+        guard canUpdateMemberRole(member, to: role) else { return }
+        if role == .substitute {
+            let podsContainingMember = pods.filter { $0.isActive && $0.memberIDs.contains(member.id) }
+            for pod in podsContainingMember {
+                await deletePod(pod)
+            }
+        }
+        guard let index = members.firstIndex(where: { $0.id == member.id }) else { return }
+        if role == .substitute { members[index].teamID = nil }
+        members[index].role = role
+        members[index].lastUpdatedAt = .init()
+        _ = await FirebaseService.shared.updateSeriesMember(members[index])
+        addEvent("series.member_role_updated", eventProps: seriesTelemetryProps(["new_role": role.rawValue]))
+    }
+
+    func updateMemberTeam(_ member: SeriesMember, teamID: String?) async {
+        guard let current = members.first(where: { $0.id == member.id }) else { return }
+        guard current.role != .substitute || teamID == nil else { return }
+        let previousTeamID = current.teamID
+        if previousTeamID != teamID {
+            let podsContainingMember = pods.filter { $0.isActive && $0.memberIDs.contains(member.id) }
+            for pod in podsContainingMember {
+                await deletePod(pod)
+            }
+        }
+        guard let index = members.firstIndex(where: { $0.id == member.id }) else { return }
+        members[index].teamID = teamID
+        members[index].lastUpdatedAt = .init()
+        _ = await FirebaseService.shared.updateSeriesMember(members[index])
+        addEvent(
+            "series.member_team_updated",
+            eventProps: seriesTelemetryProps(["has_team": teamID != nil])
+        )
+    }
+
+    func updateMemberDisplayName(_ member: SeriesMember, fullName: String) async {
+        guard isCommissioner else { return }
+        let trimmed = fullName.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard trimmed.isPopulated else { return }
+        guard let index = members.firstIndex(where: { $0.id == member.id }) else { return }
+        members[index].name = Name(trimmed)
+        members[index].lastUpdatedAt = .init()
+        _ = await FirebaseService.shared.updateSeriesMember(members[index])
+        addEvent("series.member_display_name_updated", eventProps: seriesTelemetryProps())
+    }
+
+    /// Clears any fixed pair for `member`, then optionally pairs them with `partnerMemberID` on the same team.
+    func setMemberFixedPair(member: SeriesMember, partnerMemberID: String?) async {
+        guard isCommissioner else { return }
+        guard let teamID = member.teamID else { return }
+
+        for pod in pods.filter({ $0.isActive && $0.memberIDs.contains(member.id) }) {
+            await deletePod(pod)
+        }
+
+        guard let partnerID = partnerMemberID,
+              partnerID != member.id,
+              let partner = activeMembers.first(where: { $0.id == partnerID }),
+              partner.teamID == teamID
+        else { return }
+
+        for pod in pods.filter({ $0.isActive && $0.memberIDs.contains(partnerID) }) {
+            await deletePod(pod)
+        }
+
+        _ = await createPod(teamID: teamID, memberIDs: [member.id, partnerID])
+    }
+
+    // MARK: - Invite Mutations
+
+    func createInvite(for player: Player) async {
+        guard let memberID = currentMemberID else { return }
+        guard !invites.contains(where: { $0.invitedPlayerID == player.id && $0.status == .pending }) else { return }
+
+        let invite = SeriesInvite(
+            id: HackersID.string(),
+            seriesID: seriesID,
+            invitedUserID: player.userID,
+            invitedPlayerID: player.id,
+            invitedName: player.name.fullName,
+            status: .pending,
+            invitedByMemberID: memberID,
+            invitedAt: .init(),
+            createdAt: .init(),
+            lastUpdatedAt: .init(),
+            parentID: seriesID
+        )
+
+        switch await FirebaseService.shared.addSeriesInvite(invite) {
+        case .success(let created):
+            invites.append(created)
+            addEvent("series.invite_created", eventProps: seriesTelemetryProps())
+        case .failure(let error):
+            addBreadcrumb(level: .error, message: "Failed to create series invite", error: error)
+        }
+    }
+
+    func resolveInvite(_ invite: SeriesInvite, status: SeriesInviteStatus) async {
+        guard let index = invites.firstIndex(where: { $0.id == invite.id }) else { return }
+        invites[index].status = status
+        invites[index].respondedAt = .init()
+        _ = await FirebaseService.shared.updateSeriesInvite(invites[index])
+        addEvent(
+            "series.invite_resolved",
+            eventProps: seriesTelemetryProps(["status": status.rawValue])
+        )
+    }
+
+    // MARK: - Team + Pod Mutations
+
+    func createDefaultTeams() async {
+        guard teams.isEmpty else { return }
+        let previousSettings = series.settings
+        series.settings.useTeams = true
+        series.settings.useTeamStandings = true
+        series.settings.defaultRoundConfig.teamAssignmentMode = .seriesTeams
+        invalidateLeagueRulesConfirmationIfNeeded(previousSettings: previousSettings, newSettings: series.settings)
+        _ = await FirebaseService.shared.updateSeries(series)
+
+        let red = SeriesTeam(
+            id: HackersID.string(),
+            name: TeamColor.teamValue(for: 0).1,
+            color: TeamColor.teamValue(for: 0).0.rawValue,
+            index: 0,
+            createdAt: .init(),
+            lastUpdatedAt: .init(),
+            parentID: seriesID
+        )
+        let blue = SeriesTeam(
+            id: HackersID.string(),
+            name: TeamColor.teamValue(for: 1).1,
+            color: TeamColor.teamValue(for: 1).0.rawValue,
+            index: 1,
+            createdAt: .init(),
+            lastUpdatedAt: .init(),
+            parentID: seriesID
+        )
+
+        switch await FirebaseService.shared.addSeriesTeam(red) {
+        case .success(let team): teams.append(team)
+        case .failure(let error):
+            addBreadcrumb(level: .error, message: "Failed to create default red team", error: error)
+            return
+        }
+
+        switch await FirebaseService.shared.addSeriesTeam(blue) {
+        case .success(let team): teams.append(team)
+        case .failure(let error):
+            addBreadcrumb(level: .error, message: "Failed to create default blue team", error: error)
+            return
+        }
+
+        await refreshSeriesCachesIfNeeded()
+        addEvent("series.default_teams_created", eventProps: seriesTelemetryProps(["team_count": teams.count]))
+    }
+
+    /// - Parameters:
+    ///   - presetColorKey: `TeamColor` raw value used when no custom hex is set.
+    ///   - customColorHex: Optional `#RRGGBB` / `RRGGBB` override stored as `custom_color_hex` in Firestore.
+    func createTeam(name: String, presetColorKey: String, customColorHex: String?) async -> SeriesTeam? {
+        let hex = Self.normalizedSeriesTeamCustomHex(customColorHex)
+        let team = SeriesTeam(
+            id: HackersID.string(),
+            name: name,
+            color: presetColorKey,
+            customColorHex: hex,
+            index: teams.nextIndex,
+            createdAt: .init(),
+            lastUpdatedAt: .init(),
+            parentID: seriesID
+        )
+        switch await FirebaseService.shared.addSeriesTeam(team) {
+        case .success(let created):
+            teams.append(created)
+            let previousSettings = series.settings
+            series.settings.useTeams = true
+            series.settings.useTeamStandings = true
+            series.settings.defaultRoundConfig.teamAssignmentMode = .seriesTeams
+            invalidateLeagueRulesConfirmationIfNeeded(previousSettings: previousSettings, newSettings: series.settings)
+            _ = await FirebaseService.shared.updateSeries(series)
+            addEvent("series.team_created", eventProps: seriesTelemetryProps(["team_id": created.id]))
+            return created
+        case .failure(let error):
+            addBreadcrumb(level: .error, message: "Failed to create team", error: error)
+            return nil
+        }
+    }
+
+    func updateTeam(_ team: SeriesTeam, name: String, presetColorKey: String, customColorHex: String?) async {
+        guard let index = teams.firstIndex(where: { $0.id == team.id }) else { return }
+        teams[index].name = name
+        teams[index].color = presetColorKey
+        teams[index].customColorHex = Self.normalizedSeriesTeamCustomHex(customColorHex)
+        teams[index].lastUpdatedAt = .init()
+        _ = await FirebaseService.shared.updateSeriesTeam(teams[index])
+        addEvent("series.team_updated", eventProps: seriesTelemetryProps(["team_id": team.id]))
+    }
+
+    private static func normalizedSeriesTeamCustomHex(_ raw: String?) -> String? {
+        guard let raw else { return nil }
+        var t = raw.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard t.isPopulated else { return nil }
+        if !t.hasPrefix("#") { t = "#\(t)" }
+        let digits = t.dropFirst().filter(\.isHexDigit)
+        guard digits.count == 3 || digits.count == 6 else { return nil }
+        return "#\(String(digits).uppercased())"
+    }
+
+    func deleteTeam(_ team: SeriesTeam) async {
+        guard let target = teams.first(where: { $0.id == team.id }) else { return }
+
+        let dependentPods = pods.filter { $0.teamID == team.id }
+        for pod in dependentPods {
+            _ = await FirebaseService.shared.deleteSeriesPod(pod)
+        }
+        pods.removeAll { $0.teamID == team.id }
+
+        let affectedMembers = members.filter { $0.teamID == team.id }
+        for member in affectedMembers {
+            var updated = member
+            updated.teamID = nil
+            updated.lastUpdatedAt = .init()
+            if case .success(let saved) = await FirebaseService.shared.updateSeriesMember(updated),
+               let currentIndex = members.firstIndex(where: { $0.id == saved.id }) {
+                members[currentIndex] = saved
+            }
+        }
+
+        teams.removeAll { $0.id == target.id }
+        _ = await FirebaseService.shared.deleteSeriesTeam(target)
+        addEvent("series.team_deleted", eventProps: seriesTelemetryProps(["had_dependent_pods": dependentPods.isPopulated]))
+
+        if teams.isEmpty {
+            let previousSettings = series.settings
+            series.settings.useTeams = false
+            series.settings.useTeamStandings = false
+            series.settings.defaultRoundConfig.teamAssignmentMode = .manual
+            series.settings.defaultRoundConfig.matchupMode = series.settings.defaultRoundConfig.resolvedCompetitionScope == .matchup
+                ? .individualVsIndividual
+                : .field
+            series.settings.defaultRoundConfig.podGroupingStrategy = .disabled
+            invalidateLeagueRulesConfirmationIfNeeded(previousSettings: previousSettings, newSettings: series.settings)
+            _ = await FirebaseService.shared.updateSeries(series)
+        }
+
+        await refreshSeriesCachesIfNeeded()
+    }
+
+    func createPod(teamID: String, memberIDs: [String], label: String? = nil) async -> SeriesTeamPod? {
+        let cleanedIDs = Array(Set(memberIDs)).sorted()
+        guard cleanedIDs.count == 2 else { return nil }
+        guard validatePod(teamID: teamID, memberIDs: cleanedIDs) else { return nil }
+
+        let pod = SeriesTeamPod(
+            id: HackersID.string(),
+            teamID: teamID,
+            label: label ?? "",
+            index: pods.filter { $0.teamID == teamID }.nextIndex,
+            memberIDs: cleanedIDs,
+            isActive: true,
+            createdAt: .init(),
+            lastUpdatedAt: .init(),
+            parentID: seriesID
+        )
+        switch await FirebaseService.shared.addSeriesPod(pod) {
+        case .success(let created):
+            pods.append(created)
+            addEvent(
+                "series.pod_created",
+                eventProps: seriesTelemetryProps(["team_id": teamID])
+            )
+            return created
+        case .failure(let error):
+            addBreadcrumb(level: .error, message: "Failed to create team pod", error: error)
+            return nil
+        }
+    }
+
+    func deletePod(_ pod: SeriesTeamPod) async {
+        guard let index = pods.firstIndex(where: { $0.id == pod.id }) else { return }
+        let target = pods[index]
+        pods.remove(at: index)
+        _ = await FirebaseService.shared.deleteSeriesPod(target)
+        addEvent("series.pod_deleted", eventProps: seriesTelemetryProps(["team_id": target.teamID]))
+    }
+
+    // MARK: - Round Mutations
+
+    func addRound(
+        title: String,
+        scheduledAt: Time? = nil,
+        format: GameFormat = .strokePlay
+    ) async -> SeriesRound? {
+        let defaults = series.settings.roundDefaults
+        var defaultConfig = defaults.configuration
+        if format != .strokePlay {
+            defaultConfig.formatTemplateID = templateID(for: format)
+        }
+        return await addRound(
+            title: title,
+            scheduledAt: scheduledAt,
+            courseOverride: nil,
+            roundConfig: defaultConfig,
+            teamScoringProfileID: defaults.teamScoringProfileID,
+            individualScoringProfileID: defaults.individualScoringProfileID,
+            matchupPlans: [],
+            plannedMatchups: [],
+            plannedTeeGroups: [],
+            partnershipPlans: [],
+            notes: nil,
+            duplicateSourceSeriesRoundID: nil
+        )
+    }
+
+    func addRound(
+        title: String,
+        scheduledAt: Time?,
+        courseOverride: SeriesCourseSelection?,
+        roundConfig: SeriesRoundConfiguration,
+        teamScoringProfileID: String?,
+        individualScoringProfileID: String?,
+        matchupPlans: [SeriesRoundMatchupPlan],
+        plannedMatchups: [SeriesRoundPlannedMatchup],
+        plannedTeeGroups: [SeriesRoundPlannedTeeGroup],
+        partnershipPlans: [SeriesRoundPartnershipPlan] = [],
+        notes: String?,
+        duplicateSourceSeriesRoundID: String? = nil,
+        resolveDefaultCourseWhenMissing: Bool = true
+    ) async -> SeriesRound? {
+        let roundCourse = courseOverride
+            ?? (resolveDefaultCourseWhenMissing ? resolvedDefaultCourseSelection(forRoundIndex: rounds.nextIndex) : nil)
+        let round = SeriesRound(
+            id: HackersID.string(),
+            title: title,
+            index: rounds.nextIndex,
+            status: .planned,
+            scheduledAt: scheduledAt,
+            courseOverride: roundCourse,
+            roundConfig: roundConfig,
+            policyBinding: SeriesStandingsPolicyResolver.bindingForNewRound(settings: series.settings),
+            teamScoringProfileID: teamScoringProfileID,
+            individualScoringProfileID: individualScoringProfileID,
+            matchupPlans: matchupPlans.sorted { $0.index < $1.index },
+            plannedMatchups: plannedMatchups,
+            plannedTeeGroups: plannedTeeGroups,
+            partnershipPlans: partnershipPlans,
+            notes: notes,
+            awardsStatus: .pending,
+            createdAt: .init(),
+            lastUpdatedAt: .init(),
+            parentID: seriesID
+        )
+
+        switch await FirebaseService.shared.addSeriesRound(round) {
+        case .success(let created):
+            rounds.append(created)
+            await seedAttendance(for: created)
+            await refreshSeriesCachesIfNeeded()
+            if let sourceID = duplicateSourceSeriesRoundID {
+                addEvent(
+                    "series.round_duplicated",
+                    eventProps: seriesTelemetryProps([
+                        "source_series_round_id": sourceID,
+                        "new_series_round_id": created.id
+                    ])
+                )
+            } else {
+                addEvent(
+                    "series.round_added",
+                    eventProps: seriesTelemetryProps([
+                        "series_round_id": created.id,
+                        "round_index": created.index
+                    ])
+                )
+            }
+            return created
+        case .failure(let error):
+            addBreadcrumb(level: .error, message: "Failed to add series round", error: error)
+            return nil
+        }
+    }
+
+    func addRound(
+        draft: SeriesRoundDraft,
+        courseHandicapAvailable: Bool,
+        fallbackTitle: String
+    ) async -> SeriesRound? {
+        let values: SeriesRoundDraftPersistenceValues
+        do {
+            values = try draft.persistedValues(
+                usesTeams: usesTeams,
+                courseHandicapAvailable: courseHandicapAvailable,
+                fallbackTitle: fallbackTitle
+            )
+        } catch {
+            addBreadcrumb(level: .error, message: "Invalid Series round draft", error: error)
+            return nil
+        }
+        return await addRound(
+            title: values.title,
+            scheduledAt: values.scheduledAt,
+            courseOverride: values.courseOverride,
+            roundConfig: values.roundConfig,
+            teamScoringProfileID: values.teamScoringProfileID,
+            individualScoringProfileID: values.individualScoringProfileID,
+            matchupPlans: values.matchupPlans,
+            plannedMatchups: values.plannedMatchups,
+            plannedTeeGroups: values.plannedTeeGroups,
+            partnershipPlans: values.partnershipPlans,
+            notes: values.notes
+        )
+    }
+
+    @discardableResult
+    func updateSeriesRound(
+        _ round: SeriesRound,
+        title: String? = nil,
+        scheduledAt: Time? = nil,
+        courseOverride: SeriesCourseSelection? = nil,
+        shouldUpdateCourseOverride: Bool = false,
+        roundConfig: SeriesRoundConfiguration? = nil,
+        teamScoringProfileID: String? = nil,
+        individualScoringProfileID: String? = nil,
+        matchupPlans: [SeriesRoundMatchupPlan]? = nil,
+        plannedMatchups: [SeriesRoundPlannedMatchup]? = nil,
+        plannedTeeGroups: [SeriesRoundPlannedTeeGroup]? = nil,
+        partnershipPlans: [SeriesRoundPartnershipPlan]? = nil,
+        notes: String? = nil,
+        shouldUpdateNotes: Bool = false,
+        syncLinkedLobby: Bool = true
+    ) async -> Bool {
+        guard var updatedRound = rounds.first(where: { $0.id == round.id }) else { return false }
+        let previousRound = updatedRound
+        if let title { updatedRound.title = title }
+        updatedRound.scheduledAt = scheduledAt
+        if let roundConfig {
+            var sanitizedRoundConfig = roundConfig
+            sanitizedRoundConfig.excludedHandicapMemberIDs = roundConfig.normalizedExcludedHandicapMemberIDs
+            updatedRound.roundConfig = sanitizedRoundConfig
+        }
+        if let matchupPlans { updatedRound.matchupPlans = matchupPlans.sorted { $0.index < $1.index } }
+        if let plannedMatchups { updatedRound.plannedMatchups = plannedMatchups }
+        if let plannedTeeGroups { updatedRound.plannedTeeGroups = plannedTeeGroups }
+        if let partnershipPlans { updatedRound.partnershipPlans = partnershipPlans }
+        if shouldUpdateNotes { updatedRound.notes = notes }
+        if shouldUpdateCourseOverride {
+            updatedRound.courseOverride = courseOverride
+        }
+        updatedRound.teamScoringProfileID = teamScoringProfileID
+        updatedRound.individualScoringProfileID = individualScoringProfileID
+        let effectiveLifecycleStatus = effectiveStatus(for: previousRound)
+        guard SeriesRoundLifecycleGuard.permitsScoreContractChange(
+            from: previousRound,
+            to: updatedRound,
+            effectiveStatus: effectiveLifecycleStatus,
+            in: series
+        ) else {
+            addBreadcrumb(
+                level: .warning,
+                message: "Blocked Series round score-contract mutation after start"
+            )
+            addEvent(
+                "series.round_score_contract_change_blocked",
+                eventProps: seriesTelemetryProps([
+                    "series_round_id": round.id,
+                    "effective_status": effectiveLifecycleStatus.rawValue
+                ])
+            )
+            return false
+        }
+        updatedRound.lastUpdatedAt = .init()
+        switch await FirebaseService.shared.updateSeriesRound(updatedRound) {
+        case .success(let saved):
+            updatedRound = saved
+            if let currentIndex = rounds.firstIndex(where: { $0.id == saved.id }) {
+                rounds[currentIndex] = saved
+            }
+        case .failure(let error):
+            addBreadcrumb(level: .error, message: "Failed to persist Series round update", error: error)
+            return false
+        }
+
+        let handicapSettingsChanged =
+            previousRound.roundConfig.countsTowardHandicapPool != updatedRound.roundConfig.countsTowardHandicapPool
+            || previousRound.roundConfig.normalizedExcludedHandicapMemberIDs != updatedRound.roundConfig.normalizedExcludedHandicapMemberIDs
+            || previousRound.roundConfig.formatTemplateID != updatedRound.roundConfig.formatTemplateID
+
+        let awardRelevantChanged =
+            previousRound.roundConfig != updatedRound.roundConfig
+            || previousRound.teamScoringProfileID != updatedRound.teamScoringProfileID
+            || previousRound.individualScoringProfileID != updatedRound.individualScoringProfileID
+            || previousRound.matchupPlans != updatedRound.matchupPlans
+            || previousRound.partnershipPlans != updatedRound.partnershipPlans
+
+        let roundIsComplete = effectiveStatus(for: updatedRound) == .complete || updatedRound.status == .complete
+        let shouldReprocessCompleteRound = roundIsComplete
+            && updatedRound.roundID != nil
+            && (handicapSettingsChanged || awardRelevantChanged)
+
+        if shouldReprocessCompleteRound,
+           let roundID = updatedRound.roundID,
+           let snapshot = await loadRoundSnapshot(roundID: roundID) {
+            let processingResult = await processCompletedRound(
+                seriesRound: updatedRound,
+                snapshot: snapshot,
+                overwriteDerivedData: true
+            )
+            guard processingResult.derivedPublicationSucceeded,
+                  let proposedAwardsStatus = processingResult.proposedAwardsStatus else {
+                return false
+            }
+            if processingResult.awardsChanged, !(await rebuildStandings(only: nil)) {
+                return false
+            }
+            guard await persistAwardsStatuses([updatedRound.id: proposedAwardsStatus]) else {
+                return false
+            }
+            if handicapSettingsChanged {
+                handicapScores = await FirebaseService.shared.fetchHandicapScores(seriesID: seriesID)
+                recomputeAllHandicaps()
+            }
+        }
+        if syncLinkedLobby,
+           shouldSyncLinkedLobbyAfterSeriesRoundUpdate(previous: previousRound, updated: updatedRound),
+           let roundID = updatedRound.roundID,
+           await linkedRoundIsLobbyForSync(roundID: roundID) {
+            let options = SeriesRoundSyncOptions(
+                syncPlayerData: true,
+                syncFormat: true,
+                syncOrganization: true,
+                syncPairs: true,
+                syncMatchups: true,
+                syncHandicapSettings: true,
+                preserveManualHandicapEdits: false
+            )
+            let result = await syncLinkedRoundFromSeries(seriesRound: updatedRound, options: options)
+            if case .failure(let error) = result {
+                addBreadcrumb(level: .error, message: "Failed to sync linked lobby after series round update", error: error)
+            }
+        }
+        addEvent(
+            "series.round_updated",
+            eventProps: seriesTelemetryProps(["series_round_id": round.id])
+        )
+        refreshLinkedConfigurationDivergences()
+        return true
+    }
+
+    @discardableResult
+    func updateSeriesRound(
+        _ round: SeriesRound,
+        draft: SeriesRoundDraft,
+        courseHandicapAvailable: Bool,
+        syncLinkedLobby: Bool = true
+    ) async -> Bool {
+        let values: SeriesRoundDraftPersistenceValues
+        do {
+            values = try draft.persistedValues(
+                usesTeams: usesTeams,
+                courseHandicapAvailable: courseHandicapAvailable,
+                fallbackTitle: round.title.isPopulated ? round.title : "Round \(round.index + 1)"
+            )
+        } catch {
+            addBreadcrumb(level: .error, message: "Invalid Series round draft", error: error)
+            return false
+        }
+        return await updateSeriesRound(
+            round,
+            title: values.title,
+            scheduledAt: values.scheduledAt,
+            courseOverride: values.courseOverride,
+            shouldUpdateCourseOverride: true,
+            roundConfig: values.roundConfig,
+            teamScoringProfileID: values.teamScoringProfileID,
+            individualScoringProfileID: values.individualScoringProfileID,
+            matchupPlans: values.matchupPlans,
+            plannedMatchups: values.plannedMatchups,
+            plannedTeeGroups: values.plannedTeeGroups,
+            partnershipPlans: values.partnershipPlans,
+            notes: values.notes,
+            shouldUpdateNotes: true,
+            syncLinkedLobby: syncLinkedLobby
+        )
+    }
+
+    private func linkedRoundIsLobbyForSync(roundID: String) async -> Bool {
+        if let linkedRound = linkedRounds[roundID] {
+            return linkedRound.status == .lobby
+        }
+
+        switch await FirebaseService.shared.getRoundDocument(byID: roundID) {
+        case .success(let linkedRound):
+            linkedRounds[roundID] = linkedRound
+            return linkedRound.status == .lobby
+        case .failure(let error):
+            addBreadcrumb(level: .error, message: "Could not load linked round before lobby sync", error: error)
+            return false
+        }
+    }
+
+    func shouldSyncLinkedLobbyAfterSeriesRoundUpdate(previous: SeriesRound, updated: SeriesRound) -> Bool {
+        guard updated.roundID != nil else { return false }
+        return previous.title != updated.title
+            || previous.scheduledAt != updated.scheduledAt
+            || previous.courseOverride != updated.courseOverride
+            || previous.roundConfig != updated.roundConfig
+            || previous.teamScoringProfileID != updated.teamScoringProfileID
+            || previous.individualScoringProfileID != updated.individualScoringProfileID
+            || previous.matchupPlans != updated.matchupPlans
+            || previous.plannedMatchups != updated.plannedMatchups
+            || previous.plannedTeeGroups != updated.plannedTeeGroups
+            || previous.partnershipPlans != updated.partnershipPlans
+    }
+
+    func duplicateRound(_ source: SeriesRound) async -> SeriesRound? {
+        await addRound(
+            title: source.title.isPopulated ? "\(source.title) (copy)" : "Round \(rounds.nextIndex + 1)",
+            scheduledAt: source.scheduledAt,
+            courseOverride: source.courseOverride,
+            roundConfig: source.roundConfig,
+            teamScoringProfileID: source.teamScoringProfileID,
+            individualScoringProfileID: source.individualScoringProfileID,
+            matchupPlans: source.matchupPlans.map {
+                var plan = $0
+                plan.id = HackersID.string()
+                plan.createdAt = .init()
+                plan.lastUpdatedAt = .init()
+                return plan
+            },
+            plannedMatchups: source.plannedMatchups.map {
+                var updated = $0
+                var plan = updated.matchupPlan
+                plan.id = HackersID.string()
+                plan.createdAt = .init()
+                plan.lastUpdatedAt = .init()
+                updated.id = plan.id
+                updated.plan = plan
+                return updated
+            },
+            plannedTeeGroups: source.plannedTeeGroups,
+            partnershipPlans: source.partnershipPlans.map {
+                var plan = $0
+                plan.id = HackersID.string()
+                plan.createdAt = .init()
+                plan.lastUpdatedAt = .init()
+                return plan
+            },
+            notes: source.notes,
+            duplicateSourceSeriesRoundID: source.id,
+            resolveDefaultCourseWhenMissing: false
+        )
+    }
+
+    func deleteScheduledRound(_ round: SeriesRound) async {
+        guard rounds.contains(where: { $0.id == round.id }) else { return }
+        let attendance = attendanceByRound[round.id] ?? []
+        for item in attendance {
+            _ = await FirebaseService.shared.deleteSeriesRoundAttendance(item)
+        }
+        attendanceByRound[round.id] = nil
+        rounds.removeAll { $0.id == round.id }
+        _ = await FirebaseService.shared.deleteSeriesRound(round)
+        await refreshSeriesCachesIfNeeded()
+        addEvent(
+            "series.round_deleted",
+            eventProps: seriesTelemetryProps(["series_round_id": round.id])
+        )
+    }
+
+    func cancelRound(_ round: SeriesRound) async {
+        guard var updatedRound = rounds.first(where: { $0.id == round.id }) else { return }
+        updatedRound.status = .canceled
+        updatedRound.lastUpdatedAt = .init()
+        if let roundID = updatedRound.roundID,
+           var linked = linkedRounds[roundID],
+           linked.status != .complete {
+            linked.status = .archived
+            _ = await linked.put()
+            linkedRounds[roundID] = linked
+        }
+        if case .success(let saved) = await FirebaseService.shared.updateSeriesRound(updatedRound),
+           let currentIndex = rounds.firstIndex(where: { $0.id == saved.id }) {
+            rounds[currentIndex] = saved
+        }
+        await refreshSeriesCachesIfNeeded()
+        addEvent(
+            "series.round_canceled",
+            eventProps: seriesTelemetryProps(["series_round_id": round.id])
+        )
+    }
+
+    func attendanceCounts(for seriesRoundID: String) -> (playing: Int, declined: Int, noResponse: Int) {
+        let list = attendanceByRound[seriesRoundID] ?? []
+        let playing = list.filter { $0.status == SeriesRoundAttendanceStatus.accepted.rawValue }.count
+        let declined = list.filter { $0.status == SeriesRoundAttendanceStatus.no.rawValue }.count
+        let noResponse = max(0, eligibleMembers.count - playing - declined)
+        return (playing, declined, noResponse)
+    }
+
+    func currentAttendanceStatus(for seriesRoundID: String) -> SeriesRoundAttendanceStatus {
+        guard let memberID = currentMemberID,
+              let attendance = attendanceByRound[seriesRoundID]?.first(where: { $0.memberID == memberID }),
+              let status = SeriesRoundAttendanceStatus(rawValue: attendance.status) else {
+            return series.settings.attendanceDefault
+        }
+        return status
+    }
+
+    /// Whether the current user may change RSVP for someone else (commissioner: eligible roster; captain: same team).
+    func canProxyRSVP(for member: SeriesMember) -> Bool {
+        guard let selfID = currentMemberID, member.id != selfID else { return false }
+        if isCommissioner {
+            return eligibleMembers.contains { $0.id == member.id }
+        }
+        if isCaptain {
+            guard let myTeam = currentMemberRecord?.teamID,
+                  let theirTeam = member.teamID,
+                  myTeam == theirTeam else { return false }
+            return activeMembers.contains { $0.id == member.id }
+        }
+        return false
+    }
+
+    func updateAttendance(
+        seriesRoundID: String,
+        memberID: String,
+        status: SeriesRoundAttendanceStatus,
+        declinedNote: String?
+    ) async {
+        guard let seriesRound = rounds.first(where: { $0.id == seriesRoundID }),
+              isRSVPEligible(for: seriesRound) else { return }
+
+        if memberID != currentMemberID {
+            guard let target = activeMembers.first(where: { $0.id == memberID }),
+                  canProxyRSVP(for: target) else { return }
+        }
+
+        let existing = attendanceByRound[seriesRoundID]?.first(where: { $0.memberID == memberID })
+        let attendance = SeriesRoundAttendance(
+            id: SeriesRoundAttendance.documentID(seriesRoundID: seriesRoundID, memberID: memberID),
+            seriesRoundID: seriesRoundID,
+            memberID: memberID,
+            status: status.rawValue,
+            declinedNote: declinedNote,
+            createdAt: existing?.createdAt ?? .init(),
+            lastUpdatedAt: .init(),
+            parentID: seriesID
+        )
+
+        switch await FirebaseService.shared.upsertSeriesRoundAttendance(attendance) {
+        case .success(let saved):
+            var roundAttendance = attendanceByRound[seriesRoundID] ?? []
+            if let index = roundAttendance.firstIndex(where: { $0.memberID == memberID }) {
+                roundAttendance[index] = saved
+            } else {
+                roundAttendance.append(saved)
+            }
+            attendanceByRound[seriesRoundID] = roundAttendance
+            attendanceByMember[memberID] = saved
+            await applyLobbyAttendanceChangeIfNeeded(seriesRoundID: seriesRoundID)
+            addEvent(
+                "series.attendance_updated",
+                eventProps: seriesTelemetryProps([
+                    "series_round_id": seriesRoundID,
+                    "status": status.rawValue,
+                    "is_proxy_rsvp": memberID != currentMemberID
+                ])
+            )
+        case .failure(let error):
+            addBreadcrumb(level: .error, message: "Failed to update attendance", error: error)
+        }
+    }
+
+    private func applyLobbyAttendanceChangeIfNeeded(seriesRoundID: String) async {
+        guard let seriesRound = rounds.first(where: { $0.id == seriesRoundID }),
+              isRSVPEligible(for: seriesRound),
+              let roundID = seriesRound.roundID,
+              let linked = linkedRounds[roundID],
+              linked.status == .lobby,
+              let snapshot = await loadRoundSnapshot(roundID: roundID) else {
+            return
+        }
+
+        let attendance = attendanceByRound[seriesRoundID] ?? []
+        let attendancePlan = SeriesRoundCreationMapping.participatingMembersAndPresenceStatuses(
+            series: series,
+            eligibleMembers: eligibleMembers,
+            attendance: attendance,
+            plannedTeeGroups: seriesRound.plannedTeeGroups
+        )
+        let participatingMembers = attendancePlan.members
+        let presenceStatusByMemberID = attendancePlan.presenceStatusByMemberID
+
+        let mappings: [SeriesRoundMapping]
+        switch await FirebaseService.shared.fetchSeriesRoundMappingsResult(
+            seriesID: seriesID,
+            seriesRoundID: seriesRoundID
+        ) {
+        case .success(let fetchedMappings):
+            mappings = fetchedMappings
+        case .failure(let error):
+            addBreadcrumb(level: .error, message: "Lobby attendance mappings read failed", error: error)
+            return
+        }
+        let hostPlayerID = await AppData.shared.getPrimaryPlayer()?.id
+
+        do {
+            let plan = try SeriesRoundSyncPlanning.buildLobbyAttendancePlan(
+                series: series,
+                seriesRound: seriesRound,
+                participatingMembers: participatingMembers,
+                teams: teams,
+                pods: pods,
+                handicaps: memberHandicaps,
+                seriesMappings: mappings,
+                snapshot: snapshot,
+                hostPlayerID: hostPlayerID,
+                presenceStatusByMemberID: presenceStatusByMemberID
+            )
+            try await applyLobbyAttendancePlan(plan)
+            await refreshLinkedRoundState()
+        } catch {
+            addBreadcrumb(level: .error, message: "Failed to apply lobby RSVP rebuild", error: error)
+        }
+    }
+
+    private func applyLobbyAttendancePlan(_ plan: SeriesRoundSyncPlanning.LobbyAttendancePlan) async throws {
+        _ = try await plan.round.put().get()
+        for item in plan.teeGroupsToDelete {
+            _ = try await item.delete().get()
+        }
+        for item in plan.teamsToDelete {
+            _ = try await item.delete().get()
+        }
+        for item in plan.scoringGroupsToDelete {
+            _ = try await item.delete().get()
+        }
+        for item in plan.participantsToDelete {
+            _ = try await item.delete().get()
+        }
+        for item in plan.mappingsToDelete {
+            _ = try await item.delete().get()
+        }
+        try await putSubcollectionItems(plan.teeGroupsToPut)
+        try await putSubcollectionItems(plan.teamsToPut)
+        try await putSubcollectionItems(plan.participantsToPut)
+        try await putSubcollectionItems(plan.scoringGroupsToPut)
+        try await putSubcollectionItems(plan.mappingsToPut)
+        _ = try await plan.segment.put().get()
+    }
+
+    /// Lazily heals substitute-related roster drift before a commissioner opens an unscored lobby.
+    /// Non-Series participants are intentionally preserved by the attendance reconciliation plan.
+    func repairLinkedLobbyRosterIfNeeded(seriesRoundID: String) async {
+        guard isCommissioner,
+              var seriesRound = rounds.first(where: { $0.id == seriesRoundID }),
+              seriesRound.status == .planned || seriesRound.status == .lobby,
+              let roundID = seriesRound.roundID,
+              let linked = linkedRounds[roundID],
+              linked.status == .lobby,
+              let snapshot = await loadRoundSnapshot(roundID: roundID),
+              !snapshot.scoring.contains(where: \.hasRecordedScore) else {
+            return
+        }
+
+        let hasSubstitutionContext = seriesRound.plannedTeeGroups
+            .flatMap(\.seats)
+            .contains { $0.isSubstitute || $0.substituteForSeriesMemberID?.isPopulated == true }
+            || snapshot.participants.contains(where: \.isSubstitute)
+            || snapshot.participants.contains { participant in
+                guard let memberID = participant.seriesMemberID else { return false }
+                return members.first(where: { $0.id == memberID })?.role == .substitute
+            }
+        guard hasSubstitutionContext else { return }
+
+        let repairedStructure = SeriesRoundPlanningService.resolvedPlannedStructure(
+            series: series,
+            seriesRound: seriesRound,
+            members: eligibleMembers,
+            teams: teams,
+            pods: pods,
+            courseSelection: seriesRound.resolvedCourse(using: series)
+        )
+        let previousPlannedMatchups = seriesRound.plannedMatchups
+        let previousPlannedTeeGroups = seriesRound.plannedTeeGroups
+        seriesRound.plannedMatchups = repairedStructure.matchups
+        seriesRound.plannedTeeGroups = repairedStructure.teeGroups
+        let repairedPartnershipPlans = SeriesRoundCreationMapping.resolvedPartnershipPlans(
+            seriesRound: seriesRound,
+            teams: teams,
+            pods: pods,
+            members: eligibleMembers
+        )
+        if previousPlannedMatchups != repairedStructure.matchups
+            || previousPlannedTeeGroups != repairedStructure.teeGroups
+            || seriesRound.partnershipPlans != repairedPartnershipPlans {
+            seriesRound.partnershipPlans = repairedPartnershipPlans
+            seriesRound.lastUpdatedAt = .init()
+            if case .success(let saved) = await FirebaseService.shared.updateSeriesRound(seriesRound) {
+                seriesRound = saved
+                if let index = rounds.firstIndex(where: { $0.id == saved.id }) {
+                    rounds[index] = saved
+                }
+            }
+        }
+
+        let attendancePlan = SeriesRoundCreationMapping.participatingMembersAndPresenceStatuses(
+            series: series,
+            eligibleMembers: eligibleMembers,
+            attendance: attendanceByRound[seriesRoundID] ?? [],
+            plannedTeeGroups: seriesRound.plannedTeeGroups
+        )
+        let mappings: [SeriesRoundMapping]
+        switch await FirebaseService.shared.fetchSeriesRoundMappingsResult(
+            seriesID: seriesID,
+            seriesRoundID: seriesRoundID
+        ) {
+        case .success(let fetched):
+            mappings = fetched
+        case .failure(let error):
+            addBreadcrumb(level: .error, message: "Lobby substitution repair mappings read failed", error: error)
+            return
+        }
+
+        do {
+            let plan = try SeriesRoundSyncPlanning.buildLobbyAttendancePlan(
+                series: series,
+                seriesRound: seriesRound,
+                participatingMembers: attendancePlan.members,
+                teams: teams,
+                pods: pods,
+                handicaps: memberHandicaps,
+                seriesMappings: mappings,
+                snapshot: snapshot,
+                hostPlayerID: await AppData.shared.getPrimaryPlayer()?.id,
+                presenceStatusByMemberID: attendancePlan.presenceStatusByMemberID,
+                pruneNonSeriesParticipants: false
+            )
+            try await applyLobbyAttendancePlan(plan)
+            await refreshLinkedRoundState()
+        } catch {
+            addBreadcrumb(level: .error, message: "Failed to lazily repair lobby substitutions", error: error)
+        }
+    }
+
+    private func putSubcollectionItems<T: FirebaseSubcollectable>(_ items: [T]) async throws {
+        guard items.isPopulated else { return }
+        _ = try await items.batchPut().get()
+    }
+
+    private func seedAttendance(for round: SeriesRound) async {
+        guard series.settings.isAttendanceEnabled else { return }
+        guard eligibleMembers.isPopulated else { return }
+        var seeded: [SeriesRoundAttendance] = []
+        for member in eligibleMembers {
+            let attendance = SeriesRoundAttendance(
+                id: SeriesRoundAttendance.documentID(seriesRoundID: round.id, memberID: member.id),
+                seriesRoundID: round.id,
+                memberID: member.id,
+                status: series.settings.attendanceDefault.rawValue,
+                createdAt: .init(),
+                lastUpdatedAt: .init(),
+                parentID: seriesID
+            )
+            switch await FirebaseService.shared.upsertSeriesRoundAttendance(attendance) {
+            case .success(let saved):
+                seeded.append(saved)
+            case .failure(let error):
+                addBreadcrumb(level: .error, message: "Failed to seed attendance", error: error)
+            }
+        }
+        attendanceByRound[round.id] = seeded
+    }
+
+    private func seedAttendanceForFutureRounds(memberID: String) async {
+        guard series.settings.isAttendanceEnabled else { return }
+        for round in rounds where effectiveStatus(for: round) == .planned {
+            let attendance = SeriesRoundAttendance(
+                id: SeriesRoundAttendance.documentID(seriesRoundID: round.id, memberID: memberID),
+                seriesRoundID: round.id,
+                memberID: memberID,
+                status: series.settings.attendanceDefault.rawValue,
+                createdAt: .init(),
+                lastUpdatedAt: .init(),
+                parentID: seriesID
+            )
+            switch await FirebaseService.shared.upsertSeriesRoundAttendance(attendance) {
+            case .success(let saved):
+                var current = attendanceByRound[round.id] ?? []
+                current.append(saved)
+                attendanceByRound[round.id] = current
+            case .failure:
+                break
+            }
+        }
+    }
+
+    // MARK: - Scoring Profiles
+
+    func createBuiltInScoringProfilesIfNeeded() async {
+        guard scoringProfiles.isEmpty else { return }
+
+        let profiles = [
+            SeriesScoringProfile(
+                id: HackersID.string(),
+                name: "Team WLT",
+                summary: "Award win, tie, and loss points from team matchup results.",
+                outcomeSource: .roundMatchResult,
+                competitorType: .team,
+                kind: .winTieLoss,
+                tieHandling: .splitPoints,
+                placementRules: [],
+                resultPoints: .init(winPoints: 1, tiePoints: 0.5, lossPoints: 0),
+                parentID: seriesID
+            ),
+            SeriesScoringProfile(
+                id: HackersID.string(),
+                name: "Individual WLT",
+                summary: "Award win, tie, and loss points from individual matchup results.",
+                outcomeSource: .roundMatchResult,
+                competitorType: .member,
+                kind: .winTieLoss,
+                tieHandling: .splitPoints,
+                placementRules: [],
+                resultPoints: .init(winPoints: 1, tiePoints: 0.5, lossPoints: 0),
+                parentID: seriesID
+            ),
+            SeriesScoringProfile(
+                id: HackersID.string(),
+                name: "Team Placement",
+                summary: "Award points from team leaderboard placements.",
+                outcomeSource: .roundTeamLeaderboard,
+                competitorType: .team,
+                kind: .placement,
+                tieHandling: .splitPoints,
+                placementRules: [
+                    .init(id: HackersID.string(), rankStart: 1, rankEnd: 1, points: 3),
+                    .init(id: HackersID.string(), rankStart: 2, rankEnd: 2, points: 1),
+                    .init(id: HackersID.string(), rankStart: 3, rankEnd: 3, points: 0.5)
+                ],
+                parentID: seriesID
+            ),
+            SeriesScoringProfile(
+                id: HackersID.string(),
+                name: "Accrue from Individual",
+                summary: "Sum awarded individual round points into team standings for this round.",
+                outcomeSource: .individualAwardsAggregateToTeam,
+                competitorType: .team,
+                kind: .accrueFromIndividual,
+                tieHandling: .splitPoints,
+                placementRules: [],
+                parentID: seriesID
+            ),
+            SeriesScoringProfile(
+                id: HackersID.string(),
+                name: "Individual Placement",
+                summary: "Award points from individual leaderboard placements.",
+                outcomeSource: .roundIndividualLeaderboard,
+                competitorType: .member,
+                kind: .placement,
+                tieHandling: .splitPoints,
+                placementRules: [
+                    .init(id: HackersID.string(), rankStart: 1, rankEnd: 1, points: 3),
+                    .init(id: HackersID.string(), rankStart: 2, rankEnd: 2, points: 2),
+                    .init(id: HackersID.string(), rankStart: 3, rankEnd: 3, points: 1)
+                ],
+                parentID: seriesID
+            ),
+            SeriesScoringProfile(
+                id: HackersID.string(),
+                name: "Manual Team",
+                summary: "Commissioner manually allocates team series points.",
+                outcomeSource: .manual,
+                competitorType: .team,
+                kind: .manual,
+                tieHandling: .commissionerDecision,
+                placementRules: [],
+                parentID: seriesID
+            ),
+            SeriesScoringProfile(
+                id: HackersID.string(),
+                name: "Manual Individual",
+                summary: "Commissioner manually allocates individual series points.",
+                outcomeSource: .manual,
+                competitorType: .member,
+                kind: .manual,
+                tieHandling: .commissionerDecision,
+                placementRules: [],
+                parentID: seriesID
+            )
+        ]
+
+        var profilesCreated = 0
+        for profile in profiles {
+            switch await FirebaseService.shared.addScoringProfile(profile) {
+            case .success(let created):
+                scoringProfiles.append(created)
+                profilesCreated += 1
+            case .failure(let error):
+                addBreadcrumb(level: .error, message: "Failed to create built-in series scoring profile", error: error)
+            }
+        }
+
+        let previousSettings = series.settings
+        if let teamProfile = scoringProfiles.first(where: { $0.kind == .placement && $0.competitorType == .team }) {
+            series.settings.defaultTeamScoringProfileID = teamProfile.id
+        }
+        if let individualProfile = scoringProfiles.first(where: { $0.kind == .placement && $0.competitorType == .member }) {
+            series.settings.defaultIndividualScoringProfileID = individualProfile.id
+        }
+        invalidateLeagueRulesConfirmationIfNeeded(previousSettings: previousSettings, newSettings: series.settings)
+        _ = await FirebaseService.shared.updateSeries(series)
+        if profilesCreated > 0 {
+            addEvent(
+                "series.built_in_scoring_profiles_seeded",
+                eventProps: seriesTelemetryProps(["profile_count": profilesCreated])
+            )
+        }
+    }
+
+    func createMatchupScoringProfile() async -> SeriesScoringProfile? {
+        await createBuiltInScoringProfilesIfNeeded()
+        return scoringProfiles.first(where: { $0.kind == .winTieLoss && $0.outcomeSource == .roundMatchResult && $0.competitorType == .team })
+    }
+
+    func ensureMirrorTeeGroupTeamScoringProfile() async -> SeriesScoringProfile? {
+        await createBuiltInScoringProfilesIfNeeded()
+        if let existing = scoringProfiles.first(where: { profile in
+            profile.kind == .winTieLoss
+                && profile.outcomeSource == .roundMatchResult
+                && profile.competitorType == .team
+                && profile.resultPoints?.winPoints == 40
+                && profile.resultPoints?.tiePoints == 20
+                && profile.resultPoints?.lossPoints == 0
+        }) {
+            return existing
+        }
+
+        let profile = SeriesScoringProfile(
+            id: HackersID.string(),
+            name: "Team WLT 40",
+            summary: "Each group matchup is worth 40 points; ties split 20/20.",
+            outcomeSource: .roundMatchResult,
+            competitorType: .team,
+            kind: .winTieLoss,
+            tieHandling: .splitPoints,
+            placementRules: [],
+            resultPoints: .init(winPoints: 40, tiePoints: 20, lossPoints: 0),
+            parentID: seriesID
+        )
+        return await saveScoringProfile(profile)
+    }
+
+    @discardableResult
+    func saveScoringProfile(_ profile: SeriesScoringProfile) async -> SeriesScoringProfile? {
+        if let existing = scoringProfiles.first(where: { $0.id == profile.id }) {
+            let isReferencedByStartedRound = rounds.contains { round in
+                guard round.teamScoringProfileID == profile.id || round.individualScoringProfileID == profile.id else {
+                    return false
+                }
+                switch effectiveStatus(for: round) {
+                case .planned, .lobby:
+                    return false
+                case .live, .complete, .canceled:
+                    return true
+                }
+            }
+
+            if isReferencedByStartedRound {
+                let revision = Self.revisedScoringProfile(
+                    profile,
+                    existing: existing,
+                    allProfiles: scoringProfiles
+                )
+                switch await FirebaseService.shared.addScoringProfile(revision) {
+                case .success(let created):
+                    scoringProfiles.append(created)
+                    addEvent(
+                        "series.scoring_profile_saved",
+                        eventProps: seriesTelemetryProps([
+                            "profile_id": created.id,
+                            "is_new": true,
+                            "is_revision": true,
+                            "profile_kind": created.kind.rawValue
+                        ])
+                    )
+                    return created
+                case .failure(let error):
+                    addBreadcrumb(level: .error, message: "Failed to create scoring profile revision", error: error)
+                    return nil
+                }
+            }
+
+            switch await FirebaseService.shared.updateScoringProfile(profile) {
+            case .success(let updated):
+                if let index = scoringProfiles.firstIndex(where: { $0.id == updated.id }) {
+                    scoringProfiles[index] = updated
+                }
+                addEvent(
+                    "series.scoring_profile_saved",
+                    eventProps: seriesTelemetryProps([
+                        "profile_id": updated.id,
+                        "is_new": false,
+                        "profile_kind": updated.kind.rawValue
+                    ])
+                )
+                return updated
+            case .failure(let error):
+                addBreadcrumb(level: .error, message: "Failed to update scoring profile", error: error)
+                return nil
+            }
+        }
+
+        switch await FirebaseService.shared.addScoringProfile(profile) {
+        case .success(let created):
+            scoringProfiles.append(created)
+            addEvent(
+                "series.scoring_profile_saved",
+                eventProps: seriesTelemetryProps([
+                    "profile_id": created.id,
+                    "is_new": true,
+                    "profile_kind": created.kind.rawValue
+                ])
+            )
+            return created
+        case .failure(let error):
+            addBreadcrumb(level: .error, message: "Failed to create scoring profile", error: error)
+            return nil
+        }
+    }
+
+    nonisolated static func revisedScoringProfile(
+        _ proposed: SeriesScoringProfile,
+        existing: SeriesScoringProfile,
+        allProfiles: [SeriesScoringProfile],
+        id: String = HackersID.string(),
+        createdAt: Time = .init()
+    ) -> SeriesScoringProfile {
+        let rootID = existing.revisionRootID ?? existing.id
+        let nextSequence = allProfiles
+            .filter { ($0.revisionRootID ?? $0.id) == rootID }
+            .compactMap { $0.revisionSequence ?? 1 }
+            .max()
+            .map { $0 + 1 } ?? 2
+        var revision = proposed
+        revision.id = id
+        revision.revisionRootID = rootID
+        revision.revisionSequence = nextSequence
+        revision.createdAt = createdAt
+        revision.lastUpdatedAt = createdAt
+        return revision
+    }
+
+    func updateSeriesRound(
+        _ round: SeriesRound,
+        title: String?,
+        scheduledAt: Time?,
+        scoringProfileID: String?
+    ) async {
+        let profile = scoringProfile(id: scoringProfileID)
+        let teamProfileID = profile?.competitorType == .team ? profile?.id : round.teamScoringProfileID
+        let individualProfileID = profile?.competitorType == .member ? profile?.id : round.individualScoringProfileID
+        await updateSeriesRound(
+            round,
+            title: title,
+            scheduledAt: scheduledAt,
+            roundConfig: nil,
+            teamScoringProfileID: teamProfileID,
+            individualScoringProfileID: individualProfileID,
+            matchupPlans: nil,
+            plannedMatchups: nil,
+            plannedTeeGroups: nil,
+            notes: nil
+        )
+    }
+
+    // MARK: - Handicap
+
+    func recomputeAllHandicaps() {
+        let startedAt = ContinuousClock.now
+        let projection = SeriesHandicapProjectionService.project(
+            members: eligibleMembers,
+            scores: handicapScores,
+            overrides: handicapOverrides,
+            handicapConfig: series.handicapConfig
+        )
+        memberHandicaps = projection.handicapsByMemberID
+        memberHandicapScoreSelections = projection.scoreSelectionsByMemberID.mapValues {
+            (poolIDs: $0.poolIDs, countingIDs: $0.countingIDs)
+        }
+        SeriesPerformanceRecorder.shared.record(
+            .handicapProjection,
+            startedAt: startedAt,
+            itemCount: handicapScores.count,
+            context: seriesID
+        )
+    }
+
+    func handicapScoreAdjustmentSubtitle(for score: SeriesHandicapScore) -> String? {
+        guard series.handicapConfig.isEnabled else { return nil }
+        let config = series.handicapConfig.config.toConfig()
+        guard config.usesCourseRatingSlopeAdjustment, score.source == .round else { return nil }
+        guard let rating = score.courseRating,
+              let slope = score.courseSlope,
+              let normalized = normalizedGrossForHandicapIndex(
+                gross: score.score,
+                rating: rating,
+                slope: slope,
+                defaultParForIndex: config.defaultParForIndex
+              ) else {
+            return nil
+        }
+
+        let teeName: String? = {
+            guard let roundID = score.sourceRoundID,
+                  let teeBoxID = score.teeBoxID?.trimmingCharacters(in: .whitespacesAndNewlines),
+                  teeBoxID.isPopulated else { return nil }
+            return linkedRounds[roundID]?.configuration.courses.first?.tee(from: teeBoxID)?.name
+        }()
+
+        let ratingSlope = "\(String(format: "%.1f", rating)) / \(slope)"
+        let context = teeName?.isPopulated == true ? "\(teeName!), \(ratingSlope)" : ratingSlope
+
+        if context.isPopulated {
+            return "Adjusted \(String(format: "%.1f", normalized)) from \(Int(score.score)) (\(context))"
+        }
+        return "Adjusted \(String(format: "%.1f", normalized)) from \(Int(score.score))"
+    }
+
+    func handicapRoundUsage(for score: SeriesHandicapScore) async -> SeriesHandicapRoundUsage? {
+        guard score.source == .round,
+              let roundID = score.sourceRoundID,
+              roundID.isPopulated,
+              let snapshot = await cachedLinkedRoundSnapshot(roundID: roundID),
+              let participant = handicapRoundParticipant(memberID: score.memberID, snapshot: snapshot) else {
+            return nil
+        }
+
+        let tee = snapshot.courseSegment?.tee(from: participant.teeBoxID)
+            ?? snapshot.courseSegment?.tee(from: snapshot.courseSegment?.defaultTee ?? "")
+            ?? snapshot.courseSegment?.courseInfo.tees.first
+
+        return SeriesHandicapRoundUsage(
+            courseHandicap: participant.adjustedHandicap,
+            handicapIndex: participant.handicapIndex,
+            teeName: tee?.name
+        )
+    }
+
+    func setHandicapOverride(memberID: String, value: Double?, isOverridden: Bool) async {
+        let override = SeriesHandicapOverride(
+            id: memberID,
+            memberID: memberID,
+            overrideIndex: value,
+            isEnabled: isOverridden && value != nil,
+            createdAt: handicapOverrides.first(where: { $0.memberID == memberID })?.createdAt ?? .init(),
+            lastUpdatedAt: .init(),
+            parentID: seriesID
+        )
+        switch await FirebaseService.shared.upsertHandicapOverride(override) {
+        case .success(let saved):
+            if let index = handicapOverrides.firstIndex(where: { $0.memberID == memberID }) {
+                handicapOverrides[index] = saved
+            } else {
+                handicapOverrides.append(saved)
+            }
+            recomputeAllHandicaps()
+            addEvent(
+                "series.handicap_override_saved",
+                eventProps: seriesTelemetryProps([
+                    "is_overridden": saved.isEnabled,
+                    "has_value": saved.overrideIndex != nil
+                ])
+            )
+        case .failure(let error):
+            addBreadcrumb(level: .error, message: "Failed to save handicap override", error: error)
+        }
+    }
+
+    func addBaselineScore(memberID: String, score: Double, par: Double = 36, segment: HoleSegment = .front9) async {
+        await addHandicapScore(
+            memberID: memberID,
+            score: score,
+            par: par,
+            segment: segment,
+            source: .baseline,
+            sourceRoundID: nil,
+            caption: nil,
+            recordedAt: nil
+        )
+    }
+
+    /// Adds a handicap history row. For `source == .round`, `sourceRoundID` must be the **live** round id (`SeriesRound.roundID`).
+    func addHandicapScore(
+        memberID: String,
+        score: Double,
+        par: Double,
+        segment: HoleSegment,
+        source: SeriesHandicapScoreSourceType,
+        sourceRoundID: String?,
+        caption: String?,
+        recordedAt: Time?
+    ) async {
+        guard isCommissioner else {
+            addBreadcrumb(level: .warning, message: "Ignoring handicap score add for non-commissioner")
+            return
+        }
+        if source == .round, let rid = sourceRoundID, rid.isPopulated {
+            let remoteRoundScores = await FirebaseService.shared.fetchHandicapScores(
+                seriesID: seriesID,
+                sourceRoundID: rid
+            )
+            if (handicapScores + remoteRoundScores).contains(where: { $0.memberID == memberID && $0.source == .round && $0.sourceRoundID == rid }) {
+                addBreadcrumb(level: .warning, message: "Skipping duplicate round handicap score for member \(memberID) round \(rid)")
+                return
+            }
+        }
+
+        let trimmedCaption = caption?.trimmingCharacters(in: .whitespacesAndNewlines)
+        let resolvedCaption = trimmedCaption.isPopulated ? trimmedCaption : nil
+        let now = Time(for: Date())
+        let resolvedRecorded: Time = {
+            if let recordedAt { return recordedAt }
+            if source == .round, let rid = sourceRoundID, rid.isPopulated,
+               let sr = seriesRound(forLiveRoundID: rid) {
+                return sr.handicapScoreRecordedAt
+            }
+            return now
+        }()
+        let roundMetadata = await handicapRoundMetadata(memberID: memberID, roundID: sourceRoundID)
+
+        let sortOrder = nextHandicapSortOrder(for: memberID)
+        let countsToward: Bool = {
+            guard source == .round, let rid = sourceRoundID, rid.isPopulated,
+                  let sr = seriesRound(forLiveRoundID: rid) else { return true }
+            let excluded = Set(sr.roundConfig.normalizedExcludedHandicapMemberIDs).contains(memberID)
+            return shouldAccrueLeagueHandicap(for: sr, snapshot: nil) && !excluded
+        }()
+
+        let entryID: String = {
+            guard source == .round, let rid = sourceRoundID, rid.isPopulated else {
+                return HackersID.string()
+            }
+            return Self.roundHandicapScoreID(roundID: rid, memberID: memberID)
+        }()
+        let entry = SeriesHandicapScore(
+            id: entryID,
+            memberID: memberID,
+            score: score,
+            par: par,
+            holeSegment: segment,
+            teeBoxID: roundMetadata?.teeBoxID,
+            courseRating: roundMetadata?.courseRating,
+            courseSlope: roundMetadata?.courseSlope,
+            source: source,
+            sourceRoundID: sourceRoundID,
+            caption: resolvedCaption,
+            recordedAt: resolvedRecorded,
+            sortOrder: sortOrder,
+            createdAt: now,
+            lastUpdatedAt: now,
+            parentID: seriesID,
+            countsTowardHandicapIndex: countsToward
+        )
+        switch await FirebaseService.shared.addHandicapScore(entry) {
+        case .success(let saved):
+            handicapScores.append(saved)
+            recomputeAllHandicaps()
+            addEvent(
+                "series.handicap_score_added",
+                eventProps: seriesTelemetryProps([
+                    "source": source.rawValue,
+                    "hole_segment": "\(segment)"
+                ])
+            )
+        case .failure(let error):
+            addBreadcrumb(level: .error, message: "Failed to add handicap score", error: error)
+        }
+    }
+
+    func updateHandicapScoreEntry(_ score: SeriesHandicapScore) async -> Bool {
+        guard isCommissioner else {
+            addBreadcrumb(level: .warning, message: "Ignoring handicap score update for non-commissioner")
+            return false
+        }
+        var updated = score
+        updated.lastUpdatedAt = .init()
+        switch await FirebaseService.shared.updateHandicapScore(updated) {
+        case .success(let saved):
+            if let idx = handicapScores.firstIndex(where: { $0.id == saved.id }) {
+                handicapScores[idx] = saved
+            }
+            recomputeAllHandicaps()
+            addEvent(
+                "series.handicap_score_updated",
+                eventProps: seriesTelemetryProps(["source": saved.source.rawValue])
+            )
+            return true
+        case .failure(let error):
+            addBreadcrumb(level: .error, message: "Failed to update handicap score", error: error)
+            return false
+        }
+    }
+
+    func setHandicapScoreCountsTowardIndex(_ score: SeriesHandicapScore, countsToward: Bool) async -> Bool {
+        guard isCommissioner else {
+            addBreadcrumb(level: .warning, message: "Ignoring handicap score count toggle for non-commissioner")
+            return false
+        }
+        var updated = score
+        updated.countsTowardHandicapIndex = countsToward
+        updated.lastUpdatedAt = .init()
+        return await updateHandicapScoreEntry(updated)
+    }
+
+    func deleteHandicapScoreEntry(_ score: SeriesHandicapScore) async -> Bool {
+        guard isCommissioner else {
+            addBreadcrumb(level: .warning, message: "Ignoring handicap score delete for non-commissioner")
+            return false
+        }
+        switch await FirebaseService.shared.deleteHandicapScore(score) {
+        case .success:
+            handicapScores.removeAll { $0.id == score.id }
+            recomputeAllHandicaps()
+            addEvent(
+                "series.handicap_score_deleted",
+                eventProps: seriesTelemetryProps(["source": score.source.rawValue])
+            )
+            return true
+        case .failure(let error):
+            addBreadcrumb(level: .error, message: "Failed to delete handicap score", error: error)
+            return false
+        }
+    }
+
+    func nextHandicapSortOrder(for memberID: String) -> Int {
+        let maxOrder = handicapScores.filter { $0.memberID == memberID }.map(\.sortOrder).max() ?? -1
+        return maxOrder + 1
+    }
+
+    func seriesRound(forLiveRoundID roundID: String) -> SeriesRound? {
+        rounds.first { $0.roundID == roundID }
+    }
+
+    /// Round participant id for a series member in a loaded snapshot (for commissioner correction UI).
+    func preferredRoundParticipantID(seriesMemberID: String, snapshot: RoundSnapshot) -> String? {
+        if let match = snapshot.participants.first(where: { $0.seriesMemberID == seriesMemberID }) {
+            return match.id
+        }
+        guard let member = members.first(where: { $0.id == seriesMemberID }),
+              let playerID = member.playerID, playerID.isPopulated else { return nil }
+        return snapshot.participants.first(where: { $0.playerID == playerID })?.id
+    }
+
+    /// Builds hole-level commissioner changes so the player’s total gross matches `targetGross` (uses draft grid overrides when present).
+    func commissionerGrossCorrectionChanges(
+        context: SeriesRoundCorrectionContext,
+        participantID: String,
+        targetGross: Int,
+        draftScores: [String: Int]
+    ) -> [SeriesScoreCorrectionChange]? {
+        CommissionerGrossScoreDistributer.correctionChanges(
+            holes: context.holes,
+            participantID: participantID,
+            currentStrokes: { holeNumber in
+                let key = "\(participantID)_\(holeNumber)"
+                if let draft = draftScores[key] {
+                    return draft == 0 ? nil : draft
+                }
+                return context.entriesByParticipantID[participantID]?[holeNumber]?.strokes
+            },
+            targetGross: targetGross
+        )
+    }
+
+    // MARK: - Round Creation
+
+    func createLiveRound(from seriesRound: SeriesRound, courseSegment: CourseSegment? = nil) async -> String? {
+        guard var workingRound = rounds.first(where: { $0.id == seriesRound.id }) else { return nil }
+        roundCreationErrorMessage = nil
+        creatingRoundID = seriesRound.id
+        defer { creatingRoundID = nil }
+
+        if let courseSegment {
+            let defaultTee = courseSegment.defaultTee.flatMap { courseSegment.tee(from: $0) }
+            workingRound.courseOverride = SeriesCourseSelection(
+                courseID: courseSegment.courseInfo.golfCourseApiID.map(String.init) ?? courseSegment.courseInfo.id,
+                cachedName: courseSegment.courseInfo.name,
+                defaultTeeBoxID: courseSegment.defaultTee ?? "",
+                defaultTeeName: defaultTee?.name,
+                defaultTeeGender: defaultTee?.gender,
+                holeSegment: courseSegment.holeSegment
+            )
+        }
+        workingRound = seriesRoundForSyncPreservingAuthoredConfiguration(workingRound)
+        let repairedPlanningStructure = SeriesRoundPlanningService.resolvedPlannedStructure(
+            series: series,
+            seriesRound: workingRound,
+            members: eligibleMembers,
+            teams: teams,
+            pods: pods,
+            courseSelection: workingRound.resolvedCourse(using: series)
+        )
+        workingRound.plannedMatchups = repairedPlanningStructure.matchups
+        workingRound.plannedTeeGroups = repairedPlanningStructure.teeGroups
+        workingRound.partnershipPlans = SeriesRoundCreationMapping.resolvedPartnershipPlans(
+            seriesRound: workingRound,
+            teams: teams,
+            pods: pods,
+            members: eligibleMembers
+        )
+        workingRound.lastUpdatedAt = .init()
+        switch await FirebaseService.shared.updateSeriesRound(workingRound) {
+        case .success(let saved):
+            workingRound = saved
+            if let currentIndex = rounds.firstIndex(where: { $0.id == saved.id }) {
+                rounds[currentIndex] = saved
+            }
+        case .failure(let error):
+            addBreadcrumb(level: .error, message: "Failed to persist repaired Series round plan", error: error)
+            return nil
+        }
+
+        let attendancePlan = SeriesRoundCreationMapping.participatingMembersAndPresenceStatuses(
+            series: series,
+            eligibleMembers: eligibleMembers,
+            attendance: attendanceByRound[seriesRound.id] ?? [],
+            plannedTeeGroups: workingRound.plannedTeeGroups
+        )
+        let participants = attendancePlan.members
+        let presenceStatusByMemberID = attendancePlan.presenceStatusByMemberID
+
+        let policyCompatibility = standingsPolicyCompatibility(for: workingRound)
+        let hasInvalidPolicyContract = policyCompatibility.contains { result in
+            if case .invalid = result.classification { return true }
+            return false
+        }
+        guard !hasInvalidPolicyContract else {
+            addBreadcrumb(
+                level: .warning,
+                message: "Blocked Series round creation with an invalid standings policy contract"
+            )
+            addEvent(
+                "series.round_policy_preflight_failed",
+                eventProps: seriesTelemetryProps(["series_round_id": seriesRound.id])
+            )
+            return nil
+        }
+
+        let creationResult = await SeriesRoundCreationService().createRoundFromSeries(
+            series: series,
+            seriesRound: workingRound,
+            members: participants,
+            teams: teams,
+            pods: pods,
+            handicaps: memberHandicaps,
+            selectedHandicapScoreIDsByMemberID: memberHandicapScoreSelections.mapValues { $0.countingIDs },
+            presenceStatusByMemberID: presenceStatusByMemberID,
+            courseSegment: courseSegment
+        )
+        let roundID: String
+        switch creationResult {
+        case .success(let createdRoundID):
+            roundID = createdRoundID
+        case .failure(let failure):
+            roundCreationErrorMessage = failure.message
+            return nil
+        }
+
+        workingRound.roundID = roundID
+        workingRound.status = .lobby
+        workingRound.startedAt = .init()
+        workingRound.lastUpdatedAt = .init()
+        switch await FirebaseService.shared.updateSeriesRound(workingRound) {
+        case .success(let saved):
+            workingRound = saved
+            if let currentIndex = rounds.firstIndex(where: { $0.id == saved.id }) {
+                rounds[currentIndex] = saved
+            }
+        case .failure(let error):
+            addBreadcrumb(level: .error, message: "Failed to persist linked Series round", error: error)
+            return nil
+        }
+
+        let refreshedRoundIDs = await loadLinkedRounds()
+        let postCreateSyncOptions = SeriesRoundSyncOptions(
+            syncPlayerData: true,
+            syncFormat: true,
+            syncOrganization: true,
+            syncPairs: true,
+            syncMatchups: true,
+            syncHandicapSettings: true,
+            preserveManualHandicapEdits: false
+        )
+        let postCreateSyncResult = await syncLinkedRoundFromSeries(
+            seriesRound: workingRound,
+            options: postCreateSyncOptions
+        )
+        if case .failure(let error) = postCreateSyncResult {
+            addBreadcrumb(level: .error, message: "Failed to reconcile linked lobby after series round creation", error: error)
+        }
+        await syncLinkedRoundState(persistingStatusesFor: refreshedRoundIDs)
+        return roundID
+    }
+
+    /// Pushes league-authored player, format, and/or organization state into the linked live round (commissioner).
+    func syncLinkedRoundFromSeries(
+        seriesRound: SeriesRound,
+        options: SeriesRoundSyncOptions
+    ) async -> Result<Void, SeriesRoundSyncError> {
+        let sourceRound = sourceSeriesRoundForSync(seriesRound)
+        guard let roundID = sourceRound.roundID else { return .failure(.roundNotLinked) }
+        let linked: Round
+        if let cached = linkedRounds[roundID] {
+            linked = cached
+        } else {
+            switch await FirebaseService.shared.getRoundDocument(byID: roundID) {
+            case .success(let fetched):
+                linkedRounds[roundID] = fetched
+                linked = fetched
+            case .failure:
+                return .failure(.roundNotLinked)
+            }
+        }
+        guard let snapshot = await loadRoundSnapshot(roundID: roundID) else {
+            return .failure(.writeFailed("Could not load live round data."))
+        }
+
+        let membersByID = Dictionary(uniqueKeysWithValues: members.map { ($0.id, $0) })
+        let mappings: [SeriesRoundMapping]
+        switch await FirebaseService.shared.fetchSeriesRoundMappingsResult(
+            seriesID: seriesID,
+            seriesRoundID: sourceRound.id
+        ) {
+        case .success(let fetchedMappings):
+            mappings = fetchedMappings
+        case .failure(let error):
+            addBreadcrumb(level: .error, message: "Round sync mappings read failed", error: error)
+            return .failure(.writeFailed("Could not load round mappings."))
+        }
+        let hostPlayerID = await AppData.shared.getPrimaryPlayer()?.id
+
+        let result = await SeriesRoundSyncService().syncRoundFromSeries(
+            series: series,
+            seriesRound: sourceRound,
+            membersByID: membersByID,
+            teams: teams,
+            pods: pods,
+            handicaps: memberHandicaps,
+            seriesMappings: mappings,
+            snapshot: snapshot,
+            roundStatus: linked.status,
+            hostPlayerID: hostPlayerID,
+            options: options
+        )
+
+        if case .success = result {
+            await refreshLinkedRoundState()
+            HackersNotification.roundSetupDidChange.send(with: roundID)
+        }
+        return result
+    }
+
+    /// Replaces Series-owned lobby configuration with the linked lobby's current setup.
+    func adoptLinkedRoundConfiguration(
+        for seriesRound: SeriesRound
+    ) async -> Result<Void, SeriesRoundSyncError> {
+        guard isCommissioner else {
+            return .failure(.preflightFailed("Only a commissioner can adopt lobby settings."))
+        }
+        guard let roundID = seriesRound.roundID else { return .failure(.roundNotLinked) }
+        guard let snapshot = await loadRoundSnapshot(roundID: roundID) else {
+            return .failure(.writeFailed("Could not load the linked lobby configuration."))
+        }
+        guard snapshot.round.status == .lobby else {
+            return .failure(.optionsDisallowedForRoundStatus)
+        }
+
+        let mappings: [SeriesRoundMapping]
+        switch await FirebaseService.shared.fetchSeriesRoundMappingsResult(
+            seriesID: seriesID,
+            seriesRoundID: seriesRound.id
+        ) {
+        case .success(let fetchedMappings):
+            mappings = fetchedMappings
+        case .failure(let error):
+            addBreadcrumb(level: .error, message: "Adopt lobby mappings read failed", error: error)
+            return .failure(.writeFailed("Could not load round mappings."))
+        }
+
+        let sourceRound = cachedSourceSeriesRoundForSync(seriesRound)
+        let adoptedConfiguration = SeriesRoundConfigurationReconciler.adoptingLinkedConfiguration(
+            from: snapshot.round,
+            segment: snapshot.roundSegment,
+            preserving: sourceRound.roundConfig
+        )
+        var adoptedRound = sourceRound
+        adoptedRound.roundConfig = adoptedConfiguration
+        let adoptedMatchups = seriesMatchupPlans(
+            from: snapshot,
+            seriesRound: adoptedRound,
+            mappings: mappings
+        ) ?? []
+
+        let saved = await updateSeriesRound(
+            sourceRound,
+            scheduledAt: sourceRound.scheduledAt,
+            courseOverride: SeriesRoundConfigurationReconciler.courseSelection(from: snapshot.courseSegment),
+            shouldUpdateCourseOverride: true,
+            roundConfig: adoptedConfiguration,
+            teamScoringProfileID: sourceRound.teamScoringProfileID,
+            individualScoringProfileID: sourceRound.individualScoringProfileID,
+            matchupPlans: adoptedMatchups,
+            syncLinkedLobby: false
+        )
+        guard saved else {
+            return .failure(.writeFailed("Could not save the adopted lobby configuration."))
+        }
+
+        linkedRounds[roundID] = snapshot.round
+        refreshLinkedConfigurationDivergences()
+        return .success(())
+    }
+
+    /// Restores the linked lobby to the Series-owned configuration.
+    func resetLinkedRoundConfiguration(
+        for seriesRound: SeriesRound
+    ) async -> Result<Void, SeriesRoundSyncError> {
+        guard isCommissioner else {
+            return .failure(.preflightFailed("Only a commissioner can reset lobby settings."))
+        }
+        let options = SeriesRoundSyncOptions(
+            syncPlayerData: true,
+            syncFormat: true,
+            syncOrganization: true,
+            syncPairs: true,
+            syncMatchups: true,
+            syncHandicapSettings: true,
+            preserveManualHandicapEdits: false
+        )
+        return await syncLinkedRoundFromSeries(seriesRound: seriesRound, options: options)
+    }
+
+    func sourceSeriesRoundForSync(_ seriesRound: SeriesRound) -> SeriesRound {
+        seriesRoundForSyncPreservingAuthoredConfiguration(cachedSourceSeriesRoundForSync(seriesRound))
+    }
+
+    func cachedSourceSeriesRoundForSync(_ seriesRound: SeriesRound) -> SeriesRound {
+        rounds.first { $0.id == seriesRound.id } ?? seriesRound
+    }
+
+    func seriesRoundForSyncPreservingAuthoredConfiguration(_ seriesRound: SeriesRound) -> SeriesRound {
+        seriesRound
+    }
+
+    func refreshLinkedRoundState() async {
+        snapshotRepository.invalidateAll()
+        let refreshedRoundIDs = await loadLinkedRounds()
+        await syncLinkedRoundState(persistingStatusesFor: refreshedRoundIDs)
+        await loadAttendanceForRSVPEligibleRounds()
+    }
+
+    func syncLinkedRoundState(persistingStatusesFor freshRoundIDs: Set<String>) async {
+        guard linkedRounds.isPopulated else {
+            linkedConfigurationDivergences = [:]
+            return
+        }
+
+        let sourceRounds = rounds
+        let contexts = sourceRounds.compactMap { seriesRound -> (
+            seriesRound: SeriesRound,
+            linkedRound: Round,
+            previousStatus: SeriesRoundStatus,
+            newStatus: SeriesRoundStatus,
+            shouldBackPropagate: Bool,
+            shouldProcessCompletedRound: Bool
+        )? in
+            guard let roundID = seriesRound.roundID,
+                  let linkedRound = linkedRounds[roundID] else { return nil }
+            let previousStatus = seriesRound.status
+            let newStatus = SeriesRoundStatus(linkedRoundStatus: linkedRound.status)
+            let shouldBackPropagate = shouldUseLinkedRoundConfiguration(
+                for: seriesRound,
+                linkedRound: linkedRound
+            ) && (newStatus == .lobby || newStatus == .live || (newStatus == .complete && previousStatus != .complete))
+            let shouldProcessCompletedRound = needsCompletedRoundProcessing(
+                for: seriesRound,
+                linkedRound: linkedRound,
+                roundID: roundID,
+                previousStatus: previousStatus,
+                newStatus: newStatus
+            )
+            return (
+                seriesRound,
+                linkedRound,
+                previousStatus,
+                newStatus,
+                shouldBackPropagate,
+                shouldProcessCompletedRound
+            )
+        }
+
+        let snapshotResults = await snapshotRepository.snapshots(
+            roundIDs: contexts.compactMap { context in
+                guard context.shouldBackPropagate || context.shouldProcessCompletedRound else { return nil }
+                return context.seriesRound.roundID
+            },
+            policy: .reload
+        )
+        let processingContexts = contexts.filter(\.shouldProcessCompletedRound)
+        let needsMappings = contexts.contains { $0.shouldBackPropagate || $0.shouldProcessCompletedRound }
+        let allMappings: [SeriesRoundMapping]
+        let allAwards: [SeriesPointAward]
+        var mappingsAvailable = true
+        var awardsAvailable = true
+        if processingContexts.isPopulated {
+            switch await fetchDerivedInputs() {
+            case .success(let inputs):
+                allMappings = inputs.mappings
+                allAwards = inputs.awards
+            case .failure(let error):
+                allMappings = []
+                allAwards = []
+                mappingsAvailable = false
+                awardsAvailable = false
+                addBreadcrumb(level: .error, message: "Completed-round inputs read failed", error: error)
+            }
+        } else if needsMappings {
+            switch await FirebaseService.shared.fetchSeriesRoundMappingsResult(seriesID: seriesID) {
+            case .success(let mappings):
+                allMappings = mappings
+            case .failure(let error):
+                allMappings = []
+                mappingsAvailable = false
+                addBreadcrumb(level: .error, message: "Linked-round mappings read failed", error: error)
+            }
+            allAwards = []
+        } else {
+            allMappings = []
+            allAwards = []
+        }
+        let mappingsByRound = Dictionary(grouping: allMappings, by: \.seriesRoundID)
+        let awardsByRound = Dictionary(grouping: allAwards, by: \.seriesRoundID)
+
+        var proposedRoundChanges: [(original: SeriesRound, proposed: SeriesRound)] = []
+        var awardsChanged = false
+        var hadAwardWriteFailure = false
+        var awardsStatusesToPublish: [String: SeriesAwardsStatus] = [:]
+
+        for context in contexts {
+            let originalRound = context.seriesRound
+            var updatedRound = originalRound
+            let linkedRound = context.linkedRound
+            let previousStatus = context.previousStatus
+            let newStatus = context.newStatus
+            let roundID = linkedRound.id
+            var hasChanged = false
+
+            if let statusUpdate = Self.resolvedLinkedRoundStatusUpdate(
+                previousStatus: previousStatus,
+                linkedRoundStatus: linkedRound.status,
+                roundID: roundID,
+                freshRoundIDs: freshRoundIDs
+            ) {
+                updatedRound.status = statusUpdate
+                hasChanged = true
+            }
+            if newStatus == .lobby || newStatus == .live {
+                if updatedRound.startedAt == nil {
+                    updatedRound.startedAt = linkedRound.lastUpdatedAt
+                    hasChanged = true
+                }
+            }
+            let snapshot: RoundSnapshot? = {
+                guard let result = snapshotResults[roundID], case .success(let value) = result else { return nil }
+                return value
+            }()
+
+            if let snapshot, context.shouldBackPropagate {
+                let updatedConfig = shouldPreserveSeriesMatchupConfig(for: updatedRound, linkedRound: linkedRound)
+                    ? updatedRound.roundConfig
+                    : roundConfig(
+                        from: linkedRound,
+                        segment: snapshot.roundSegment,
+                        fallback: updatedRound.roundConfig
+                    )
+                if updatedRound.roundConfig != updatedConfig {
+                    updatedRound.roundConfig = updatedConfig
+                    hasChanged = true
+                }
+
+                let syncedCourse = courseSelection(from: snapshot.courseSegment)
+                if updatedRound.courseOverride != syncedCourse {
+                    updatedRound.courseOverride = syncedCourse
+                    hasChanged = true
+                }
+
+                if !shouldPreserveSeriesMatchupConfig(for: updatedRound, linkedRound: linkedRound), mappingsAvailable {
+                    let syncedMatchups = seriesMatchupPlans(
+                        from: snapshot,
+                        seriesRound: updatedRound,
+                        mappings: mappingsByRound[updatedRound.id] ?? []
+                    ) ?? []
+                    if updatedRound.matchupPlans != syncedMatchups {
+                        updatedRound.matchupPlans = syncedMatchups
+                        hasChanged = true
+                    }
+                }
+            }
+
+            if newStatus == .complete {
+                if updatedRound.completedAt == nil {
+                    updatedRound.completedAt = linkedRound.lastUpdatedAt
+                    hasChanged = true
+                }
+
+                if context.shouldProcessCompletedRound, let snapshot, mappingsAvailable, awardsAvailable {
+                    let shouldOverwriteDerivedData = previousStatus == .complete
+                        && completedLinkedRoundNeedsFinalizedAutomaticAwardRefresh(
+                            seriesRound: updatedRound,
+                            linkedRound: linkedRound
+                        )
+                    let processingResult = await processCompletedRound(
+                        seriesRound: updatedRound,
+                        snapshot: snapshot,
+                        overwriteDerivedData: shouldOverwriteDerivedData,
+                        existingAwards: awardsByRound[updatedRound.id] ?? [],
+                        mappings: mappingsByRound[updatedRound.id] ?? []
+                    )
+                    awardsChanged = awardsChanged || processingResult.awardsChanged
+                    hadAwardWriteFailure = hadAwardWriteFailure
+                        || !processingResult.derivedPublicationSucceeded
+                    if let proposedAwardsStatus = processingResult.proposedAwardsStatus {
+                        awardsStatusesToPublish[updatedRound.id] = proposedAwardsStatus
+                    }
+                } else if context.shouldProcessCompletedRound, !mappingsAvailable || !awardsAvailable {
+                    hadAwardWriteFailure = true
+                }
+            }
+
+            if hasChanged {
+                proposedRoundChanges.append((originalRound, updatedRound))
+            }
+        }
+
+        var changedRounds: [SeriesRound] = []
+        for change in proposedRoundChanges {
+            guard let currentIndex = rounds.firstIndex(where: { $0.id == change.original.id }),
+                  let merged = Self.mergingLinkedStateChanges(
+                    original: change.original,
+                    proposed: change.proposed,
+                    current: rounds[currentIndex]
+                  ) else {
+                continue
+            }
+            rounds[currentIndex] = merged
+            changedRounds.append(merged)
+        }
+        if changedRounds.isPopulated {
+            _ = await changedRounds.batchPut()
+        }
+
+        if !hadAwardWriteFailure {
+            let standingsPublished: Bool
+            if awardsChanged {
+                standingsPublished = await rebuildStandings(only: nil)
+            } else {
+                standingsPublished = true
+            }
+            if standingsPublished {
+                hadAwardWriteFailure = !(await persistAwardsStatuses(awardsStatusesToPublish))
+            } else {
+                hadAwardWriteFailure = true
+            }
+        }
+        if series.settings.standingsReadAuthority == .canonicalWhenReady {
+            standings = resolvedStandings(legacyStandings: legacyStandings)
+        }
+
+        await refreshSeriesCachesIfNeeded()
+        refreshLinkedConfigurationDivergences()
+    }
+
+    nonisolated static func mergingLinkedStateChanges(
+        original: SeriesRound,
+        proposed: SeriesRound,
+        current: SeriesRound
+    ) -> SeriesRound? {
+        var merged = current
+        var changed = false
+
+        if original.status != proposed.status, current.status == original.status {
+            merged.status = proposed.status
+            changed = true
+        }
+        if original.startedAt != proposed.startedAt, current.startedAt == original.startedAt {
+            merged.startedAt = proposed.startedAt
+            changed = true
+        }
+        if original.completedAt != proposed.completedAt, current.completedAt == original.completedAt {
+            merged.completedAt = proposed.completedAt
+            changed = true
+        }
+        if original.roundConfig != proposed.roundConfig, current.roundConfig == original.roundConfig {
+            merged.roundConfig = proposed.roundConfig
+            changed = true
+        }
+        if original.courseOverride != proposed.courseOverride, current.courseOverride == original.courseOverride {
+            merged.courseOverride = proposed.courseOverride
+            changed = true
+        }
+        if original.matchupPlans != proposed.matchupPlans, current.matchupPlans == original.matchupPlans {
+            merged.matchupPlans = proposed.matchupPlans
+            changed = true
+        }
+
+        guard changed else { return nil }
+        merged.lastUpdatedAt = .init()
+        return merged
+    }
+
+    nonisolated static func resolvedLinkedRoundStatusUpdate(
+        previousStatus: SeriesRoundStatus,
+        linkedRoundStatus: RoundStatus,
+        roundID: String,
+        freshRoundIDs: Set<String>
+    ) -> SeriesRoundStatus? {
+        guard freshRoundIDs.contains(roundID) else { return nil }
+        let newStatus = resolvedLinkedRoundStatus(
+            previousStatus: previousStatus,
+            linkedRoundStatus: linkedRoundStatus
+        )
+        return previousStatus == newStatus ? nil : newStatus
+    }
+
+    nonisolated static func resolvedLinkedRoundStatus(
+        previousStatus: SeriesRoundStatus,
+        linkedRoundStatus: RoundStatus
+    ) -> SeriesRoundStatus {
+        let newStatus = SeriesRoundStatus(linkedRoundStatus: linkedRoundStatus)
+        if previousStatus == .live && newStatus == .lobby {
+            return previousStatus
+        }
+        return newStatus
+    }
+
+    private func needsCompletedRoundProcessing(
+        for seriesRound: SeriesRound,
+        linkedRound: Round,
+        roundID: String,
+        previousStatus: SeriesRoundStatus,
+        newStatus: SeriesRoundStatus
+    ) -> Bool {
+        guard newStatus == .complete else { return false }
+        if previousStatus != .complete { return true }
+
+        let needsCanonicalRetry = canonicalRetryRoundIDs.contains(seriesRound.id)
+            || SeriesRoundCanonicalRetryPlanner.needsProcessing(
+                state: canonicalProcessingStates[seriesRound.id]
+            )
+
+        let needsHandicapRefresh: Bool = {
+            guard series.handicapConfig.mode.allowsAccrual else { return false }
+            return !handicapScores.contains { $0.source == .round && $0.sourceRoundID == roundID }
+        }()
+
+        let hasAssignedAwardProfile = hasAssignedAwardProfile(for: seriesRound)
+        let hasAwardRows = pointAwards.contains { $0.seriesRoundID == seriesRound.id }
+        let needsAwardRefresh = hasAssignedAwardProfile
+            && seriesRound.awardsStatus == .pending
+            && (!hasAwardRows || hasAutomaticAwardProfile(for: seriesRound))
+
+        let needsFinalizedAwardRefresh = hasAutomaticAwardProfile(for: seriesRound)
+            && seriesRound.awardsStatus == .finalized
+            && (!hasAwardRows || completedLinkedRoundNeedsFinalizedAutomaticAwardRefresh(seriesRound: seriesRound, linkedRound: linkedRound))
+
+        return needsHandicapRefresh || needsAwardRefresh || needsFinalizedAwardRefresh || needsCanonicalRetry
+    }
+
+    private func hasAssignedAwardProfile(for seriesRound: SeriesRound) -> Bool {
+        scoringProfile(id: seriesRound.teamScoringProfileID) != nil
+            || individualScoringProfile(for: seriesRound) != nil
+    }
+
+    private func hasAutomaticAwardProfile(for seriesRound: SeriesRound) -> Bool {
+        ([seriesRound.teamScoringProfileID.flatMap(scoringProfile(id:)), individualScoringProfile(for: seriesRound)])
+            .compactMap { $0 }
+            .contains { profile in
+                profile.kind != .manual && profile.outcomeSource != .manual
+            }
+    }
+
+    private func needsAutomaticAwardsEngineRefresh(for seriesRound: SeriesRound) -> Bool {
+        hasAutomaticAwardProfile(for: seriesRound)
+            && Self.automaticAwardsNeedEngineRefresh(for: seriesRound)
+    }
+
+    nonisolated static func automaticAwardsNeedEngineRefresh(for seriesRound: SeriesRound) -> Bool {
+        seriesRound.automaticAwardsEngineVersion < currentAutomaticAwardsEngineVersion
+    }
+
+    private func completedLinkedRoundNeedsFinalizedAutomaticAwardRefresh(
+        seriesRound: SeriesRound,
+        linkedRound: Round
+    ) -> Bool {
+        guard seriesRound.status == .complete || SeriesRoundStatus(linkedRoundStatus: linkedRound.status) == .complete else {
+            return false
+        }
+        guard hasAutomaticAwardProfile(for: seriesRound) else { return false }
+        if Self.automaticAwardsNeedEngineRefresh(for: seriesRound) {
+            return true
+        }
+        guard let awardsFinalizedAt = seriesRound.awardsFinalizedAt else { return true }
+        return linkedRound.lastUpdatedAt.unix > awardsFinalizedAt.unix
+    }
+
+    private struct CompletedRoundProcessingResult {
+        var changed = false
+        var awardsChanged = false
+        var handicapWriteFailed = false
+        var awardWriteFailed = false
+        var canonicalWriteFailed = false
+        var proposedAwardsStatus: SeriesAwardsStatus?
+
+        var derivedPublicationSucceeded: Bool {
+            !handicapWriteFailed && !awardWriteFailed && !canonicalWriteFailed
+        }
+    }
+
+    private enum AwardsFinalizationResult {
+        case published(status: SeriesAwardsStatus, awardsChanged: Bool, awards: [SeriesPointAward])
+        case writeFailed
+    }
+
+    private struct HandicapSyncResult {
+        var changed = false
+        var projectedScores: [SeriesHandicapScore] = []
+        var writeFailed = false
+    }
+
+    private struct SeriesDerivedInputs {
+        let mappings: [SeriesRoundMapping]
+        let awards: [SeriesPointAward]
+    }
+
+    private func fetchDerivedInputs(
+        seriesRoundID: String? = nil
+    ) async -> Result<SeriesDerivedInputs, Error> {
+        async let mappingsTask = FirebaseService.shared.fetchSeriesRoundMappingsResult(
+            seriesID: seriesID,
+            seriesRoundID: seriesRoundID
+        )
+        async let awardsTask = FirebaseService.shared.fetchPointAwardsResult(
+            seriesID: seriesID,
+            seriesRoundID: seriesRoundID
+        )
+        let mappingsResult = await mappingsTask
+        let awardsResult = await awardsTask
+
+        switch (mappingsResult, awardsResult) {
+        case (.success(let mappings), .success(let awards)):
+            return .success(SeriesDerivedInputs(mappings: mappings, awards: awards))
+        case (.failure(let error), _), (_, .failure(let error)):
+            return .failure(error)
+        }
+    }
+
+    nonisolated static func resolvedAwardsStatus(
+        proposedStatus: SeriesAwardsStatus,
+        writeSucceeded: Bool
+    ) -> SeriesAwardsStatus? {
+        writeSucceeded ? proposedStatus : nil
+    }
+
+    private func processCompletedRound(
+        seriesRound: SeriesRound,
+        snapshot: RoundSnapshot,
+        overwriteDerivedData: Bool = false,
+        existingAwards: [SeriesPointAward]? = nil,
+        mappings: [SeriesRoundMapping]? = nil
+    ) async -> CompletedRoundProcessingResult {
+        var result = CompletedRoundProcessingResult()
+
+        let handicapSync = await syncRoundHandicapScores(
+            seriesRound: seriesRound,
+            snapshot: snapshot,
+            replacingExisting: overwriteDerivedData
+        )
+        result.changed = handicapSync.changed
+        guard !handicapSync.writeFailed else {
+            result.handicapWriteFailed = true
+            canonicalRetryRoundIDs.insert(seriesRound.id)
+            return result
+        }
+
+        guard let segment = snapshot.roundSegment ?? snapshot.segments.first else {
+            return result
+        }
+        let canonicalScoringResult = scoringResult(from: snapshot, segment: segment)
+
+        let finalization = await finalizeAwardsIfPossible(
+            seriesRound: seriesRound,
+            snapshot: snapshot,
+            scoringResult: canonicalScoringResult,
+            existingAwards: existingAwards,
+            mappings: mappings
+        )
+        guard case .published(let awardsState, let awardsChanged, let publishedAwards) = finalization else {
+            result.awardWriteFailed = true
+            return result
+        }
+        result.awardsChanged = awardsChanged
+        result.changed = result.changed || awardsChanged
+        result.proposedAwardsStatus = awardsState
+
+        let canonicalPublished = await publishCanonicalRoundResult(
+            seriesRound: seriesRound,
+            snapshot: snapshot,
+            scoringResult: canonicalScoringResult,
+            awards: publishedAwards,
+            handicapScores: handicapSync.projectedScores,
+            providedMappings: mappings
+        )
+        guard canonicalPublished else {
+            result.canonicalWriteFailed = true
+            canonicalRetryRoundIDs.insert(seriesRound.id)
+            return result
+        }
+        canonicalRetryRoundIDs.remove(seriesRound.id)
+        return result
+    }
+
+    /// Awards remain pending until their canonical result and the standings that
+    /// consume them are both safely published.
+    private func persistAwardsStatuses(
+        _ statusesBySeriesRoundID: [String: SeriesAwardsStatus]
+    ) async -> Bool {
+        guard statusesBySeriesRoundID.isPopulated else { return true }
+        let timestamp = Time()
+        let updates = statusesBySeriesRoundID.compactMap { seriesRoundID, status -> SeriesRound? in
+            guard var round = rounds.first(where: { $0.id == seriesRoundID }) else { return nil }
+            round.awardsStatus = status
+            round.awardsFinalizedAt = status == .finalized ? timestamp : nil
+            if status == .finalized, hasAutomaticAwardProfile(for: round) {
+                round.automaticAwardsEngineVersion = Self.currentAutomaticAwardsEngineVersion
+            }
+            round.lastUpdatedAt = timestamp
+            return round
+        }
+        guard updates.count == statusesBySeriesRoundID.count else { return false }
+
+        switch await updates.batchPut() {
+        case .success(let saved):
+            let savedByID = Dictionary(uniqueKeysWithValues: saved.map { ($0.id, $0) })
+            rounds = rounds.map { savedByID[$0.id] ?? $0 }
+            return true
+        case .failure(let error):
+            addBreadcrumb(level: .error, message: "Failed to persist post-standings award status", error: error)
+            return false
+        }
+    }
+
+    private func publishCanonicalRoundResult(
+        seriesRound: SeriesRound,
+        snapshot: RoundSnapshot,
+        scoringResult: ScoringResult,
+        awards: [SeriesPointAward],
+        handicapScores: [SeriesHandicapScore],
+        providedMappings: [SeriesRoundMapping]?
+    ) async -> Bool {
+        let mappings: [SeriesRoundMapping]
+        if let providedMappings {
+            mappings = providedMappings
+        } else {
+            switch await FirebaseService.shared.fetchSeriesRoundMappingsResult(
+                seriesID: seriesID,
+                seriesRoundID: seriesRound.id
+            ) {
+            case .success(let values):
+                mappings = values
+            case .failure(let error):
+                addBreadcrumb(level: .error, message: "Canonical round mappings read failed", error: error)
+                return false
+            }
+        }
+
+        let policy = SeriesStandingsPolicyResolver.resolve(
+            round: seriesRound,
+            settings: series.settings
+        )
+        let compatibility = SeriesStandingsPolicyResolver.compatibility(
+            for: seriesRound,
+            in: series
+        )
+        let teamProfile = seriesRound.teamScoringProfileID.flatMap { scoringProfile(id: $0) }
+        let individualProfile = individualScoringProfile(for: seriesRound)
+        let processingInputs = SeriesRoundCanonicalBuilder.processingInputs(
+            teamProfile: teamProfile,
+            individualProfile: individualProfile,
+            handicapConfig: series.handicapConfig,
+            members: members,
+            teams: teams
+        )
+        guard let canonicalResult = SeriesRoundCanonicalBuilder.makeResult(
+            seriesID: seriesID,
+            seriesRound: seriesRound,
+            snapshot: snapshot,
+            mappings: mappings,
+            policy: policy,
+            compatibility: compatibility,
+            scoringResult: scoringResult,
+            awards: awards,
+            handicapScores: handicapScores,
+            processingInputs: processingInputs
+        ) else {
+            return false
+        }
+
+        switch await FirebaseService.shared.markCanonicalRoundResultPending(canonicalResult) {
+        case .success(.alreadyPublished):
+            canonicalProcessingStates[seriesRound.id] = SeriesRoundCanonicalBuilder.processingState(
+                for: canonicalResult,
+                previous: canonicalProcessingStates[seriesRound.id]
+            )
+            return true
+        case .success(.stale):
+            return true
+        case .success(.repairState), .success(.publish):
+            break
+        case .failure(let error):
+            addBreadcrumb(level: .error, message: "Canonical round pending state write failed", error: error)
+            return false
+        }
+
+        switch await SeriesRoundResultPublicationService.shared.publish(canonicalResult) {
+        case .success(let decision):
+            canonicalRoundResults[canonicalResult.id] = canonicalResult
+            canonicalProcessingStates[seriesRound.id] = SeriesRoundCanonicalBuilder.processingState(
+                for: canonicalResult,
+                previous: canonicalProcessingStates[seriesRound.id]
+            )
+            let shadowValidation = SeriesRoundShadowValidator.validate(
+                authoritativeAwards: awards,
+                canonicalResult: canonicalResult
+            )
+            addEvent(
+                "series.canonical_round_result_processed",
+                eventProps: seriesTelemetryProps([
+                    "series_round_id": seriesRound.id,
+                    "generation_id": canonicalResult.id,
+                    "decision": String(describing: decision),
+                    "shadow_equivalent": shadowValidation.isEquivalent,
+                    "award_projection_count": canonicalResult.pointAwards.count,
+                    "metric_count": canonicalResult.performanceMetrics.count
+                ])
+            )
+            return true
+        case .failure(let error):
+            addBreadcrumb(level: .error, message: "Canonical round result shadow write failed", error: error)
+            return false
+        }
+    }
+
+    // MARK: - Awards
+
+    private func finalizeAwardsIfPossible(
+        seriesRound: SeriesRound,
+        snapshot: RoundSnapshot,
+        scoringResult: ScoringResult,
+        existingAwards providedExistingAwards: [SeriesPointAward]? = nil,
+        mappings providedMappings: [SeriesRoundMapping]? = nil
+    ) async -> AwardsFinalizationResult {
+        let teamProfile = seriesRound.teamScoringProfileID.flatMap { scoringProfile(id: $0) }
+        let individualProfile = individualScoringProfile(for: seriesRound)
+
+        guard teamProfile != nil || individualProfile != nil else {
+            return .published(status: .pending, awardsChanged: false, awards: [])
+        }
+
+        let existingAwards: [SeriesPointAward]
+        let mappings: [SeriesRoundMapping]
+        if let providedExistingAwards, let providedMappings {
+            existingAwards = providedExistingAwards
+            mappings = providedMappings
+        } else {
+            switch await fetchDerivedInputs(seriesRoundID: seriesRound.id) {
+            case .success(let inputs):
+                existingAwards = providedExistingAwards ?? inputs.awards
+                mappings = providedMappings ?? inputs.mappings
+            case .failure(let error):
+                addBreadcrumb(level: .error, message: "Award inputs read failed", error: error)
+                return .writeFailed
+            }
+        }
+
+        var needsReview = false
+        var newAwards: [SeriesPointAward] = []
+        var individualAwards: [SeriesPointAward] = []
+        var rebuiltTracks = Set<SeriesAwardTrack>()
+
+        if let individualProfile {
+            if individualProfile.kind == .manual || individualProfile.outcomeSource == .manual {
+                needsReview = true
+            } else {
+                switch await buildAwards(
+                    seriesRound: seriesRound,
+                    snapshot: snapshot,
+                    awardTrack: .individual,
+                    profile: individualProfile,
+                    mappings: mappings,
+                    scoringResult: scoringResult
+                ) {
+                case .success(let awards):
+                    rebuiltTracks.insert(.individual)
+                    individualAwards = awards
+                    newAwards.append(contentsOf: awards)
+                case .needsReview:
+                    needsReview = true
+                }
+            }
+        }
+
+        if let teamProfile {
+            let result: AwardBuildResult
+            if teamProfile.kind == .manual || teamProfile.outcomeSource == .manual {
+                result = .needsReview
+            } else if teamProfile.kind == .accrueFromIndividual || teamProfile.outcomeSource == .individualAwardsAggregateToTeam {
+                result = buildTeamAwardsAccruedFromIndividuals(
+                    seriesRound: seriesRound,
+                    profile: teamProfile,
+                    individualAwards: individualAwards
+                )
+            } else {
+                result = await buildAwards(
+                    seriesRound: seriesRound,
+                    snapshot: snapshot,
+                    awardTrack: .team,
+                    profile: teamProfile,
+                    mappings: mappings,
+                    scoringResult: scoringResult
+                )
+            }
+
+            switch result {
+            case .success(let awards):
+                rebuiltTracks.insert(.team)
+                newAwards.append(contentsOf: awards)
+            case .needsReview:
+                needsReview = true
+            }
+        }
+
+        let publicationPlan = SeriesPointAwardsPublicationPlanner.plan(
+            existing: existingAwards,
+            computed: newAwards,
+            rebuiltTracks: rebuiltTracks
+        )
+
+        let writeResult: Result<Void, Error>
+        if publicationPlan.writeCount == 0 {
+            writeResult = .success(())
+        } else {
+            writeResult = await FirebaseService.shared.batchReplacePointAwards(
+                deleting: publicationPlan.deleting,
+                upserting: publicationPlan.upserting
+            )
+        }
+        switch writeResult {
+        case .success:
+            addEvent(
+                "series.automatic_point_awards_replaced",
+                eventProps: seriesTelemetryProps([
+                    "series_round_id": seriesRound.id,
+                    "deleted_award_count": publicationPlan.deleting.count,
+                    "upserted_award_count": publicationPlan.upserting.count
+                ])
+            )
+        case .failure(let error):
+            addBreadcrumb(level: .error, message: "batchReplacePointAwards failed", error: error)
+            return .writeFailed
+        }
+
+        let proposedStatus: SeriesAwardsStatus = needsReview ? .needsReview : .finalized
+        guard let persistedStatus = Self.resolvedAwardsStatus(
+            proposedStatus: proposedStatus,
+            writeSucceeded: true
+        ) else {
+            return .writeFailed
+        }
+        return .published(
+            status: persistedStatus,
+            awardsChanged: publicationPlan.writeCount > 0,
+            awards: publicationPlan.published
+        )
+    }
+
+    private func buildTeamAwardsAccruedFromIndividuals(
+        seriesRound: SeriesRound,
+        profile: SeriesScoringProfile,
+        individualAwards: [SeriesPointAward]
+    ) -> AwardBuildResult {
+        guard individualAwards.isPopulated else { return .needsReview }
+        let awards = Self.buildAccruedTeamAwards(
+            seriesRoundID: seriesRound.id,
+            profile: profile,
+            individualAwards: individualAwards,
+            members: members,
+            teams: teams,
+            seriesID: seriesID,
+            awardedByMemberID: currentMemberID
+        )
+        return .success(awards)
+    }
+
+    static func buildAccruedTeamAwards(
+        seriesRoundID: String,
+        profile: SeriesScoringProfile,
+        individualAwards: [SeriesPointAward],
+        members: [SeriesMember],
+        teams: [SeriesTeam],
+        seriesID: String,
+        awardedByMemberID: String?
+    ) -> [SeriesPointAward] {
+        let teamNameByID = Dictionary(uniqueKeysWithValues: teams.map { ($0.id, $0.name) })
+        let teamRows: [(teamID: String, teamName: String, total: Double)] = Dictionary(grouping: individualAwards) { award in
+            members.first(where: { $0.id == award.competitorID })?.teamID ?? ""
+        }
+        .compactMap { teamID, awards -> (String, String, Double)? in
+            guard teamID.isPopulated else { return nil }
+            let total = awards.reduce(0.0) { partial, award in
+                partial + award.totalPoints
+            }
+            return (teamID, teamNameByID[teamID] ?? "Team", total)
+        }
+
+        let sortedRows = teamRows.sorted {
+            if $0.total != $1.total {
+                return $0.total > $1.total
+            }
+            return $0.teamName.localizedCaseInsensitiveCompare($1.teamName) == .orderedAscending
+        }
+
+        var awards: [SeriesPointAward] = []
+        var placement = 1
+        var index = 0
+
+        while index < sortedRows.count {
+            let total = sortedRows[index].total
+            var group: [(teamID: String, teamName: String, total: Double)] = []
+            while index < sortedRows.count, sortedRows[index].total == total {
+                group.append(sortedRows[index])
+                index += 1
+            }
+
+            for row in group {
+                awards.append(
+                    SeriesPointAward(
+                        id: "\(seriesRoundID)_team_\(row.teamID)",
+                        seriesRoundID: seriesRoundID,
+                        awardTrack: .team,
+                        competitorType: .team,
+                        competitorID: row.teamID,
+                        competitorName: row.teamName,
+                        profileKind: profile.kind,
+                        placement: placement,
+                        tieGroupSize: group.count > 1 ? group.count : nil,
+                        basePoints: row.total,
+                        bonusPoints: 0,
+                        totalPoints: row.total,
+                        source: .automatic,
+                        roundOwnerID: row.teamID,
+                        reason: "Accrued from individual awards",
+                        awardedByMemberID: awardedByMemberID,
+                        awardedAt: .init(),
+                        createdAt: .init(),
+                        lastUpdatedAt: .init(),
+                        parentID: seriesID
+                    )
+                )
+            }
+
+            placement += group.count
+        }
+
+        return awards
+    }
+
+    private func hasIndividualPlacementAwardsConfigured(_ seriesRound: SeriesRound) -> Bool {
+        guard let profile = individualScoringProfile(for: seriesRound) else { return false }
+        return profile.kind == .placement && profile.outcomeSource == .roundIndividualLeaderboard
+    }
+
+    private func individualScoringProfile(for seriesRound: SeriesRound) -> SeriesScoringProfile? {
+        guard series.settings.useIndividualStandings else { return nil }
+        guard let profileID = seriesRound.individualScoringProfileID ?? series.settings.defaultIndividualScoringProfileID else {
+            return nil
+        }
+        return scoringProfile(id: profileID)
+    }
+
+    private func hasMissingIndividualPlacementAwards(for seriesRound: SeriesRound) -> Bool {
+        guard hasIndividualPlacementAwardsConfigured(seriesRound) else { return false }
+        let individualAwards = pointAwards.filter {
+            $0.seriesRoundID == seriesRound.id && $0.awardTrack == .individual
+        }
+        guard let roundID = seriesRound.roundID else {
+            return individualAwards.isEmpty
+        }
+
+        let scoredMemberIDs = Set(handicapScores.compactMap { score -> String? in
+            guard score.source == .round,
+                  score.sourceRoundID == roundID,
+                  score.memberID.isPopulated else { return nil }
+            return score.memberID
+        })
+        guard scoredMemberIDs.isPopulated else { return individualAwards.isEmpty }
+
+        let awardedMemberIDs = Set(individualAwards.map(\.competitorID))
+        return !scoredMemberIDs.isSubset(of: awardedMemberIDs)
+    }
+
+    func rebuildIndividualPlacementAwardsAndStandings() async -> Bool {
+        guard isCommissioner, !isRebuildingIndividualStandings else { return false }
+
+        isRebuildingIndividualStandings = true
+        defer { isRebuildingIndividualStandings = false }
+
+        let targetRounds = completedRounds.filter(hasIndividualPlacementAwardsConfigured)
+        let snapshotResults = await snapshotRepository.snapshots(
+            roundIDs: targetRounds.compactMap(\.roundID),
+            policy: .reload
+        )
+        let allMappings: [SeriesRoundMapping]
+        let existingAwards: [SeriesPointAward]
+        switch await fetchDerivedInputs() {
+        case .success(let inputs):
+            allMappings = inputs.mappings
+            existingAwards = inputs.awards
+        case .failure(let error):
+            addBreadcrumb(level: .error, message: "Individual standings inputs read failed", error: error)
+            return false
+        }
+        let mappingsByRound = Dictionary(grouping: allMappings, by: \.seriesRoundID)
+        let awardsByRound = Dictionary(grouping: existingAwards, by: \.seriesRoundID)
+
+        var didChange = false
+        var hadWriteFailure = false
+        for seriesRound in targetRounds {
+            guard let roundID = seriesRound.roundID,
+                  let profile = individualScoringProfile(for: seriesRound),
+                  let snapshotResult = snapshotResults[roundID],
+                  case .success(let snapshot) = snapshotResult,
+                  let segment = snapshot.roundSegment ?? snapshot.segments.first else {
+                continue
+            }
+            let scoringResult = scoringResult(from: snapshot, segment: segment)
+
+            let result = await buildAwards(
+                seriesRound: seriesRound,
+                snapshot: snapshot,
+                awardTrack: .individual,
+                profile: profile,
+                mappings: mappingsByRound[seriesRound.id] ?? [],
+                scoringResult: scoringResult
+            )
+            guard case .success(let newIndividualAwards) = result else { continue }
+
+            let publicationPlan = SeriesPointAwardsPublicationPlanner.plan(
+                existing: awardsByRound[seriesRound.id] ?? [],
+                computed: newIndividualAwards,
+                rebuiltTracks: [.individual]
+            )
+            guard publicationPlan.writeCount > 0 else { continue }
+
+            switch await FirebaseService.shared.batchReplacePointAwards(
+                deleting: publicationPlan.deleting,
+                upserting: publicationPlan.upserting
+            ) {
+            case .success:
+                didChange = true
+            case .failure(let error):
+                hadWriteFailure = true
+                addBreadcrumb(level: .error, message: "Individual standings rebuild failed", error: error)
+            }
+        }
+
+        if didChange, !hadWriteFailure {
+            let standingsPublished = await rebuildStandings(only: .individual)
+            hadWriteFailure = !standingsPublished
+        }
+
+        addEvent(
+            "series.individual_standings_rebuilt",
+            eventProps: seriesTelemetryProps([
+                "changed": didChange,
+                "write_failed": hadWriteFailure
+            ])
+        )
+        return didChange && !hadWriteFailure
+    }
+
+    func rebuildAutomaticAwardsAndStandingsForCompletedRounds() async -> Bool {
+        guard isCommissioner, !isRebuildingAutomaticAwards else { return false }
+
+        let startedAt = ContinuousClock.now
+        isRebuildingAutomaticAwards = true
+        defer { isRebuildingAutomaticAwards = false }
+
+        let targetRounds = completedRounds.filter(hasAutomaticAwardProfile)
+        let snapshotResults = await snapshotRepository.snapshots(
+            roundIDs: targetRounds.compactMap(\.roundID),
+            policy: .reload
+        )
+        let allMappings: [SeriesRoundMapping]
+        let existingAwards: [SeriesPointAward]
+        switch await fetchDerivedInputs() {
+        case .success(let inputs):
+            allMappings = inputs.mappings
+            existingAwards = inputs.awards
+        case .failure(let error):
+            addBreadcrumb(level: .error, message: "Automatic awards inputs read failed", error: error)
+            SeriesPerformanceRecorder.shared.record(
+                .automaticAwardsRefresh,
+                startedAt: startedAt,
+                logicalReadCount: 2,
+                context: "\(seriesID)_read_failed"
+            )
+            return false
+        }
+        let mappingsByRound = Dictionary(grouping: allMappings, by: \.seriesRoundID)
+        let awardsByRound = Dictionary(grouping: existingAwards, by: \.seriesRoundID)
+
+        var didChange = false
+        var awardsChanged = false
+        var hadAwardWriteFailure = false
+        var processedRoundCount = 0
+        var awardsStatusesToPublish: [String: SeriesAwardsStatus] = [:]
+        for seriesRound in targetRounds {
+            guard let roundID = seriesRound.roundID,
+                  let snapshotResult = snapshotResults[roundID],
+                  case .success(let snapshot) = snapshotResult else {
+                continue
+            }
+            let processingResult = await processCompletedRound(
+                seriesRound: seriesRound,
+                snapshot: snapshot,
+                overwriteDerivedData: true,
+                existingAwards: awardsByRound[seriesRound.id] ?? [],
+                mappings: mappingsByRound[seriesRound.id] ?? []
+            )
+            didChange = didChange || processingResult.changed
+            awardsChanged = awardsChanged || processingResult.awardsChanged
+            hadAwardWriteFailure = hadAwardWriteFailure
+                || !processingResult.derivedPublicationSucceeded
+            if let proposedAwardsStatus = processingResult.proposedAwardsStatus {
+                awardsStatusesToPublish[seriesRound.id] = proposedAwardsStatus
+            }
+            processedRoundCount += 1
+        }
+
+        if !hadAwardWriteFailure {
+            let standingsPublished: Bool
+            if awardsChanged {
+                standingsPublished = await rebuildStandings(only: nil)
+            } else {
+                standingsPublished = true
+            }
+            didChange = didChange || (awardsChanged && standingsPublished)
+            if standingsPublished {
+                hadAwardWriteFailure = !(await persistAwardsStatuses(awardsStatusesToPublish))
+            } else {
+                hadAwardWriteFailure = true
+            }
+        }
+        handicapScores = await FirebaseService.shared.fetchHandicapScores(seriesID: seriesID)
+        recomputeAllHandicaps()
+
+        addEvent(
+            "series.automatic_awards_rebuilt",
+            eventProps: seriesTelemetryProps([
+                "processed_round_count": processedRoundCount,
+                "changed": didChange,
+                "award_write_failed": hadAwardWriteFailure
+            ])
+        )
+        SeriesPerformanceRecorder.shared.record(
+            .automaticAwardsRefresh,
+            startedAt: startedAt,
+            logicalReadCount: 3,
+            itemCount: processedRoundCount,
+            context: hadAwardWriteFailure ? "\(seriesID)_failed" : seriesID
+        )
+        return didChange && !hadAwardWriteFailure
+    }
+
+    private enum AwardBuildResult {
+        case success([SeriesPointAward])
+        case needsReview
+    }
+
+    private func buildAwards(
+        seriesRound: SeriesRound,
+        snapshot: RoundSnapshot,
+        awardTrack: SeriesAwardTrack,
+        profile: SeriesScoringProfile,
+        mappings: [SeriesRoundMapping],
+        scoringResult: ScoringResult
+    ) async -> AwardBuildResult {
+        guard profile.kind != .manual, profile.outcomeSource != .manual else { return .needsReview }
+        guard snapshot.roundSegment != nil || snapshot.segments.first != nil else { return .needsReview }
+        if profile.kind == .winTieLoss,
+           seriesRound.roundConfig.resolvedCompetitionScope != .matchup {
+            return .success([])
+        }
+        if profile.kind == .winTieLoss,
+           profile.competitorType == .member,
+           snapshot.requiresTeams {
+            return .success([])
+        }
+
+        if profile.outcomeSource == .roundIndividualLeaderboard {
+            return .success(Self.buildIndividualPlacementAwards(
+                seriesRound: seriesRound,
+                snapshot: snapshot,
+                profile: profile,
+                mappings: mappings,
+                members: members,
+                seriesID: seriesID,
+                awardedByMemberID: currentMemberID
+            ))
+        }
+
+        let competitors: [AwardCompetitor]
+
+        switch profile.outcomeSource {
+        case .roundIndividualLeaderboard:
+            competitors = []
+        case .roundTeamLeaderboard:
+            guard let resolvedCompetitors = buildTeamCompetitors(
+                result: scoringResult,
+                snapshot: snapshot,
+                mappings: mappings
+            ) else {
+                return .needsReview
+            }
+            competitors = resolvedCompetitors
+        case .roundMatchResult:
+            guard let resolvedCompetitors = buildMatchupCompetitors(
+                result: scoringResult,
+                snapshot: snapshot,
+                awardTrack: awardTrack,
+                mappings: mappings
+            ) else {
+                return .needsReview
+            }
+            competitors = resolvedCompetitors
+        case .individualAwardsAggregateToTeam:
+            return .needsReview
+        case .manual:
+            competitors = []
+        }
+
+        guard competitors.isPopulated else { return .success([]) }
+
+        let awards = competitors.compactMap { competitor -> SeriesPointAward? in
+            guard let placement = competitor.placement else { return nil }
+            let isDirectHolePoints = profile.outcomeSource == .roundMatchResult
+                && seriesRound.roundConfig.matchupScoringStyle == .holeByHolePoints
+            let basePoints: Double
+            if isDirectHolePoints {
+                basePoints = competitor.rawScore ?? 0
+            } else {
+                guard let resolved = Self.resolvePoints(
+                    placement: placement,
+                    tieGroupSize: competitor.tieGroupSize ?? 1,
+                    profile: profile
+                ) else {
+                    return nil
+                }
+                basePoints = resolved
+            }
+            let tieGroupSize = max(1, competitor.tieGroupSize ?? 1)
+            let matchWinnerBonus: Double = {
+                guard isDirectHolePoints, placement == 1 else { return 0 }
+                let bonus = seriesRound.roundConfig.resolvedMatchWinnerBonusPoints
+                guard bonus > 0 else { return 0 }
+                return tieGroupSize > 1 ? bonus / Double(tieGroupSize) : bonus
+            }()
+            let bonusPoints = profile.bonusRules
+                .filter(\.isEnabled)
+                .reduce(0.0) { partial, rule in
+                    switch rule.type {
+                    case .participation:
+                        return partial + rule.points
+                    case .manual:
+                        return partial
+                    }
+                } + matchWinnerBonus
+            let total = basePoints + bonusPoints
+            return SeriesPointAward(
+                id: "\(seriesRound.id)_\(awardTrack.rawValue)_\(competitor.competitorID)",
+                seriesRoundID: seriesRound.id,
+                awardTrack: awardTrack,
+                competitorType: competitor.competitorType,
+                competitorID: competitor.competitorID,
+                competitorName: competitor.competitorName,
+                profileKind: profile.kind,
+                placement: placement,
+                tieGroupSize: competitor.tieGroupSize,
+                basePoints: basePoints,
+                bonusPoints: bonusPoints,
+                totalPoints: total,
+                source: .automatic,
+                roundOwnerID: competitor.roundOwnerID,
+                reason: competitor.reason,
+                awardedByMemberID: currentMemberID,
+                awardedAt: .init(),
+                createdAt: .init(),
+                lastUpdatedAt: .init(),
+                parentID: seriesID
+            )
+        }
+
+        return .success(awards)
+    }
+
+    nonisolated static func buildIndividualPlacementAwards(
+        seriesRound: SeriesRound,
+        snapshot: RoundSnapshot,
+        profile: SeriesScoringProfile,
+        mappings: [SeriesRoundMapping],
+        members: [SeriesMember],
+        seriesID: String,
+        awardedByMemberID: String?
+    ) -> [SeriesPointAward] {
+        guard profile.kind == .placement,
+              profile.outcomeSource == .roundIndividualLeaderboard,
+              let segment = snapshot.roundSegment ?? snapshot.segments.first else {
+            return []
+        }
+
+        let result = ScoringEngine.computeStrokePlay(
+            scores: snapshot.scoring,
+            participants: snapshot.participants,
+            segment: segment,
+            holes: scoringHoles(in: snapshot),
+            basis: snapshot.configuration.primaryFormat.configuration.basis,
+            scoreInputMode: snapshot.configuration.scoreInputMode,
+            template: snapshot.resolvedActiveTemplate,
+            scoreLookupSegmentIDs: snapshot.segmentScoreLookupSegmentIDs,
+            handicapStrokeBasis: snapshot.handicapStrokeBasis,
+            substitutesScore: snapshot.configuration.substitutesScore
+        )
+        let competitors = individualPlacementCompetitors(
+            result: result,
+            snapshot: snapshot,
+            mappings: mappings,
+            members: members
+        )
+
+        return competitors.compactMap { competitor -> SeriesPointAward? in
+            guard let placement = competitor.placement,
+                  let basePoints = resolvePoints(
+                    placement: placement,
+                    tieGroupSize: competitor.tieGroupSize ?? 1,
+                    profile: profile
+                  ) else {
+                return nil
+            }
+            let bonusPoints = profile.bonusRules
+                .filter(\.isEnabled)
+                .reduce(0.0) { partial, rule in
+                    switch rule.type {
+                    case .participation:
+                        return partial + rule.points
+                    case .manual:
+                        return partial
+                    }
+                }
+            return SeriesPointAward(
+                id: "\(seriesRound.id)_\(SeriesAwardTrack.individual.rawValue)_\(competitor.competitorID)",
+                seriesRoundID: seriesRound.id,
+                awardTrack: .individual,
+                competitorType: .member,
+                competitorID: competitor.competitorID,
+                competitorName: competitor.competitorName,
+                profileKind: profile.kind,
+                placement: placement,
+                tieGroupSize: competitor.tieGroupSize,
+                basePoints: basePoints,
+                bonusPoints: bonusPoints,
+                totalPoints: basePoints + bonusPoints,
+                source: .automatic,
+                roundOwnerID: competitor.roundOwnerID,
+                reason: competitor.reason,
+                awardedByMemberID: awardedByMemberID,
+                awardedAt: .init(),
+                createdAt: .init(),
+                lastUpdatedAt: .init(),
+                parentID: seriesID
+            )
+        }
+    }
+
+    @discardableResult
+    func rebuildStandings() async -> Bool {
+        await rebuildStandings(only: nil)
+    }
+
+    @discardableResult
+    private func rebuildStandings(
+        only track: SeriesAwardTrack?,
+        using providedAwards: [SeriesPointAward]? = nil
+    ) async -> Bool {
+        let startedAt = ContinuousClock.now
+        let awards: [SeriesPointAward]
+        if let providedAwards {
+            awards = providedAwards
+        } else {
+            switch await FirebaseService.shared.fetchPointAwardsResult(seriesID: seriesID) {
+            case .success(let fetchedAwards):
+                awards = fetchedAwards
+            case .failure(let error):
+                addBreadcrumb(level: .error, message: "Standings awards read failed", error: error)
+                return false
+            }
+        }
+        let existingStandings: [SeriesStanding]
+        switch await FirebaseService.shared.fetchStandingsResult(seriesID: seriesID) {
+        case .success(let fetchedStandings):
+            existingStandings = fetchedStandings
+        case .failure(let error):
+            addBreadcrumb(level: .error, message: "Existing standings read failed", error: error)
+            return false
+        }
+
+        let targetAwards = track.map { target in
+            awards.filter { $0.awardTrack == target }
+        } ?? awards
+        let computedForTarget = Self.computedStandings(
+            from: targetAwards,
+            seriesID: seriesID,
+            sort: Self.standingsSort
+        )
+
+        let publicationResult = await standingsPublicationService.publish(
+            existing: existingStandings,
+            computed: computedForTarget,
+            track: track
+        )
+        let plan: SeriesStandingsPublicationPlan
+        switch publicationResult {
+        case .success(let publishedPlan):
+            plan = publishedPlan
+        case .failure(let error):
+            addBreadcrumb(level: .error, message: "Standings publication failed", error: error)
+            SeriesPerformanceRecorder.shared.record(
+                .standingsRebuild,
+                startedAt: startedAt,
+                logicalReadCount: providedAwards == nil ? 2 : 1,
+                itemCount: computedForTarget.count,
+                context: "\(track?.rawValue ?? "all")_failed"
+            )
+            return false
+        }
+
+        pointAwards = awards
+        legacyStandings = plan.published
+        standings = resolvedStandings(legacyStandings: legacyStandings)
+
+        let eventName = track == .individual
+            ? "series.individual_standings_recomputed"
+            : "series.standings_recomputed"
+        addEvent(
+            eventName,
+            eventProps: seriesTelemetryProps(["standing_row_count": computedForTarget.count])
+        )
+        SeriesPerformanceRecorder.shared.record(
+            .standingsRebuild,
+            startedAt: startedAt,
+            logicalReadCount: providedAwards == nil ? 2 : 1,
+            logicalWriteCount: plan.writeCount,
+            itemCount: computedForTarget.count,
+            context: track?.rawValue ?? "all"
+        )
+        return true
+    }
+
+    private func resolvedStandings(legacyStandings: [SeriesStanding]) -> [SeriesStanding] {
+        guard series.settings.standingsReadAuthority == .canonicalWhenReady else {
+            standingsReadSource = .legacy
+            return legacyStandings
+        }
+        let projection = SeriesCanonicalStandingsProjector.project(
+            series: series,
+            completedRounds: rounds.filter { effectiveStatus(for: $0) == .complete },
+            processingStates: Array(canonicalProcessingStates.values),
+            results: Array(canonicalRoundResults.values)
+        )
+        switch projection {
+        case .success(let canonical):
+            standingsReadSource = .canonical
+            return canonical.standings
+        case .failure(let error):
+            standingsReadSource = .legacyFallback(error)
+            return legacyStandings
+        }
+    }
+
+    static func computedStandings(
+        from awards: [SeriesPointAward],
+        seriesID: String,
+        sort: (SeriesStanding, SeriesStanding) -> Bool
+    ) -> [SeriesStanding] {
+        var grouped: [String: SeriesStanding] = [:]
+        var roundsCountedByKey: [String: Set<String>] = [:]
+        let rebuildTime = Time()
+
+        for award in awards {
+            let standingID = SeriesStanding.standingID(for: award.awardTrack, competitorID: award.competitorID)
+            var standing = grouped[standingID] ?? SeriesStanding(
+                id: standingID,
+                awardTrack: award.awardTrack,
+                competitorType: award.competitorType,
+                competitorID: award.competitorID,
+                competitorName: award.competitorName,
+                createdAt: rebuildTime,
+                lastUpdatedAt: rebuildTime,
+                parentID: seriesID
+            )
+            standing.totalPoints += award.totalPoints
+            standing.wins += award.placement == 1 ? 1 : 0
+            standing.topThrees += (award.placement ?? .max) <= 3 ? 1 : 0
+            standing.lastPlacement = award.placement
+            if let best = standing.bestPlacement {
+                standing.bestPlacement = min(best, award.placement ?? best)
+            } else {
+                standing.bestPlacement = award.placement
+            }
+            standing.lastUpdatedAt = rebuildTime
+            grouped[standingID] = standing
+            roundsCountedByKey[standingID, default: []].insert(award.seriesRoundID)
+        }
+
+        for key in grouped.keys {
+            grouped[key]?.roundsCounted = roundsCountedByKey[key]?.count ?? 0
+        }
+
+        var computedStandings: [SeriesStanding] = []
+        for track in SeriesAwardTrack.allCases {
+            let sorted = grouped.values
+                .filter { $0.awardTrack == track }
+                .sorted(by: sort)
+            for (index, var standing) in sorted.enumerated() {
+                standing.rank = index + 1
+                computedStandings.append(standing)
+            }
+        }
+        return computedStandings
+    }
+
+    // MARK: - Handicap Ingestion
+
+    private func ingestRoundScores(
+        seriesRound: SeriesRound,
+        snapshot: RoundSnapshot,
+        replacingExisting: Bool = false
+    ) async -> HandicapSyncResult {
+        guard let roundID = seriesRound.roundID else { return HandicapSyncResult() }
+        let excludedMemberIDs = Set(seriesRound.roundConfig.normalizedExcludedHandicapMemberIDs)
+        let accruesForRound = shouldAccrueLeagueHandicap(for: seriesRound, snapshot: snapshot)
+
+        let teeByParticipant = Dictionary(uniqueKeysWithValues: snapshot.participants.map { participant in
+            let tee = snapshot.courseSegment?.tee(from: participant.teeBoxID)
+                ?? snapshot.courseSegment?.tee(from: snapshot.courseSegment?.defaultTee ?? "")
+                ?? snapshot.courseSegment?.courseInfo.tees.first
+            return (participant.id, tee)
+        })
+
+        let scoreEntriesByParticipant = Dictionary(grouping: snapshot.scoring, by: \.scoringUnitID)
+        var inserted = false
+        let existingRoundScores = await FirebaseService.shared.fetchHandicapScores(
+            seriesID: seriesID,
+            sourceRoundID: roundID
+        )
+        let scoresToReplace = replacingExisting ? existingRoundScores : []
+
+        var pendingHandicapScores: [SeriesHandicapScore] = []
+        var projectedScores: [SeriesHandicapScore] = []
+        var writeFailed = false
+
+        for participant in snapshot.participants {
+            guard let memberID = participant.seriesMemberID ?? members.first(where: { $0.playerID == participant.playerID })?.id else { continue }
+            let excluded = excludedMemberIDs.contains(memberID)
+            let countsTowardIndex = accruesForRound && !excluded
+            let existingScore = (handicapScores + existingRoundScores).first {
+                $0.memberID == memberID && $0.source == .round && $0.sourceRoundID == roundID
+            }
+            if !replacingExisting, let existingScore {
+                projectedScores.append(existingScore)
+                continue
+            }
+
+            let entries = scoreEntriesByParticipant[participant.id] ?? []
+            let tee = teeByParticipant[participant.id] ?? nil
+            let holeNumbers = snapshot.roundSegment?.holeRange.holeNumbers ?? snapshot.holeSegment.holeRange.holeNumbers
+            let completeness = RoundScoreCompleteness.classify(
+                participantID: participant.id,
+                scores: snapshot.scoring,
+                holeNumbers: holeNumbers,
+                holes: tee?.holes ?? snapshot.defaultTee?.holes ?? [],
+                scoreLookupSegmentIDs: snapshot.segmentScoreLookupSegmentIDs
+            )
+            guard completeness.isComplete else { continue }
+
+            let holeMap = Dictionary(uniqueKeysWithValues: (tee?.holes ?? snapshot.defaultTee?.holes ?? []).map { ($0.number, $0.par) })
+            let total = Double(entries.compactMap { entry in
+                guard holeNumbers.contains(entry.holeNumber) else { return nil }
+                return RoundScoreCompleteness.validGrossStrokes(entry: entry, par: holeMap[entry.holeNumber])
+            }.reduce(0, +))
+            let par = Double(tee?.par(for: snapshot.holeSegment) ?? snapshot.courseSegment?.courseInfo.tees.first?.par(for: snapshot.holeSegment) ?? Int(series.handicapConfig.config.defaultParForIndex))
+            let resolvedTeeBoxID = participant.teeBoxID.isPopulated ? participant.teeBoxID : tee?.id
+            let courseRating = tee?.rating(for: snapshot.holeSegment)
+            let courseSlope = tee?.slope(for: snapshot.holeSegment)
+            let recordedAt = seriesRound.handicapScoreRecordedAt
+            let sortOrder = nextHandicapSortOrder(for: memberID)
+            let now = Time(for: Date())
+            let score = SeriesHandicapScore(
+                id: Self.roundHandicapScoreID(roundID: roundID, memberID: memberID),
+                memberID: memberID,
+                score: total,
+                par: par,
+                holeSegment: snapshot.holeSegment,
+                teeBoxID: resolvedTeeBoxID,
+                courseRating: courseRating,
+                courseSlope: courseSlope,
+                source: .round,
+                sourceRoundID: roundID,
+                caption: nil,
+                recordedAt: recordedAt,
+                sortOrder: sortOrder,
+                createdAt: now,
+                lastUpdatedAt: now,
+                parentID: seriesID,
+                countsTowardHandicapIndex: countsTowardIndex
+            )
+            pendingHandicapScores.append(score)
+            projectedScores.append(score)
+        }
+
+        if pendingHandicapScores.isPopulated || scoresToReplace.isPopulated {
+            let writeResult: Result<[SeriesHandicapScore], Error>
+            if replacingExisting {
+                writeResult = await FirebaseService.shared.batchReplaceHandicapScores(
+                    deleting: scoresToReplace,
+                    upserting: pendingHandicapScores
+                )
+            } else {
+                writeResult = await pendingHandicapScores.batchPut()
+            }
+
+            switch writeResult {
+            case .success(let saved):
+                let replacedIDs = Set(scoresToReplace.map(\.id))
+                handicapScores.removeAll { replacedIDs.contains($0.id) }
+                let savedIDs = Set(saved.map(\.id))
+                handicapScores.removeAll { savedIDs.contains($0.id) }
+                handicapScores.append(contentsOf: saved)
+                projectedScores = saved.sorted { $0.id < $1.id }
+                inserted = saved.isPopulated
+                addEvent(
+                    "series.handicap_scores_ingested_from_round",
+                    eventProps: seriesTelemetryProps([
+                        "source_round_id": roundID,
+                        "rows_ingested": saved.count
+                    ])
+                )
+            case .failure(let error):
+                writeFailed = true
+                addBreadcrumb(level: .error, message: "Failed to batch ingest series handicap scores", error: error)
+            }
+        }
+
+        let deleted = !writeFailed && replacingExisting && scoresToReplace.isPopulated
+        if inserted || deleted {
+            recomputeAllHandicaps()
+        }
+        return HandicapSyncResult(
+            changed: inserted || deleted,
+            projectedScores: projectedScores.sorted { $0.id < $1.id },
+            writeFailed: writeFailed
+        )
+    }
+
+    private func hydrateRoundHandicapScoreMetadataIfNeeded() async {
+        guard series.handicapConfig.isEnabled else { return }
+        guard series.handicapConfig.config.usesCourseRatingSlopeAdjustment else { return }
+        guard !isHydratingHandicapScoreMetadata else { return }
+
+        let missingScores = handicapScores.filter {
+            $0.source == .round
+                && $0.sourceRoundID?.isPopulated == true
+                && ($0.teeBoxID?.isPopulated != true || $0.courseRating == nil || $0.courseSlope == nil)
+        }
+        guard missingScores.isPopulated else { return }
+
+        isHydratingHandicapScoreMetadata = true
+        defer { isHydratingHandicapScoreMetadata = false }
+
+        let groupedByRoundID = Dictionary(grouping: missingScores, by: { $0.sourceRoundID ?? "" })
+        var updates: [SeriesHandicapScore] = []
+
+        for (roundID, scores) in groupedByRoundID where roundID.isPopulated {
+            guard let snapshot = await loadRoundSnapshot(roundID: roundID) else { continue }
+            for score in scores {
+                guard let metadata = handicapRoundMetadata(memberID: score.memberID, snapshot: snapshot) else { continue }
+                var updated = score
+                updated.teeBoxID = metadata.teeBoxID
+                updated.courseRating = metadata.courseRating
+                updated.courseSlope = metadata.courseSlope
+                updated.lastUpdatedAt = .init()
+                updates.append(updated)
+            }
+        }
+
+        guard updates.isPopulated else { return }
+
+        switch await updates.batchPut() {
+        case .success(let saved):
+            let savedByID = Dictionary(uniqueKeysWithValues: saved.map { ($0.id, $0) })
+            handicapScores = handicapScores.map { savedByID[$0.id] ?? $0 }
+            recomputeAllHandicaps()
+        case .failure(let error):
+            addBreadcrumb(level: .error, message: "Failed to hydrate handicap score round metadata", error: error)
+        }
+    }
+
+    private typealias HandicapRoundMetadata = (teeBoxID: String, courseRating: Double, courseSlope: Int)
+
+    private func handicapRoundMetadata(memberID: String, roundID: String?) async -> HandicapRoundMetadata? {
+        guard let roundID, roundID.isPopulated,
+              let snapshot = await loadRoundSnapshot(roundID: roundID) else { return nil }
+        return handicapRoundMetadata(memberID: memberID, snapshot: snapshot)
+    }
+
+    private func handicapRoundMetadata(memberID: String, snapshot: RoundSnapshot) -> HandicapRoundMetadata? {
+        guard let participant = handicapRoundParticipant(memberID: memberID, snapshot: snapshot) else {
+            return nil
+        }
+
+        let tee = snapshot.courseSegment?.tee(from: participant.teeBoxID)
+            ?? snapshot.courseSegment?.tee(from: snapshot.courseSegment?.defaultTee ?? "")
+            ?? snapshot.courseSegment?.courseInfo.tees.first
+
+        let resolvedTeeBoxID = participant.teeBoxID.isPopulated ? participant.teeBoxID : tee?.id ?? ""
+        guard resolvedTeeBoxID.isPopulated,
+              let courseRating = tee?.rating(for: snapshot.holeSegment),
+              let courseSlope = tee?.slope(for: snapshot.holeSegment) else {
+            return nil
+        }
+
+        return (teeBoxID: resolvedTeeBoxID, courseRating: courseRating, courseSlope: courseSlope)
+    }
+
+    private func handicapRoundParticipant(memberID: String, snapshot: RoundSnapshot) -> RoundParticipant? {
+        let memberPlayerID = members.first(where: { $0.id == memberID })?.playerID
+        return snapshot.participants.first {
+            ($0.seriesMemberID?.isPopulated == true && $0.seriesMemberID == memberID)
+                || (memberPlayerID?.isPopulated == true && $0.playerID == memberPlayerID)
+        }
+    }
+
+    private func syncRoundHandicapScores(
+        seriesRound: SeriesRound,
+        snapshot: RoundSnapshot,
+        replacingExisting: Bool
+    ) async -> HandicapSyncResult {
+        guard series.handicapConfig.mode.allowsAccrual else {
+            if replacingExisting, let roundID = seriesRound.roundID {
+                let deleted = await deleteRoundHandicapScores(sourceRoundID: roundID)
+                if deleted { recomputeAllHandicaps() }
+                return HandicapSyncResult(changed: deleted)
+            }
+            return HandicapSyncResult()
+        }
+
+        return await ingestRoundScores(
+            seriesRound: seriesRound,
+            snapshot: snapshot,
+            replacingExisting: replacingExisting
+        )
+    }
+
+    private func shouldAccrueLeagueHandicap(for seriesRound: SeriesRound, snapshot: RoundSnapshot?) -> Bool {
+        guard series.handicapConfig.mode.allowsAccrual else { return false }
+        guard seriesRound.roundConfig.countsTowardHandicapPool else { return false }
+        if let snapshot {
+            return snapshot.resolvedActiveTemplate.supportsLeagueHandicapAccrual
+        }
+        return effectiveRoundConfig(for: seriesRound).supportsLeagueHandicapAccrual
+    }
+
+    private func deleteRoundHandicapScores(sourceRoundID: String) async -> Bool {
+        let remoteScores = await FirebaseService.shared.fetchHandicapScores(
+            seriesID: seriesID,
+            sourceRoundID: sourceRoundID
+        )
+        var existingRoundScoresByID: [String: SeriesHandicapScore] = [:]
+        for score in handicapScores + remoteScores where score.source == .round && score.sourceRoundID == sourceRoundID {
+            existingRoundScoresByID[score.id] = score
+        }
+        let existingRoundScores = Array(existingRoundScoresByID.values)
+
+        guard existingRoundScores.isPopulated else { return false }
+        switch await FirebaseService.shared.batchReplaceHandicapScores(
+            deleting: existingRoundScores,
+            upserting: []
+        ) {
+        case .success:
+            let deletedIDs = Set(existingRoundScores.map(\.id))
+            handicapScores.removeAll { deletedIDs.contains($0.id) }
+            return true
+        case .failure(let error):
+            addBreadcrumb(level: .error, message: "Failed to atomically delete existing handicap scores", error: error)
+            return false
+        }
+    }
+
+    nonisolated static func roundHandicapScoreID(roundID: String, memberID: String) -> String {
+        func safeDocumentIDComponent(_ value: String) -> String {
+            value
+                .replacingOccurrences(of: "/", with: "_")
+                .replacingOccurrences(of: " ", with: "_")
+        }
+        return "round_\(safeDocumentIDComponent(roundID))_member_\(safeDocumentIDComponent(memberID))"
+    }
+
+    // MARK: - Announcements
+
+    @discardableResult
+    func addAnnouncement(title: String, message: String, start: Date?, end: Date?) async -> Bool {
+        guard let memberID = currentMemberID else { return false }
+        guard let (startTime, endTime) = Self.resolvedAnnouncementSchedule(start: start, end: end) else { return false }
+        let announcement = SeriesAnnouncement(
+            id: HackersID.string(),
+            title: title,
+            message: message,
+            createdByMemberID: memberID,
+            startsAt: startTime,
+            endsAt: endTime,
+            createdAt: .init(),
+            lastUpdatedAt: .init(),
+            parentID: seriesID
+        )
+        switch await FirebaseService.shared.addSeriesAnnouncement(announcement) {
+        case .success(let created):
+            announcements.append(created)
+            await refreshSeriesCachesIfNeeded()
+            addEvent(
+                "series.announcement_created",
+                eventProps: seriesTelemetryProps(["announcement_id": created.id])
+            )
+            return true
+        case .failure(let error):
+            addBreadcrumb(level: .error, message: "Failed to add announcement", error: error)
+            return false
+        }
+    }
+
+    func deleteAnnouncement(_ announcement: SeriesAnnouncement) async {
+        guard let index = announcements.firstIndex(where: { $0.id == announcement.id }) else { return }
+        let target = announcements[index]
+        announcements.remove(at: index)
+        _ = await FirebaseService.shared.deleteSeriesAnnouncement(target)
+        await refreshSeriesCachesIfNeeded()
+        addEvent(
+            "series.announcement_deleted",
+            eventProps: seriesTelemetryProps(["announcement_id": target.id])
+        )
+    }
+
+    @discardableResult
+    func updateAnnouncement(_ announcement: SeriesAnnouncement, title: String, message: String, start: Date?, end: Date?) async -> Bool {
+        guard let (startTime, endTime) = Self.resolvedAnnouncementSchedule(start: start, end: end) else { return false }
+        var updated = announcement
+        updated.title = title
+        updated.message = message
+        updated.startsAt = startTime
+        updated.endsAt = endTime
+        updated.lastUpdatedAt = .init()
+        switch await FirebaseService.shared.updateSeriesAnnouncement(updated) {
+        case .success(let saved):
+            if let idx = announcements.firstIndex(where: { $0.id == saved.id }) {
+                announcements[idx] = saved
+            }
+            await refreshSeriesCachesIfNeeded()
+            addEvent(
+                "series.announcement_updated",
+                eventProps: seriesTelemetryProps(["announcement_id": saved.id])
+            )
+            return true
+        case .failure(let error):
+            addBreadcrumb(level: .error, message: "Failed to update announcement", error: error)
+            return false
+        }
+    }
+
+    /// Maps optional schedule to stored `Time` values; returns `nil` if explicit window is invalid.
+    private static func resolvedAnnouncementSchedule(start: Date?, end: Date?) -> (Time, Time)? {
+        let startTime = start.map { Time(for: $0) } ?? Time().beginningOfTime
+        let endTime = end.map { Time(for: $0) } ?? Time().endOfTIme
+        let bothExplicit = start != nil && end != nil
+        if bothExplicit, endTime.unix <= startTime.unix { return nil }
+        return (startTime, endTime)
+    }
+
+    private func announcementSortNewestFirst(_ lhs: SeriesAnnouncement, _ rhs: SeriesAnnouncement) -> Bool {
+        if lhs.startsAt.unix != rhs.startsAt.unix { return lhs.startsAt.unix > rhs.startsAt.unix }
+        return lhs.createdAt.unix > rhs.createdAt.unix
+    }
+
+    /// Future start time — not yet visible as “live”.
+    var plannedAnnouncements: [SeriesAnnouncement] {
+        let now = Time()
+        return announcements
+            .filter { $0.startsAt.unix > now.unix }
+            .sorted(by: announcementSortNewestFirst)
+    }
+
+    /// In the active time window.
+    var liveAnnouncements: [SeriesAnnouncement] {
+        let now = Time()
+        return announcements
+            .filter { $0.isActive(at: now) }
+            .sorted(by: announcementSortNewestFirst)
+    }
+
+    /// Past explicit end (open-ended announcements never land here).
+    var expiredAnnouncements: [SeriesAnnouncement] {
+        let now = Time()
+        return announcements
+            .filter {
+                !$0.isActive(at: now)
+                    && $0.startsAt.unix <= now.unix
+                    && !$0.usesOpenEnd
+                    && $0.endsAt.unix <= now.unix
+            }
+            .sorted(by: announcementSortNewestFirst)
+    }
+
+    // MARK: - CSV Export
+
+    func exportCSV(for seriesRound: SeriesRound) async -> URL? {
+        guard seriesRound.roundID != nil else { return nil }
+        exportingRoundID = seriesRound.id
+        defer { exportingRoundID = nil }
+
+        let options = SeriesCSVExportOptions(
+            selectedRoundIDs: [seriesRound.id],
+            selectedTeamIDs: [],
+            selectedMemberIDs: [],
+            selectedSections: Set(SeriesCSVExportSection.allCases)
+        )
+        return await exportCSV(options: options)
+    }
+
+    func exportCSV(options: SeriesCSVExportOptions) async -> URL? {
+        exportingRoundID = "series"
+        skippedCSVExportRoundTitles = []
+        defer { exportingRoundID = nil }
+
+        let selectedLinkedRoundIDs = rounds.compactMap { seriesRound -> String? in
+            guard options.selectedRoundIDs.contains(seriesRound.id) else { return nil }
+            return seriesRound.roundID
+        }
+        _ = await snapshotRepository.snapshots(
+            roundIDs: selectedLinkedRoundIDs,
+            policy: .useCache
+        )
+        let exportResult = await SeriesCSVExporter.build(
+            series: series,
+            rounds: rounds,
+            members: members,
+            teams: teams,
+            options: options,
+            snapshotProvider: { [weak self] seriesRound in
+                await self?.cachedLinkedRoundSnapshot(for: seriesRound)
+            }
+        )
+        skippedCSVExportRoundTitles = exportResult.skippedRoundTitles
+        guard let document = exportResult.document, document.rows.isPopulated else { return nil }
+
+        let fileURL = FileManager.default.temporaryDirectory
+            .appendingPathComponent(csvExportFileName())
+
+        do {
+            try document.content.write(to: fileURL, atomically: true, encoding: .utf8)
+            exportedCSVURL = fileURL
+            addEvent(
+                "series.csv_exported",
+                eventProps: seriesTelemetryProps([
+                    "round_count": options.selectedRoundIDs.count,
+                    "section_count": options.selectedSections.count,
+                    "skipped_round_count": exportResult.skippedRoundTitles.count
+                ])
+            )
+            return fileURL
+        } catch {
+            addBreadcrumb(level: .error, message: "Failed to write series CSV export", error: error)
+            return nil
+        }
+    }
+
+    private func csvExportFileName() -> String {
+        let slug = series.name
+            .lowercased()
+            .components(separatedBy: CharacterSet.alphanumerics.inverted)
+            .filter(\.isPopulated)
+            .joined(separator: "-")
+        let formatter = DateFormatter()
+        formatter.dateFormat = "yyyyMMdd"
+        let date = formatter.string(from: Date())
+        return "series-\(slug.isPopulated ? slug : series.id)-export-\(date).csv"
+    }
+
+    func pointAwards(for seriesRound: SeriesRound, track: SeriesAwardTrack? = nil) -> [SeriesPointAward] {
+        pointAwards
+            .filter { award in
+                award.seriesRoundID == seriesRound.id && (track == nil || award.awardTrack == track)
+            }
+            .sorted { lhs, rhs in
+                if (lhs.awardTrack.rawValue, lhs.placement ?? .max) != (rhs.awardTrack.rawValue, rhs.placement ?? .max) {
+                    if lhs.awardTrack != rhs.awardTrack {
+                        return lhs.awardTrack.rawValue < rhs.awardTrack.rawValue
+                    }
+                    return (lhs.placement ?? .max) < (rhs.placement ?? .max)
+                }
+                if lhs.totalPoints != rhs.totalPoints { return lhs.totalPoints > rhs.totalPoints }
+                return lhs.competitorName < rhs.competitorName
+            }
+    }
+
+    func teamRosterSubtitle(for teamID: String) -> String? {
+        let roster = activeMembers.filter { $0.teamID == teamID }
+        return SeriesTeamInsightBuilder.rosterSubtitle(for: roster)
+    }
+
+    func teamInsight(for standing: SeriesStanding) async -> SeriesTeamInsight? {
+        let startedAt = ContinuousClock.now
+        guard standing.awardTrack == .team,
+              let team = teams.first(where: { $0.id == standing.competitorID }) else {
+            return nil
+        }
+
+        let linkedRoundIDs = rounds.compactMap(\.roundID)
+        let snapshotResults = await snapshotRepository.snapshots(
+            roundIDs: linkedRoundIDs,
+            policy: .useCache
+        )
+        var snapshotsBySeriesRoundID: [String: RoundSnapshot] = [:]
+        for round in rounds where round.roundID?.isPopulated == true {
+            guard let roundID = round.roundID,
+                  let result = snapshotResults[roundID],
+                  case .success(let snapshot) = result else {
+                continue
+            }
+                snapshotsBySeriesRoundID[round.id] = snapshot
+        }
+
+        let statusBySeriesRoundID = Dictionary(uniqueKeysWithValues: rounds.map { ($0.id, effectiveStatus(for: $0)) })
+        let insight = SeriesTeamInsightBuilder.build(
+            team: team,
+            standing: standing,
+            teams: teams,
+            members: members,
+            rounds: rounds,
+            pointAwards: pointAwards,
+            snapshotsBySeriesRoundID: snapshotsBySeriesRoundID,
+            statusBySeriesRoundID: statusBySeriesRoundID
+        )
+        SeriesPerformanceRecorder.shared.record(
+            .teamInsight,
+            startedAt: startedAt,
+            itemCount: snapshotsBySeriesRoundID.count,
+            context: standing.competitorID
+        )
+        return insight
+    }
+
+    func teeChoices(for course: SeriesCourseSelection?) -> [Tee] {
+        guard let course, course.courseID.isPopulated else { return [] }
+        if let cached = seriesCourseTeesByCourseID[course.courseID], cached.isPopulated {
+            return cached
+        }
+
+        if let round = rounds.first(where: { $0.resolvedCourse(using: series)?.courseID == course.courseID }),
+           let roundID = round.roundID,
+           let linked = linkedRounds[roundID],
+           let tees = linked.configuration.courses.first?.courseInfo.tees,
+           tees.isPopulated {
+            return tees
+        }
+
+        return []
+    }
+
+    func ensureTeeChoicesLoaded(for course: SeriesCourseSelection?) async {
+        guard let course, course.courseID.isPopulated else { return }
+        if seriesCourseTeesByCourseID[course.courseID]?.isPopulated == true { return }
+
+        let courseID = course.courseID
+        let applyLinkedRoundFallback: () -> Void = { [self] in
+            if let round = rounds.first(where: { $0.resolvedCourse(using: series)?.courseID == courseID }),
+               let roundID = round.roundID,
+               let linked = linkedRounds[roundID],
+               let tees = linked.configuration.courses.first?.courseInfo.tees,
+               tees.isPopulated {
+                seriesCourseTeesByCourseID[courseID] = tees
+            }
+        }
+
+        if let apiID = Int(courseID) {
+            do {
+                let built = try await GolfCourseRepository.shared.course(by: apiID)
+                seriesCourseTeesByCourseID[courseID] = built.tees
+            } catch {
+                switch await FirebaseService.shared.getCourseByID(courseID) {
+                case .success(let loadedCourse):
+                    seriesCourseTeesByCourseID[courseID] = loadedCourse.tees
+                case .failure:
+                    applyLinkedRoundFallback()
+                }
+            }
+        } else {
+            switch await FirebaseService.shared.getCourseByID(courseID) {
+            case .success(let loadedCourse):
+                seriesCourseTeesByCourseID[courseID] = loadedCourse.tees
+            case .failure:
+                applyLinkedRoundFallback()
+            }
+        }
+    }
+
+    func loadCorrectionContext(for seriesRound: SeriesRound) async -> SeriesRoundCorrectionContext? {
+        guard let roundID = seriesRound.roundID,
+              let snapshot = await loadRoundSnapshot(roundID: roundID) else {
+            return nil
+        }
+
+        let holes = holesForScoring(in: snapshot).sorted { $0.number < $1.number }
+        let entriesByParticipantID = Dictionary(
+            uniqueKeysWithValues: snapshot.participants.map { participant in
+                let scoreRows = Dictionary(
+                    uniqueKeysWithValues: snapshot.scoring
+                        .filter { $0.scoringUnitID == participant.id }
+                        .map { ($0.holeNumber, $0) }
+                )
+                return (participant.id, scoreRows)
+            }
+        )
+
+        return SeriesRoundCorrectionContext(
+            seriesRound: seriesRound,
+            snapshot: snapshot,
+            holes: holes,
+            entriesByParticipantID: entriesByParticipantID
+        )
+    }
+
+    /// Writes commissioner hole edits to the live round, updates series round metadata, then runs `processCompletedRound` (handicap accrual, awards, standings). Used by hole-by-hole and gross-total correction UIs.
+    func applyScoreCorrections(
+        for seriesRound: SeriesRound,
+        changes: [SeriesScoreCorrectionChange],
+        participantChanges: [SeriesParticipantHandicapCorrectionChange] = [],
+        reason: String
+    ) async -> Bool {
+        let batch = SeriesScoreCorrectionBatch(
+            seriesRoundID: seriesRound.id,
+            changes: changes,
+            participantChanges: participantChanges,
+            reason: reason,
+            expectedRoundRevision: seriesRound.lastUpdatedAt.unix
+        )
+        switch await applyScoreCorrectionBatch(batch, seriesRound: seriesRound) {
+        case .success:
+            scoreCorrectionErrorMessage = nil
+            return true
+        case .failure(let failure):
+            scoreCorrectionErrorMessage = failure.localizedDescription
+            return false
+        }
+    }
+
+    func applyScoreCorrectionBatch(
+        _ batch: SeriesScoreCorrectionBatch,
+        seriesRound: SeriesRound
+    ) async -> Result<Void, SeriesScoreCorrectionBatchFailure> {
+        guard isCommissioner,
+              let roundID = seriesRound.roundID,
+              let currentMemberID else { return .failure(.sourceWriteFailed) }
+        guard batch.seriesRoundID == seriesRound.id,
+              batch.expectedRoundRevision == seriesRound.lastUpdatedAt.unix,
+              rounds.first(where: { $0.id == seriesRound.id })?.lastUpdatedAt.unix
+                == batch.expectedRoundRevision else {
+            return .failure(.staleRound)
+        }
+        guard batch.changes.isPopulated || batch.participantChanges.isPopulated else {
+            return .failure(.noChanges)
+        }
+        guard batch.changes.count + batch.participantChanges.count <= 498 else {
+            return .failure(.tooManyChanges(batch.changes.count + batch.participantChanges.count))
+        }
+
+        let trimmedReason = batch.reason.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard let snapshot = await loadRoundSnapshot(roundID: roundID) else {
+            return .failure(.sourceWriteFailed)
+        }
+
+        correctingRoundID = seriesRound.id
+        defer { correctingRoundID = nil }
+
+        let participantsByID = Dictionary(uniqueKeysWithValues: snapshot.participants.map { ($0.id, $0) })
+        let existingEntries = Dictionary(
+            grouping: snapshot.scoring,
+            by: { "\($0.scoringUnitID)_\($0.holeNumber)" }
+        )
+
+        var entriesToWrite: [ScoreEntry] = []
+        for change in batch.changes {
+            guard let participant = participantsByID[change.participantID] else { continue }
+            let key = "\(participant.id)_\(change.holeNumber)"
+            let previousEntry = existingEntries[key]?.first
+
+            if previousEntry?.strokes == change.strokes, previousEntry?.pickedUp == false {
+                continue
+            }
+            if change.strokes == nil, previousEntry == nil {
+                continue
+            }
+
+            let resolvedSegmentID: String = {
+                if let existingID = previousEntry?.segmentID, existingID.isPopulated {
+                    return existingID
+                }
+                if let segment = snapshot.segment(forHole: change.holeNumber), segment.id.isPopulated {
+                    return segment.id
+                }
+                if let roundSegmentID = snapshot.roundSegment?.id, roundSegmentID.isPopulated {
+                    return roundSegmentID
+                }
+                return snapshot.segments.first?.id ?? "seg0"
+            }()
+
+            let entryID = ScoreEntry.makeID(
+                hole: change.holeNumber,
+                segment: resolvedSegmentID,
+                scoringUnit: participant.id
+            )
+
+            var entry = previousEntry ?? ScoreEntry(
+                id: entryID,
+                holeNumber: change.holeNumber,
+                segmentID: resolvedSegmentID,
+                groupID: participant.groupID ?? "",
+                scoringUnitID: participant.id,
+                participantIDs: [participant.id],
+                strokes: nil,
+                value: nil,
+                pickedUp: false,
+                entryID: previousEntry?.entryID ?? participant.id,
+                createdAt: .init(),
+                lastUpdatedAt: .init(),
+                parentID: roundID
+            )
+
+            entry.id = entryID
+            entry.parentID = roundID
+            entry.segmentID = resolvedSegmentID
+            entry.groupID = participant.groupID ?? entry.groupID
+            entry.scoringUnitID = participant.id
+            entry.participantIDs = [participant.id]
+            entry.entryID = previousEntry?.entryID ?? participant.id
+            entry.pickedUp = false
+            entry.value = nil
+            entry.strokes = change.strokes
+            entry.lastUpdatedAt = .init()
+
+            entriesToWrite.append(entry)
+        }
+
+        var participantsToWrite: [RoundParticipant] = []
+        var updatedParticipantsByID = participantsByID
+        for change in batch.participantChanges {
+            guard var participant = participantsByID[change.participantID] else { continue }
+            let isUnchanged = participant.teeBoxID == change.teeBoxID
+                && participant.handicapIndex == change.handicapIndex
+                && participant.adjustedHandicap == change.courseHandicap
+                && participant.leagueHandicapStrokesAtCreation == change.courseHandicap
+                && participant.handicapSnapshot == change.snapshot
+            guard !isUnchanged else { continue }
+
+            participant.teeBoxID = change.teeBoxID
+            participant.handicapIndex = change.handicapIndex
+            participant.originalHandicap = change.handicapIndex
+                .map { max(0, Int($0.rounded())) }
+                ?? participant.originalHandicap
+            participant.adjustedHandicap = change.courseHandicap
+            participant.leagueHandicapStrokesAtCreation = change.courseHandicap
+            participant.handicapSnapshot = change.snapshot
+            participant.lastUpdatedAt = .init()
+            participantsToWrite.append(participant)
+            updatedParticipantsByID[participant.id] = participant
+        }
+
+        let updatedParticipants = snapshot.participants.map {
+            updatedParticipantsByID[$0.id] ?? $0
+        }
+        let segmentsToWrite: [RoundSegment] = participantsToWrite.isPopulated
+            ? snapshot.segments.compactMap { segment in
+                let refreshedUnits = SeriesRoundCreationMapping.refreshingHandicapAllowances(
+                    in: segment.scoringUnits,
+                    participants: updatedParticipants
+                )
+                guard refreshedUnits != segment.scoringUnits else { return nil }
+                var updated = segment
+                updated.scoringUnits = refreshedUnits
+                updated.lastUpdatedAt = .init()
+                return updated
+            }
+            : []
+
+        guard entriesToWrite.isPopulated || participantsToWrite.isPopulated,
+              var updatedSeriesRound = rounds.first(where: { $0.id == seriesRound.id }) else {
+            return .failure(.noChanges)
+        }
+
+        updatedSeriesRound.lastScoreAdjustmentAt = .init()
+        updatedSeriesRound.lastScoreAdjustmentByMemberID = currentMemberID
+        updatedSeriesRound.lastScoreAdjustmentReason = trimmedReason.isPopulated ? trimmedReason : "Commissioner score correction"
+        updatedSeriesRound.scoreAdjustmentCount += 1
+        updatedSeriesRound.awardsStatus = .pending
+        updatedSeriesRound.awardsFinalizedAt = nil
+        updatedSeriesRound.lastUpdatedAt = .init()
+        switch await FirebaseService.shared.batchApplySeriesScoreCorrection(
+            entries: entriesToWrite,
+            participants: participantsToWrite,
+            segments: segmentsToWrite,
+            seriesRound: updatedSeriesRound
+        ) {
+        case .success(let saved):
+            updatedSeriesRound = saved.seriesRound
+            if let currentIndex = rounds.firstIndex(where: { $0.id == saved.seriesRound.id }) {
+                rounds[currentIndex] = saved.seriesRound
+            }
+        case .failure(let error):
+            addBreadcrumb(level: .error, message: "Failed to persist atomic score-correction source batch", error: error)
+            return .failure(.sourceWriteFailed)
+        }
+
+        if case .success(let linkedRound) = await FirebaseService.shared.getRoundByID(roundID) {
+            linkedRounds[roundID] = linkedRound
+        }
+
+        guard let refreshedSnapshot = await loadRoundSnapshot(roundID: roundID) else {
+            return .failure(.derivedPublicationFailed)
+        }
+        handicapScores = await FirebaseService.shared.fetchHandicapScores(seriesID: seriesID)
+        let processingResult = await processCompletedRound(
+            seriesRound: updatedSeriesRound,
+            snapshot: refreshedSnapshot,
+            overwriteDerivedData: true
+        )
+        guard processingResult.derivedPublicationSucceeded else {
+            return .failure(.derivedPublicationFailed)
+        }
+        if processingResult.awardsChanged {
+            guard await rebuildStandings(only: nil) else {
+                return .failure(.derivedPublicationFailed)
+            }
+        }
+        guard let proposedAwardsStatus = processingResult.proposedAwardsStatus,
+              await persistAwardsStatuses([seriesRound.id: proposedAwardsStatus]) else {
+            return .failure(.derivedPublicationFailed)
+        }
+        handicapScores = await FirebaseService.shared.fetchHandicapScores(seriesID: seriesID)
+        recomputeAllHandicaps()
+        addEvent(
+            "series.commissioner_score_correction_applied",
+            eventProps: seriesTelemetryProps([
+                "series_round_id": seriesRound.id,
+                "round_id": roundID,
+                "score_cells_written": entriesToWrite.count,
+                "participants_repaired": participantsToWrite.count
+            ])
+        )
+        return .success(())
+    }
+
+    // MARK: - Helpers
+
+    private func hasActiveMember(for player: Player) -> Bool {
+        let playerID = player.playerID ?? player.id
+        if playerID.isPopulated {
+            return activeMembers.contains { $0.playerID == playerID }
+        }
+        return hasOfflineMember(named: player.name)
+    }
+
+    private func hasOfflineMember(named name: Name) -> Bool {
+        activeMembers.contains { $0.playerID == nil && normalizedName($0.name) == normalizedName(name) }
+    }
+
+    private func normalizedName(_ name: Name) -> String {
+        name.searchKey
+    }
+
+    private func validatePod(teamID: String, memberIDs: [String]) -> Bool {
+        let teamMemberIDs = Set(activeMembers.filter { $0.teamID == teamID }.map(\.id))
+        guard Set(memberIDs).isSubset(of: teamMemberIDs) else { return false }
+
+        let usedMemberIDs = Set(
+            pods
+                .filter { $0.teamID == teamID && $0.isActive }
+                .flatMap(\.memberIDs)
+        )
+        return Set(memberIDs).intersection(usedMemberIDs).isEmpty
+    }
+
+    private func scoringProfile(id: String?) -> SeriesScoringProfile? {
+        guard let id else { return nil }
+        return scoringProfiles.first { $0.id == id && !$0.isArchived }
+    }
+
+    private func roundConfig(
+        from linkedRound: Round,
+        segment: RoundSegment? = nil,
+        fallback: SeriesRoundConfiguration
+    ) -> SeriesRoundConfiguration {
+        SeriesRoundConfigurationReconciler.adoptingLinkedConfiguration(
+            from: linkedRound,
+            segment: segment,
+            preserving: fallback
+        )
+    }
+
+    private func seriesMatchupMode(
+        from configuration: RoundConfiguration,
+        segment: RoundSegment?,
+        fallback: SeriesMatchupMode
+    ) -> SeriesMatchupMode {
+        let matchups = segment?.matchups ?? []
+        if matchups.contains(where: { $0.effectiveMode == .partnership }) {
+            return .teeGroupPartnerships
+        }
+        if matchups.contains(where: { $0.effectiveMode == .team }) {
+            return .teamVsTeam
+        }
+        if matchups.contains(where: { $0.effectiveMode == .individual }) {
+            return .individualVsIndividual
+        }
+        if configuration.selectionDomain == .partnership && fallback == .teeGroupPartnerships {
+            return .teeGroupPartnerships
+        }
+        return configuration.primaryFormat.configuration.requiresTeams ? .teamVsTeam : .individualVsIndividual
+    }
+
+    private func templateID(for format: GameFormat) -> String {
+        switch (format.type, format.configuration.requiresTeams) {
+        case (.matchPlay, false): return FormatTemplateRegistry.matchPlayIndividual.id
+        case (.strokePlay, true): return FormatTemplateRegistry.bestBall.id
+        default: return FormatTemplateRegistry.strokePlay.id
+        }
+    }
+
+    private func loadRoundSnapshot(roundID: String) async -> RoundSnapshot? {
+        let startedAt = ContinuousClock.now
+        var loadedItemCount = 0
+        defer {
+            SeriesPerformanceRecorder.shared.record(
+                .roundSnapshotLoad,
+                startedAt: startedAt,
+                logicalReadCount: 7,
+                itemCount: loadedItemCount,
+                context: roundID
+            )
+        }
+        addBreadcrumb(message: "\(#function) roundID: \(roundID)")
+        let result = await snapshotRepository.snapshot(roundID: roundID, policy: .reload)
+        guard case .success(let snapshot) = result else {
+            if case .failure(let failure) = result {
+                addBreadcrumb(
+                    level: .error,
+                    message: "loadRoundSnapshot failed component=\(failure.component.rawValue) roundID=\(roundID): \(failure.message)"
+                )
+            }
+            return nil
+        }
+
+        let round = snapshot.round
+        let participants = snapshot.participants
+        let roundTeams = snapshot.teams
+        let teeGroups = snapshot.teeGroups
+        let segments = snapshot.segments
+        let scores = snapshot.scoring
+        let scoringGroups = snapshot.scoringGroups
+        let templateID = round.configuration.formatSummary?.templateID ?? round.configuration.activeTemplate.id
+        addBreadcrumb(
+            message: """
+            loadRoundSnapshot decoded roundID=\(roundID) \
+            template=\(templateID) status=\(round.status.rawValue) \
+            participants=\(participants.count) teams=\(roundTeams.count) \
+            groups=\(teeGroups.count) segments=\(segments.count) scores=\(scores.count) \
+            scoringGroups=\(scoringGroups.count)
+            """
+        )
+        loadedItemCount = participants.count
+            + roundTeams.count
+            + teeGroups.count
+            + segments.count
+            + scores.count
+            + scoringGroups.count
+
+        return snapshot
+    }
+
+    func loadLinkedRoundSnapshot(for seriesRound: SeriesRound) async -> RoundSnapshot? {
+        guard let roundID = seriesRound.roundID else { return nil }
+        return await cachedLinkedRoundSnapshot(roundID: roundID)
+    }
+
+    private func cachedLinkedRoundSnapshot(for seriesRound: SeriesRound) async -> RoundSnapshot? {
+        guard let roundID = seriesRound.roundID else { return nil }
+        return await cachedLinkedRoundSnapshot(roundID: roundID)
+    }
+
+    private func cachedLinkedRoundSnapshot(roundID: String) async -> RoundSnapshot? {
+        switch await snapshotRepository.snapshot(roundID: roundID, policy: .useCache) {
+        case .success(let snapshot):
+            return snapshot
+        case .failure(let failure):
+            addBreadcrumb(
+                level: .error,
+                message: "cachedLinkedRoundSnapshot failed component=\(failure.component.rawValue) roundID=\(roundID): \(failure.message)"
+            )
+            return nil
+        }
+    }
+
+    func roundOutcomeNarrative(for seriesRound: SeriesRound) async -> SeriesRoundOutcomeNarrative? {
+        guard effectiveStatus(for: seriesRound) == .complete,
+              let roundID = seriesRound.roundID,
+              let snapshot = await loadRoundSnapshot(roundID: roundID) else {
+            return nil
+        }
+
+        let priorRounds = rounds
+            .filter { prior in
+                prior.id != seriesRound.id
+                    && prior.index < seriesRound.index
+                    && effectiveStatus(for: prior) == .complete
+                    && prior.roundID?.isPopulated == true
+            }
+            .sorted { $0.index > $1.index }
+
+        var priorSnapshots: [SeriesRoundOutcomeNarrativeBuilder.PriorRoundSnapshot] = []
+        for priorRound in priorRounds {
+            guard let priorRoundID = priorRound.roundID,
+                  let priorSnapshot = await loadRoundSnapshot(roundID: priorRoundID) else {
+                continue
+            }
+            priorSnapshots.append(.init(seriesRound: priorRound, snapshot: priorSnapshot))
+        }
+
+        return roundOutcomeNarrative(
+            for: seriesRound,
+            snapshot: snapshot,
+            priorRoundSnapshots: priorSnapshots
+        )
+    }
+
+    func roundOutcomeNarrative(
+        for seriesRound: SeriesRound,
+        snapshot: RoundSnapshot,
+        priorRoundSnapshots: [SeriesRoundOutcomeNarrativeBuilder.PriorRoundSnapshot] = []
+    ) -> SeriesRoundOutcomeNarrative? {
+        SeriesRoundOutcomeNarrativeBuilder.build(
+            seriesRound: seriesRound,
+            snapshot: snapshot,
+            priorRoundSnapshots: priorRoundSnapshots,
+            members: members,
+            handicapScores: handicapScores,
+            memberHandicaps: memberHandicaps,
+            pointAwards: pointAwards,
+            standings: standings,
+            teams: teams
+        )
+    }
+
+    func viewerParticipantID(for seriesRound: SeriesRound, appSession: AppSession) async -> String? {
+        guard let roundID = seriesRound.roundID,
+              let snapshot = await loadRoundSnapshot(roundID: roundID) else {
+            return nil
+        }
+
+        if let ephemeral = appSession.ephemeralParticipantID, ephemeral.isPopulated,
+           snapshot.participants.contains(where: { $0.id == ephemeral }) {
+            return ephemeral
+        }
+
+        if let user = await AppData.shared.user,
+           let participant = snapshot.participants.first(where: { $0.userID == user.id }) {
+            return participant.id
+        }
+
+        if let primary = await AppData.shared.getPrimaryPlayer(),
+           let participant = snapshot.participants.first(where: { $0.playerID == primary.id }) {
+            return participant.id
+        }
+
+        return nil
+    }
+
+    func matchupOutcomes(
+        for seriesRound: SeriesRound,
+        promotingParticipantID: String? = nil
+    ) async -> [SeriesMatchupOutcome] {
+        guard let roundID = seriesRound.roundID,
+              let snapshot = await loadRoundSnapshot(roundID: roundID),
+              let segment = snapshot.roundSegment else { return [] }
+        guard snapshot.configuration.resolvedCompetitionScope == .matchup else { return [] }
+
+        if let mismatch = snapshot.primarySegmentHoleRangeMismatch {
+            return orderedMatchupOutcomes(
+                diagnosticMatchupOutcomes(
+                    mismatch: mismatch,
+                    segment: segment,
+                    snapshot: snapshot
+                ),
+                promotingParticipantID: promotingParticipantID
+            )
+        }
+
+        let result = scoringResult(from: snapshot, segment: segment)
+        guard result.matchupResults.isPopulated else { return [] }
+
+        let highestWins = result.template.leaderboardSort == .highestWins
+        let participantSortBasis: ScoreBasis = snapshot.configuration.useHandicaps ? .net : .gross
+        let outcomes = result.matchupResults.enumerated().compactMap { index, matchupResult -> SeriesMatchupOutcome? in
+            guard matchupResult.matchup.isValid else { return nil }
+            let presentation = MatchupResultPresentationBuilder.build(
+                snapshot: snapshot,
+                result: result,
+                matchupResult: matchupResult
+            )
+            let sides = presentation.sides.map { side in
+                return SeriesMatchupOutcome.Side(
+                    id: side.id,
+                    title: markedMatchupSideTitle(side.title, sideID: side.id, mode: presentation.mode, snapshot: snapshot),
+                    subtitle: side.subtitle,
+                    score: side.scoreLabel,
+                    accentColor: side.accentColor
+                )
+            }
+            guard sides.count == 2 else { return nil }
+
+            let playerItems = presentation.sides.flatMap { side in
+                side.participants.map { (participant: $0, side: side) }
+            }
+            let players = playerItems
+                .sorted {
+                    matchupParticipantSort(
+                        lhs: $0.participant,
+                        rhs: $1.participant,
+                        highestWins: highestWins,
+                        sortBasis: participantSortBasis,
+                        snapshot: snapshot,
+                        segment: segment
+                    )
+                }
+                .map { item in
+                    SeriesMatchupOutcome.Player(
+                        id: "\(item.side.id)_\(item.participant.id)",
+                        participantID: item.participant.id,
+                        ownerID: item.side.id,
+                        name: item.participant.name.fullName,
+                        handicap: "\(item.participant.adjustedHandicap)",
+                        gross: participantScoreLabel(participantID: item.participant.id, snapshot: snapshot, segment: segment, basis: .gross),
+                        net: snapshot.configuration.useHandicaps ? participantScoreLabel(participantID: item.participant.id, snapshot: snapshot, segment: segment, basis: .net) : nil,
+                        scoreCounts: item.side.isParticipantActive(item.participant),
+                        isSubstitute: item.participant.isSubstitute,
+                        accentColor: item.participant.teamID.flatMap { teamID in snapshot.teams.first(where: { $0.id == teamID })?.displaySwatchColor }
+                            ?? item.side.accentColor
+                    )
+                }
+            let showsResultChip = Self.shouldShowMatchupResultChip(for: presentation)
+
+            return SeriesMatchupOutcome(
+                id: matchupResult.matchup.id,
+                matchIndex: index + 1,
+                title: presentation.hasCompleteSides ? presentation.title : "Match \(index + 1)",
+                detail: presentation.hasCompleteSides ? presentation.scorelineDetail : presentation.scorelineDetail,
+                mode: presentation.mode,
+                sides: sides,
+                players: players,
+                winningSideID: presentation.winningSideID,
+                isTie: presentation.isTie,
+                showsResultChip: showsResultChip,
+                resultChipLabel: presentation.isAutoWin ? "Auto-win" : nil,
+                usesNetScores: snapshot.configuration.useHandicaps,
+                showsSubstituteScoringFootnote: !snapshot.configuration.substitutesScore && players.contains(where: \.isSubstitute)
+            )
+        }
+        return orderedMatchupOutcomes(outcomes, promotingParticipantID: promotingParticipantID)
+    }
+
+    private func diagnosticMatchupOutcomes(
+        mismatch: RoundSegmentHoleRangeMismatch,
+        segment: RoundSegment,
+        snapshot: RoundSnapshot
+    ) -> [SeriesMatchupOutcome] {
+        let validMatchups = (segment.matchups ?? []).filter(\.isValid)
+        return validMatchups.enumerated().compactMap { index, matchup in
+            let mode = matchup.effectiveMode
+            let sides = matchup.pairingIDs().map { sideID in
+                SeriesMatchupOutcome.Side(
+                    id: sideID,
+                    title: markedMatchupSideTitle(matchupSideName(sideID: sideID, mode: mode, snapshot: snapshot), sideID: sideID, mode: mode, snapshot: snapshot),
+                    subtitle: matchupSideSubtitle(sideID: sideID, mode: mode, snapshot: snapshot),
+                    score: "—",
+                    accentColor: matchupSideAccentColor(sideID: sideID, mode: mode, snapshot: snapshot)
+                )
+            }
+            guard sides.count == 2 else { return nil }
+
+            let players = sides.flatMap { side in
+                matchupSideParticipants(sideID: side.id, mode: mode, snapshot: snapshot).map { participant in
+                    SeriesMatchupOutcome.Player(
+                        id: "\(side.id)_\(participant.id)",
+                        participantID: participant.id,
+                        ownerID: side.id,
+                        name: participant.name.fullName,
+                        handicap: "\(participant.adjustedHandicap)",
+                        gross: "—",
+                        net: snapshot.configuration.useHandicaps ? "—" : nil,
+                        scoreCounts: false,
+                        isSubstitute: participant.isSubstitute,
+                        accentColor: participant.teamID.flatMap { teamID in snapshot.teams.first(where: { $0.id == teamID })?.displaySwatchColor }
+                            ?? side.accentColor
+                    )
+                }
+            }
+
+            return SeriesMatchupOutcome(
+                id: matchup.id,
+                matchIndex: index + 1,
+                title: "\(mismatch.diagnosticTitle) - Match \(index + 1)",
+                detail: mismatch.diagnosticDetail,
+                mode: mode,
+                sides: sides,
+                players: players,
+                winningSideID: nil,
+                isTie: false,
+                showsResultChip: false,
+                resultChipLabel: nil,
+                usesNetScores: snapshot.configuration.useHandicaps,
+                showsSubstituteScoringFootnote: !snapshot.configuration.substitutesScore && players.contains(where: \.isSubstitute)
+            )
+        }
+    }
+
+    private func markedMatchupSideTitle(_ title: String, sideID: String, mode: MatchupMode, snapshot: RoundSnapshot) -> String {
+        guard mode == .individual,
+              snapshot.participants.first(where: { $0.id == sideID })?.isSubstitute == true else { return title }
+        return "\(title)*"
+    }
+
+    private func orderedMatchupOutcomes(
+        _ outcomes: [SeriesMatchupOutcome],
+        promotingParticipantID participantID: String?
+    ) -> [SeriesMatchupOutcome] {
+        guard let participantID, participantID.isPopulated else { return outcomes }
+
+        return outcomes.sorted { lhs, rhs in
+            let lhsContains = lhs.players.contains { $0.participantID == participantID }
+            let rhsContains = rhs.players.contains { $0.participantID == participantID }
+            if lhsContains != rhsContains { return lhsContains }
+            return lhs.matchIndex < rhs.matchIndex
+        }
+    }
+
+    func matchupScoreDisplayLabel(for row: ScoringRow, highestWins: Bool) -> String {
+        Self.matchupScoreDisplayLabel(for: row, highestWins: highestWins)
+    }
+
+    nonisolated static func matchupScoreDisplayLabel(for row: ScoringRow, highestWins: Bool) -> String {
+        MatchupResultPresentationBuilder.scoreLabel(for: row.total, isPointsFormat: highestWins)
+    }
+
+    nonisolated static func shouldShowMatchupResultChip(for presentation: MatchupResultPresentation) -> Bool {
+        presentation.hasCompleteSides && (presentation.winningSideID != nil || presentation.isTie)
+    }
+
+    private func expectedMatchupMode(for snapshot: RoundSnapshot) -> MatchupMode {
+        snapshot.expectedMatchupMode
+    }
+
+    private func scoringRow(
+        in rows: [ScoringRow],
+        matchesSideID sideID: String,
+        matchup: TeamMatchup,
+        expectedMode: MatchupMode,
+        snapshot: RoundSnapshot
+    ) -> ScoringRow? {
+        rows.first {
+            scoringRowIdentityMatches(
+                scoringUnitID: $0.scoringUnitID,
+                owner: $0.owner,
+                participantIDs: $0.participantIDs,
+                sideID: sideID,
+                mode: matchup.effectiveMode,
+                snapshot: snapshot
+            )
+        }
+    }
+
+    private func scoringRowIdentityMatches(
+        scoringUnitID: String,
+        owner: ScoringOwner,
+        participantIDs: [String],
+        sideID: String,
+        mode: MatchupMode,
+        snapshot: RoundSnapshot
+    ) -> Bool {
+        if scoringUnitID == sideID { return true }
+
+        switch mode {
+        case .individual:
+            return participantIDs.contains(sideID)
+        case .team:
+            let teamMemberIDs = Set(snapshot.participants.filter { $0.teamID == sideID }.map(\.id))
+            return teamMemberIDs.isPopulated && Set(participantIDs).isSubset(of: teamMemberIDs)
+        case .partnership, .teeGroup, .scoreOwner:
+            guard let group = snapshot.scoringGroup(id: sideID) else { return false }
+            return Set(participantIDs) == Set(group.memberIDs)
+        }
+    }
+
+    private func matchupSideName(sideID: String, mode: MatchupMode, snapshot: RoundSnapshot) -> String {
+        switch mode {
+        case .team:
+            return snapshot.teams.first(where: { $0.id == sideID })?.name ?? "Team"
+        case .individual:
+            return snapshot.participants.first(where: { $0.id == sideID })?.name.fullName ?? "Player"
+        case .partnership, .teeGroup, .scoreOwner:
+            if let scoringGroup = snapshot.scoringGroup(id: sideID) {
+                if let label = scoringGroup.label, label.isPopulated {
+                    return label
+                }
+                let names = matchupSideParticipants(sideID: sideID, mode: mode, snapshot: snapshot)
+                    .map(\.name.fullName)
+                    .filter(\.isPopulated)
+                return names.isPopulated ? names.joined(separator: " + ") : "Side"
+            }
+            return "Side"
+        }
+    }
+
+    private func matchupSideSubtitle(sideID: String, mode: MatchupMode, snapshot: RoundSnapshot) -> String? {
+        switch mode {
+        case .individual:
+            return nil
+        case .team, .partnership, .teeGroup, .scoreOwner:
+            let names = matchupSideParticipants(sideID: sideID, mode: mode, snapshot: snapshot)
+                .map(\.name.fullName)
+                .filter(\.isPopulated)
+            return names.isPopulated ? names.joined(separator: ", ") : nil
+        }
+    }
+
+    private func matchupSideAccentColor(sideID: String, mode: MatchupMode, snapshot: RoundSnapshot) -> Color? {
+        switch mode {
+        case .team:
+            return snapshot.teams.first(where: { $0.id == sideID })?.displaySwatchColor
+        case .individual:
+            return snapshot.participants
+                .first(where: { $0.id == sideID })?
+                .teamID
+                .flatMap { teamID in snapshot.teams.first(where: { $0.id == teamID })?.displaySwatchColor }
+        case .partnership, .teeGroup, .scoreOwner:
+            guard let group = snapshot.scoringGroup(id: sideID) else { return nil }
+            if let teamID = group.teamID {
+                return snapshot.teams.first(where: { $0.id == teamID })?.displaySwatchColor
+            }
+            return nil
+        }
+    }
+
+    private func matchupSideParticipants(sideID: String, mode: MatchupMode, snapshot: RoundSnapshot) -> [RoundParticipant] {
+        switch mode {
+        case .team:
+            return snapshot.participants
+                .filter { $0.teamID == sideID }
+                .sorted { ($0.teeOrder ?? Int.max) < ($1.teeOrder ?? Int.max) }
+        case .individual:
+            return snapshot.participants
+                .filter { $0.id == sideID }
+                .sorted { ($0.teeOrder ?? Int.max) < ($1.teeOrder ?? Int.max) }
+        case .partnership, .teeGroup, .scoreOwner:
+            guard let group = snapshot.scoringGroup(id: sideID) else { return [] }
+            let memberIDs = Set(group.memberIDs)
+            return snapshot.participants
+                .filter { memberIDs.contains($0.id) }
+                .sorted { ($0.teeOrder ?? Int.max) < ($1.teeOrder ?? Int.max) }
+        }
+    }
+
+    private func matchupParticipantSort(
+        lhs: RoundParticipant,
+        rhs: RoundParticipant,
+        highestWins: Bool,
+        sortBasis: ScoreBasis,
+        snapshot: RoundSnapshot,
+        segment: RoundSegment
+    ) -> Bool {
+        let basis: ScoreBasis = highestWins ? .gross : sortBasis
+        let lhsScore = participantScoreToPar(participantID: lhs.id, snapshot: snapshot, segment: segment, basis: basis) ?? 0
+        let rhsScore = participantScoreToPar(participantID: rhs.id, snapshot: snapshot, segment: segment, basis: basis) ?? 0
+        if lhsScore != rhsScore {
+            return highestWins ? lhsScore > rhsScore : lhsScore < rhsScore
+        }
+        if (lhs.teeOrder ?? Int.max) != (rhs.teeOrder ?? Int.max) {
+            return (lhs.teeOrder ?? Int.max) < (rhs.teeOrder ?? Int.max)
+        }
+        let nameComparison = lhs.name.fullName.localizedCaseInsensitiveCompare(rhs.name.fullName)
+        if nameComparison != .orderedSame {
+            return nameComparison == .orderedAscending
+        }
+        return lhs.id < rhs.id
+    }
+
+    private func participantScoreCounts(participantID: String, row: ScoringRow?) -> Bool {
+        guard let row else { return false }
+        if row.countingParticipantIDs.isPopulated {
+            return row.countingParticipantIDs.contains(participantID)
+        }
+        return row.participantIDs.contains(participantID)
+    }
+
+    private func participantScoreLabel(
+        participantID: String,
+        snapshot: RoundSnapshot,
+        segment: RoundSegment,
+        basis: ScoreBasis
+    ) -> String {
+        guard let score = participantScoreToPar(participantID: participantID, snapshot: snapshot, segment: segment, basis: basis) else {
+            return "—"
+        }
+        return Self.scoreReviewFormatRelative(score)
+    }
+
+    private func participantScoreToPar(
+        participantID: String,
+        snapshot: RoundSnapshot,
+        segment: RoundSegment,
+        basis: ScoreBasis
+    ) -> Int? {
+        let result = ScoringEngine.computeStrokePlay(
+            scores: snapshot.scoring,
+            participants: snapshot.participants,
+            segment: segment,
+            holes: holesForScoring(in: snapshot),
+            basis: basis,
+            template: snapshot.resolvedActiveTemplate,
+            scoreLookupSegmentIDs: snapshot.segmentScoreLookupSegmentIDs,
+            handicapStrokeBasis: snapshot.handicapStrokeBasis
+        )
+        guard let row = result.rows.first(where: { $0.scoringUnitID == participantID }),
+              row.holesPlayed > 0 else { return nil }
+        return Int(row.total.rounded())
+    }
+
+    /// Relative to par and gross total, e.g. `+4 / 45`, for commissioner score review rows.
+    func scoreReviewTrailingLabel(playerID: String, snapshot: RoundSnapshot) -> String? {
+        guard let segment = snapshot.roundSegment else { return nil }
+        let result = ScoringEngine.computeStrokePlay(
+            scores: snapshot.scoring,
+            participants: snapshot.participants,
+            segment: segment,
+            holes: holesForScoring(in: snapshot),
+            basis: snapshot.configuration.primaryFormat.configuration.basis,
+            template: snapshot.resolvedActiveTemplate,
+            scoreLookupSegmentIDs: snapshot.segmentScoreLookupSegmentIDs,
+            handicapStrokeBasis: snapshot.handicapStrokeBasis
+        )
+        guard let participant = snapshot.participants.first(where: { $0.playerID == playerID }) else { return nil }
+        guard RoundScoreCompleteness.classify(participantID: participant.id, snapshot: snapshot).isComplete else {
+            return nil
+        }
+        guard let row = result.rows.first(where: { $0.scoringUnitID == participant.id }),
+              row.holesPlayed > 0 else { return nil }
+        let relStr = Self.scoreReviewFormatRelative(Int(row.total.rounded()))
+        let gross = row.holeValues.values.compactMap(\.rawStrokes).reduce(0, +)
+        return gross > 0 ? "\(relStr) / \(gross)" : "\(relStr) / —"
+    }
+
+    nonisolated private static func scoreReviewFormatRelative(_ value: Int) -> String {
+        if value == 0 { return "E" }
+        if value > 0 { return "+\(value)" }
+        return "\(value)"
+    }
+
+    private static func grossStrokesSum(participantID: String, snapshot: RoundSnapshot) -> Int {
+        let holes = snapshot.roundSegment?.holeRange.holeNumbers ?? []
+        let segmentIDs = snapshot.segmentScoreLookupSegmentIDs
+        var sum = 0
+        for hole in holes {
+            for seg in segmentIDs {
+                let id = ScoreEntry.makeID(hole: hole, segment: seg, scoringUnit: participantID)
+                if let entry = snapshot.scoring.first(where: { $0.id == id }), let s = entry.strokes {
+                    sum += s
+                }
+            }
+        }
+        return sum
+    }
+
+    private func courseSelection(from segment: CourseSegment?) -> SeriesCourseSelection? {
+        SeriesRoundConfigurationReconciler.courseSelection(from: segment)
+    }
+
+    private func seriesMatchupPlans(
+        from snapshot: RoundSnapshot,
+        seriesRound: SeriesRound,
+        mappings: [SeriesRoundMapping]
+    ) -> [SeriesRoundMatchupPlan]? {
+        let currentMatchups = snapshot.roundSegment?.matchups ?? []
+        let validTeamMatchups = currentMatchups
+            .filter { $0.effectiveMode == .team && $0.teamIDs.count == 2 }
+        let validIndividualMatchups = currentMatchups
+            .filter { $0.effectiveMode == .individual && ($0.participantIDs?.count ?? 0) == 2 }
+        let validScoreOwnerMatchups = currentMatchups
+            .filter { $0.effectiveMode == .partnership && ($0.scoreOwnerIDs?.count ?? 0) == 2 }
+
+        let expectsMatchups = seriesRound.roundConfig.matchupMode == .teamVsTeam
+            || seriesRound.roundConfig.matchupMode == .individualVsIndividual
+            || seriesRound.roundConfig.matchupMode == .teeGroupPartnerships
+        let preferredMode: MatchupMode
+        if seriesRound.roundConfig.matchupMode == .teeGroupPartnerships || validScoreOwnerMatchups.isPopulated {
+            preferredMode = .partnership
+        } else {
+            preferredMode = snapshot.requiresTeams ? .team : .individual
+        }
+        let hasPreferredMatchups: Bool
+        switch preferredMode {
+        case .team:
+            hasPreferredMatchups = validTeamMatchups.isPopulated
+        case .individual:
+            hasPreferredMatchups = validIndividualMatchups.isPopulated
+        case .partnership, .teeGroup, .scoreOwner:
+            hasPreferredMatchups = validScoreOwnerMatchups.isPopulated
+        }
+        if !hasPreferredMatchups {
+            return expectsMatchups ? [] : nil
+        }
+
+        let reverseTeamMapping = Dictionary(
+            mappings
+                .filter { $0.roundOwnerType == .team && $0.competitorType == .team }
+                .map { ($0.roundOwnerID, $0.competitorID) },
+            uniquingKeysWith: { _, new in new }
+        )
+        let reverseParticipantMapping = Dictionary(
+            mappings
+                .filter { $0.roundOwnerType == .participant && $0.competitorType == .member }
+                .map { ($0.roundOwnerID, $0.competitorID) },
+            uniquingKeysWith: { _, new in new }
+        )
+        let reverseScoreOwnerTeamMapping = Dictionary(
+            mappings
+                .filter { $0.roundOwnerType == .scoreOwner && $0.competitorType == .team }
+                .map { ($0.roundOwnerID, $0.competitorID) },
+            uniquingKeysWith: { _, new in new }
+        )
+
+        if preferredMode == .partnership {
+            let updatedPlans = validScoreOwnerMatchups.enumerated().compactMap { index, matchup -> SeriesRoundMatchupPlan? in
+                guard let scoreOwnerIDs = matchup.scoreOwnerIDs,
+                      scoreOwnerIDs.count == 2,
+                      scoreOwnerIDs[0] != scoreOwnerIDs[1],
+                      let teamAID = reverseScoreOwnerTeamMapping[scoreOwnerIDs[0]],
+                      let teamBID = reverseScoreOwnerTeamMapping[scoreOwnerIDs[1]],
+                      teamAID != teamBID else { return nil }
+
+                let existing = seriesRound.matchupPlans.first {
+                    $0.id == matchup.id || Set([$0.pairAID ?? "", $0.pairBID ?? ""]) == Set(scoreOwnerIDs)
+                }
+
+                return SeriesRoundMatchupPlan(
+                    id: existing?.id ?? matchup.id,
+                    teamAID: teamAID,
+                    teamBID: teamBID,
+                    pairAID: scoreOwnerIDs[0],
+                    pairBID: scoreOwnerIDs[1],
+                    index: index,
+                    podGroupingStrategy: existing?.podGroupingStrategy ?? seriesRound.roundConfig.podGroupingStrategy,
+                    notes: existing?.notes,
+                    isLocked: existing?.isLocked ?? false,
+                    createdAt: existing?.createdAt ?? .init(),
+                    lastUpdatedAt: .init()
+                )
+            }
+
+            return updatedPlans.sorted { $0.index < $1.index }
+        }
+
+        if preferredMode == .individual {
+            let updatedPlans = validIndividualMatchups.enumerated().compactMap { index, matchup -> SeriesRoundMatchupPlan? in
+                guard let participantIDs = matchup.participantIDs,
+                      participantIDs.count == 2,
+                      let memberAID = reverseParticipantMapping[participantIDs[0]],
+                      let memberBID = reverseParticipantMapping[participantIDs[1]],
+                      memberAID != memberBID else { return nil }
+
+                let existing = seriesRound.matchupPlans.first {
+                    $0.id == matchup.id || Set([$0.memberAID ?? "", $0.memberBID ?? ""]) == Set([memberAID, memberBID])
+                }
+
+                return SeriesRoundMatchupPlan(
+                    id: existing?.id ?? matchup.id,
+                    memberAID: memberAID,
+                    memberBID: memberBID,
+                    index: index,
+                    podGroupingStrategy: .disabled,
+                    notes: existing?.notes,
+                    isLocked: existing?.isLocked ?? false,
+                    createdAt: existing?.createdAt ?? .init(),
+                    lastUpdatedAt: .init()
+                )
+            }
+
+            return updatedPlans.sorted { $0.index < $1.index }
+        }
+
+        let updatedPlans = validTeamMatchups.enumerated().compactMap { index, matchup -> SeriesRoundMatchupPlan? in
+            guard let teamAID = reverseTeamMapping[matchup.teamIDs[0]],
+                  let teamBID = reverseTeamMapping[matchup.teamIDs[1]],
+                  teamAID != teamBID else { return nil }
+
+            let existing = seriesRound.matchupPlans.first {
+                $0.id == matchup.id || Set([$0.teamAID, $0.teamBID]) == Set([teamAID, teamBID])
+            }
+
+            return SeriesRoundMatchupPlan(
+                id: existing?.id ?? matchup.id,
+                teamAID: teamAID,
+                teamBID: teamBID,
+                index: index,
+                podGroupingStrategy: existing?.podGroupingStrategy ?? seriesRound.roundConfig.podGroupingStrategy,
+                notes: existing?.notes,
+                isLocked: existing?.isLocked ?? false,
+                createdAt: existing?.createdAt ?? .init(),
+                lastUpdatedAt: .init()
+            )
+        }
+
+        return updatedPlans.sorted { $0.index < $1.index }
+    }
+
+    private func resolvedDefaultCourseSelection(forRoundIndex roundIndex: Int) -> SeriesCourseSelection? {
+        guard let defaultCourse = series.settings.defaultCourse else { return nil }
+        guard series.settings.defaultCourseRotationMode == .alternateFrontBack else { return defaultCourse }
+
+        let startingSegment = defaultCourse.holeSegment.isNineHoleLeagueSegment ? defaultCourse.holeSegment : HoleSegment.front9
+        let matchingRoundsCount = rounds.filter { round in
+            let selection = round.courseOverride ?? round.resolvedCourse(using: series)
+            return selection?.courseID == defaultCourse.courseID && round.index < roundIndex
+        }.count
+
+        let resolvedSegment = matchingRoundsCount.isMultiple(of: 2)
+            ? startingSegment
+            : startingSegment.alternatingPairSegment
+        return defaultCourse.applying(holeSegment: resolvedSegment)
+    }
+
+    private func scoringResult(from snapshot: RoundSnapshot, segment: RoundSegment) -> ScoringResult {
+        Self.buildScoringResult(from: snapshot, segment: segment)
+    }
+
+    nonisolated static func buildScoringResult(from snapshot: RoundSnapshot, segment: RoundSegment) -> ScoringResult {
+        let holes = scoringHoles(in: snapshot)
+        return ScoringEngine.computeSnapshotResult(
+            snapshot: snapshot,
+            segment: segment,
+            holes: holes,
+            basis: snapshot.configuration.primaryFormat.configuration.basis,
+            scoreLookupSegmentIDs: snapshot.segmentScoreLookupSegmentIDs
+        )
+    }
+
+    private func holesForScoring(in snapshot: RoundSnapshot) -> [Hole] {
+        Self.scoringHoles(in: snapshot)
+    }
+
+    nonisolated static func shouldUseTeamAggregateScoring(snapshot: RoundSnapshot, segment: RoundSegment) -> Bool {
+        ScoringEngine.shouldUseTeamAggregateScoring(snapshot: snapshot, segment: segment)
+    }
+
+    private nonisolated static func scoringHoles(in snapshot: RoundSnapshot) -> [Hole] {
+        let preferredTeeID = snapshot.courseSegment?.defaultTee
+        let tee = preferredTeeID.flatMap { snapshot.courseSegment?.tee(from: $0) }
+            ?? snapshot.courseSegment?.courseInfo.tees.first
+        let allHoles = tee?.holes ?? []
+        let sliced = Array(allHoles.slice(for: snapshot.holeSegment))
+        return sliced.isEmpty ? allHoles : sliced
+    }
+
+    private struct AwardCompetitor {
+        let roundOwnerID: String
+        let competitorType: SeriesCompetitorType
+        let competitorID: String
+        let competitorName: String
+        let placement: Int?
+        let tieGroupSize: Int?
+        let reason: String?
+        let rawScore: Double?
+    }
+
+    private func buildIndividualCompetitors(
+        result: ScoringResult,
+        snapshot: RoundSnapshot,
+        mappings: [SeriesRoundMapping]
+    ) -> [AwardCompetitor] {
+        if result.rows.contains(where: { $0.owner == .scoreOwner }) {
+            let ownerRows = result.rows.map { row in
+                OwnerPlacementRow(
+                    roundOwnerID: row.scoringUnitID,
+                    roundOwnerType: Self.roundOwnerType(for: row.owner),
+                    displayName: ownerDisplayName(for: row, snapshot: snapshot),
+                    fallbackParticipantIDs: row.participantIDs,
+                    fallbackTeamID: scoreOwnerFallbackTeamID(for: row, snapshot: snapshot),
+                    score: row.total
+                )
+            }
+            let ownerPlacements = buildOwnerPlacementGroups(
+                for: ownerRows,
+                highestWins: result.template.leaderboardSort == .highestWins
+            )
+            return ownerPlacements.flatMap { placement in
+                expandAwardCompetitors(
+                    placement,
+                    competitorType: .member,
+                    snapshot: snapshot,
+                    mappings: mappings
+                )
+            }
+        }
+
+        let leaderboard = LeaderboardBuilder.buildIndividualLeaderboard(result: result, participants: snapshot.participants)
+        let mappingByParticipant = Dictionary(uniqueKeysWithValues: mappings.compactMap { mapping -> (String, String)? in
+            guard mapping.roundOwnerType == .participant, mapping.competitorType == .member else { return nil }
+            return (mapping.roundOwnerID, mapping.competitorID)
+        })
+
+        return Self.buildPlacementGroups(for: leaderboard.map { row in
+            let participant = snapshot.participants.first(where: { $0.id == row.scoringUnitID })
+            return AwardPlacementRow(
+                roundOwnerID: row.scoringUnitID,
+                competitorType: .member,
+                competitorID: mappingByParticipant[row.scoringUnitID]
+                    ?? participant?.seriesMemberID
+                    ?? members.first(where: { $0.playerID == participant?.playerID })?.id
+                    ?? row.scoringUnitID,
+                competitorName: participant?.name.fullName ?? "Player",
+                score: row.total
+            )
+        }, highestWins: result.template.leaderboardSort == .highestWins)
+    }
+
+    private nonisolated static func individualPlacementCompetitors(
+        result: ScoringResult,
+        snapshot: RoundSnapshot,
+        mappings: [SeriesRoundMapping],
+        members: [SeriesMember]
+    ) -> [AwardCompetitor] {
+        var mappingByParticipant: [String: String] = [:]
+        for mapping in mappings where mapping.roundOwnerType == .participant && mapping.competitorType == .member {
+            mappingByParticipant[mapping.roundOwnerID] = mapping.competitorID
+        }
+
+        let memberByID = Dictionary(uniqueKeysWithValues: members.map { ($0.id, $0) })
+        let participantByID = Dictionary(uniqueKeysWithValues: snapshot.participants.map { ($0.id, $0) })
+        let rows = result.rows.compactMap { row -> AwardPlacementRow? in
+            guard row.owner == .participant,
+                  row.holesPlayed > 0,
+                  let participant = participantByID[row.scoringUnitID] else {
+                return nil
+            }
+
+            let memberFromPlayer = participant.playerID.flatMap { playerID in
+                members.first { $0.playerID == playerID }
+            }
+            let competitorID = mappingByParticipant[row.scoringUnitID]
+                ?? participant.seriesMemberID
+                ?? memberFromPlayer?.id
+                ?? row.scoringUnitID
+            let competitorName = memberByID[competitorID]?.name.fullName
+                ?? participant.name.fullName
+
+            return AwardPlacementRow(
+                roundOwnerID: row.scoringUnitID,
+                competitorType: .member,
+                competitorID: competitorID,
+                competitorName: competitorName,
+                score: row.total
+            )
+        }
+
+        return buildPlacementGroups(
+            for: rows,
+            highestWins: result.template.leaderboardSort == .highestWins
+        )
+    }
+
+    private func buildTeamCompetitors(
+        result: ScoringResult,
+        snapshot: RoundSnapshot,
+        mappings: [SeriesRoundMapping]
+    ) -> [AwardCompetitor]? {
+        if result.rows.contains(where: { $0.owner == .scoreOwner }) {
+            let ownerRows = result.rows.filter { $0.owner == .team || $0.owner == .scoreOwner }.map { row in
+                OwnerPlacementRow(
+                    roundOwnerID: row.scoringUnitID,
+                    roundOwnerType: Self.roundOwnerType(for: row.owner),
+                    displayName: ownerDisplayName(for: row, snapshot: snapshot),
+                    fallbackParticipantIDs: row.participantIDs,
+                    fallbackTeamID: scoreOwnerFallbackTeamID(for: row, snapshot: snapshot),
+                    score: row.total
+                )
+            }
+            let ownerPlacements = buildOwnerPlacementGroups(
+                for: ownerRows,
+                highestWins: result.template.leaderboardSort == .highestWins
+            )
+            var competitors: [AwardCompetitor] = []
+            for placement in ownerPlacements {
+                let resolved = expandAwardCompetitors(
+                    placement,
+                    competitorType: .team,
+                    snapshot: snapshot,
+                    mappings: mappings
+                )
+                guard resolved.isPopulated else { return nil }
+                competitors.append(contentsOf: resolved)
+            }
+            return competitors
+        }
+
+        let sections = LeaderboardBuilder.buildTeamSections(result: result, participants: snapshot.participants, teams: snapshot.teams)
+        var rows: [AwardPlacementRow] = []
+        for section in sections where section.id != LeaderboardBuilder.unassignedTeamSectionID {
+            guard let competitorID = Self.canonicalSeriesTeamID(
+                roundTeamID: section.id,
+                roundTeamName: section.name,
+                participantIDs: snapshot.participants
+                    .filter { $0.teamID == section.id }
+                    .map(\.id),
+                snapshot: snapshot,
+                mappings: mappings,
+                members: members,
+                teams: teams
+            ) else {
+                return nil
+            }
+            rows.append(AwardPlacementRow(
+                roundOwnerID: section.id,
+                competitorType: .team,
+                competitorID: competitorID,
+                competitorName: teams.first(where: { $0.id == competitorID })?.name ?? section.name,
+                score: section.sectionTotal
+            ))
+        }
+        return Self.buildPlacementGroups(for: rows, highestWins: result.template.leaderboardSort == .highestWins)
+    }
+
+    private func buildMatchupCompetitors(
+        result: ScoringResult,
+        snapshot: RoundSnapshot,
+        awardTrack: SeriesAwardTrack,
+        mappings: [SeriesRoundMapping]
+    ) -> [AwardCompetitor]? {
+        var competitors: [AwardCompetitor] = []
+        for matchupResult in result.matchupResults {
+            let highestWins = matchupResult.isPointsFormat ?? (result.template.leaderboardSort == .highestWins)
+            let minimumStatus = shouldResolveMinimumCountResult(matchupResult.minimumCountStatus, snapshot: snapshot)
+                ? matchupResult.minimumCountStatus
+                : nil
+            let resolvedRows = Self.resolvedMatchupAwardRows(
+                matchupResult.rows,
+                matchup: matchupResult.matchup,
+                status: minimumStatus,
+                highestWins: highestWins,
+                snapshot: snapshot,
+                mappings: mappings,
+                members: members
+            )
+            let sortedRows = resolvedRows.rows
+            let isMinimumCountTie = resolvedRows.isMinimumCountTie
+
+            guard let first = sortedRows.first else { continue }
+            let isTie = Self.isMatchupAwardTie(sortedRows, isMinimumCountTie: isMinimumCountTie)
+            for row in sortedRows {
+                let competitorType: SeriesCompetitorType = awardTrack == .team ? .team : .member
+                let placement = isTie ? 1 : (row.scoringUnitID == first.scoringUnitID ? 1 : 2)
+                let ownerPlacement = OwnerPlacement(
+                    roundOwnerID: row.scoringUnitID,
+                    roundOwnerType: Self.roundOwnerType(for: row.owner),
+                    displayName: ownerDisplayName(for: row, snapshot: snapshot),
+                    fallbackParticipantIDs: row.participantIDs,
+                    fallbackTeamID: scoreOwnerFallbackTeamID(for: row, snapshot: snapshot),
+                    rawScore: row.total,
+                    placement: placement,
+                    tieGroupSize: isTie ? sortedRows.count : nil,
+                    reason: nil
+                )
+                let resolved = expandAwardCompetitors(
+                    ownerPlacement,
+                    competitorType: competitorType,
+                    snapshot: snapshot,
+                    mappings: mappings
+                )
+                if competitorType == .team, resolved.isEmpty {
+                    return nil
+                }
+                competitors.append(contentsOf: resolved)
+            }
+        }
+        return competitors
+    }
+
+    private func shouldResolveMinimumCountResult(
+        _ status: MatchupMinimumCountStatus?,
+        snapshot: RoundSnapshot
+    ) -> Bool {
+        guard let status, status.hasUnderMinimumSide else {
+            return true
+        }
+        return status.hasStructuralShortage || snapshot.round.status == .complete
+    }
+
+    nonisolated static func resolvedMatchupAwardRows(
+        _ rows: [ScoringRow],
+        matchup: TeamMatchup,
+        status: MatchupMinimumCountStatus?,
+        highestWins: Bool,
+        snapshot: RoundSnapshot,
+        mappings: [SeriesRoundMapping],
+        members: [SeriesMember]
+    ) -> (rows: [ScoringRow], isMinimumCountTie: Bool) {
+        func sortedByScore() -> [ScoringRow] {
+            rows.sorted {
+                if MatchupScoreComparison.totalsDiffer($0.total, $1.total) {
+                    return highestWins ? $0.total > $1.total : $0.total < $1.total
+                }
+                return $0.scoringUnitID < $1.scoringUnitID
+            }
+        }
+
+        guard let status, status.hasUnderMinimumSide else {
+            return (sortedByScore(), false)
+        }
+
+        let pairingOrder = matchup.pairingIDs()
+        func row(for sideID: String) -> ScoringRow? {
+            rows.first { row in
+                rowAwardSideIDs(
+                    for: row,
+                    snapshot: snapshot,
+                    mappings: mappings,
+                    members: members
+                )
+                .contains(sideID)
+            }
+        }
+
+        let pairedRows = pairingOrder.compactMap(row(for:))
+        let pairedRowIDs = Set(pairedRows.map(\.scoringUnitID))
+
+        if let winnerID = status.autoWinnerSideID,
+           let winner = row(for: winnerID) {
+            let losers = pairedRows.filter { $0.scoringUnitID != winner.scoringUnitID }
+            let extras = rows.filter { !pairedRowIDs.contains($0.scoringUnitID) && $0.scoringUnitID != winner.scoringUnitID }
+            return ([winner] + losers + extras, false)
+        }
+        if status.bothSidesUnderMinimum {
+            let extras = rows.filter { !pairedRowIDs.contains($0.scoringUnitID) }
+            return (pairedRows + extras, true)
+        }
+
+        return (sortedByScore(), false)
+    }
+
+    nonisolated static func isMatchupAwardTie(_ rows: [ScoringRow], isMinimumCountTie: Bool) -> Bool {
+        guard !isMinimumCountTie else { return true }
+        guard let first = rows.first, rows.count > 1 else { return false }
+        return rows.allSatisfy { MatchupScoreComparison.totalsMatch($0.total, first.total) }
+    }
+
+    private nonisolated static func rowAwardSideIDs(
+        for row: ScoringRow,
+        snapshot: RoundSnapshot,
+        mappings: [SeriesRoundMapping],
+        members: [SeriesMember]
+    ) -> Set<String> {
+        var ids = Set([row.scoringUnitID])
+        let ownerType = roundOwnerType(for: row.owner)
+        for mapping in mappings where mapping.roundOwnerID == row.scoringUnitID && mapping.roundOwnerType == ownerType {
+            ids.insert(mapping.competitorID)
+        }
+
+        let participantByID = Dictionary(uniqueKeysWithValues: snapshot.participants.map { ($0.id, $0) })
+        var memberByPlayerID: [String: SeriesMember] = [:]
+        for member in members {
+            guard let playerID = member.playerID, memberByPlayerID[playerID] == nil else { continue }
+            memberByPlayerID[playerID] = member
+        }
+
+        for participantID in row.participantIDs {
+            ids.insert(participantID)
+            guard let participant = participantByID[participantID] else { continue }
+            if let teamID = participant.teamID {
+                ids.insert(teamID)
+                for mapping in mappings where mapping.roundOwnerID == teamID && mapping.roundOwnerType == .team {
+                    ids.insert(mapping.competitorID)
+                }
+            }
+            if let memberID = participant.seriesMemberID {
+                ids.insert(memberID)
+            }
+            if let playerID = participant.playerID,
+               let member = memberByPlayerID[playerID] {
+                ids.insert(member.id)
+                if let teamID = member.teamID {
+                    ids.insert(teamID)
+                }
+            }
+        }
+
+        if row.owner == .scoreOwner,
+           let scoringGroup = snapshot.scoringGroup(id: row.scoringUnitID),
+           let teamID = scoringGroup.teamID {
+            ids.insert(teamID)
+            for mapping in mappings where mapping.roundOwnerID == teamID && mapping.roundOwnerType == .team {
+                ids.insert(mapping.competitorID)
+            }
+        }
+
+        return ids
+    }
+
+    private struct AwardPlacementRow {
+        let roundOwnerID: String
+        let competitorType: SeriesCompetitorType
+        let competitorID: String
+        let competitorName: String
+        let score: Double
+    }
+
+    private struct OwnerPlacementRow {
+        let roundOwnerID: String
+        let roundOwnerType: SeriesRoundOwnerType
+        let displayName: String
+        let fallbackParticipantIDs: [String]
+        let fallbackTeamID: String?
+        let score: Double
+    }
+
+    private struct OwnerPlacement {
+        let roundOwnerID: String
+        let roundOwnerType: SeriesRoundOwnerType
+        let displayName: String
+        let fallbackParticipantIDs: [String]
+        let fallbackTeamID: String?
+        let rawScore: Double
+        let placement: Int?
+        let tieGroupSize: Int?
+        let reason: String?
+    }
+
+    private func ownerDisplayName(for row: ScoringRow, snapshot: RoundSnapshot) -> String {
+        switch row.owner {
+        case .participant:
+            return snapshot.participants.first(where: { $0.id == row.scoringUnitID })?.name.fullName ?? "Player"
+        case .team:
+            return snapshot.teams.first(where: { $0.id == row.scoringUnitID })?.name ?? "Team"
+        case .scoreOwner:
+            if let scoringGroup = snapshot.scoringGroup(id: row.scoringUnitID) {
+                if let label = scoringGroup.label, label.isPopulated {
+                    return label
+                }
+            }
+            let names = row.participantIDs
+                .compactMap { participantID in
+                    snapshot.participants.first(where: { $0.id == participantID })?.name.fullName
+                }
+                .filter(\.isPopulated)
+            return names.isPopulated ? names.joined(separator: " + ") : "Side"
+        }
+    }
+
+    private nonisolated static func roundOwnerType(for owner: ScoringOwner) -> SeriesRoundOwnerType {
+        switch owner {
+        case .participant: return .participant
+        case .team: return .team
+        case .scoreOwner: return .scoreOwner
+        }
+    }
+
+    private func scoreOwnerFallbackTeamID(for row: ScoringRow, snapshot: RoundSnapshot) -> String? {
+        switch row.owner {
+        case .team:
+            return row.scoringUnitID
+        case .scoreOwner:
+            return snapshot.scoringGroup(id: row.scoringUnitID)?.teamID
+        case .participant:
+            return snapshot.participants.first(where: { $0.id == row.scoringUnitID })?.teamID
+        }
+    }
+
+    private func buildOwnerPlacementGroups(
+        for rows: [OwnerPlacementRow],
+        highestWins: Bool
+    ) -> [OwnerPlacement] {
+        let sortedRows = rows.sorted {
+            if $0.score != $1.score {
+                return highestWins ? $0.score > $1.score : $0.score < $1.score
+            }
+            return $0.displayName < $1.displayName
+        }
+
+        var placements: [OwnerPlacement] = []
+        var placement = 1
+        var index = 0
+
+        while index < sortedRows.count {
+            let score = sortedRows[index].score
+            var group: [OwnerPlacementRow] = []
+            while index < sortedRows.count, sortedRows[index].score == score {
+                group.append(sortedRows[index])
+                index += 1
+            }
+            for row in group {
+                placements.append(
+                    OwnerPlacement(
+                        roundOwnerID: row.roundOwnerID,
+                        roundOwnerType: row.roundOwnerType,
+                        displayName: row.displayName,
+                        fallbackParticipantIDs: row.fallbackParticipantIDs,
+                        fallbackTeamID: row.fallbackTeamID,
+                        rawScore: row.score,
+                        placement: placement,
+                        tieGroupSize: group.count > 1 ? group.count : nil,
+                        reason: nil
+                    )
+                )
+            }
+            placement += group.count
+        }
+
+        return placements
+    }
+
+    private func expandAwardCompetitors(
+        _ ownerPlacement: OwnerPlacement,
+        competitorType: SeriesCompetitorType,
+        snapshot: RoundSnapshot,
+        mappings: [SeriesRoundMapping]
+    ) -> [AwardCompetitor] {
+        let mapped = mappings.filter {
+            $0.roundOwnerID == ownerPlacement.roundOwnerID
+                && $0.roundOwnerType == ownerPlacement.roundOwnerType
+                && $0.competitorType == competitorType
+        }
+
+        let resolvedMappings: [(id: String, name: String)] = {
+            if mapped.isPopulated {
+                return mapped.compactMap { mapping in
+                    if competitorType == .team,
+                       !teams.contains(where: { $0.id == mapping.competitorID }) {
+                        return nil
+                    }
+                    return (
+                        id: mapping.competitorID,
+                        name: competitorName(
+                            for: mapping.competitorID,
+                            type: competitorType,
+                            snapshot: snapshot
+                        )
+                    )
+                }
+            }
+
+            switch competitorType {
+            case .team:
+                guard let teamID = ownerPlacement.fallbackTeamID else { return [] }
+                let participantIDs = ownerPlacement.fallbackParticipantIDs.isPopulated
+                    ? ownerPlacement.fallbackParticipantIDs
+                    : snapshot.participants.filter { $0.teamID == teamID }.map(\.id)
+                guard let canonicalTeamID = Self.canonicalSeriesTeamID(
+                    roundTeamID: teamID,
+                    roundTeamName: snapshot.teams.first(where: { $0.id == teamID })?.name,
+                    participantIDs: participantIDs,
+                    snapshot: snapshot,
+                    mappings: mappings,
+                    members: members,
+                    teams: teams
+                ) else {
+                    return []
+                }
+                return [(
+                    id: canonicalTeamID,
+                    name: competitorName(for: canonicalTeamID, type: .team, snapshot: snapshot)
+                )]
+            case .member:
+                return ownerPlacement.fallbackParticipantIDs.compactMap { participantID in
+                    guard let participant = snapshot.participants.first(where: { $0.id == participantID }) else { return nil }
+                    let memberID = participant.seriesMemberID
+                        ?? members.first(where: { $0.playerID == participant.playerID })?.id
+                        ?? participantID
+                    return (
+                        id: memberID,
+                        name: competitorName(for: memberID, type: .member, snapshot: snapshot)
+                    )
+                }
+            }
+        }()
+
+        return resolvedMappings.map { item in
+            AwardCompetitor(
+                roundOwnerID: ownerPlacement.roundOwnerID,
+                competitorType: competitorType,
+                competitorID: item.id,
+                competitorName: item.name,
+                placement: ownerPlacement.placement,
+                tieGroupSize: ownerPlacement.tieGroupSize,
+                reason: ownerPlacement.reason,
+                rawScore: ownerPlacement.rawScore
+            )
+        }
+    }
+
+    nonisolated static func canonicalSeriesTeamID(
+        roundTeamID: String,
+        roundTeamName: String?,
+        participantIDs: [String],
+        snapshot: RoundSnapshot,
+        mappings: [SeriesRoundMapping],
+        members: [SeriesMember],
+        teams: [SeriesTeam]
+    ) -> String? {
+        let canonicalTeamIDs = Set(teams.map(\.id))
+
+        if let mappedTeamID = mappings.first(where: {
+            $0.roundOwnerType == .team
+                && $0.roundOwnerID == roundTeamID
+                && $0.competitorType == .team
+                && canonicalTeamIDs.contains($0.competitorID)
+        })?.competitorID {
+            return mappedTeamID
+        }
+
+        if canonicalTeamIDs.contains(roundTeamID) {
+            return roundTeamID
+        }
+
+        if let deterministicTeamID = teams.first(where: {
+            roundTeamID == "\(snapshot.round.id)_series_team_\($0.id)"
+        })?.id {
+            return deterministicTeamID
+        }
+
+        let participantIDSet = Set(participantIDs)
+        let memberByID = Dictionary(uniqueKeysWithValues: members.map { ($0.id, $0) })
+        let memberByPlayerID = Dictionary(
+            members.compactMap { member in
+                member.playerID.map { ($0, member) }
+            },
+            uniquingKeysWith: { first, _ in first }
+        )
+        let rosterTeamIDs = Set(snapshot.participants.compactMap { participant -> String? in
+            guard participantIDSet.contains(participant.id) || participant.teamID == roundTeamID else {
+                return nil
+            }
+            let member = participant.seriesMemberID.flatMap { memberByID[$0] }
+                ?? participant.playerID.flatMap { memberByPlayerID[$0] }
+            guard let teamID = member?.teamID, canonicalTeamIDs.contains(teamID) else {
+                return nil
+            }
+            return teamID
+        })
+        if rosterTeamIDs.count == 1 {
+            return rosterTeamIDs.first
+        }
+        if rosterTeamIDs.count > 1 {
+            return nil
+        }
+
+        guard let normalizedName = roundTeamName?
+            .trimmingCharacters(in: .whitespacesAndNewlines)
+            .lowercased(),
+              normalizedName.isPopulated else {
+            return nil
+        }
+        let nameMatches = teams.filter {
+            $0.name.trimmingCharacters(in: .whitespacesAndNewlines).lowercased() == normalizedName
+        }
+        return nameMatches.count == 1 ? nameMatches[0].id : nil
+    }
+
+    private func competitorName(
+        for competitorID: String,
+        type: SeriesCompetitorType,
+        snapshot: RoundSnapshot
+    ) -> String {
+        switch type {
+        case .team:
+            return snapshot.teams.first(where: { $0.id == competitorID })?.name
+                ?? teams.first(where: { $0.id == competitorID })?.name
+                ?? "Team"
+        case .member:
+            return members.first(where: { $0.id == competitorID })?.name.fullName
+                ?? snapshot.participants.first(where: { $0.seriesMemberID == competitorID })?.name.fullName
+                ?? "Player"
+        }
+    }
+
+    private nonisolated static func buildPlacementGroups(for rows: [AwardPlacementRow], highestWins: Bool) -> [AwardCompetitor] {
+        let sortedRows = rows.sorted {
+            if $0.score != $1.score {
+                return highestWins ? $0.score > $1.score : $0.score < $1.score
+            }
+            return $0.competitorName < $1.competitorName
+        }
+
+        var competitors: [AwardCompetitor] = []
+        var placement = 1
+        var index = 0
+
+        while index < sortedRows.count {
+            let score = sortedRows[index].score
+            var group: [AwardPlacementRow] = []
+            while index < sortedRows.count, sortedRows[index].score == score {
+                group.append(sortedRows[index])
+                index += 1
+            }
+            for row in group {
+                competitors.append(
+                    AwardCompetitor(
+                        roundOwnerID: row.roundOwnerID,
+                        competitorType: row.competitorType,
+                        competitorID: row.competitorID,
+                        competitorName: row.competitorName,
+                        placement: placement,
+                        tieGroupSize: group.count > 1 ? group.count : nil,
+                        reason: nil,
+                        rawScore: row.score
+                    )
+                )
+            }
+            placement += group.count
+        }
+
+        return competitors
+    }
+
+    nonisolated static func resolvePoints(placement: Int, tieGroupSize: Int, profile: SeriesScoringProfile) -> Double? {
+        func points(at rank: Int) -> Double {
+            profile.placementRules.first(where: { rank >= $0.rankStart && rank <= $0.rankEnd })?.points ?? 0
+        }
+
+        switch profile.kind {
+        case .placement:
+            let occupiedRanks = Array(placement..<(placement + max(1, tieGroupSize)))
+            let total = occupiedRanks.reduce(0.0) { partial, rank in partial + points(at: rank) }
+            return total / Double(max(1, tieGroupSize))
+        case .accrueFromIndividual:
+            return nil
+        case .winTieLoss:
+            guard let resultPoints = profile.resultPoints else { return 0 }
+            if tieGroupSize > 1 {
+                return resultPoints.tiePoints
+            }
+            return placement == 1 ? resultPoints.winPoints : resultPoints.lossPoints
+        case .manual:
+            return nil
+        }
+    }
+
+    /// Assigns a `share_code` when missing (older series documents) so join links work.
+    func ensureShareCodeIfNeeded() async {
+        guard !series.shareCode.isPopulated else { return }
+        let code = await FirebaseService.shared.getUniqueShareCode()
+        var updated = series
+        updated.shareCode = code
+        updated.lastUpdatedAt = Time()
+        switch await FirebaseService.shared.updateSeries(updated) {
+        case .success(let saved):
+            series = saved
+        case .failure(let error):
+            addBreadcrumb(level: .warning, message: "Failed to assign series share code", error: error)
+        }
+    }
+
+    nonisolated static func standingsSort(_ lhs: SeriesStanding, _ rhs: SeriesStanding) -> Bool {
+        if lhs.totalPoints != rhs.totalPoints { return lhs.totalPoints > rhs.totalPoints }
+        if lhs.wins != rhs.wins { return lhs.wins > rhs.wins }
+        if lhs.bestPlacement != rhs.bestPlacement { return (lhs.bestPlacement ?? .max) < (rhs.bestPlacement ?? .max) }
+        return lhs.competitorName < rhs.competitorName
+    }
+}

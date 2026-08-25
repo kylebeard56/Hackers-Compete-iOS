@@ -1,0 +1,374 @@
+//
+//  AppSessionV2.swift
+//  Hackers
+//
+//  Created by Kyle Beard on 10/24/22.
+//
+
+import Combine
+import FirebaseAuth
+import SwiftUI
+
+enum RoundFormat: String {
+    case stroke = "stroke_play"
+    case match = "match_play"
+    
+    var name: String {
+        switch self {
+        case .stroke:   return "Stroke Play"
+        case .match:    return "Match Play"
+        }
+    }
+    
+    var subtitle: String {
+        switch self {
+        case .stroke:   return "All strokes taken by the player or team count towards the overall round score."
+        case .match:    return "Each hole is won by the player or team who had the fewest number of strokes."
+        }
+    }
+    
+    var icon: String {
+        switch self {
+        case .stroke:   return "f450"
+        case .match:    return "e3ac"
+        }
+    }
+    
+    var players: [Int] {
+        switch self {
+        case .stroke:   return [1, 2, 3, 4]
+        case .match:    return [2, 4]
+        }
+    }
+}
+
+@MainActor
+class AppSessionV2: Hackable {
+    
+    // MARK: - Legal
+    
+    @Published var showTerms: Bool = false
+    
+    // MARK: - Navigation
+    
+    @Published var path = NavigationPath()
+    
+    // MARK: - Session
+    
+    @Published var session: Session?
+    @Published var sessionCode: String = ""
+    @Published var currentSessions: [Session] = []
+    @Published var pastSessions: [Session] = []
+    @Published var sessionCodeError: SessionCodeError = .none
+    
+    // MARK: - Load
+    
+//    @Published var isLoading: Bool = false
+    @Published var isJoiningWithPartyCode: Bool = false
+    @Published var isCreatingNewRound: Bool = false
+    @Published var partyCodeTaken: Bool = false
+    @Published var roundCreationError: Bool = false
+    @Published var isReady: Bool = false
+
+    // MARK: - Sheets
+    
+    @Published var showJoinWithCode: Bool = false
+    @Published var showContinueRound: Bool = false
+    
+    // MARK: - Setup your Round
+    
+    @Published var numberOfHoles: Int = 18
+    @Published var startingSide: String = "front"
+    @Published var startingHole: Int = 1
+    
+    // MARK: - Round Settings
+    
+    @Published var sideGame: SideGame = .none
+    
+    // MARK: - Players
+    
+    @Published var players: [Player] = kDefaultPlayers
+    @Published var arePlayersEmpty: Bool = true
+    
+    init() {
+        print("init AppSessionV2")
+        Task(operation: load)
+        
+        _ = $startingSide
+            .subscribe(on: DispatchQueue.main)
+            .sink(receiveValue: { s in self.updateRoundSetup(for: s) })
+        
+        _ = $players
+            .subscribe(on: DispatchQueue.main)
+            .sink(receiveValue: { p in self.updatePlayerValues(for: p) })
+    }
+    
+    deinit { print("deinit AppSessionV2") }
+    
+    @Sendable private func load() async {
+        await loginAnonymously()
+        await getLatestTermsVersion()
+        await checkSessionState()
+        self.isReady = true
+    }
+    
+    private func loginAnonymously() async {
+        do {
+            let user = try await FirebaseServiceV2.shared.loginAnonymously().get()
+            FirebaseServiceV2.shared.observeMinimumAppVersion()
+            print("logged in anonymously for id: \(user.uid)")
+        } catch let error {
+            print("couldn't login anonymously, \(error)")
+        }
+    }
+    
+    private func getLatestTermsVersion() async {
+        do {
+            let v = try await FirebaseServiceV2.shared.getLatestTermsVersion().get()
+            print("latest terms version: \(v)")
+//            let compare = deviceDefaults.lastKnownTermsVersion.versionCompare(v)
+//            if compare == .orderedAscending || !deviceDefaults.acceptedTerms {
+            if deviceDefaults.acceptedTerms.isGreaterThanOrEqualTo(version: deviceDefaults.lastKnownTermsVersion) {
+                deviceDefaults.lastKnownTermsVersion = v
+                showTerms = true
+            }
+        } catch let error {
+            print("couldn't get latest terms version, \(error)")
+        }
+    }
+    
+    private func updateRoundSetup(for side: String) {
+        if side == "front" && startingHole > 9 {
+            startingHole = 1
+        }
+        if side == "back" && startingHole < 10 {
+            startingHole = 10
+        }
+    }
+    
+    private func updatePlayerValues(for players: [Player]) {
+        arePlayersEmpty = players.filter(\.isPlaying).isEmpty
+    }
+}
+
+extension AppSessionV2 {
+    
+    // MARK: - Navigation
+    
+    func goToRoundSetup() {
+        path.append(DestinationV2.roundSetup)
+    }
+    
+    func goToPlayers() {
+        path.append(DestinationV2.players)
+    }
+    
+    func goToSideGames() {
+        path.append(DestinationV2.sideGames)
+    }
+    
+    func goToPartyCode() {
+        path.append(DestinationV2.partyCode)
+    }
+    
+    func goToRoundPlay() {
+        path.append(DestinationV2.roundPlay)
+    }
+    
+    func goToLanding() {
+        path.removeLast(path.count)
+    }
+}
+
+extension AppSessionV2 {
+    
+    // MARK: - Session
+    
+    func checkSessionState() async {
+        print(#function)
+        
+        /// 1. Fetch session IDs from device cache
+        let sessionIDs = deviceDefaults.sessionHistory
+        currentSessions.removeAll()
+//        pastSessions.removeAll()
+        
+        if sessionIDs.isEmpty {
+            print("no existing session IDs cached to device to pre-load")
+            return
+        }
+        
+        /// 2. Fetch the session data for each cached ID (either from Realm or Firebase)
+        for id in sessionIDs {
+            do {
+                let s = try await FirebaseServiceV2.shared.getSession(by: id, useCache: true).get()
+                /// 3. If the round was created more than 24 hours ago, we consider it expired and no longer editable.
+                if s.createdAt.unix < Date().timeIntervalSince1970 - activeSessionTimeInterval {
+//                    pastSessions.append(s)
+                    
+                    /// 3a. Add the session to the device archive and remove it from the device history to speed up loading
+                    deviceDefaults.sessionArchive.appendIfMissing(s.id)
+                    if let index = deviceDefaults.sessionHistory.firstIndex(where: { $0 == s.id }) {
+                        deviceDefaults.sessionHistory.remove(at: index)
+                    }
+                } else {
+                    currentSessions.append(s)
+                }
+            } catch let error {
+                /// 4. If the sessino no longer exists, remove it from cache so it doesn't appear on `ContinueRoundView`
+                if let err = error as? HackersError, err == .documentNotFound {
+                    await RealmService.shared.delete(Session(id: id))
+                } else {
+                    self.addBreadcrumb(.warning, .session, "couldn't get session by id [\(id)]")
+                }
+            }
+        }
+        
+        /// 3. Sort by newest to oldest for future data display
+        currentSessions = currentSessions.sorted(by: { $0.lastUpdatedAt.unix > $1.lastUpdatedAt.unix })
+//        pastSessions = pastSessions.sorted(by: { $0.lastUpdatedAt.unix > $1.lastUpdatedAt.unix })
+        
+        print("SESSIONS LOADED: \(currentSessions.count) current, \(deviceDefaults.sessionArchive.count) expired")
+    }
+    
+    func checkExpiration() {
+        print(#function)
+        if let unix = session?.createdAt.unix, unix < Date().timeIntervalSince1970 - activeSessionTimeInterval {
+            print("session has expired")
+            Task(operation: leaveRound)
+        }
+    }
+    
+    func startRound(for session: Session) {
+        print(#function)
+        printPretty(session)
+        
+        /// 1. Start session observer for other device changes.
+        FirebaseServiceV2.shared.observeSession(for: session.id)
+        self.session = session
+        self.sessionCode = session.partyCode
+        self.cacheSession(by: session.id)
+        
+        /// 2. Go to the round view, but wait 0.6 sec for sheets to dismiss if they're presented.
+        if showJoinWithCode || showContinueRound {
+            showJoinWithCode = false
+            showContinueRound = false
+            DispatchQueue.main.asyncAfter(deadline: .now() + 0.6, execute: {
+                self.goToRoundPlay()
+            })
+        } else {
+            self.goToRoundPlay()
+        }
+        
+    }
+    
+    func createNewRoundSession(with partyCode: String = "") async {
+        print(#function)
+        self.partyCodeTaken = false
+        self.roundCreationError = false
+        self.isCreatingNewRound = true
+        defer { self.isCreatingNewRound = false }
+        
+        /// 1. If party code is populated, ensure it's unique and not taken
+        if !partyCode.isEmpty, await FirebaseServiceV2.shared.isPartyCodeTaken(partyCode) {
+            self.partyCodeTaken = true
+            return
+        }
+        
+        /// 2. Create a new session object
+        var session = Session(
+            id: "",
+            partyCode: partyCode,
+            players: players.compactMap({ PlayerSession(player: $0) }).filter({ !$0.name.isEmpty }),
+            unlockedPro: sideGame != .none,
+            numberOfHoles: numberOfHoles,
+            staringHole: startingHole,
+            sideGames: [],
+            createdAt: Time(),
+            lastUpdatedAt: Time()
+        )
+        
+        /// 3. Build starting side game session
+        print("Side game: \(sideGame)")
+        let range = HoleUtil.buildRange(starting: startingHole, playing: numberOfHoles)
+        session.sideGames = [SideGameUtil.buildSideGameSession(for: sideGame, withHoleRange: range)]
+        printPretty(session)
+        
+        /// 4. Create the new session
+        do {
+            self.startRound(for: try await session.post().get())
+        } catch let error {
+            self.addBreadcrumb(.error, .session, "couldn't start new round", error)
+            self.roundCreationError = true
+        }
+    }
+    
+    /// Fetch a session by the party code manually entered by a user.
+    @Sendable func fetchSessionFromPartyCode() async {
+        print(#function)
+        
+        sessionCodeError = .none
+        isJoiningWithPartyCode = true
+        defer { isJoiningWithPartyCode = false }
+        
+        do {
+            let s = try await FirebaseServiceV2.shared.getSession(using: self.sessionCode).get()
+            if s.isExpired {
+                Haptics.fire(.error)
+                self.sessionCodeError = .expired
+            } else {
+                self.startRound(for: s)
+            }
+        } catch let error {
+            self.addBreadcrumb(.warning, .session, "couldn't find session by party code [\(self.sessionCode)]", error)
+            Haptics.fire(.error)
+            self.sessionCodeError = .notFound
+        }
+    }
+    
+    /// Store the session ID to device cache
+    private func cacheSession(by id: String) {
+        var ids = deviceDefaults.sessionHistory
+        ids.append(id)
+        ids = ids.uniques
+        deviceDefaults.sessionHistory = ids
+    }
+    
+    /// Remove the session ID from cache, losing it forever (but keeping it in DB for metric purposes).
+    func removeCachedSession(by id: String) {
+        print(#function)
+        var ids = deviceDefaults.sessionHistory
+        if let i = ids.firstIndex(where: { $0 == id }) {
+            ids.remove(at: i)
+            ids = ids.uniques
+            deviceDefaults.sessionHistory = ids
+            print("Session [\(id)] removed from device history")
+        } else {
+            print("Cached session not found in device history")
+        }
+    }
+}
+
+extension AppSessionV2 {
+    
+    // MARK: - Finishing Round
+
+    @Sendable func leaveRound() async {
+        print(#function)
+        
+        /// 1. Stop observing current session
+        FirebaseServiceV2.shared.stopSessionObservation()
+        
+        /// 2. Navigate back to the landing page
+        self.goToLanding()
+        
+        /// 3. Check to see if we can ask user if they're liking Hackers
+        AppStoreReviewManager.requestReview()
+        
+        /// 4. Reload sessions for future selection on landing page
+        await checkSessionState()
+        sessionCode = ""
+        
+        /// 5. Clear out player scores and teams, but preserve name, color, and HCP in current app memory.
+        players = players.compactMap({ $0.stripped() })
+    }
+}

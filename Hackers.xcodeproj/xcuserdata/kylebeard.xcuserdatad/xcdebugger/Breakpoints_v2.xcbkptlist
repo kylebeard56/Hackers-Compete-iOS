@@ -7,16 +7,16 @@
       <BreakpointProxy
          BreakpointExtensionID = "Xcode.Breakpoint.FileBreakpoint">
          <BreakpointContent
-            uuid = "1CABB997-2945-4AE1-A10A-750786E84482"
+            uuid = "0D50C863-08B5-4C96-B04B-63D0A16B7032"
             shouldBeEnabled = "No"
             ignoreCount = "0"
             continueAfterRunningActions = "No"
-            filePath = "Hackers/UI/Packs/Gameplay/DesignGameplayModeView.swift"
+            filePath = "Hackers/App/HackersApp.swift"
             startingColumnNumber = "9223372036854775807"
             endingColumnNumber = "9223372036854775807"
-            startingLineNumber = "32"
-            endingLineNumber = "32"
-            landmarkName = "playerDifficultyChanged"
+            startingLineNumber = "50"
+            endingLineNumber = "50"
+            landmarkName = "body"
             landmarkType = "24">
          </BreakpointContent>
       </BreakpointProxy>
