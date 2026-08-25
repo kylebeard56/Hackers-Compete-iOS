@@ -1,0 +1,23 @@
+{
+  "/Users/kylebeard/Developer/Hackers-Compete-iOS/HackersLiveActivity/RoundActivityCompetitionView.swift" : {
+    "const-values" : "/Users/kylebeard/Developer/Hackers-Compete-iOS/build/Hackers.build/Sandbox-iphonesimulator/HackersLiveActivity.build/Objects-normal/x86_64/RoundActivityCompetitionView.swiftconstvalues",
+    "dependencies" : "/Users/kylebeard/Developer/Hackers-Compete-iOS/build/Hackers.build/Sandbox-iphonesimulator/HackersLiveActivity.build/Objects-normal/x86_64/RoundActivityCompetitionView.d",
+    "diagnostics" : "/Users/kylebeard/Developer/Hackers-Compete-iOS/build/Hackers.build/Sandbox-iphonesimulator/HackersLiveActivity.build/Objects-normal/x86_64/RoundActivityCompetitionView.dia",
+    "object" : "/Users/kylebeard/Developer/Hackers-Compete-iOS/build/Hackers.build/Sandbox-iphonesimulator/HackersLiveActivity.build/Objects-normal/x86_64/RoundActivityCompetitionView.o",
+    "swift-dependencies" : "/Users/kylebeard/Developer/Hackers-Compete-iOS/build/Hackers.build/Sandbox-iphonesimulator/HackersLiveActivity.build/Objects-normal/x86_64/RoundActivityCompetitionView.swiftdeps"
+  },
+  "/Users/kylebeard/Developer/Hackers-Compete-iOS/HackersLiveActivity/RoundActivityContentView.swift" : {
+    "const-values" : "/Users/kylebeard/Developer/Hackers-Compete-iOS/build/Hackers.build/Sandbox-iphonesimulator/HackersLiveActivity.build/Objects-normal/x86_64/RoundActivityContentView.swiftconstvalues",
+    "dependencies" : "/Users/kylebeard/Developer/Hackers-Compete-iOS/build/Hackers.build/Sandbox-iphonesimulator/HackersLiveActivity.build/Objects-normal/x86_64/RoundActivityContentView.d",
+    "diagnostics" : "/Users/kylebeard/Developer/Hackers-Compete-iOS/build/Hackers.build/Sandbox-iphonesimulator/HackersLiveActivity.build/Objects-normal/x86_64/RoundActivityContentView.dia",
+    "object" : "/Users/kylebeard/Developer/Hackers-Compete-iOS/build/Hackers.build/Sandbox-iphonesimulator/HackersLiveActivity.build/Objects-normal/x86_64/RoundActivityContentView.o",
+    "swift-dependencies" : "/Users/kylebeard/Developer/Hackers-Compete-iOS/build/Hackers.build/Sandbox-iphonesimulator/HackersLiveActivity.build/Objects-normal/x86_64/RoundActivityContentView.swiftdeps"
+  },
+  "/Users/kylebeard/Developer/Hackers-Compete-iOS/HackersLiveActivity/RoundActivityFocusCard.swift" : {
+    "const-values" : "/Users/kylebeard/Developer/Hackers-Compete-iOS/build/Hackers.build/Sandbox-iphonesimulator/HackersLiveActivity.build/Objects-normal/x86_64/RoundActivityFocusCard.swiftconstvalues",
+    "dependencies" : "/Users/kylebeard/Developer/Hackers-Compete-iOS/build/Hackers.build/Sandbox-iphonesimulator/HackersLiveActivity.build/Objects-normal/x86_64/RoundActivityFocusCard.d",
+    "diagnostics" : "/Users/kylebeard/Developer/Hackers-Compete-iOS/build/Hackers.build/Sandbox-iphonesimulator/HackersLiveActivity.build/Objects-normal/x86_64/RoundActivityFocusCard.dia",
+    "object" : "/Users/kylebeard/Developer/Hackers-Compete-iOS/build/Hackers.build/Sandbox-iphonesimulator/HackersLiveActivity.build/Objects-normal/x86_64/RoundActivityFocusCard.o",
+    "swift-dependencies" : "/Users/kylebeard/Developer/Hackers-Compete-iOS/build/Hackers.build/Sandbox-iphonesimulator/HackersLiveActivity.build/Objects-normal/x86_64/RoundActivityFocusCard.swiftdeps"
+  }
+}

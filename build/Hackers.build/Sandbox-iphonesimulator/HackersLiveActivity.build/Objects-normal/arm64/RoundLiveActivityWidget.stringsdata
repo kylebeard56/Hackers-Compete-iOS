@@ -1,0 +1,24 @@
+{
+  "source": "/Users/kylebeard/Developer/Hackers-Compete-iOS/HackersLiveActivity/RoundLiveActivityWidget.swift",
+  "tables": {
+    "Localizable": [
+      {
+        "comment": "",
+        "key": "%@ · %@",
+        "location": {
+          "startingColumn": 34,
+          "startingLine": 30
+        }
+      },
+      {
+        "comment": "",
+        "key": "Net %@",
+        "location": {
+          "startingColumn": 34,
+          "startingLine": 47
+        }
+      }
+    ]
+  },
+  "version": 1
+}

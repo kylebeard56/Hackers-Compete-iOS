@@ -1,0 +1,64 @@
+{
+  "source": "/Users/kylebeard/Developer/Hackers-Compete-iOS/HackersWatchApp/WatchScoreEditorView.swift",
+  "tables": {
+    "Localizable": [
+      {
+        "comment": "",
+        "key": "Enter Score",
+        "location": {
+          "startingColumn": 26,
+          "startingLine": 78
+        }
+      },
+      {
+        "comment": "",
+        "key": "Score",
+        "location": {
+          "startingColumn": 20,
+          "startingLine": 49
+        }
+      },
+      {
+        "comment": "",
+        "key": "Clear Score",
+        "location": {
+          "startingColumn": 24,
+          "startingLine": 69
+        }
+      },
+      {
+        "comment": "",
+        "key": "Hole %lld · Par %lld",
+        "location": {
+          "startingColumn": 22,
+          "startingLine": 44
+        }
+      },
+      {
+        "comment": "",
+        "key": "Save",
+        "location": {
+          "startingColumn": 24,
+          "startingLine": 57
+        }
+      },
+      {
+        "comment": "",
+        "key": "Save & Next",
+        "location": {
+          "startingColumn": 47,
+          "startingLine": 62
+        }
+      },
+      {
+        "comment": "",
+        "key": "Update & Next",
+        "location": {
+          "startingColumn": 63,
+          "startingLine": 62
+        }
+      }
+    ]
+  },
+  "version": 1
+}

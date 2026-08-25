@@ -1,0 +1,16 @@
+{
+  "source": "/Users/kylebeard/Developer/Hackers-Compete-iOS/HackersLiveActivity/RoundActivityCompactView.swift",
+  "tables": {
+    "Localizable": [
+      {
+        "comment": "",
+        "key": "N %@",
+        "location": {
+          "startingColumn": 30,
+          "startingLine": 22
+        }
+      }
+    ]
+  },
+  "version": 1
+}

@@ -1,0 +1,24 @@
+{
+  "source": "/Users/kylebeard/Developer/Hackers-Compete-iOS/HackersWatchApp/WatchEmptyRoundView.swift",
+  "tables": {
+    "Localizable": [
+      {
+        "comment": "",
+        "key": "No Live Round",
+        "location": {
+          "startingColumn": 19,
+          "startingLine": 6
+        }
+      },
+      {
+        "comment": "",
+        "key": "Choose a live round in Hackers on iPhone.",
+        "location": {
+          "startingColumn": 18,
+          "startingLine": 8
+        }
+      }
+    ]
+  },
+  "version": 1
+}

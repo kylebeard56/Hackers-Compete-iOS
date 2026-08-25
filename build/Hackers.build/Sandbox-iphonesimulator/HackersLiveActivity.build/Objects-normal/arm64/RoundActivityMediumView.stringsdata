@@ -1,0 +1,40 @@
+{
+  "source": "/Users/kylebeard/Developer/Hackers-Compete-iOS/HackersLiveActivity/RoundActivityMediumView.swift",
+  "tables": {
+    "Localizable": [
+      {
+        "comment": "",
+        "key": "· %@",
+        "location": {
+          "startingColumn": 26,
+          "startingLine": 19
+        }
+      },
+      {
+        "comment": "",
+        "key": "Net %@",
+        "location": {
+          "startingColumn": 30,
+          "startingLine": 31
+        }
+      },
+      {
+        "comment": "",
+        "key": "COUNTING",
+        "location": {
+          "startingColumn": 14,
+          "startingLine": 142
+        }
+      },
+      {
+        "comment": "",
+        "key": "Your score is counting",
+        "location": {
+          "startingColumn": 33,
+          "startingLine": 149
+        }
+      }
+    ]
+  },
+  "version": 1
+}

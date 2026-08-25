@@ -1,0 +1,32 @@
+{
+  "source": "/Users/kylebeard/Developer/Hackers-Compete-iOS/HackersWatchApp/WatchScoreStatusView.swift",
+  "tables": {
+    "Localizable": [
+      {
+        "comment": "",
+        "key": "Pending sync",
+        "location": {
+          "startingColumn": 37,
+          "startingLine": 11
+        }
+      },
+      {
+        "comment": "",
+        "key": "Changed elsewhere",
+        "location": {
+          "startingColumn": 37,
+          "startingLine": 15
+        }
+      },
+      {
+        "comment": "",
+        "key": "Needs attention",
+        "location": {
+          "startingColumn": 37,
+          "startingLine": 19
+        }
+      }
+    ]
+  },
+  "version": 1
+}

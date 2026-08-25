@@ -1,0 +1,129 @@
+{
+  "" : {
+    "diagnostics" : "/Users/kylebeard/Developer/Hackers-Compete-iOS/build/Hackers.build/Sandbox-watchsimulator/Hackers Watch App.build/Objects-normal/x86_64/Hackers Watch App-primary.dia",
+    "emit-module-dependencies" : "/Users/kylebeard/Developer/Hackers-Compete-iOS/build/Hackers.build/Sandbox-watchsimulator/Hackers Watch App.build/Objects-normal/x86_64/Hackers Watch App-primary-emit-module.d",
+    "emit-module-diagnostics" : "/Users/kylebeard/Developer/Hackers-Compete-iOS/build/Hackers.build/Sandbox-watchsimulator/Hackers Watch App.build/Objects-normal/x86_64/Hackers Watch App-primary-emit-module.dia",
+    "pch" : "/Users/kylebeard/Developer/Hackers-Compete-iOS/build/Hackers.build/Sandbox-watchsimulator/Hackers Watch App.build/Objects-normal/x86_64/Hackers Watch App-primary-Bridging-header.pch",
+    "swift-dependencies" : "/Users/kylebeard/Developer/Hackers-Compete-iOS/build/Hackers.build/Sandbox-watchsimulator/Hackers Watch App.build/Objects-normal/x86_64/Hackers Watch App-primary.swiftdeps"
+  },
+  "/Users/kylebeard/Developer/Hackers-Compete-iOS/HackersWatchApp/HackersWatchApp.swift" : {
+    "const-values" : "/Users/kylebeard/Developer/Hackers-Compete-iOS/build/Hackers.build/Sandbox-watchsimulator/Hackers Watch App.build/Objects-normal/x86_64/HackersWatchApp.swiftconstvalues",
+    "dependencies" : "/Users/kylebeard/Developer/Hackers-Compete-iOS/build/Hackers.build/Sandbox-watchsimulator/Hackers Watch App.build/Objects-normal/x86_64/HackersWatchApp.d",
+    "diagnostics" : "/Users/kylebeard/Developer/Hackers-Compete-iOS/build/Hackers.build/Sandbox-watchsimulator/Hackers Watch App.build/Objects-normal/x86_64/HackersWatchApp.dia",
+    "index-unit-output-path" : "/Hackers.build/Sandbox-watchsimulator/Hackers Watch App.build/Objects-normal/x86_64/HackersWatchApp.o",
+    "llvm-bc" : "/Users/kylebeard/Developer/Hackers-Compete-iOS/build/Hackers.build/Sandbox-watchsimulator/Hackers Watch App.build/Objects-normal/x86_64/HackersWatchApp.bc",
+    "object" : "/Users/kylebeard/Developer/Hackers-Compete-iOS/build/Hackers.build/Sandbox-watchsimulator/Hackers Watch App.build/Objects-normal/x86_64/HackersWatchApp.o",
+    "swift-dependencies" : "/Users/kylebeard/Developer/Hackers-Compete-iOS/build/Hackers.build/Sandbox-watchsimulator/Hackers Watch App.build/Objects-normal/x86_64/HackersWatchApp.swiftdeps",
+    "swiftmodule" : "/Users/kylebeard/Developer/Hackers-Compete-iOS/build/Hackers.build/Sandbox-watchsimulator/Hackers Watch App.build/Objects-normal/x86_64/HackersWatchApp~partial.swiftmodule"
+  },
+  "/Users/kylebeard/Developer/Hackers-Compete-iOS/HackersWatchApp/PendingWatchMutation.swift" : {
+    "const-values" : "/Users/kylebeard/Developer/Hackers-Compete-iOS/build/Hackers.build/Sandbox-watchsimulator/Hackers Watch App.build/Objects-normal/x86_64/PendingWatchMutation.swiftconstvalues",
+    "dependencies" : "/Users/kylebeard/Developer/Hackers-Compete-iOS/build/Hackers.build/Sandbox-watchsimulator/Hackers Watch App.build/Objects-normal/x86_64/PendingWatchMutation.d",
+    "diagnostics" : "/Users/kylebeard/Developer/Hackers-Compete-iOS/build/Hackers.build/Sandbox-watchsimulator/Hackers Watch App.build/Objects-normal/x86_64/PendingWatchMutation.dia",
+    "index-unit-output-path" : "/Hackers.build/Sandbox-watchsimulator/Hackers Watch App.build/Objects-normal/x86_64/PendingWatchMutation.o",
+    "llvm-bc" : "/Users/kylebeard/Developer/Hackers-Compete-iOS/build/Hackers.build/Sandbox-watchsimulator/Hackers Watch App.build/Objects-normal/x86_64/PendingWatchMutation.bc",
+    "object" : "/Users/kylebeard/Developer/Hackers-Compete-iOS/build/Hackers.build/Sandbox-watchsimulator/Hackers Watch App.build/Objects-normal/x86_64/PendingWatchMutation.o",
+    "swift-dependencies" : "/Users/kylebeard/Developer/Hackers-Compete-iOS/build/Hackers.build/Sandbox-watchsimulator/Hackers Watch App.build/Objects-normal/x86_64/PendingWatchMutation.swiftdeps",
+    "swiftmodule" : "/Users/kylebeard/Developer/Hackers-Compete-iOS/build/Hackers.build/Sandbox-watchsimulator/Hackers Watch App.build/Objects-normal/x86_64/PendingWatchMutation~partial.swiftmodule"
+  },
+  "/Users/kylebeard/Developer/Hackers-Compete-iOS/HackersWatchApp/WatchEmptyRoundView.swift" : {
+    "const-values" : "/Users/kylebeard/Developer/Hackers-Compete-iOS/build/Hackers.build/Sandbox-watchsimulator/Hackers Watch App.build/Objects-normal/x86_64/WatchEmptyRoundView.swiftconstvalues",
+    "dependencies" : "/Users/kylebeard/Developer/Hackers-Compete-iOS/build/Hackers.build/Sandbox-watchsimulator/Hackers Watch App.build/Objects-normal/x86_64/WatchEmptyRoundView.d",
+    "diagnostics" : "/Users/kylebeard/Developer/Hackers-Compete-iOS/build/Hackers.build/Sandbox-watchsimulator/Hackers Watch App.build/Objects-normal/x86_64/WatchEmptyRoundView.dia",
+    "index-unit-output-path" : "/Hackers.build/Sandbox-watchsimulator/Hackers Watch App.build/Objects-normal/x86_64/WatchEmptyRoundView.o",
+    "llvm-bc" : "/Users/kylebeard/Developer/Hackers-Compete-iOS/build/Hackers.build/Sandbox-watchsimulator/Hackers Watch App.build/Objects-normal/x86_64/WatchEmptyRoundView.bc",
+    "object" : "/Users/kylebeard/Developer/Hackers-Compete-iOS/build/Hackers.build/Sandbox-watchsimulator/Hackers Watch App.build/Objects-normal/x86_64/WatchEmptyRoundView.o",
+    "swift-dependencies" : "/Users/kylebeard/Developer/Hackers-Compete-iOS/build/Hackers.build/Sandbox-watchsimulator/Hackers Watch App.build/Objects-normal/x86_64/WatchEmptyRoundView.swiftdeps",
+    "swiftmodule" : "/Users/kylebeard/Developer/Hackers-Compete-iOS/build/Hackers.build/Sandbox-watchsimulator/Hackers Watch App.build/Objects-normal/x86_64/WatchEmptyRoundView~partial.swiftmodule"
+  },
+  "/Users/kylebeard/Developer/Hackers-Compete-iOS/HackersWatchApp/WatchHoleView.swift" : {
+    "const-values" : "/Users/kylebeard/Developer/Hackers-Compete-iOS/build/Hackers.build/Sandbox-watchsimulator/Hackers Watch App.build/Objects-normal/x86_64/WatchHoleView.swiftconstvalues",
+    "dependencies" : "/Users/kylebeard/Developer/Hackers-Compete-iOS/build/Hackers.build/Sandbox-watchsimulator/Hackers Watch App.build/Objects-normal/x86_64/WatchHoleView.d",
+    "diagnostics" : "/Users/kylebeard/Developer/Hackers-Compete-iOS/build/Hackers.build/Sandbox-watchsimulator/Hackers Watch App.build/Objects-normal/x86_64/WatchHoleView.dia",
+    "index-unit-output-path" : "/Hackers.build/Sandbox-watchsimulator/Hackers Watch App.build/Objects-normal/x86_64/WatchHoleView.o",
+    "llvm-bc" : "/Users/kylebeard/Developer/Hackers-Compete-iOS/build/Hackers.build/Sandbox-watchsimulator/Hackers Watch App.build/Objects-normal/x86_64/WatchHoleView.bc",
+    "object" : "/Users/kylebeard/Developer/Hackers-Compete-iOS/build/Hackers.build/Sandbox-watchsimulator/Hackers Watch App.build/Objects-normal/x86_64/WatchHoleView.o",
+    "swift-dependencies" : "/Users/kylebeard/Developer/Hackers-Compete-iOS/build/Hackers.build/Sandbox-watchsimulator/Hackers Watch App.build/Objects-normal/x86_64/WatchHoleView.swiftdeps",
+    "swiftmodule" : "/Users/kylebeard/Developer/Hackers-Compete-iOS/build/Hackers.build/Sandbox-watchsimulator/Hackers Watch App.build/Objects-normal/x86_64/WatchHoleView~partial.swiftmodule"
+  },
+  "/Users/kylebeard/Developer/Hackers-Compete-iOS/HackersWatchApp/WatchPreviewFixtures.swift" : {
+    "const-values" : "/Users/kylebeard/Developer/Hackers-Compete-iOS/build/Hackers.build/Sandbox-watchsimulator/Hackers Watch App.build/Objects-normal/x86_64/WatchPreviewFixtures.swiftconstvalues",
+    "dependencies" : "/Users/kylebeard/Developer/Hackers-Compete-iOS/build/Hackers.build/Sandbox-watchsimulator/Hackers Watch App.build/Objects-normal/x86_64/WatchPreviewFixtures.d",
+    "diagnostics" : "/Users/kylebeard/Developer/Hackers-Compete-iOS/build/Hackers.build/Sandbox-watchsimulator/Hackers Watch App.build/Objects-normal/x86_64/WatchPreviewFixtures.dia",
+    "index-unit-output-path" : "/Hackers.build/Sandbox-watchsimulator/Hackers Watch App.build/Objects-normal/x86_64/WatchPreviewFixtures.o",
+    "llvm-bc" : "/Users/kylebeard/Developer/Hackers-Compete-iOS/build/Hackers.build/Sandbox-watchsimulator/Hackers Watch App.build/Objects-normal/x86_64/WatchPreviewFixtures.bc",
+    "object" : "/Users/kylebeard/Developer/Hackers-Compete-iOS/build/Hackers.build/Sandbox-watchsimulator/Hackers Watch App.build/Objects-normal/x86_64/WatchPreviewFixtures.o",
+    "swift-dependencies" : "/Users/kylebeard/Developer/Hackers-Compete-iOS/build/Hackers.build/Sandbox-watchsimulator/Hackers Watch App.build/Objects-normal/x86_64/WatchPreviewFixtures.swiftdeps",
+    "swiftmodule" : "/Users/kylebeard/Developer/Hackers-Compete-iOS/build/Hackers.build/Sandbox-watchsimulator/Hackers Watch App.build/Objects-normal/x86_64/WatchPreviewFixtures~partial.swiftmodule"
+  },
+  "/Users/kylebeard/Developer/Hackers-Compete-iOS/HackersWatchApp/WatchRoundStore.swift" : {
+    "const-values" : "/Users/kylebeard/Developer/Hackers-Compete-iOS/build/Hackers.build/Sandbox-watchsimulator/Hackers Watch App.build/Objects-normal/x86_64/WatchRoundStore.swiftconstvalues",
+    "dependencies" : "/Users/kylebeard/Developer/Hackers-Compete-iOS/build/Hackers.build/Sandbox-watchsimulator/Hackers Watch App.build/Objects-normal/x86_64/WatchRoundStore.d",
+    "diagnostics" : "/Users/kylebeard/Developer/Hackers-Compete-iOS/build/Hackers.build/Sandbox-watchsimulator/Hackers Watch App.build/Objects-normal/x86_64/WatchRoundStore.dia",
+    "index-unit-output-path" : "/Hackers.build/Sandbox-watchsimulator/Hackers Watch App.build/Objects-normal/x86_64/WatchRoundStore.o",
+    "llvm-bc" : "/Users/kylebeard/Developer/Hackers-Compete-iOS/build/Hackers.build/Sandbox-watchsimulator/Hackers Watch App.build/Objects-normal/x86_64/WatchRoundStore.bc",
+    "object" : "/Users/kylebeard/Developer/Hackers-Compete-iOS/build/Hackers.build/Sandbox-watchsimulator/Hackers Watch App.build/Objects-normal/x86_64/WatchRoundStore.o",
+    "swift-dependencies" : "/Users/kylebeard/Developer/Hackers-Compete-iOS/build/Hackers.build/Sandbox-watchsimulator/Hackers Watch App.build/Objects-normal/x86_64/WatchRoundStore.swiftdeps",
+    "swiftmodule" : "/Users/kylebeard/Developer/Hackers-Compete-iOS/build/Hackers.build/Sandbox-watchsimulator/Hackers Watch App.build/Objects-normal/x86_64/WatchRoundStore~partial.swiftmodule"
+  },
+  "/Users/kylebeard/Developer/Hackers-Compete-iOS/HackersWatchApp/WatchScoreEditorView.swift" : {
+    "const-values" : "/Users/kylebeard/Developer/Hackers-Compete-iOS/build/Hackers.build/Sandbox-watchsimulator/Hackers Watch App.build/Objects-normal/x86_64/WatchScoreEditorView.swiftconstvalues",
+    "dependencies" : "/Users/kylebeard/Developer/Hackers-Compete-iOS/build/Hackers.build/Sandbox-watchsimulator/Hackers Watch App.build/Objects-normal/x86_64/WatchScoreEditorView.d",
+    "diagnostics" : "/Users/kylebeard/Developer/Hackers-Compete-iOS/build/Hackers.build/Sandbox-watchsimulator/Hackers Watch App.build/Objects-normal/x86_64/WatchScoreEditorView.dia",
+    "index-unit-output-path" : "/Hackers.build/Sandbox-watchsimulator/Hackers Watch App.build/Objects-normal/x86_64/WatchScoreEditorView.o",
+    "llvm-bc" : "/Users/kylebeard/Developer/Hackers-Compete-iOS/build/Hackers.build/Sandbox-watchsimulator/Hackers Watch App.build/Objects-normal/x86_64/WatchScoreEditorView.bc",
+    "object" : "/Users/kylebeard/Developer/Hackers-Compete-iOS/build/Hackers.build/Sandbox-watchsimulator/Hackers Watch App.build/Objects-normal/x86_64/WatchScoreEditorView.o",
+    "swift-dependencies" : "/Users/kylebeard/Developer/Hackers-Compete-iOS/build/Hackers.build/Sandbox-watchsimulator/Hackers Watch App.build/Objects-normal/x86_64/WatchScoreEditorView.swiftdeps",
+    "swiftmodule" : "/Users/kylebeard/Developer/Hackers-Compete-iOS/build/Hackers.build/Sandbox-watchsimulator/Hackers Watch App.build/Objects-normal/x86_64/WatchScoreEditorView~partial.swiftmodule"
+  },
+  "/Users/kylebeard/Developer/Hackers-Compete-iOS/HackersWatchApp/WatchScoreStatusView.swift" : {
+    "const-values" : "/Users/kylebeard/Developer/Hackers-Compete-iOS/build/Hackers.build/Sandbox-watchsimulator/Hackers Watch App.build/Objects-normal/x86_64/WatchScoreStatusView.swiftconstvalues",
+    "dependencies" : "/Users/kylebeard/Developer/Hackers-Compete-iOS/build/Hackers.build/Sandbox-watchsimulator/Hackers Watch App.build/Objects-normal/x86_64/WatchScoreStatusView.d",
+    "diagnostics" : "/Users/kylebeard/Developer/Hackers-Compete-iOS/build/Hackers.build/Sandbox-watchsimulator/Hackers Watch App.build/Objects-normal/x86_64/WatchScoreStatusView.dia",
+    "index-unit-output-path" : "/Hackers.build/Sandbox-watchsimulator/Hackers Watch App.build/Objects-normal/x86_64/WatchScoreStatusView.o",
+    "llvm-bc" : "/Users/kylebeard/Developer/Hackers-Compete-iOS/build/Hackers.build/Sandbox-watchsimulator/Hackers Watch App.build/Objects-normal/x86_64/WatchScoreStatusView.bc",
+    "object" : "/Users/kylebeard/Developer/Hackers-Compete-iOS/build/Hackers.build/Sandbox-watchsimulator/Hackers Watch App.build/Objects-normal/x86_64/WatchScoreStatusView.o",
+    "swift-dependencies" : "/Users/kylebeard/Developer/Hackers-Compete-iOS/build/Hackers.build/Sandbox-watchsimulator/Hackers Watch App.build/Objects-normal/x86_64/WatchScoreStatusView.swiftdeps",
+    "swiftmodule" : "/Users/kylebeard/Developer/Hackers-Compete-iOS/build/Hackers.build/Sandbox-watchsimulator/Hackers Watch App.build/Objects-normal/x86_64/WatchScoreStatusView~partial.swiftmodule"
+  },
+  "/Users/kylebeard/Developer/Hackers-Compete-iOS/LiveRoundSharedWatch/WatchConnectivityContract.swift" : {
+    "const-values" : "/Users/kylebeard/Developer/Hackers-Compete-iOS/build/Hackers.build/Sandbox-watchsimulator/Hackers Watch App.build/Objects-normal/x86_64/WatchConnectivityContract.swiftconstvalues",
+    "dependencies" : "/Users/kylebeard/Developer/Hackers-Compete-iOS/build/Hackers.build/Sandbox-watchsimulator/Hackers Watch App.build/Objects-normal/x86_64/WatchConnectivityContract.d",
+    "diagnostics" : "/Users/kylebeard/Developer/Hackers-Compete-iOS/build/Hackers.build/Sandbox-watchsimulator/Hackers Watch App.build/Objects-normal/x86_64/WatchConnectivityContract.dia",
+    "index-unit-output-path" : "/Hackers.build/Sandbox-watchsimulator/Hackers Watch App.build/Objects-normal/x86_64/WatchConnectivityContract.o",
+    "llvm-bc" : "/Users/kylebeard/Developer/Hackers-Compete-iOS/build/Hackers.build/Sandbox-watchsimulator/Hackers Watch App.build/Objects-normal/x86_64/WatchConnectivityContract.bc",
+    "object" : "/Users/kylebeard/Developer/Hackers-Compete-iOS/build/Hackers.build/Sandbox-watchsimulator/Hackers Watch App.build/Objects-normal/x86_64/WatchConnectivityContract.o",
+    "swift-dependencies" : "/Users/kylebeard/Developer/Hackers-Compete-iOS/build/Hackers.build/Sandbox-watchsimulator/Hackers Watch App.build/Objects-normal/x86_64/WatchConnectivityContract.swiftdeps",
+    "swiftmodule" : "/Users/kylebeard/Developer/Hackers-Compete-iOS/build/Hackers.build/Sandbox-watchsimulator/Hackers Watch App.build/Objects-normal/x86_64/WatchConnectivityContract~partial.swiftmodule"
+  },
+  "/Users/kylebeard/Developer/Hackers-Compete-iOS/LiveRoundSharedWatch/WatchRoundSnapshot.swift" : {
+    "const-values" : "/Users/kylebeard/Developer/Hackers-Compete-iOS/build/Hackers.build/Sandbox-watchsimulator/Hackers Watch App.build/Objects-normal/x86_64/WatchRoundSnapshot.swiftconstvalues",
+    "dependencies" : "/Users/kylebeard/Developer/Hackers-Compete-iOS/build/Hackers.build/Sandbox-watchsimulator/Hackers Watch App.build/Objects-normal/x86_64/WatchRoundSnapshot.d",
+    "diagnostics" : "/Users/kylebeard/Developer/Hackers-Compete-iOS/build/Hackers.build/Sandbox-watchsimulator/Hackers Watch App.build/Objects-normal/x86_64/WatchRoundSnapshot.dia",
+    "index-unit-output-path" : "/Hackers.build/Sandbox-watchsimulator/Hackers Watch App.build/Objects-normal/x86_64/WatchRoundSnapshot.o",
+    "llvm-bc" : "/Users/kylebeard/Developer/Hackers-Compete-iOS/build/Hackers.build/Sandbox-watchsimulator/Hackers Watch App.build/Objects-normal/x86_64/WatchRoundSnapshot.bc",
+    "object" : "/Users/kylebeard/Developer/Hackers-Compete-iOS/build/Hackers.build/Sandbox-watchsimulator/Hackers Watch App.build/Objects-normal/x86_64/WatchRoundSnapshot.o",
+    "swift-dependencies" : "/Users/kylebeard/Developer/Hackers-Compete-iOS/build/Hackers.build/Sandbox-watchsimulator/Hackers Watch App.build/Objects-normal/x86_64/WatchRoundSnapshot.swiftdeps",
+    "swiftmodule" : "/Users/kylebeard/Developer/Hackers-Compete-iOS/build/Hackers.build/Sandbox-watchsimulator/Hackers Watch App.build/Objects-normal/x86_64/WatchRoundSnapshot~partial.swiftmodule"
+  },
+  "/Users/kylebeard/Developer/Hackers-Compete-iOS/LiveRoundSharedWatch/WatchScoreAcknowledgement.swift" : {
+    "const-values" : "/Users/kylebeard/Developer/Hackers-Compete-iOS/build/Hackers.build/Sandbox-watchsimulator/Hackers Watch App.build/Objects-normal/x86_64/WatchScoreAcknowledgement.swiftconstvalues",
+    "dependencies" : "/Users/kylebeard/Developer/Hackers-Compete-iOS/build/Hackers.build/Sandbox-watchsimulator/Hackers Watch App.build/Objects-normal/x86_64/WatchScoreAcknowledgement.d",
+    "diagnostics" : "/Users/kylebeard/Developer/Hackers-Compete-iOS/build/Hackers.build/Sandbox-watchsimulator/Hackers Watch App.build/Objects-normal/x86_64/WatchScoreAcknowledgement.dia",
+    "index-unit-output-path" : "/Hackers.build/Sandbox-watchsimulator/Hackers Watch App.build/Objects-normal/x86_64/WatchScoreAcknowledgement.o",
+    "llvm-bc" : "/Users/kylebeard/Developer/Hackers-Compete-iOS/build/Hackers.build/Sandbox-watchsimulator/Hackers Watch App.build/Objects-normal/x86_64/WatchScoreAcknowledgement.bc",
+    "object" : "/Users/kylebeard/Developer/Hackers-Compete-iOS/build/Hackers.build/Sandbox-watchsimulator/Hackers Watch App.build/Objects-normal/x86_64/WatchScoreAcknowledgement.o",
+    "swift-dependencies" : "/Users/kylebeard/Developer/Hackers-Compete-iOS/build/Hackers.build/Sandbox-watchsimulator/Hackers Watch App.build/Objects-normal/x86_64/WatchScoreAcknowledgement.swiftdeps",
+    "swiftmodule" : "/Users/kylebeard/Developer/Hackers-Compete-iOS/build/Hackers.build/Sandbox-watchsimulator/Hackers Watch App.build/Objects-normal/x86_64/WatchScoreAcknowledgement~partial.swiftmodule"
+  },
+  "/Users/kylebeard/Developer/Hackers-Compete-iOS/LiveRoundSharedWatch/WatchScoreMutation.swift" : {
+    "const-values" : "/Users/kylebeard/Developer/Hackers-Compete-iOS/build/Hackers.build/Sandbox-watchsimulator/Hackers Watch App.build/Objects-normal/x86_64/WatchScoreMutation.swiftconstvalues",
+    "dependencies" : "/Users/kylebeard/Developer/Hackers-Compete-iOS/build/Hackers.build/Sandbox-watchsimulator/Hackers Watch App.build/Objects-normal/x86_64/WatchScoreMutation.d",
+    "diagnostics" : "/Users/kylebeard/Developer/Hackers-Compete-iOS/build/Hackers.build/Sandbox-watchsimulator/Hackers Watch App.build/Objects-normal/x86_64/WatchScoreMutation.dia",
+    "index-unit-output-path" : "/Hackers.build/Sandbox-watchsimulator/Hackers Watch App.build/Objects-normal/x86_64/WatchScoreMutation.o",
+    "llvm-bc" : "/Users/kylebeard/Developer/Hackers-Compete-iOS/build/Hackers.build/Sandbox-watchsimulator/Hackers Watch App.build/Objects-normal/x86_64/WatchScoreMutation.bc",
+    "object" : "/Users/kylebeard/Developer/Hackers-Compete-iOS/build/Hackers.build/Sandbox-watchsimulator/Hackers Watch App.build/Objects-normal/x86_64/WatchScoreMutation.o",
+    "swift-dependencies" : "/Users/kylebeard/Developer/Hackers-Compete-iOS/build/Hackers.build/Sandbox-watchsimulator/Hackers Watch App.build/Objects-normal/x86_64/WatchScoreMutation.swiftdeps",
+    "swiftmodule" : "/Users/kylebeard/Developer/Hackers-Compete-iOS/build/Hackers.build/Sandbox-watchsimulator/Hackers Watch App.build/Objects-normal/x86_64/WatchScoreMutation~partial.swiftmodule"
+  }
+}

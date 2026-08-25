@@ -1,0 +1,32 @@
+{
+  "source": "/Users/kylebeard/Developer/Hackers-Compete-iOS/HackersLiveActivity/RoundActivityHoleContextView.swift",
+  "tables": {
+    "Localizable": [
+      {
+        "comment": "",
+        "key": "HOLE %@ · PAR %@",
+        "location": {
+          "startingColumn": 18,
+          "startingLine": 12
+        }
+      },
+      {
+        "comment": "",
+        "key": "Round in progress",
+        "location": {
+          "startingColumn": 37,
+          "startingLine": 16
+        }
+      },
+      {
+        "comment": "",
+        "key": "%@ YDS",
+        "location": {
+          "startingColumn": 59,
+          "startingLine": 16
+        }
+      }
+    ]
+  },
+  "version": 1
+}

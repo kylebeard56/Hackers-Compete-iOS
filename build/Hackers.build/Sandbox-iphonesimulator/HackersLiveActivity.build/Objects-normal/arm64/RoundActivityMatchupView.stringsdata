@@ -1,0 +1,16 @@
+{
+  "source": "/Users/kylebeard/Developer/Hackers-Compete-iOS/HackersLiveActivity/RoundActivityMatchupView.swift",
+  "tables": {
+    "Localizable": [
+      {
+        "comment": "",
+        "key": "TEAM MATCH",
+        "location": {
+          "startingColumn": 22,
+          "startingLine": 18
+        }
+      }
+    ]
+  },
+  "version": 1
+}

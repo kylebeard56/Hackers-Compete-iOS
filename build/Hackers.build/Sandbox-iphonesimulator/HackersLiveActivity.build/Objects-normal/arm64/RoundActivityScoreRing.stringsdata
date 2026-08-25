@@ -1,0 +1,16 @@
+{
+  "source": "/Users/kylebeard/Developer/Hackers-Compete-iOS/HackersLiveActivity/RoundActivityScoreRing.swift",
+  "tables": {
+    "Localizable": [
+      {
+        "comment": "",
+        "key": "YOU",
+        "location": {
+          "startingColumn": 22,
+          "startingLine": 23
+        }
+      }
+    ]
+  },
+  "version": 1
+}

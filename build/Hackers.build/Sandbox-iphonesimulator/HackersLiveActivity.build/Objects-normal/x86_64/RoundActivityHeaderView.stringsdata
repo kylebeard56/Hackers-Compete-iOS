@@ -1,0 +1,16 @@
+{
+  "source": "/Users/kylebeard/Developer/Hackers-Compete-iOS/HackersLiveActivity/RoundActivityHeaderView.swift",
+  "tables": {
+    "Localizable": [
+      {
+        "comment": "",
+        "key": "HACKERS GOLF",
+        "location": {
+          "startingColumn": 18,
+          "startingLine": 9
+        }
+      }
+    ]
+  },
+  "version": 1
+}

@@ -1,0 +1,23 @@
+{
+  "/Users/kylebeard/Developer/Hackers-Compete-iOS/HackersLiveActivity/RoundActivityHeaderView.swift" : {
+    "const-values" : "/Users/kylebeard/Developer/Hackers-Compete-iOS/build/Hackers.build/Sandbox-iphonesimulator/HackersLiveActivity.build/Objects-normal/arm64/RoundActivityHeaderView.swiftconstvalues",
+    "dependencies" : "/Users/kylebeard/Developer/Hackers-Compete-iOS/build/Hackers.build/Sandbox-iphonesimulator/HackersLiveActivity.build/Objects-normal/arm64/RoundActivityHeaderView.d",
+    "diagnostics" : "/Users/kylebeard/Developer/Hackers-Compete-iOS/build/Hackers.build/Sandbox-iphonesimulator/HackersLiveActivity.build/Objects-normal/arm64/RoundActivityHeaderView.dia",
+    "object" : "/Users/kylebeard/Developer/Hackers-Compete-iOS/build/Hackers.build/Sandbox-iphonesimulator/HackersLiveActivity.build/Objects-normal/arm64/RoundActivityHeaderView.o",
+    "swift-dependencies" : "/Users/kylebeard/Developer/Hackers-Compete-iOS/build/Hackers.build/Sandbox-iphonesimulator/HackersLiveActivity.build/Objects-normal/arm64/RoundActivityHeaderView.swiftdeps"
+  },
+  "/Users/kylebeard/Developer/Hackers-Compete-iOS/HackersLiveActivity/RoundActivityHoleContextView.swift" : {
+    "const-values" : "/Users/kylebeard/Developer/Hackers-Compete-iOS/build/Hackers.build/Sandbox-iphonesimulator/HackersLiveActivity.build/Objects-normal/arm64/RoundActivityHoleContextView.swiftconstvalues",
+    "dependencies" : "/Users/kylebeard/Developer/Hackers-Compete-iOS/build/Hackers.build/Sandbox-iphonesimulator/HackersLiveActivity.build/Objects-normal/arm64/RoundActivityHoleContextView.d",
+    "diagnostics" : "/Users/kylebeard/Developer/Hackers-Compete-iOS/build/Hackers.build/Sandbox-iphonesimulator/HackersLiveActivity.build/Objects-normal/arm64/RoundActivityHoleContextView.dia",
+    "object" : "/Users/kylebeard/Developer/Hackers-Compete-iOS/build/Hackers.build/Sandbox-iphonesimulator/HackersLiveActivity.build/Objects-normal/arm64/RoundActivityHoleContextView.o",
+    "swift-dependencies" : "/Users/kylebeard/Developer/Hackers-Compete-iOS/build/Hackers.build/Sandbox-iphonesimulator/HackersLiveActivity.build/Objects-normal/arm64/RoundActivityHoleContextView.swiftdeps"
+  },
+  "/Users/kylebeard/Developer/Hackers-Compete-iOS/HackersLiveActivity/RoundActivityLockScreenContainer.swift" : {
+    "const-values" : "/Users/kylebeard/Developer/Hackers-Compete-iOS/build/Hackers.build/Sandbox-iphonesimulator/HackersLiveActivity.build/Objects-normal/arm64/RoundActivityLockScreenContainer.swiftconstvalues",
+    "dependencies" : "/Users/kylebeard/Developer/Hackers-Compete-iOS/build/Hackers.build/Sandbox-iphonesimulator/HackersLiveActivity.build/Objects-normal/arm64/RoundActivityLockScreenContainer.d",
+    "diagnostics" : "/Users/kylebeard/Developer/Hackers-Compete-iOS/build/Hackers.build/Sandbox-iphonesimulator/HackersLiveActivity.build/Objects-normal/arm64/RoundActivityLockScreenContainer.dia",
+    "object" : "/Users/kylebeard/Developer/Hackers-Compete-iOS/build/Hackers.build/Sandbox-iphonesimulator/HackersLiveActivity.build/Objects-normal/arm64/RoundActivityLockScreenContainer.o",
+    "swift-dependencies" : "/Users/kylebeard/Developer/Hackers-Compete-iOS/build/Hackers.build/Sandbox-iphonesimulator/HackersLiveActivity.build/Objects-normal/arm64/RoundActivityLockScreenContainer.swiftdeps"
+  }
+}
