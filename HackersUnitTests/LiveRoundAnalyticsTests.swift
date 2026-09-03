@@ -236,6 +236,66 @@ final class RoundProjectionSimulatorTests: XCTestCase {
 }
 
 final class MatchupProbabilitySimulatorTests: XCTestCase {
+    func testExpectedShareSplitsTieProbabilityEvenly() {
+        XCTAssertEqual(
+            MatchupProbabilityTrendPoint(
+                holesCompleted: 0,
+                leftWin: 46,
+                tie: 8,
+                rightWin: 46
+            ).leftExpectedShare,
+            50
+        )
+        XCTAssertEqual(
+            MatchupProbabilityTrendPoint(
+                holesCompleted: 8,
+                leftWin: 60,
+                tie: 20,
+                rightWin: 20
+            ).leftExpectedShare,
+            70
+        )
+        XCTAssertEqual(
+            MatchupProbabilityTrendPoint(
+                holesCompleted: 9,
+                leftWin: 100,
+                tie: 0,
+                rightWin: 0
+            ).leftExpectedShare,
+            100
+        )
+    }
+
+    func testFinalCountingStatusExpandsTieAcrossCutoff() {
+        let statuses = MatchupCountingStatusResolver.resolve(
+            participantIDs: ["greg", "kyle", "andrew", "joey"],
+            countingParticipantIDs: ["greg", "kyle"],
+            totalsByParticipantID: [
+                "greg": -5,
+                "kyle": -2,
+                "andrew": -2,
+                "joey": 1,
+            ]
+        )
+
+        XCTAssertEqual(statuses["greg"], .counted)
+        XCTAssertEqual(statuses["kyle"], .tiedAtCutoff)
+        XCTAssertEqual(statuses["andrew"], .tiedAtCutoff)
+        XCTAssertEqual(statuses["joey"], .notCounted)
+    }
+
+    func testFinalCountingStatusKeepsUntiedSelectionDefinitive() {
+        let statuses = MatchupCountingStatusResolver.resolve(
+            participantIDs: ["greg", "kyle", "andrew"],
+            countingParticipantIDs: ["greg", "kyle"],
+            totalsByParticipantID: ["greg": -5, "kyle": -2, "andrew": 0]
+        )
+
+        XCTAssertEqual(statuses["greg"], .counted)
+        XCTAssertEqual(statuses["kyle"], .counted)
+        XCTAssertEqual(statuses["andrew"], .notCounted)
+    }
+
     func testTargetedSimulationOnlyRequiresPlayersFromRequestedMatchup() async throws {
         let snapshot = MockLobbySixteenWithTeams.snapshotWithMatchups
         let participantIDs = Set(snapshot.participants.compactMap { participant in
@@ -570,6 +630,39 @@ final class LiveRoundProjectionIntegrationTests: XCTestCase {
 
         XCTAssertNil(viewModel.playerProjectionUnavailableReason(for: participant))
     }
+
+    @MainActor
+    func testMatchupTimelineReplaysEveryRecordedCheckpoint() async throws {
+        let snapshot = MockLiveRoundBest2of4Matchup.snapshot
+        let matchup = try XCTUnwrap(snapshot.roundSegment?.matchups?.first)
+        let viewModel = LiveRoundViewModel()
+        viewModel.set(snapshot: snapshot)
+
+        let probabilityTimeline = await viewModel.matchupProbabilityTimeline(
+            for: matchup,
+            scoreBasis: .gross
+        )
+
+        XCTAssertNil(probabilityTimeline.unsupportedReason)
+        XCTAssertEqual(probabilityTimeline.points.map(\.holesCompleted), [0, 1, 2, 3, 4])
+        XCTAssertTrue(probabilityTimeline.points.allSatisfy {
+            $0.leftWin + $0.tie + $0.rightWin == 100
+        })
+        XCTAssertEqual(
+            probabilityTimeline.latest?.participantCountingProbabilities.count,
+            snapshot.participants.count
+        )
+
+        let scoreTimeline = viewModel.matchupScoreTimeline(for: matchup, scoreBasis: .gross)
+        XCTAssertEqual(scoreTimeline.map(\.holesCompleted), [1, 2, 3, 4])
+        XCTAssertEqual(scoreTimeline.last?.holesCompleted, probabilityTimeline.points.last?.holesCompleted)
+
+        let cachedTimeline = await viewModel.matchupProbabilityTimeline(
+            for: matchup,
+            scoreBasis: .gross
+        )
+        XCTAssertEqual(cachedTimeline, probabilityTimeline)
+    }
 }
 
 final class ProjectionCalibrationMetricsTests: XCTestCase {
@@ -768,6 +861,34 @@ final class SeriesHandicapTrendTests: XCTestCase {
 
 @MainActor
 final class PlayerInsightsRoundAnalyticsTests: XCTestCase {
+    func testCumulativeStrokeTrendUsesCompletedHoleOrderForGrossAndNet() throws {
+        let relativeScores = [0, 1, -1]
+        let (viewModel, participant) = try makeViewModel(relativeScores: relativeScores)
+        let gross = viewModel.cumulativeStrokeTrend(for: participant, basis: .gross)
+        let net = viewModel.cumulativeStrokeTrend(for: participant, basis: .net)
+
+        XCTAssertEqual(gross.map(\.holesCompleted), [1, 2, 3])
+        XCTAssertEqual(gross.map(\.holeNumber), Array(viewModel.courseOrderHoleNumbers.prefix(3)))
+
+        var expectedGross = 0
+        let expectedGrossTotals = zip(viewModel.courseOrderHoleNumbers, relativeScores).map {
+            expectedGross += (viewModel.hole(for: $0.0)?.par ?? 0) + $0.1
+            return expectedGross
+        }
+        XCTAssertEqual(gross.map(\.strokes), expectedGrossTotals)
+
+        var expectedNet = 0
+        let expectedNetTotals = zip(viewModel.courseOrderHoleNumbers, relativeScores).map {
+            let grossStrokes = (viewModel.hole(for: $0.0)?.par ?? 0) + $0.1
+            expectedNet += grossStrokes - viewModel.strokesReceivedOnHole(
+                participant: participant,
+                holeNumber: $0.0
+            )
+            return expectedNet
+        }
+        XCTAssertEqual(net.map(\.strokes), expectedNetTotals)
+    }
+
     func testGrossOutcomeMixAndHandicapUsageFollowRecordedHoles() throws {
         let (viewModel, participant) = try makeViewModel(relativeScores: [-1, 0, 1, 2, 3, 4])
 

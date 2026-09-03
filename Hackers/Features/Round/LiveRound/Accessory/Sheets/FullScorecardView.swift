@@ -2005,9 +2005,13 @@ private let mockTheme: GolfTheme = .purple
     }
 }
 
-private enum PlayerInsightsSection: String, CaseIterable {
-    case overview = "Overview"
-    case scorecard = "Scorecard"
+private struct CumulativeStrokeBandPoint: Identifiable {
+    let holesCompleted: Int
+    let lower: Int
+    let median: Int
+    let upper: Int
+
+    var id: Int { holesCompleted }
 }
 
 struct PlayerInsightsView: View {
@@ -2019,7 +2023,6 @@ struct PlayerInsightsView: View {
 
     @State private var projection: PlayerFinishProjection?
     @State private var isLoadingProjection = false
-    @State private var selectedSection: PlayerInsightsSection = .overview
 
     private var palette: DesignPalette { .init(theme: .primary, scheme: colorScheme) }
     private var basis: ScoreBasis { viewModel.scoreBasis }
@@ -2030,7 +2033,10 @@ struct PlayerInsightsView: View {
     private var actualTrend: [ProjectionTrendPoint] {
         projection?.actualTrend ?? viewModel.actualScoreTrend(for: participant, basis: basis)
     }
-    private var holesCompleted: Int { actualTrend.count }
+    private var cumulativeStrokeTrend: [CumulativeStrokeTrendPoint] {
+        viewModel.cumulativeStrokeTrend(for: participant, basis: basis)
+    }
+    private var holesCompleted: Int { cumulativeStrokeTrend.count }
     private var totalHoleCount: Int { viewModel.holeNumbers.count }
     private var isPlayerRoundComplete: Bool {
         totalHoleCount > 0 && holesCompleted == totalHoleCount
@@ -2051,22 +2057,47 @@ struct PlayerInsightsView: View {
 
     var body: some View {
         NavigationStack {
-            VStack(spacing: 0) {
-                identityCard
-                    .padding(.horizontal, 16)
-                    .padding(.top, 16)
+            ScrollView(.vertical, showsIndicators: false) {
+                LazyVStack(spacing: 16) {
+                    identityCard
 
-                Picker("Player insights section", selection: $selectedSection) {
-                    ForEach(PlayerInsightsSection.allCases, id: \.self) { section in
-                        Text(section.rawValue).tag(section)
+                    if canRevealInsights {
+                        if viewModel.handicapsEnabled {
+                            Picker("Score basis", selection: $viewModel.scoreBasis) {
+                                Text("Gross").tag(ScoreBasis.gross)
+                                Text("Net").tag(ScoreBasis.net)
+                            }
+                            .pickerStyle(.segmented)
+                            .accessibilityHint("Changes the player summary and cumulative score chart")
+                        }
+
+                        currentRoundCard
+
+                        IndividualScorecardView(
+                            viewModel: viewModel,
+                            participant: participant,
+                            presentation: .embedded,
+                            showsPlayerHeader: false
+                        )
+
+                        trendCard
+
+                        if holesCompleted > 0 {
+                            scoringMixCard
+                        }
+                    } else {
+                        ContentUnavailableView(
+                            "Scores hidden",
+                            systemImage: "eye.slash",
+                            description: Text(
+                                "This player’s score details will appear when secret scoring is revealed."
+                            )
+                        )
+                        .padding(24)
                     }
                 }
-                .pickerStyle(.segmented)
-                .padding(.horizontal, 16)
-                .padding(.top, 12)
-                .padding(.bottom, 8)
-
-                insightsContent
+                .padding(16)
+                .padding(.bottom, 16)
             }
             .background(palette.backgroundColor.opacity(0.98))
             .navigationTitle("Player insights")
@@ -2088,41 +2119,6 @@ struct PlayerInsightsView: View {
             isLoadingProjection = true
             projection = await viewModel.playerProjection(for: participant, scoreBasis: basis)
             isLoadingProjection = false
-        }
-    }
-
-    @ViewBuilder
-    private var insightsContent: some View {
-        if canRevealInsights {
-            switch selectedSection {
-            case .overview:
-                ScrollView(.vertical, showsIndicators: false) {
-                    VStack(spacing: 16) {
-                        currentRoundCard
-                        trendCard
-                        if holesCompleted > 0 {
-                            scoringMixCard
-                        }
-                    }
-                    .padding(16)
-                    .padding(.bottom, 16)
-                }
-            case .scorecard:
-                IndividualScorecardView(
-                    viewModel: viewModel,
-                    participant: participant,
-                    presentation: .embedded,
-                    showsPlayerHeader: false
-                )
-            }
-        } else {
-            ContentUnavailableView(
-                "Scores hidden",
-                systemImage: "eye.slash",
-                description: Text("This player’s score details will appear when secret scoring is revealed.")
-            )
-            .padding(24)
-            .frame(maxWidth: .infinity, maxHeight: .infinity)
         }
     }
 
@@ -2247,10 +2243,10 @@ struct PlayerInsightsView: View {
         VStack(alignment: .leading, spacing: 12) {
             HStack(alignment: .firstTextBaseline) {
                 VStack(alignment: .leading, spacing: 2) {
-                    Text("Score trend")
+                    Text("Cumulative score")
                         .fontStyle(kFontName, size: 17, weight: .semibold)
                         .foregroundStyle(palette.foregroundColor)
-                    Text("Cumulative \(basis.rawValue) score to par")
+                    Text("\(basis.rawValue.capitalized) strokes by holes completed")
                         .fontStyle(kFontName, size: 12, weight: .regular)
                         .foregroundStyle(Color.neutral)
                 }
@@ -2262,7 +2258,7 @@ struct PlayerInsightsView: View {
                 }
             }
 
-            if actualTrend.isEmpty {
+            if cumulativeStrokeTrend.isEmpty {
                 emptyTrendState
             } else {
                 scoreTrendChart
@@ -2280,11 +2276,11 @@ struct PlayerInsightsView: View {
 
     private var scoreTrendChart: some View {
         Chart {
-            if let averagePaceTrend {
-                ForEach(averagePaceTrend) { point in
+            if let averageStrokeTrend {
+                ForEach(averageStrokeTrend) { point in
                     LineMark(
-                        x: .value("Hole", point.holeNumber),
-                        y: .value("Average pace", point.value),
+                        x: .value("Holes completed", point.holesCompleted),
+                        y: .value("Average pace", point.strokes),
                         series: .value("Series", "Average pace")
                     )
                     .foregroundStyle(Color.neutral2)
@@ -2292,17 +2288,17 @@ struct PlayerInsightsView: View {
                 }
             }
 
-            if let projection {
-                ForEach(projection.projectedTrend) { point in
+            if projection != nil {
+                ForEach(projectedStrokeTrend) { point in
                     AreaMark(
-                        x: .value("Hole", point.holeNumber),
+                        x: .value("Holes completed", point.holesCompleted),
                         yStart: .value("Low", point.lower),
                         yEnd: .value("High", point.upper)
                     )
                     .foregroundStyle(viewModel.theme.color.opacity(0.16))
 
                     LineMark(
-                        x: .value("Hole", point.holeNumber),
+                        x: .value("Holes completed", point.holesCompleted),
                         y: .value("Projected median", point.median)
                     )
                     .foregroundStyle(viewModel.theme.color.opacity(0.65))
@@ -2311,28 +2307,44 @@ struct PlayerInsightsView: View {
             }
 
             ForEach(actualChartTrend) { point in
+                AreaMark(
+                    x: .value("Holes completed", point.holesCompleted),
+                    yStart: .value("Baseline", 0),
+                    yEnd: .value("Recorded strokes", point.strokes)
+                )
+                .foregroundStyle(
+                    LinearGradient(
+                        colors: [viewModel.theme.color.opacity(0.3), .clear],
+                        startPoint: .top,
+                        endPoint: .bottom
+                    )
+                )
+
                 LineMark(
-                    x: .value("Hole", point.holeNumber),
-                    y: .value("Actual", point.value),
+                    x: .value("Holes completed", point.holesCompleted),
+                    y: .value("Recorded strokes", point.strokes),
                     series: .value("Series", "Actual")
                 )
                 .foregroundStyle(viewModel.theme.color)
                 .lineStyle(.init(lineWidth: 3, lineCap: .round, lineJoin: .round))
 
-                if point.holeNumber != actualChartTrend.first?.holeNumber {
+                if point.holesCompleted != 0 {
                     PointMark(
-                        x: .value("Hole", point.holeNumber),
-                        y: .value("Actual", point.value)
+                        x: .value("Holes completed", point.holesCompleted),
+                        y: .value("Recorded strokes", point.strokes)
                     )
                     .foregroundStyle(viewModel.theme.color)
                 }
             }
         }
+        .chartXScale(domain: 0...max(1, totalHoleCount))
         .chartXAxis {
             AxisMarks(values: .automatic(desiredCount: 6)) { value in
                 AxisGridLine().foregroundStyle(Color.neutral5.opacity(0.25))
                 AxisValueLabel {
-                    if let hole = value.as(Int.self) { Text("\(hole)") }
+                    if let holes = value.as(Int.self) {
+                        Text(holes == 0 ? "Start" : "\(holes)")
+                    }
                 }
             }
         }
@@ -2340,7 +2352,7 @@ struct PlayerInsightsView: View {
             AxisMarks(position: .leading) { value in
                 AxisGridLine().foregroundStyle(Color.neutral5.opacity(0.25))
                 AxisValueLabel {
-                    if let score = value.as(Int.self) { Text(scoreLabel(score)) }
+                    if let strokes = value.as(Int.self) { Text("\(strokes)") }
                 }
             }
         }
@@ -2416,7 +2428,8 @@ struct PlayerInsightsView: View {
     }
 
     private var accessibilitySummary: String {
-        var summary = "Actual \(basis.rawValue) trend through \(holesCompleted) holes, current score \(scoreLabel(currentScore))."
+        let strokes = cumulativeStrokeTrend.last?.strokes ?? 0
+        var summary = "Cumulative \(basis.rawValue) strokes through \(holesCompleted) holes, \(strokes) strokes. Current score \(scoreLabel(currentScore))."
         if let projection {
             summary += " Projected 80 percent finish interval \(scoreLabel(projection.lowerFinish)) to \(scoreLabel(projection.upperFinish)), median \(scoreLabel(projection.medianFinish)), \(projection.confidence.rawValue) confidence."
         } else if let average = averagePacePerHole {
@@ -2425,10 +2438,56 @@ struct PlayerInsightsView: View {
         return summary
     }
 
-    private var actualChartTrend: [ProjectionTrendPoint] {
-        guard let first = actualTrend.first else { return [] }
-        let baseline = ProjectionTrendPoint(holeNumber: max(0, first.holeNumber - 1), value: 0)
-        return [baseline] + actualTrend
+    private var actualChartTrend: [CumulativeStrokeTrendPoint] {
+        guard cumulativeStrokeTrend.isPopulated else { return [] }
+        let baseline = CumulativeStrokeTrendPoint(
+            holesCompleted: 0,
+            holeNumber: viewModel.courseOrderHoleNumbers.first ?? 1,
+            strokes: 0
+        )
+        return [baseline] + cumulativeStrokeTrend
+    }
+
+    private var projectedStrokeTrend: [CumulativeStrokeBandPoint] {
+        guard let projection else { return [] }
+        return projection.projectedTrend.compactMap { point in
+            guard let holesCompleted = completionCount(for: point.holeNumber) else { return nil }
+            let par = cumulativePar(through: holesCompleted)
+            return CumulativeStrokeBandPoint(
+                holesCompleted: holesCompleted,
+                lower: par + point.lower,
+                median: par + point.median,
+                upper: par + point.upper
+            )
+        }
+    }
+
+    private var averageStrokeTrend: [CumulativeStrokeTrendPoint]? {
+        averagePaceTrend?.compactMap { point in
+            guard let holesCompleted = completionCount(for: point.holeNumber) else { return nil }
+            return CumulativeStrokeTrendPoint(
+                holesCompleted: holesCompleted,
+                holeNumber: point.holeNumber,
+                strokes: cumulativePar(through: holesCompleted) + point.value
+            )
+        }
+    }
+
+    private func completionCount(for holeNumber: Int) -> Int? {
+        if let index = viewModel.courseOrderHoleNumbers.firstIndex(of: holeNumber) {
+            return index + 1
+        }
+        guard let firstHole = viewModel.courseOrderHoleNumbers.first,
+              holeNumber == max(0, firstHole - 1) else { return nil }
+        return 0
+    }
+
+    private func cumulativePar(through holesCompleted: Int) -> Int {
+        viewModel.courseOrderHoleNumbers
+            .prefix(max(0, holesCompleted))
+            .reduce(0) { total, holeNumber in
+                total + (viewModel.hole(for: holeNumber, teeID: participant.teeBoxID)?.par ?? 0)
+            }
     }
 
     private var averagePacePerHole: Double? {

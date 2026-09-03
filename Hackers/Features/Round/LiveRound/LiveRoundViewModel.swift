@@ -275,6 +275,9 @@ final class LiveRoundViewModel: ObservableObject, Loggable {
     /// Participant-level format results for Solo leaderboard contribution views.
     private var cachedIndividualContributionEngineResults: [String: ScoringResult] = [:]
     private var cachedPlayerSimulations: [String: (revision: String, simulation: PlayerProjectionSimulation)] = [:]
+    private var cachedMatchupProbabilityTimelines: [
+        String: (revision: String, timeline: MatchupProbabilityTimeline)
+    ] = [:]
     private var matchupProbabilityTask: Task<Void, Never>?
     private var matchupProbabilityTaskRevision: String?
     private var matchupProbabilityResultRevisions: [String: String] = [:]
@@ -282,6 +285,7 @@ final class LiveRoundViewModel: ObservableObject, Loggable {
     private var isMatchupProbabilityPrecomputationEnabled = false
     private var predictionContextRoundID: String?
     private static let liveProjectionIterationCount = 1_000
+    private static let matchupTimelineProjectionIterationCount = 100
     private var hasPerformedInitialHoleNudge = false
     private var hasSelectedInitialVisibleGroupStartingHole = false
     private var loadedSeriesAccessRoundID: String?
@@ -1916,6 +1920,67 @@ final class LiveRoundViewModel: ObservableObject, Loggable {
             cumulative += strokes - hole.par
             return ProjectionTrendPoint(holeNumber: holeNumber, value: cumulative)
         }
+    }
+
+    func cumulativeStrokeTrend(
+        for participant: RoundParticipant,
+        basis: ScoreBasis
+    ) -> [CumulativeStrokeTrendPoint] {
+        var cumulative = 0
+        var holesCompleted = 0
+        return courseOrderHoleNumbers.compactMap { holeNumber in
+            guard let gross = grossStrokes(
+                for: participant.id,
+                holeNumber: holeNumber
+            ) else { return nil }
+
+            holesCompleted += 1
+            cumulative += basis == .net
+                ? gross - strokesReceivedOnHole(
+                    participant: participant,
+                    holeNumber: holeNumber
+                )
+                : gross
+            return CumulativeStrokeTrendPoint(
+                holesCompleted: holesCompleted,
+                holeNumber: holeNumber,
+                strokes: cumulative
+            )
+        }
+    }
+
+    func finalMatchupCountingStatuses(
+        for side: MatchupResultPresentation.Side,
+        basis: ScoreBasis,
+        isPointsFormat: Bool
+    ) -> [String: MatchupCountingDisplayStatus] {
+        guard side.countsByRoundTotal else { return [:] }
+
+        let eligibleParticipants = side.participants.filter {
+            side.substitutesScore || !$0.isSubstitute
+        }
+        let eligibleParticipantIDs = Set(eligibleParticipants.map(\.id))
+        let rowsByParticipantID = Dictionary(
+            uniqueKeysWithValues: projectedIndividualLeaderboardRows(for: basis).map {
+                ($0.participant.id, $0)
+            }
+        )
+        let totals = eligibleParticipants.reduce(into: [String: Double]()) { values, participant in
+            guard let row = rowsByParticipantID[participant.id] else { return }
+            values[participant.id] = isPointsFormat
+                ? (row.totalPoints ?? Double(row.scoreToPar))
+                : Double(row.scoreToPar)
+        }
+
+        var statuses = MatchupCountingStatusResolver.resolve(
+            participantIDs: eligibleParticipants.map(\.id),
+            countingParticipantIDs: side.countingParticipantIDs,
+            totalsByParticipantID: totals
+        )
+        for participant in side.participants where !eligibleParticipantIDs.contains(participant.id) {
+            statuses[participant.id] = .notCounted
+        }
+        return statuses
     }
 
     func completedAveragePaceTrend(
@@ -5209,6 +5274,244 @@ final class LiveRoundViewModel: ObservableObject, Loggable {
         await task?.value
     }
 
+    /// Replays the recorded round a checkpoint at a time so the detail view can show how
+    /// matchup odds moved, including a pre-round baseline at zero holes completed.
+    func matchupProbabilityTimeline(
+        for matchup: TeamMatchup,
+        scoreBasis: ScoreBasis
+    ) async -> MatchupProbabilityTimeline {
+        guard shouldShowMatchupProbabilities else {
+            return .unsupported("Win probability is hidden until secret scoring is revealed.")
+        }
+        let template = snapshot.resolvedActiveTemplate
+        guard template.inputMode == .strokes, template.scoreSource == .individual else {
+            return .unsupported("Odds aren’t available for custom or shared-score formats.")
+        }
+        guard matchup.isValid, matchup.effectiveMode == snapshot.expectedMatchupMode else {
+            return .unsupported("This matchup’s scoring configuration is incomplete.")
+        }
+
+        let eligibleParticipantIDs = Set(ScoringEngine.scoringEligibleParticipants(
+            snapshot.participants,
+            substitutesScore: snapshot.configuration.substitutesScore,
+            attendanceConfirmationEnabled: snapshot.configuration.attendanceConfirmationEnabled == true
+        ).map(\.id))
+        let participants = matchup.pairingIDs()
+            .flatMap { matchupSideParticipants(scoringUnitID: $0, matchup: matchup) }
+            .filter { eligibleParticipantIDs.contains($0.id) }
+            .reduce(into: [String: RoundParticipant]()) { result, participant in
+                result[participant.id] = participant
+            }
+            .values
+            .sorted { $0.id < $1.id }
+        guard participants.isPopulated else {
+            return .unsupported("No eligible players are available for this matchup.")
+        }
+
+        let playOrders = Dictionary(uniqueKeysWithValues: participants.map {
+            ($0.id, matchupTimelinePlayOrder(for: $0))
+        })
+        let recordedHoles = Dictionary(uniqueKeysWithValues: participants.map {
+            ($0.id, matchupTimelineRecordedHoleNumbers(for: $0))
+        })
+        var checkpointSet: Set<Int> = [0]
+        for participant in participants {
+            guard let playOrder = playOrders[participant.id],
+                  let participantRecordedHoles = recordedHoles[participant.id] else { continue }
+            for holeNumber in participantRecordedHoles {
+                if let index = playOrder.firstIndex(of: holeNumber) {
+                    checkpointSet.insert(index + 1)
+                }
+            }
+        }
+
+        let revision = matchupProbabilityRevision(for: matchup, scoreBasis: scoreBasis)
+        let timelineCacheKey = [snapshot.round.id, matchup.id, scoreBasis.rawValue]
+            .joined(separator: "|")
+        if let cached = cachedMatchupProbabilityTimelines[timelineCacheKey],
+           cached.revision == revision {
+            return cached.timeline
+        }
+        var points: [MatchupProbabilityTrendPoint] = []
+        var latestProbability: MatchupProbability?
+
+        for checkpoint in checkpointSet.sorted() {
+            if Task.isCancelled {
+                return .init(points: points, latest: latestProbability, unsupportedReason: nil)
+            }
+
+            var simulations: [String: PlayerProjectionSimulation] = [:]
+            var simulationKeys: [String] = []
+            for participant in participants {
+                guard let playOrder = playOrders[participant.id],
+                      let participantRecordedHoles = recordedHoles[participant.id] else { continue }
+                let revealedHoles = Set(playOrder.prefix(checkpoint))
+                    .intersection(participantRecordedHoles)
+                guard let input = projectionInput(
+                    for: participant,
+                    scoreBasis: scoreBasis,
+                    recordedHoleNumbers: revealedHoles
+                ) else {
+                    return .unsupported("Not enough scoring context is available yet.")
+                }
+
+                let simulationKey = [
+                    "matchup-timeline-player",
+                    revision,
+                    participant.id,
+                    String(checkpoint),
+                    revealedHoles.sorted().map(String.init).joined(separator: ",")
+                ].joined(separator: "|")
+                do {
+                    let simulation = try await RoundProjectionSimulator.shared.simulate(
+                        input: input,
+                        iterations: Self.matchupTimelineProjectionIterationCount,
+                        minimumIterations: Self.matchupTimelineProjectionIterationCount,
+                        seed: ProjectionSeed.make(simulationKey),
+                        cacheKey: simulationKey,
+                        retainsDiagnosticScenarios: false
+                    )
+                    simulations[participant.id] = simulation
+                    simulationKeys.append(simulationKey)
+                } catch {
+                    if error is CancellationError {
+                        return .init(points: points, latest: latestProbability, unsupportedReason: nil)
+                    }
+                    return .unsupported("The probability replay couldn’t be calculated.")
+                }
+            }
+
+            guard simulations.count == participants.count else {
+                return .unsupported("Not enough scoring context is available yet.")
+            }
+
+            do {
+                let values = try await MatchupProbabilitySimulator.shared.simulate(
+                    snapshot: snapshot,
+                    scoreBasis: scoreBasis,
+                    playerSimulations: simulations,
+                    matchupIDs: [matchup.id],
+                    participantIDs: Set(participants.map(\.id)),
+                    cacheKey: "matchup-timeline|\(simulationKeys.sorted().joined(separator: "|"))"
+                )
+                guard let probability = values[matchup.id] else {
+                    return .unsupported("The probability replay couldn’t be calculated.")
+                }
+                latestProbability = probability
+                guard probability.isSupported else {
+                    let timeline = MatchupProbabilityTimeline(
+                        points: points,
+                        latest: probability,
+                        unsupportedReason: probability.unsupportedReason
+                    )
+                    cachedMatchupProbabilityTimelines[timelineCacheKey] = (revision, timeline)
+                    return timeline
+                }
+                points.append(.init(
+                    holesCompleted: checkpoint,
+                    leftWin: probability.leftWin,
+                    tie: probability.tie,
+                    rightWin: probability.rightWin
+                ))
+            } catch {
+                if error is CancellationError {
+                    return .init(points: points, latest: latestProbability, unsupportedReason: nil)
+                }
+                return .unsupported("The probability replay couldn’t be calculated.")
+            }
+        }
+
+        let timeline = MatchupProbabilityTimeline(
+            points: points,
+            latest: latestProbability,
+            unsupportedReason: nil
+        )
+        cachedMatchupProbabilityTimelines[timelineCacheKey] = (revision, timeline)
+        return timeline
+    }
+
+    /// Replays authoritative scoring at the same through-hole checkpoints. This remains useful
+    /// for shared/custom formats where Monte Carlo win odds are intentionally unsupported.
+    func matchupScoreTimeline(
+        for matchup: TeamMatchup,
+        scoreBasis: ScoreBasis
+    ) -> [MatchupScoreTrendPoint] {
+        let sideIDs = matchup.pairingIDs()
+        guard sideIDs.count >= 2 else { return [] }
+
+        let participantIDs = Set(sideIDs.flatMap {
+            matchupSideParticipants(scoringUnitID: $0, matchup: matchup).map(\.id)
+        })
+        let directScoreIDs = sideIDs.reduce(into: Set<String>()) { ids, sideID in
+            ids.formUnion(liveMatchupDirectScoreLookupIDs(sideID: sideID, matchup: matchup))
+        }
+        let relevantEntries = snapshot.scoring.filter { entry in
+            entry.hasRecordedScore
+                && (
+                    directScoreIDs.contains(entry.scoringUnitID)
+                        || entry.participantIDs.contains { participantIDs.contains($0) }
+                )
+        }
+        let checkpoints = Set(relevantEntries.map(matchupTimelinePosition(for:))).sorted()
+        guard checkpoints.isPopulated else { return [] }
+
+        let segment = snapshot.segments.first {
+            $0.matchups?.contains(where: { $0.id == matchup.id }) == true
+        } ?? snapshot.roundSegment ?? RoundSegment()
+        let holes = snapshot.defaultTee?.holes ?? []
+        let scoreLookupIDs = snapshot.segmentScoreLookupSegmentIDs
+        var points: [MatchupScoreTrendPoint] = []
+
+        for checkpoint in checkpoints {
+            var checkpointSnapshot = snapshot
+            checkpointSnapshot.scoring = snapshot.scoring.filter { entry in
+                guard entry.hasRecordedScore else { return false }
+                return matchupTimelinePosition(for: entry) <= checkpoint
+            }
+            let result = ScoringEngine.computeSnapshotResult(
+                snapshot: checkpointSnapshot,
+                segment: segment,
+                holes: holes,
+                basis: scoreBasis,
+                scoreLookupSegmentIDs: scoreLookupIDs.isEmpty ? nil : scoreLookupIDs
+            )
+            let presentation: MatchupResultPresentation
+            if let matchupResult = result.matchupResults.first(where: { $0.matchup.id == matchup.id }) {
+                presentation = MatchupResultPresentationBuilder.build(
+                    snapshot: checkpointSnapshot,
+                    result: result,
+                    matchupResult: matchupResult,
+                    basis: scoreBasis
+                )
+            } else {
+                presentation = MatchupResultPresentationBuilder.build(
+                    snapshot: checkpointSnapshot,
+                    result: result,
+                    section: MatchupLeaderboardSection(
+                        id: matchup.id,
+                        matchup: matchup,
+                        name: "Matchup",
+                        rows: []
+                    ),
+                    basis: scoreBasis
+                )
+            }
+            guard let leftTotal = presentation.side(id: sideIDs[0])?.total,
+                  let rightTotal = presentation.side(id: sideIDs[1])?.total else { continue }
+            let advantage = presentation.isPointsFormat
+                ? leftTotal - rightTotal
+                : rightTotal - leftTotal
+            points.append(.init(
+                holesCompleted: checkpoint,
+                leftTotal: leftTotal,
+                rightTotal: rightTotal,
+                leftAdvantage: advantage
+            ))
+        }
+
+        return points
+    }
+
     /// Results safe to show outside the Live Round screen. The screen has its own loading
     /// placeholder, but Watch and Activity must never publish an old value with a new score.
     var publishableMatchupProbabilities: [String: MatchupProbability] {
@@ -5474,7 +5777,8 @@ final class LiveRoundViewModel: ObservableObject, Loggable {
 
     private func projectionInput(
         for participant: RoundParticipant,
-        scoreBasis: ScoreBasis
+        scoreBasis: ScoreBasis,
+        recordedHoleNumbers: Set<Int>? = nil
     ) -> PlayerProjectionInput? {
         guard snapshot.resolvedActiveTemplate.inputMode == .strokes,
               snapshot.resolvedActiveTemplate.scoreSource == .individual else {
@@ -5494,6 +5798,7 @@ final class LiveRoundViewModel: ObservableObject, Loggable {
             } ?? []
         let currentRoundSamples = playedHoleNumbers.compactMap {
             holeNumber -> (sourceID: String, par: Int, relative: Int)? in
+            guard recordedHoleNumbers?.contains(holeNumber) ?? true else { return nil }
             guard let hole = tee.holes.first(where: { $0.number == holeNumber }),
                   let gross = grossStrokes(for: participant.id, holeNumber: holeNumber) else { return nil }
             return (
@@ -5505,6 +5810,7 @@ final class LiveRoundViewModel: ObservableObject, Loggable {
 
         let holes = playedHoleNumbers.compactMap { holeNumber -> ProjectionHoleInput? in
             guard let hole = tee.holes.first(where: { $0.number == holeNumber }) else { return nil }
+            let usesRecordedScore = recordedHoleNumbers?.contains(holeNumber) ?? true
             var samples: [ProjectionHistoricalSample] = []
             for historicalContext in historicalContexts {
                 let context = historicalContext.context
@@ -5555,14 +5861,12 @@ final class LiveRoundViewModel: ObservableObject, Loggable {
                 holeNumber: holeNumber,
                 par: hole.par,
                 strokesReceived: strokesReceived,
-                recordedGross: grossStrokes(for: participant.id, holeNumber: holeNumber),
-                isUnresolvedPickup: scoreEntry(
-                    for: participant.id,
-                    holeNumber: holeNumber
-                )?.pickedUp == true && grossStrokes(
-                    for: participant.id,
-                    holeNumber: holeNumber
-                ) == nil,
+                recordedGross: usesRecordedScore
+                    ? grossStrokes(for: participant.id, holeNumber: holeNumber)
+                    : nil,
+                isUnresolvedPickup: usesRecordedScore
+                    && scoreEntry(for: participant.id, holeNumber: holeNumber)?.pickedUp == true
+                    && grossStrokes(for: participant.id, holeNumber: holeNumber) == nil,
                 historicalSamples: samples
             )
         }
@@ -5573,6 +5877,51 @@ final class LiveRoundViewModel: ObservableObject, Loggable {
             handicapAllowance: participant.lockedHandicapAllowance,
             holes: holes
         )
+    }
+
+    private func matchupTimelineRecordedHoleNumbers(
+        for participant: RoundParticipant
+    ) -> Set<Int> {
+        Set(courseOrderHoleNumbers.filter { holeNumber in
+            scoreEntry(for: participant.id, holeNumber: holeNumber)?.hasRecordedScore == true
+        })
+    }
+
+    private func matchupTimelinePlayOrder(
+        for participant: RoundParticipant
+    ) -> [Int] {
+        let course = courseOrderHoleNumbers
+        guard let groupID = participant.groupID,
+              let group = snapshot.teeGroups.first(where: { $0.id == groupID }) else {
+            return course
+        }
+        return LiveRoundHoleOrdering.playOrderedHoleNumbers(
+            course: course,
+            startingHole: group.startingHole
+        )
+    }
+
+    private func matchupTimelinePosition(for entry: ScoreEntry) -> Int {
+        let entryParticipantIDs = Set(entry.participantIDs + [entry.scoringUnitID])
+        let participantPositions = snapshot.participants.compactMap { participant -> Int? in
+            guard entryParticipantIDs.contains(participant.id) else { return nil }
+            return matchupTimelinePlayOrder(for: participant)
+                .firstIndex(of: entry.holeNumber)
+                .map { $0 + 1 }
+        }
+        if let position = participantPositions.min() {
+            return position
+        }
+
+        if let group = snapshot.teeGroups.first(where: { $0.id == entry.groupID }),
+           let index = LiveRoundHoleOrdering.playOrderedHoleNumbers(
+            course: courseOrderHoleNumbers,
+            startingHole: group.startingHole
+           ).firstIndex(of: entry.holeNumber) {
+            return index + 1
+        }
+
+        return courseOrderHoleNumbers.firstIndex(of: entry.holeNumber).map { $0 + 1 } ?? 0
     }
 
     private func unresolvedPickupHoleNumbers(for participant: RoundParticipant) -> Set<Int> {

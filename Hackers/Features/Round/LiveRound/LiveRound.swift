@@ -111,6 +111,7 @@ struct LiveRound: View, Loggable {
     @State private var showEditRoundSheet = false
     @State private var showShareRoundSheet = false
     @State private var showCompleteRoundSheet = false
+    @State var presentedMatchupSection: MatchupLeaderboardSection?
     @State var showSwipeHint = true
     @State private var didTrackLiveRoundView = false
     @State var showRevealConfirmation = false
@@ -278,6 +279,18 @@ struct LiveRound: View, Loggable {
             PlayerInsightsView(
                 viewModel: viewModel,
                 participant: participant
+            )
+            .presentationDetents([.large])
+            .presentationDragIndicator(.visible)
+            .presentationBackground(.ultraThinMaterial)
+        }
+        .sheet(item: $presentedMatchupSection) { section in
+            MatchupInsightsView(
+                viewModel: viewModel,
+                section: section,
+                matchIndex: viewModel.orderedMatchupSections
+                    .first(where: { $0.section.id == section.id })?
+                    .displayIndex ?? 1
             )
             .presentationDetents([.large])
             .presentationDragIndicator(.visible)

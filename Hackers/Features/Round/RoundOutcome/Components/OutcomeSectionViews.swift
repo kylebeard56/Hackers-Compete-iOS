@@ -434,6 +434,7 @@ struct OutcomeMatchupTileView: View {
     let palette: DesignPalette
     let snapshot: RoundSnapshot
     let onParticipantTap: (RoundParticipant) -> Void
+    let onSelect: () -> Void
 
     private var status: LiveRoundViewModel.OutcomeMatchupStatus {
         viewModel.outcomeMatchupStatus(for: section)
@@ -473,43 +474,69 @@ struct OutcomeMatchupTileView: View {
 
     var body: some View {
         VStack(spacing: 14) {
-            HStack(alignment: .top, spacing: 12) {
-                VStack(alignment: .leading, spacing: 6) {
-                    Text("Match \(matchIndex)".uppercased())
-                        .fontStyle(kFontName, size: 13, weight: .semibold)
-                        .foregroundStyle(Color.neutral2)
+            Button(action: onSelect) {
+                VStack(spacing: 14) {
+                    HStack(alignment: .top, spacing: 12) {
+                        VStack(alignment: .leading, spacing: 6) {
+                            Text("Match \(matchIndex)".uppercased())
+                                .fontStyle(kFontName, size: 13, weight: .semibold)
+                                .foregroundStyle(Color.neutral2)
 
-                    Text(status.title)
-                        .fontStyle(kFontName, size: 18, weight: .semibold)
-                        .foregroundStyle(palette.foregroundColor)
-                        .lineLimit(2)
-                        .fixedSize(horizontal: false, vertical: true)
+                            Text(status.title)
+                                .fontStyle(kFontName, size: 18, weight: .semibold)
+                                .foregroundStyle(palette.foregroundColor)
+                                .lineLimit(2)
+                                .fixedSize(horizontal: false, vertical: true)
 
-                    Text(status.detail)
-                        .fontStyle(kFontName, size: 13, weight: .medium)
-                        .foregroundStyle(Color.neutral)
-                        .lineLimit(2)
-                        .fixedSize(horizontal: false, vertical: true)
+                            Text(status.detail)
+                                .fontStyle(kFontName, size: 13, weight: .medium)
+                                .foregroundStyle(Color.neutral)
+                                .lineLimit(2)
+                                .fixedSize(horizontal: false, vertical: true)
+                        }
+                        .frame(maxWidth: .infinity, alignment: .leading)
+
+                        Image(systemName: "chevron.right")
+                            .font(.caption.bold())
+                            .foregroundStyle(Color.neutral2)
+                            .frame(width: 44, height: 44)
+                            .accessibilityHidden(true)
+                    }
+
+                    VStack(spacing: 10) {
+                        ForEach(section.matchup.pairingIDs(), id: \.self) { scoringUnitID in
+                            matchupSideRow(scoringUnitID: scoringUnitID)
+                        }
+                    }
                 }
-                .frame(maxWidth: .infinity, alignment: .leading)
-
-                Spacer(minLength: 0)
             }
-
-            VStack(spacing: 10) {
-                ForEach(section.matchup.pairingIDs(), id: \.self) { scoringUnitID in
-                    matchupSideRow(scoringUnitID: scoringUnitID)
-                }
-            }
+            .buttonStyle(.plain)
+            .accessibilityHint("Shows the final matchup breakdown and probability replay")
 
             outcomeMembersTable
 
             substituteScoringFootnote
+
+            Button(action: onSelect) {
+                HStack(spacing: 8) {
+                    Label("Matchup breakdown", systemImage: "chart.xyaxis.line")
+                        .fontStyle(kFontName, size: 13, weight: .semibold)
+                    Spacer(minLength: 8)
+                    Image(systemName: "chevron.right")
+                        .font(.caption.bold())
+                        .accessibilityHidden(true)
+                }
+                .foregroundStyle(palette.foregroundColor)
+                .frame(minHeight: 44)
+                .contentShape(Rectangle())
+            }
+            .buttonStyle(.plain)
         }
         .padding(16)
         .frame(maxWidth: .infinity, alignment: .leading)
         .fixedSize(horizontal: false, vertical: true)
-        .glassCardEffect(interactive: false)
+        .glassCardEffect(interactive: true)
+        .accessibilityIdentifier("outcome_matchup_\(section.matchup.id)")
     }
 
     @ViewBuilder

@@ -20,6 +20,61 @@ enum MatchupScoreComparison {
     }
 }
 
+enum MatchupCountingDisplayStatus: Equatable {
+    case counted
+    case tiedAtCutoff
+    case notCounted
+
+    var label: String {
+        switch self {
+        case .counted: "Counted"
+        case .tiedAtCutoff: "Tied at cutoff"
+        case .notCounted: "Not counted"
+        }
+    }
+}
+
+enum MatchupCountingStatusResolver {
+    /// Expands a deterministic scoring-engine selection when an equal score crosses the cutoff.
+    /// Either tied score produces the same team total, so every player sharing that boundary is
+    /// presented as tied rather than assigning an arbitrary 100/0 result.
+    static func resolve(
+        participantIDs: [String],
+        countingParticipantIDs: Set<String>,
+        totalsByParticipantID: [String: Double]
+    ) -> [String: MatchupCountingDisplayStatus] {
+        guard countingParticipantIDs.isPopulated else { return [:] }
+
+        return Dictionary(uniqueKeysWithValues: participantIDs.map { participantID in
+            let status: MatchupCountingDisplayStatus
+            if let total = totalsByParticipantID[participantID] {
+                let equalScoreIDs = participantIDs.filter { candidateID in
+                    guard let candidateTotal = totalsByParticipantID[candidateID] else {
+                        return false
+                    }
+                    return MatchupScoreComparison.totalsMatch(candidateTotal, total)
+                }
+                let crossesCutoff = equalScoreIDs.contains {
+                    countingParticipantIDs.contains($0)
+                } && equalScoreIDs.contains {
+                    !countingParticipantIDs.contains($0)
+                }
+
+                if crossesCutoff {
+                    status = .tiedAtCutoff
+                } else if countingParticipantIDs.contains(participantID) {
+                    status = .counted
+                } else {
+                    status = .notCounted
+                }
+            } else {
+                status = countingParticipantIDs.contains(participantID) ? .counted : .notCounted
+            }
+            return (participantID, status)
+        })
+    }
+}
+
 // MARK: - Leaderboard Row
 
 struct LeaderboardRow: Identifiable {

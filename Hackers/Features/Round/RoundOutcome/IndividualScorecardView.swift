@@ -50,20 +50,14 @@ struct IndividualScorecardView: View {
 
     var body: some View {
         ZStack {
-            ScrollView(showsIndicators: false) {
-                VStack(spacing: 16) {
-                    if showsPlayerHeader {
-                        playerHeader
+            Group {
+                if presentation == .standalone {
+                    ScrollView(showsIndicators: false) {
+                        scorecardContent
                     }
-                    totalScoreCallout
-                    scorecardButton
-                    frontNineTile
-                    backNineTile
-                    courseDateFooter
+                } else {
+                    scorecardContent
                 }
-                .padding(.horizontal, 16)
-                .padding(.top, presentation == .standalone ? UIApplication.shared.topSafeAreaInset + 16 : 8)
-                .padding(.bottom, presentation == .standalone ? 60 : 24)
             }
 
             if presentation == .standalone {
@@ -73,9 +67,25 @@ struct IndividualScorecardView: View {
                     .alignTop()
             }
         }
-        .background(palette.backgroundColor)
+        .background(presentation == .standalone ? palette.backgroundColor : Color.clear)
         .navigationBarBackButtonHidden(true)
         .overlay { scorecardOverlay }
+    }
+
+    private var scorecardContent: some View {
+        VStack(spacing: 16) {
+            if showsPlayerHeader {
+                playerHeader
+            }
+            totalScoreCallout
+            scorecardButton
+            frontNineTile
+            backNineTile
+            courseDateFooter
+        }
+        .padding(.horizontal, presentation == .standalone ? 16 : 0)
+        .padding(.top, presentation == .standalone ? UIApplication.shared.topSafeAreaInset + 16 : 0)
+        .padding(.bottom, presentation == .standalone ? 60 : 0)
     }
 
     @ViewBuilder

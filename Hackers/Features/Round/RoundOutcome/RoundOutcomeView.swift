@@ -51,6 +51,7 @@ struct RoundOutcomeView: View {
     @State private var showFullScorecard = false
     @State private var selectedFullScorecardScoringUnitID: String?
     @State private var presentedParticipant: RoundParticipant?
+    @State private var presentedMatchupSection: MatchupLeaderboardSection?
     @State private var isCourseBreakdownExpanded = false
     @State private var holeSort: LiveRoundViewModel.OutcomeHoleSort = .holeNumber
     @State private var holeMetricMode: LiveRoundViewModel.OutcomeHoleMetricMode = .total
@@ -115,11 +116,25 @@ struct RoundOutcomeView: View {
                 .presentationBackground(.ultraThinMaterial)
             }
         }
-        .fullScreenCover(item: $presentedParticipant) { participant in
-            IndividualScorecardView(
+        .sheet(item: $presentedParticipant) { participant in
+            PlayerInsightsView(
                 viewModel: viewModel,
                 participant: participant
             )
+            .presentationDetents([.large])
+            .presentationDragIndicator(.visible)
+            .presentationBackground(.ultraThinMaterial)
+        }
+        .sheet(item: $presentedMatchupSection) { section in
+            MatchupInsightsView(
+                viewModel: viewModel,
+                section: section,
+                matchIndex: viewModel.orderedMatchupSections
+                    .first(where: { $0.section.id == section.id })?
+                    .displayIndex ?? 1
+            )
+            .presentationDetents([.large])
+            .presentationDragIndicator(.visible)
             .presentationBackground(.ultraThinMaterial)
         }
     }
@@ -161,7 +176,11 @@ struct RoundOutcomeView: View {
                         viewModel: viewModel,
                         palette: palette,
                         snapshot: snapshot,
-                        onParticipantTap: { presentedParticipant = $0 }
+                        onParticipantTap: { presentedParticipant = $0 },
+                        onSelect: {
+                            Haptics.fire(.light)
+                            presentedMatchupSection = item.section
+                        }
                     )
                 }
             }

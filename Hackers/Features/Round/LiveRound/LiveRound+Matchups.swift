@@ -30,7 +30,11 @@ extension LiveRound {
                             matchIndex: item.displayIndex,
                             viewModel: viewModel,
                             palette: palette,
-                            snapshot: snapshot
+                            snapshot: snapshot,
+                            onSelect: {
+                                Haptics.fire(.light)
+                                presentedMatchupSection = item.section
+                            }
                         )
                     }
                 }
@@ -76,8 +80,7 @@ private struct MatchupTileView: View {
     @ObservedObject var viewModel: LiveRoundViewModel
     let palette: DesignPalette
     let snapshot: RoundSnapshot
-
-    @State private var isExpanded = false
+    let onSelect: () -> Void
 
     private var isPointsFormat: Bool {
         viewModel.matchupEngineResult.template.leaderboardSort == .highestWins
@@ -93,18 +96,6 @@ private struct MatchupTileView: View {
 
     private var isScoreOwnerMode: Bool {
         matchupMode.usesScoringGroupIDs
-    }
-
-    private var showsExpandedMembers: Bool {
-        isTeamMode || isScoreOwnerMode
-    }
-
-    private var leftRow: LeaderboardRow? {
-        section.rows.first
-    }
-
-    private var rightRow: LeaderboardRow? {
-        section.rows.count > 1 ? section.rows[1] : nil
     }
 
     private var teamMap: [String: RoundTeam] {
@@ -154,13 +145,25 @@ private struct MatchupTileView: View {
     }
 
     var body: some View {
-        ZStack(alignment: .bottomTrailing) {
+        Button(action: onSelect) {
             VStack(spacing: 0) {
-                Text("Match \(matchIndex)")
-                    .fontStyle(kFontName, size: 13, weight: .semibold)
-                    .foregroundStyle(palette.foregroundColor)
-                    .alignLeading()
-                    .padding(.bottom, 8)
+                HStack(spacing: 8) {
+                    Text("Match \(matchIndex)")
+                        .fontStyle(kFontName, size: 13, weight: .semibold)
+                        .foregroundStyle(palette.foregroundColor)
+
+                    Spacer(minLength: 8)
+
+                    Text("Insights")
+                        .fontStyle(kFontName, size: 11, weight: .semibold)
+                        .foregroundStyle(Color.neutral)
+
+                    Image(systemName: "chevron.right")
+                        .font(.caption.bold())
+                        .foregroundStyle(Color.neutral2)
+                        .accessibilityHidden(true)
+                }
+                .padding(.bottom, 8)
 
                 if let rangeMismatch {
                     matchupRangeMismatchView(rangeMismatch)
@@ -169,39 +172,24 @@ private struct MatchupTileView: View {
 
                     matchupProbabilityView
 
-                    if showsExpandedMembers && isExpanded {
-                        expandedPlayerList
-                    }
-
                     substituteScoringFootnote
                 }
             }
             .frame(maxWidth: .infinity, alignment: .leading)
-            .padding(.bottom, showsExpandedMembers && rangeMismatch == nil ? 44 : 0)
-
-            if showsExpandedMembers && rangeMismatch == nil {
-                NavButton(
-                    style: .glass,
-                    icon: isExpanded ? "chevron.down" : "chevron.right",
-                    size: 14,
-                    color: palette.foregroundColor,
-                    onTap: {
-                        withAnimation(.easeInOut(duration: 0.2)) {
-                            isExpanded.toggle()
-                        }
-                    }
-                )
-            }
+            .padding(16)
+            .contentShape(Rectangle())
         }
-        .padding(16)
+        .buttonStyle(.plain)
         .frame(maxWidth: .infinity)
         .glassCardEffect(
-            interactive: false,
+            interactive: true,
             forceMaterial: true,
             tint: palette.cardColor,
             strokeOpacity: 0.38,
             shadowOpacity: 0.16
         )
+        .accessibilityHint("Shows matchup score, probability replay, scoring contributors, and player insights")
+        .accessibilityIdentifier("live_matchup_\(section.matchup.id)")
     }
 
     @ViewBuilder
@@ -406,26 +394,14 @@ private struct MatchupTileView: View {
 
         return HStack(alignment: .top, spacing: 12) {
             if let participant1 {
-                Button {
-                    Haptics.fire(.light)
-                    viewModel.presentedParticipant = participant1
-                } label: {
-                    individualEntityRow(participant: participant1, total: sidePresentations[participant1.id]?.total, leadingPill: true)
-                }
-                .buttonStyle(.plain)
+                individualEntityRow(participant: participant1, total: sidePresentations[participant1.id]?.total, leadingPill: true)
                 .frame(maxWidth: .infinity, alignment: .leading)
             }
             Text("vs")
                 .fontStyle(kFontName, size: 12, weight: .bold)
                 .foregroundStyle(Color.neutral)
             if let participant2 {
-                Button {
-                    Haptics.fire(.light)
-                    viewModel.presentedParticipant = participant2
-                } label: {
-                    individualEntityRow(participant: participant2, total: sidePresentations[participant2.id]?.total, leadingPill: false)
-                }
-                .buttonStyle(.plain)
+                individualEntityRow(participant: participant2, total: sidePresentations[participant2.id]?.total, leadingPill: false)
                 .frame(maxWidth: .infinity, alignment: .leading)
             }
         }
@@ -656,80 +632,6 @@ private struct MatchupTileView: View {
             )
     }
 
-    private var expandedPlayerList: some View {
-        let pairingIDs = section.matchup.pairingIDs()
-        let sideMap = sidePresentations
-        let participants: [(participant: RoundParticipant, side: MatchupResultPresentation.Side)] = pairingIDs.flatMap { id in
-            guard let side = sideMap[id] else {
-                return [(participant: RoundParticipant, side: MatchupResultPresentation.Side)]()
-            }
-            return side.participants.map { ($0, side) }
-        }
-
-        let sorted = participants.sorted { lhs, rhs in
-            viewModel.matchupParticipantDisplaySort(
-                lhs: lhs.participant,
-                rhs: rhs.participant,
-                isPointsFormat: isPointsFormat
-            )
-        }
-
-        let scoreColumnWidth: CGFloat = 44
-
-        return VStack(spacing: 0) {
-            Line(color: Color.neutral6.opacity(0.5))
-                .padding(.vertical, 12)
-
-            HStack(spacing: 12) {
-                Text("Player")
-                    .fontStyle(kFontName, size: 12, weight: .medium)
-                    .foregroundStyle(Color.neutral)
-                    .frame(maxWidth: .infinity, alignment: .leading)
-                Text("Thru")
-                    .fontStyle(kFontName, size: 12, weight: .medium)
-                    .foregroundStyle(Color.neutral)
-                    .frame(minWidth: scoreColumnWidth, alignment: .trailing)
-                Text("Gross")
-                    .fontStyle(kFontName, size: 12, weight: .medium)
-                    .foregroundStyle(Color.neutral)
-                    .frame(minWidth: scoreColumnWidth, alignment: .trailing)
-                if viewModel.handicapsEnabled {
-                    Text("Net")
-                        .fontStyle(kFontName, size: 12, weight: .medium)
-                        .foregroundStyle(Color.neutral)
-                        .frame(minWidth: scoreColumnWidth, alignment: .trailing)
-                }
-            }
-            .padding(.bottom, 8)
-
-            if let label = viewModel.matchupCountingScopeLabel {
-                Text(label)
-                    .fontStyle(kFontName, size: 11, weight: .semibold)
-                    .foregroundStyle(Color.neutral2)
-                    .frame(maxWidth: .infinity, alignment: .leading)
-                    .padding(.bottom, 4)
-            }
-
-            ForEach(sorted, id: \.participant.id) { item in
-                MatchupPlayerRowView(
-                    participant: item.participant,
-                    viewModel: viewModel,
-                    palette: palette,
-                    isActive: item.side.isParticipantActive(item.participant),
-                    isPointsFormat: isPointsFormat,
-                    topTwoProbability: isProbabilityLoading
-                        ? nil
-                        : probability?.participantCountingProbabilities[item.participant.id],
-                    scoreColumnWidth: scoreColumnWidth
-                )
-
-                if item.participant.id != sorted.last?.participant.id {
-                    Divider().opacity(0.2)
-                }
-            }
-        }
-    }
-
     @ViewBuilder
     private var substituteScoringFootnote: some View {
         if showsSubstituteScoringFootnote {
@@ -744,104 +646,5 @@ private struct MatchupTileView: View {
     private func markedDisplayName(for participant: RoundParticipant) -> String {
         let name = viewModel.formatDisplayName(for: participant)
         return participant.isSubstitute ? "\(name)*" : name
-    }
-}
-
-// MARK: - Matchup Player Row (Expanded)
-
-private struct MatchupPlayerRowView: View {
-    let participant: RoundParticipant
-    @ObservedObject var viewModel: LiveRoundViewModel
-    let palette: DesignPalette
-    let isActive: Bool
-    let isPointsFormat: Bool
-    let topTwoProbability: Int?
-    var scoreColumnWidth: CGFloat = 44
-
-    private var teamColor: Color? {
-        viewModel.teamColor(for: participant)
-    }
-
-    private var grossScore: Int {
-        viewModel.scoreToPar(for: participant, basis: .gross)
-    }
-
-    private var netScore: Int {
-        viewModel.scoreToPar(for: participant, basis: .net)
-    }
-
-    var body: some View {
-        HStack(spacing: 12) {
-            HStack(spacing: 8) {
-                HStack(spacing: 1) {
-                    LiveRoundAdaptiveNameText(
-                        name: participant.name,
-                        format: viewModel.nameDisplayFormat,
-                        fontSize: 14,
-                        weight: .medium,
-                        color: isActive ? palette.foregroundColor : Color.neutral2
-                    )
-                    if participant.isSubstitute {
-                        Text("*")
-                            .fontStyle(kFontName, size: 14, weight: .medium)
-                            .foregroundStyle(isActive ? palette.foregroundColor : Color.neutral2)
-                    }
-                }
-                    .frame(maxWidth: .infinity, alignment: .leading)
-
-                if isActive, let topTwoProbability {
-                    Text("\(topTwoProbability)% top 2")
-                        .fontStyle(kFontName, size: 11, weight: .semibold)
-                        .foregroundStyle(teamColor ?? palette.foregroundColor)
-                        .contentTransition(.numericText())
-                        .fixedSize(horizontal: true, vertical: false)
-                        .accessibilityLabel(
-                            "\(topTwoProbability) percent chance of counting in the top two"
-                        )
-                }
-
-                if isActive {
-                    Circle()
-                        .fill(participant.isSubstitute ? Color.clear : (teamColor ?? Color.accentGreen))
-                        .overlay(Circle().stroke(teamColor ?? Color.accentGreen, lineWidth: participant.isSubstitute ? 1.5 : 0))
-                        .frame(width: 8, height: 8)
-                }
-            }
-
-            Text("\(viewModel.holesPlayedCount(for: participant.id))")
-                .fontStyle(kFontName, size: 14, weight: .medium)
-                .foregroundStyle(Color.neutral)
-                .frame(minWidth: scoreColumnWidth, alignment: .trailing)
-
-            if viewModel.handicapsEnabled {
-                Text(formatScoreToPar(grossScore))
-                    .fontStyle(kFontName, size: 14, weight: viewModel.matchupScoreBasis == .gross ? .semibold : .medium)
-                    .foregroundStyle(scoreColor(for: .gross))
-                    .frame(minWidth: scoreColumnWidth, alignment: .trailing)
-
-                Text(formatScoreToPar(netScore))
-                    .fontStyle(kFontName, size: 14, weight: viewModel.matchupScoreBasis == .net ? .semibold : .medium)
-                    .foregroundStyle(scoreColor(for: .net))
-                    .frame(minWidth: scoreColumnWidth, alignment: .trailing)
-            } else {
-                Text(formatScoreToPar(grossScore))
-                    .fontStyle(kFontName, size: 14, weight: .semibold)
-                    .foregroundStyle(isActive ? (teamColor ?? palette.foregroundColor) : Color.neutral2)
-                    .frame(minWidth: scoreColumnWidth, alignment: .trailing)
-            }
-        }
-        .padding(.vertical, 10)
-    }
-
-    private func formatScoreToPar(_ value: Int) -> String {
-        if value == 0 { return "E" }
-        if value > 0 { return "+\(value)" }
-        return "\(value)"
-    }
-
-    private func scoreColor(for basis: ScoreBasis) -> Color {
-        guard isActive else { return Color.neutral2 }
-        guard viewModel.matchupScoreBasis == basis else { return Color.neutral }
-        return teamColor ?? palette.foregroundColor
     }
 }

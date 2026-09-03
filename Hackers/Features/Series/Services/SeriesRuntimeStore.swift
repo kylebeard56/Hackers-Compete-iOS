@@ -561,6 +561,14 @@ struct ProjectionTrendPoint: Identifiable, Hashable, Sendable {
     var id: Int { holeNumber }
 }
 
+struct CumulativeStrokeTrendPoint: Identifiable, Hashable, Sendable {
+    let holesCompleted: Int
+    let holeNumber: Int
+    let strokes: Int
+
+    var id: Int { holesCompleted }
+}
+
 struct ProjectionBandPoint: Identifiable, Hashable, Sendable {
     let holeNumber: Int
     let lower: Int
@@ -613,6 +621,41 @@ struct MatchupProbability: Hashable, Sendable {
     }
 }
 
+struct MatchupProbabilityTrendPoint: Identifiable, Hashable, Sendable {
+    let holesCompleted: Int
+    let leftWin: Int
+    let tie: Int
+    let rightWin: Int
+
+    var id: Int { holesCompleted }
+
+    /// ESPN-style two-side share. A tied finish contributes half to each side so 50 means
+    /// the matchup is balanced even when the underlying model includes a draw outcome.
+    var leftExpectedShare: Double {
+        min(100, max(0, Double(leftWin) + (Double(tie) / 2)))
+    }
+}
+
+struct MatchupProbabilityTimeline: Hashable, Sendable {
+    let points: [MatchupProbabilityTrendPoint]
+    let latest: MatchupProbability?
+    let unsupportedReason: String?
+
+    static func unsupported(_ reason: String) -> Self {
+        .init(points: [], latest: nil, unsupportedReason: reason)
+    }
+}
+
+struct MatchupScoreTrendPoint: Identifiable, Hashable, Sendable {
+    let holesCompleted: Int
+    let leftTotal: Double
+    let rightTotal: Double
+    /// Positive values favor the left side; negative values favor the right side.
+    let leftAdvantage: Double
+
+    var id: Int { holesCompleted }
+}
+
 struct RoundProjectionSnapshot: Sendable {
     let revision: String
     let scoreBasis: ScoreBasis
@@ -660,11 +703,12 @@ actor RoundProjectionSimulator {
     func simulate(
         input: PlayerProjectionInput,
         iterations: Int = 5_000,
+        minimumIterations: Int = 250,
         seed: UInt64,
         cacheKey: String? = nil,
         retainsDiagnosticScenarios: Bool = true
     ) throws -> PlayerProjectionSimulation {
-        let runCount = max(250, iterations)
+        let runCount = max(max(1, minimumIterations), iterations)
         let resolvedCacheKey = cacheKey.map {
             "\($0)|runs:\(runCount)|seed:\(seed)|diagnostics:\(retainsDiagnosticScenarios)"
         }
