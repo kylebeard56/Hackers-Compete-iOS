@@ -24,6 +24,7 @@ private extension View {
 enum FullScorecardPresentation: Equatable {
     case modal
     case embeddedLiveTable
+    case embeddedInsights
 }
 
 enum ScorecardInteractionMode: String, CaseIterable, Equatable {
@@ -42,6 +43,8 @@ enum ScorecardInteractionMode: String, CaseIterable, Equatable {
             return true
         case .embeddedLiveTable:
             return self == .edit
+        case .embeddedInsights:
+            return false
         }
     }
 }
@@ -72,6 +75,7 @@ struct FullScorecardView: View {
     let allowsScoreEditing: Bool
     let initialSelectedScoringUnitID: String?
     let presentation: FullScorecardPresentation
+    let includedParticipantIDs: Set<String>?
     
     @State private var selectedParticipantID: String?
     @State private var horizontalOffset: CGFloat = 0
@@ -99,7 +103,13 @@ struct FullScorecardView: View {
     }
     
     private var orderedParticipants: [LiveRoundViewModel.LeaderboardRow] {
-        viewModel.scorecardParticipants
+        guard let includedParticipantIDs else {
+            return viewModel.scorecardParticipants
+        }
+        return viewModel.scorecardParticipants.filter { row in
+            includedParticipantIDs.contains(row.participant.id)
+                || row.participants.contains(where: { includedParticipantIDs.contains($0.id) })
+        }
     }
 
     private var isRotated: Bool { presentationState.isRotated }
@@ -116,7 +126,8 @@ struct FullScorecardView: View {
         allowsScoreEditing: Bool = true,
         initialSelectedScoringUnitID: String? = nil,
         presentation: FullScorecardPresentation = .modal,
-        presentationState: FullScorecardPresentationState? = nil
+        presentationState: FullScorecardPresentationState? = nil,
+        includedParticipantIDs: Set<String>? = nil
     ) {
         _viewModel = ObservedObject(wrappedValue: viewModel)
         _presentationState = StateObject(
@@ -126,6 +137,7 @@ struct FullScorecardView: View {
         self.allowsScoreEditing = allowsScoreEditing
         self.initialSelectedScoringUnitID = initialSelectedScoringUnitID
         self.presentation = presentation
+        self.includedParticipantIDs = includedParticipantIDs
     }
     
     // MARK: - Main Body ✅
@@ -176,7 +188,12 @@ struct FullScorecardView: View {
                         }
                     }
                 }
-                .padding(.top, presentation == .embeddedLiveTable && !isRotated ? 0 : layout.topPadding)
+                .padding(
+                    .top,
+                    (presentation == .embeddedLiveTable || presentation == .embeddedInsights) && !isRotated
+                        ? 0
+                        : layout.topPadding
+                )
             }
             //.padding(layout.screenEdgePadding)
             .rotationEffect(.degrees(isRotated ? 90 : 0))
@@ -772,13 +789,13 @@ private extension FullScorecardView {
     func playerLabel(_ row: LiveRoundViewModel.LeaderboardRow) -> some View {
         let name = scorecardPrimaryName(for: row)
         let partnerNames = scorecardSecondaryNames(for: row)
-        let isSelected = row.id == selectedParticipantID
+        let teamStyle = participantHighlightStyle(for: row.participant)
         let canEditParticipant = presentationState.interactionMode.allowsScoreEditing(
             presentation: presentation,
             hasPermission: allowsScoreEditing && viewModel.canEditScorecard(participant: row.participant)
         )
         let accrued = accruedScoreLabel(for: row)
-        let accruedColor = isSelected ? participantHighlightStyle(for: row.participant).readableText : palette.foregroundColor
+        let accruedColor = teamStyle.readableText
         
         return VStack(alignment: .leading, spacing: 1) {
             HStack(spacing: 8) {
@@ -795,6 +812,11 @@ private extension FullScorecardView {
             }
             
             HStack(spacing: 4) {
+                Circle()
+                    .fill(teamStyle.accent)
+                    .frame(width: 7, height: 7)
+                    .accessibilityHidden(true)
+
                 if canEditParticipant {
                     Icon(name: "f0c0", size: 10, weight: .regular)
                         .foregroundStyle(Color.neutral)
@@ -802,7 +824,7 @@ private extension FullScorecardView {
                 
                 Text(name)
                     .fontStyle(kFontName, size: 12, weight: .semibold)
-                    .foregroundStyle(palette.foregroundColor)
+                    .foregroundStyle(teamStyle.readableText)
                     .lineLimit(1)
                     .minimumScaleFactor(0.75)
             }
@@ -824,6 +846,13 @@ private extension FullScorecardView {
         .padding(.leading, layout.labelHorizontalPadding)
         .padding(.trailing, layout.cellHorizontalPadding)
         .padding(.vertical, layout.cellVerticalPadding)
+        .overlay(alignment: .leading) {
+            Capsule()
+                .fill(teamStyle.accent)
+                .frame(width: 4)
+                .padding(.vertical, 7)
+                .accessibilityHidden(true)
+        }
         .contentShape(Rectangle())
         .onTapGesture {
             Haptics.fire(.light)
@@ -843,13 +872,13 @@ private extension FullScorecardView {
     
     func leftOverlayCell(_ row: LiveRoundViewModel.LeaderboardRow) -> some View {
         let initials = row.isSharedScoreUnit ? scorecardSharedInitials(for: row) : row.participant.name.initials
-        let isSelected = row.id == selectedParticipantID
+        let teamStyle = participantHighlightStyle(for: row.participant)
         let canEditParticipant = presentationState.interactionMode.allowsScoreEditing(
             presentation: presentation,
             hasPermission: allowsScoreEditing && viewModel.canEditScorecard(participant: row.participant)
         )
         let accrued = accruedScoreLabel(for: row)
-        let accruedColor = isSelected ? participantHighlightStyle(for: row.participant).readableText : palette.foregroundColor
+        let accruedColor = teamStyle.readableText
         
         return VStack(alignment: .leading, spacing: 1) {
             Text(accrued)
@@ -859,9 +888,14 @@ private extension FullScorecardView {
                 .minimumScaleFactor(0.65)
             
             HStack(spacing: 4) {
+                Circle()
+                    .fill(teamStyle.accent)
+                    .frame(width: 7, height: 7)
+                    .accessibilityHidden(true)
+
                 Text(initials)
                     .fontStyle(kFontName, size: 12, weight: .semibold)
-                    .foregroundStyle(palette.foregroundColor)
+                    .foregroundStyle(teamStyle.readableText)
                     .lineLimit(1)
                 
                 if canEditParticipant {
@@ -879,6 +913,13 @@ private extension FullScorecardView {
         .padding(.leading, layout.labelHorizontalPadding)
         .padding(.trailing, layout.cellHorizontalPadding)
         .padding(.vertical, layout.cellVerticalPadding)
+        .overlay(alignment: .leading) {
+            Capsule()
+                .fill(teamStyle.accent)
+                .frame(width: 4)
+                .padding(.vertical, 7)
+                .accessibilityHidden(true)
+        }
         .alignLeading()
     }
     
@@ -955,10 +996,11 @@ private extension FullScorecardView {
     func totalScoreLabel(for participant: RoundParticipant) -> some View {
         let score = viewModel.scoreToPar(for: participant, basis: viewModel.scoreBasis)
         let label = scoreToParLabel(score)
+        let teamStyle = participantHighlightStyle(for: participant)
         
         return Text(label)
             .fontStyle(kFontName, size: 17, weight: .semibold)
-            .foregroundStyle(palette.foregroundColor)
+            .foregroundStyle(teamStyle.readableText)
             .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .center)
             .padding(.horizontal, layout.cellHorizontalPadding)
             .padding(.vertical, layout.cellVerticalPadding)
@@ -966,10 +1008,11 @@ private extension FullScorecardView {
 
     func totalScoreLabel(for row: LiveRoundViewModel.LeaderboardRow) -> some View {
         let label = accruedScoreLabel(for: row)
+        let teamStyle = participantHighlightStyle(for: row.participant)
 
         return Text(label)
             .fontStyle(kFontName, size: 17, weight: .semibold)
-            .foregroundStyle(palette.foregroundColor)
+            .foregroundStyle(teamStyle.readableText)
             .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .center)
             .padding(.horizontal, layout.cellHorizontalPadding)
             .padding(.vertical, layout.cellVerticalPadding)
@@ -1518,18 +1561,13 @@ private extension FullScorecardView {
     }
     
     func rowBackgroundColor(for row: ScorecardRow, index: Int) -> Color {
-        //let zebra = palette.backgroundColor.opacity(index.isEven ? 0.0 : 1.0)
-        let opacity = colorScheme.isLight ? 0.75 : 0.2
-        let zebra = Color.systemWhite.opacity(index.isEven ? 0.0 : opacity)
-        
         switch row {
         case .player(let row):
+            let teamStyle = participantHighlightStyle(for: row.participant)
             if row.id == selectedParticipantID {
-                //let highlight = participantHighlightColor(for: row.participant)
-                //return highlight.opacity(0.25)
-                return zebra
+                return teamStyle.accent.opacity(colorScheme.translucent(0.16, 0.22))
             }
-            return zebra
+            return teamStyle.subtleFill.opacity(index.isEven ? 0.72 : 1)
         }
     }
     

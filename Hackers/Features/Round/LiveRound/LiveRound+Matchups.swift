@@ -34,6 +34,10 @@ extension LiveRound {
                             onSelect: {
                                 Haptics.fire(.light)
                                 presentedMatchupSection = item.section
+                            },
+                            onSelectParticipant: { participant in
+                                Haptics.fire(.light)
+                                viewModel.presentedParticipant = participant
                             }
                         )
                     }
@@ -73,7 +77,10 @@ extension LiveRound {
 
 private struct MatchupTileView: View {
     @CappedScaledMetric(relativeTo: .body) var pillSize: CGFloat = 44
+    @CappedScaledMetric(relativeTo: .body) var throughColumnWidth: CGFloat = 42
+    @CappedScaledMetric(relativeTo: .body) var scoreColumnWidth: CGFloat = 48
     @Environment(\.accessibilityReduceMotion) private var accessibilityReduceMotion
+    @State private var isExpanded = false
 
     let section: MatchupLeaderboardSection
     let matchIndex: Int
@@ -81,6 +88,7 @@ private struct MatchupTileView: View {
     let palette: DesignPalette
     let snapshot: RoundSnapshot
     let onSelect: () -> Void
+    let onSelectParticipant: (RoundParticipant) -> Void
 
     private var isPointsFormat: Bool {
         viewModel.matchupEngineResult.template.leaderboardSort == .highestWins
@@ -126,6 +134,22 @@ private struct MatchupTileView: View {
         matchupPresentation.sides.flatMap(\.participants)
     }
 
+    private var expandedParticipants: [RoundParticipant] {
+        var seenParticipantIDs = Set<String>()
+        let uniqueParticipants = matchupParticipants.filter {
+            seenParticipantIDs.insert($0.id).inserted
+        }
+
+        return uniqueParticipants.sorted { lhs, rhs in
+            let leftScore = viewModel.scoreToPar(for: lhs, basis: viewModel.matchupScoreBasis)
+            let rightScore = viewModel.scoreToPar(for: rhs, basis: viewModel.matchupScoreBasis)
+            if leftScore != rightScore {
+                return isPointsFormat ? leftScore > rightScore : leftScore < rightScore
+            }
+            return lhs.name.fullName.localizedCaseInsensitiveCompare(rhs.name.fullName) == .orderedAscending
+        }
+    }
+
     private var showsSubstituteScoringFootnote: Bool {
         !snapshot.configuration.substitutesScore && matchupParticipants.contains(where: \.isSubstitute)
     }
@@ -145,42 +169,51 @@ private struct MatchupTileView: View {
     }
 
     var body: some View {
-        Button(action: onSelect) {
-            VStack(spacing: 0) {
-                HStack(spacing: 8) {
-                    Text("Match \(matchIndex)")
-                        .fontStyle(kFontName, size: 13, weight: .semibold)
-                        .foregroundStyle(palette.foregroundColor)
+        VStack(spacing: 0) {
+            HStack(spacing: 8) {
+                Text("Match \(matchIndex)")
+                    .fontStyle(kFontName, size: 13, weight: .semibold)
+                    .foregroundStyle(palette.foregroundColor)
 
-                    Spacer(minLength: 8)
+                Spacer(minLength: 8)
 
-                    Text("Insights")
-                        .fontStyle(kFontName, size: 11, weight: .semibold)
-                        .foregroundStyle(Color.neutral)
+                Button(action: onSelect) {
+                    HStack(spacing: 5) {
+                        Text("Insights")
+                            .fontStyle(kFontName, size: 11, weight: .semibold)
+                            .foregroundStyle(Color.neutral)
 
-                    Image(systemName: "chevron.right")
-                        .font(.caption.bold())
-                        .foregroundStyle(Color.neutral2)
-                        .accessibilityHidden(true)
+                        Image(systemName: "chevron.right")
+                            .font(.caption.bold())
+                            .foregroundStyle(Color.neutral2)
+                            .accessibilityHidden(true)
+                    }
                 }
-                .padding(.bottom, 8)
-
-                if let rangeMismatch {
-                    matchupRangeMismatchView(rangeMismatch)
-                } else {
-                    matchupHeaderRow
-
-                    matchupProbabilityView
-
-                    substituteScoringFootnote
-                }
+                .buttonStyle(.plain)
+                .accessibilityHint("Opens detailed matchup analytics")
             }
-            .frame(maxWidth: .infinity, alignment: .leading)
-            .padding(16)
-            .contentShape(Rectangle())
+            .padding(.bottom, 8)
+
+            if let rangeMismatch {
+                matchupRangeMismatchView(rangeMismatch)
+            } else {
+                ZStack(alignment: .bottomTrailing) {
+                    matchupHeaderRow
+                        .padding(.trailing, 34)
+
+                    matchupExpansionButton
+                }
+
+                if isExpanded {
+                    matchupProbabilityView
+                    expandedPlayerTable
+                }
+
+                substituteScoringFootnote
+            }
         }
-        .buttonStyle(.plain)
         .frame(maxWidth: .infinity)
+        .padding(16)
         .glassCardEffect(
             interactive: true,
             forceMaterial: true,
@@ -188,8 +221,126 @@ private struct MatchupTileView: View {
             strokeOpacity: 0.38,
             shadowOpacity: 0.16
         )
-        .accessibilityHint("Shows matchup score, probability replay, scoring contributors, and player insights")
         .accessibilityIdentifier("live_matchup_\(section.matchup.id)")
+    }
+
+    private var matchupExpansionButton: some View {
+        Button {
+            Haptics.fire(.light)
+            withAnimation(accessibilityReduceMotion ? nil : .easeInOut(duration: 0.22)) {
+                isExpanded.toggle()
+            }
+        } label: {
+            Image(systemName: "chevron.down")
+                .font(.caption.bold())
+                .foregroundStyle(Color.neutral2)
+                .frame(width: 30, height: 44)
+                .contentShape(Rectangle())
+                .rotationEffect(.degrees(isExpanded ? 180 : 0))
+        }
+        .buttonStyle(.plain)
+        .accessibilityLabel(isExpanded ? "Collapse matchup" : "Expand matchup")
+        .accessibilityHint("Shows win probability and player scoring details")
+    }
+
+    private var expandedPlayerTable: some View {
+        VStack(alignment: .leading, spacing: 0) {
+            Divider()
+                .padding(.top, 14)
+                .padding(.bottom, 12)
+
+            HStack(spacing: 8) {
+                Text("Player")
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                Text("Thru")
+                    .frame(width: throughColumnWidth, alignment: .trailing)
+                Text("Gross")
+                    .frame(width: scoreColumnWidth, alignment: .trailing)
+                if viewModel.handicapsEnabled {
+                    Text("Net")
+                        .frame(width: scoreColumnWidth, alignment: .trailing)
+                }
+            }
+            .fontStyle(kFontName, size: 11, weight: .semibold)
+            .foregroundStyle(Color.neutral)
+
+            if probability?.participantCountingProbabilities.isPopulated == true {
+                Text("Best 2 per round")
+                    .fontStyle(kFontName, size: 11, weight: .semibold)
+                    .foregroundStyle(Color.neutral2)
+                    .padding(.top, 7)
+            }
+
+            ForEach(expandedParticipants) { participant in
+                expandedPlayerRow(participant)
+            }
+        }
+    }
+
+    private func expandedPlayerRow(_ participant: RoundParticipant) -> some View {
+        let side = matchupPresentation.sides.first {
+            $0.participants.contains(where: { $0.id == participant.id })
+        }
+        let accent = side?.accentColor ?? viewModel.teamColor(for: participant) ?? viewModel.theme.color
+        let isActive = side?.isParticipantActive(participant) ?? true
+        let countingChance = probability?.participantCountingProbabilities[participant.id]
+        let gross = viewModel.scoreToParLabel(viewModel.scoreToPar(for: participant, basis: .gross))
+        let net = viewModel.scoreToParLabel(viewModel.scoreToPar(for: participant, basis: .net))
+        let holes = viewModel.holesPlayedCount(for: participant.id)
+
+        return VStack(spacing: 0) {
+            HStack(spacing: 8) {
+                VStack(alignment: .leading, spacing: 3) {
+                    Button {
+                        onSelectParticipant(participant)
+                    } label: {
+                        Text(markedDisplayName(for: participant))
+                            .fontStyle(kFontName, size: 13, weight: .semibold)
+                            .foregroundStyle(isActive ? palette.foregroundColor : Color.neutral2)
+                            .lineLimit(1)
+                    }
+                    .buttonStyle(.plain)
+                    .accessibilityLabel(participant.name.fullName)
+                    .accessibilityHint("Opens player scorecard and analytics")
+
+                    if let countingChance {
+                        HStack(spacing: 5) {
+                            Text("\(countingChance)% top 2")
+                                .contentTransition(.numericText())
+                            Circle()
+                                .fill(accent)
+                                .frame(width: 7, height: 7)
+                                .accessibilityHidden(true)
+                        }
+                        .fontStyle(kFontName, size: 11, weight: .semibold)
+                        .foregroundStyle(accent)
+                    }
+                }
+                .frame(maxWidth: .infinity, alignment: .leading)
+
+                Text("\(holes)")
+                    .frame(width: throughColumnWidth, alignment: .trailing)
+                    .accessibilityLabel("Through \(holes)")
+
+                Text(gross)
+                    .frame(width: scoreColumnWidth, alignment: .trailing)
+                    .accessibilityLabel("Gross \(gross)")
+
+                if viewModel.handicapsEnabled {
+                    Text(net)
+                        .foregroundStyle(isActive ? accent : Color.neutral2)
+                        .frame(width: scoreColumnWidth, alignment: .trailing)
+                        .accessibilityLabel("Net \(net)")
+                }
+            }
+            .fontStyle(kFontName, size: 13, weight: .medium)
+            .foregroundStyle(isActive ? palette.foregroundColor : Color.neutral2)
+            .padding(.vertical, 10)
+
+            if participant.id != expandedParticipants.last?.id {
+                Divider()
+            }
+        }
     }
 
     @ViewBuilder
