@@ -30,10 +30,10 @@ struct LiveHoleScoringView: View, Loggable {
     private var effectiveAccentLabelColor: Color {
         Color.accessibleLabelOnSolidBackground(background: effectiveAccent, colorScheme: colorScheme)
     }
-    
+
     private enum NavigationDirection {
         case forward, backward
-        
+
         var edge: Edge {
             switch self {
             case .forward: return .trailing
@@ -236,11 +236,11 @@ private extension LiveHoleScoringView {
 
             playerNameText(title(for: currentScoringUnit, style: .compact))
         }
-            .id(currentScoringUnit.id)
-            .transition(.asymmetric(
-                insertion: .move(edge: navigationDirection.edge).combined(with: .opacity),
-                removal: .move(edge: navigationDirection == .forward ? .leading : .trailing).combined(with: .opacity)
-            ))
+        .id(currentScoringUnit.id)
+        .transition(.asymmetric(
+            insertion: .move(edge: navigationDirection.edge).combined(with: .opacity),
+            removal: .move(edge: navigationDirection == .forward ? .leading : .trailing).combined(with: .opacity)
+        ))
     }
 
     private func playerNameText(_ text: String) -> some View {
@@ -603,7 +603,7 @@ private extension LiveHoleScoringView {
                 buttonColor: isFinishing ? effectiveAccent : palette.foregroundColor,
                 isDisabled: .constant(false),
                 isLoading: .constant(false),
-                onTapAsync: { await handleCTA() }
+                onTap: handleCTA
             )
 
             Text(footerText)
@@ -793,7 +793,7 @@ private extension LiveHoleScoringView {
         }
     }
 
-    func handleCTA() async {
+    func handleCTA() {
         let unit = currentScoringUnit
         let score = draftScore
         let hole = holeNumber
@@ -802,13 +802,17 @@ private extension LiveHoleScoringView {
 
         if isEditMode {
             if needsSave {
-                await saveScore(
-                    unit: unit,
-                    value: score,
-                    holeNumber: hole
-                )
+                Task {
+                    await saveScore(
+                        unit: unit,
+                        value: score,
+                        holeNumber: hole
+                    )
+                    await MainActor.run { dismiss() }
+                }
+            } else {
+                dismiss()
             }
-            dismiss()
             return
         }
 
@@ -817,30 +821,40 @@ private extension LiveHoleScoringView {
         let willComplete = holeWillCompleteAfterThisCTA
         let nextIdx = nextIndexAfterCTA()
 
-        if needsSave {
-            Task {
-                await saveScore(
-                    unit: unit,
-                    value: score,
-                    holeNumber: hole
-                )
-            }
-        }
-
         if willComplete {
             dismiss()
 
             if autoAdvance {
                 viewModel.navigateToNextUnscoredHole()
             }
+
+            enqueueScoreSaveIfNeeded(needsSave, unit: unit, value: score, holeNumber: hole)
             return
         }
 
-        Haptics.fire(.light)
         navigationDirection = .forward
 
         withAnimation(.easeOut(duration: 0.12)) {
             selectScoringUnit(at: nextIdx)
+        }
+
+        enqueueScoreSaveIfNeeded(needsSave, unit: unit, value: score, holeNumber: hole)
+    }
+
+    /// Let SwiftUI render the next scoring unit before starting persistence work on
+    /// the main actor. The captured arguments keep the write tied to the player and
+    /// hole that were visible when the CTA was tapped.
+    private func enqueueScoreSaveIfNeeded(
+        _ needsSave: Bool,
+        unit: ScoringUnitItem,
+        value: Int,
+        holeNumber: Int
+    ) {
+        guard needsSave else { return }
+
+        Task {
+            await Task.yield()
+            await saveScore(unit: unit, value: value, holeNumber: holeNumber)
         }
     }
 
