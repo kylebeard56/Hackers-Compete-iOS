@@ -158,7 +158,8 @@ struct LiveHoleScoringView: View, Loggable {
         if viewModel.isFriendlyScoreInputMode {
             let configMax = viewModel.snapshot.gameFormat.configuration.maxScoreOverPar.friendlyMaxRelativeValue(for: holePar)
             let maxScore = max(configMax, savedScoreForCurrent ?? 0)
-            scores = Array(-4...maxScore)
+            let minimumRelativeScore = max(-4, 1 - holePar)
+            scores = Array(minimumRelativeScore...maxScore)
         } else {
             let minScore = holePar == 4 ? 1 : max(1, holePar - 2)
             let configMax = viewModel.snapshot.gameFormat.configuration.maxScoreOverPar.maxScore(for: holePar)
@@ -220,9 +221,6 @@ struct LiveHoleScoringView: View, Loggable {
         .onAppear {
             configureInitialState()
             trackScoringSheetOpenedIfNeeded()
-        }
-        .onChange(of: currentScoringUnitIndex) {
-            syncDraftScore(resetDraft: true)
         }
         .onChange(of: savedScoreForCurrent) { _, newValue in
             syncSavedScore(newValue)
@@ -306,7 +304,7 @@ private extension LiveHoleScoringView {
                     proxy.scrollTo(currentScoringUnit.id, anchor: .center)
                 }
                 .onChange(of: currentScoringUnitIndex) { _, _ in
-                    withAnimation(.easeInOut(duration: 0.2)) {
+                    withAnimation(.easeOut(duration: 0.12)) {
                         proxy.scrollTo(currentScoringUnit.id, anchor: .center)
                     }
                 }
@@ -370,7 +368,7 @@ private extension LiveHoleScoringView {
                 }
             }
             .scaleEffect(scale, anchor: .bottom)
-            .animation(.spring(response: 0.4, dampingFraction: 0.75), value: isCurrent)
+            .animation(.easeOut(duration: 0.12), value: isCurrent)
             .frame(width: groupWidth, height: playerCircleSize)
         }
         .onTapGesture {
@@ -466,8 +464,6 @@ private extension LiveHoleScoringView {
     }
 
     var scoreInput: some View {
-        let initialScore = savedScoreForCurrent ?? (viewModel.isFriendlyScoreInputMode ? 0 : holePar)
-        
         return VStack(spacing: 16) {
             ZStack {
                 scoreSelectionDecoration(strokes: draftScore)
@@ -476,15 +472,17 @@ private extension LiveHoleScoringView {
                 
                 CarouselNumberPicker(
                     values: scoreOptions,
-                    initialValue: initialScore,
+                    selectedValue: $draftScore,
                     labelForValue: { value in
                         if value == Self.clearScoreSentinel { return "−" }
-                        if viewModel.isFriendlyScoreInputMode {
-                            return value == 0 ? "0" : (value > 0 ? "+\(value)" : "\(value)")
-                        }
-                        return "\(value)"
+                        let displayedStrokes = ScoreCarouselSelection.displayedStrokes(
+                            for: value,
+                            par: holePar,
+                            isFriendlyMode: viewModel.isFriendlyScoreInputMode
+                        )
+                        return "\(displayedStrokes)"
                     },
-                    leadingSignFontScale: viewModel.isFriendlyScoreInputMode ? 0.5 : nil
+                    leadingSignFontScale: nil
                 ) { newValue in
                     if newValue == Self.clearScoreSentinel {
                         draftScore = Self.clearScoreSentinel
@@ -498,7 +496,6 @@ private extension LiveHoleScoringView {
                         Haptics.fire(.light)
                     }
                 }
-                .id(currentScoringUnit.id) // Force recreation when scoring unit changes
             }
             .frame(height: scoreInputHeight)
 
@@ -709,23 +706,43 @@ private extension LiveHoleScoringView {
 
         navigationDirection = index > currentScoringUnitIndex ? .forward : .backward
 
-        withAnimation(.easeInOut(duration: 0.2)) {
-            currentScoringUnitIndex = index
+        withAnimation(.easeOut(duration: 0.12)) {
+            selectScoringUnit(at: index)
         }
+    }
+
+    func selectScoringUnit(at index: Int) {
+        guard scoringUnits.indices.contains(index) else { return }
+        let nextSavedScore = currentSavedScore(for: scoringUnits[index])
+        currentScoringUnitIndex = index
+        savedScore = nextSavedScore
+        draftScore = ScoreCarouselSelection.initialValue(
+            savedScore: nextSavedScore,
+            par: holePar,
+            isFriendlyMode: viewModel.isFriendlyScoreInputMode
+        )
     }
 
     func syncDraftScore(resetDraft: Bool) {
         let saved = savedScoreForCurrent
         savedScore = saved
         if resetDraft {
-            let target = saved ?? (viewModel.isFriendlyScoreInputMode ? 0 : holePar)
+            let target = ScoreCarouselSelection.initialValue(
+                savedScore: saved,
+                par: holePar,
+                isFriendlyMode: viewModel.isFriendlyScoreInputMode
+            )
             draftScore = target
         }
     }
 
     func syncSavedScore(_ newValue: Int?) {
         guard savedScore != newValue else { return }
-        let defaultValue = viewModel.isFriendlyScoreInputMode ? 0 : holePar
+        let defaultValue = ScoreCarouselSelection.initialValue(
+            savedScore: nil,
+            par: holePar,
+            isFriendlyMode: viewModel.isFriendlyScoreInputMode
+        )
         if draftScore == (savedScore ?? defaultValue) {
             draftScore = newValue ?? defaultValue
         }
@@ -782,74 +799,48 @@ private extension LiveHoleScoringView {
         let hole = holeNumber
         let needsSave = shouldCommitScore()
         let autoAdvance = viewModel.autoAdvanceWhenHoleComplete
-        let willComplete = holeWillCompleteAfterThisCTA
-        let nextIdx = nextIndexAfterCTA()
-        let simpleForward = currentScoringUnitIndex + 1 < scoringUnits.count && nextIdx == currentScoringUnitIndex + 1
 
         if isEditMode {
-            dismiss()
-
             if needsSave {
-                Task.detached(priority: .background) {
-                    await saveScore(
-                        unit: unit,
-                        value: score,
-                        holeNumber: hole
-                    )
-                }
-            }
-            return
-        }
-
-        if willComplete {
-            dismiss()
-
-            if needsSave {
-                Task.detached(priority: .background) {
-                    await saveScore(
-                        unit: unit,
-                        value: score,
-                        holeNumber: hole
-                    )
-
-                    if autoAdvance {
-                        await MainActor.run {
-                            viewModel.navigateToNextUnscoredHole()
-                        }
-                    }
-                }
-            } else if autoAdvance {
-                viewModel.navigateToNextUnscoredHole()
-            }
-
-            return
-        }
-
-        if needsSave && !simpleForward {
-            await saveScore(
-                unit: unit,
-                value: score,
-                holeNumber: hole
-            )
-        }
-
-        Haptics.fire(.light)
-        navigationDirection = .forward
-
-        withAnimation(.easeInOut(duration: 0.2)) {
-            currentScoringUnitIndex = nextIdx
-        }
-
-        guard needsSave else { return }
-
-        if simpleForward {
-            Task.detached(priority: .background) {
                 await saveScore(
                     unit: unit,
                     value: score,
                     holeNumber: hole
                 )
             }
+            dismiss()
+            return
+        }
+
+        // Resolve navigation from the current draft before starting the write. This
+        // keeps the roster deterministic without making the UI wait on Firestore.
+        let willComplete = holeWillCompleteAfterThisCTA
+        let nextIdx = nextIndexAfterCTA()
+
+        if needsSave {
+            Task {
+                await saveScore(
+                    unit: unit,
+                    value: score,
+                    holeNumber: hole
+                )
+            }
+        }
+
+        if willComplete {
+            dismiss()
+
+            if autoAdvance {
+                viewModel.navigateToNextUnscoredHole()
+            }
+            return
+        }
+
+        Haptics.fire(.light)
+        navigationDirection = .forward
+
+        withAnimation(.easeOut(duration: 0.12)) {
+            selectScoringUnit(at: nextIdx)
         }
     }
 
