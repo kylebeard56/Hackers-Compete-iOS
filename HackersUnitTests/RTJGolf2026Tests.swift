@@ -300,8 +300,9 @@ final class RTJGolf2026Tests: XCTestCase {
         let r3 = computeAggregateRoundWinnerPoints(rounds[2])
         let r4 = computeHoleByHolePoints(rounds[3], matchWinnerBonus: 2)
 
-        let totalA = (r1.teamPoints["team_a"] ?? 0) + (r2.teamPoints["team_a"] ?? 0) + (r3.teamPoints["team_a"] ?? 0) + (r4.teamPoints["team_a"] ?? 0)
-        let totalB = (r1.teamPoints["team_b"] ?? 0) + (r2.teamPoints["team_b"] ?? 0) + (r3.teamPoints["team_b"] ?? 0) + (r4.teamPoints["team_b"] ?? 0)
+        let results = [r1, r2, r3, r4]
+        let totalA = results.reduce(0) { $0 + ($1.teamPoints["team_a"] ?? 0) }
+        let totalB = results.reduce(0) { $0 + ($1.teamPoints["team_b"] ?? 0) }
 
         XCTAssertEqual(totalA, 330)
         XCTAssertEqual(totalB, 310)
@@ -315,8 +316,9 @@ final class RTJGolf2026Tests: XCTestCase {
         let r3 = computeHoleByHolePoints(rounds[2], matchWinnerBonus: 4)
         let r4 = computeHoleByHolePoints(rounds[3], matchWinnerBonus: 2)
 
-        let totalA = (r1.teamPoints["team_a"] ?? 0) + (r2.teamPoints["team_a"] ?? 0) + (r3.teamPoints["team_a"] ?? 0) + (r4.teamPoints["team_a"] ?? 0)
-        let totalB = (r1.teamPoints["team_b"] ?? 0) + (r2.teamPoints["team_b"] ?? 0) + (r3.teamPoints["team_b"] ?? 0) + (r4.teamPoints["team_b"] ?? 0)
+        let results = [r1, r2, r3, r4]
+        let totalA = results.reduce(0) { $0 + ($1.teamPoints["team_a"] ?? 0) }
+        let totalB = results.reduce(0) { $0 + ($1.teamPoints["team_b"] ?? 0) }
 
         XCTAssertEqual(totalA, 336)
         XCTAssertEqual(totalB, 304)
