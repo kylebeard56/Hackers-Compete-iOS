@@ -149,7 +149,7 @@ struct LiveHoleScoringView: View, Loggable {
             let minimumRelativeScore = max(-4, 1 - holePar)
             scores = Array(minimumRelativeScore...maxScore)
         } else {
-            let minScore = holePar == 4 ? 1 : max(1, holePar - 2)
+            let minScore = 1
             let configMax = viewModel.snapshot.gameFormat.configuration.maxScoreOverPar.maxScore(for: holePar)
             let maxScore = max(configMax, savedScoreForCurrent ?? 0)
             scores = Array(minScore...maxScore)
