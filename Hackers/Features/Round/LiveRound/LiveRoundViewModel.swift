@@ -176,6 +176,45 @@ final class LiveRoundViewModel: ObservableObject, Loggable {
     @Published private(set) var seriesScoreboardSnapshot: SeriesScoreboardSnapshot?
     @Published private(set) var matchupProbabilities: [String: MatchupProbability] = [:]
     @Published private(set) var loadingMatchupProbabilityIDs: Set<String> = []
+    @Published private(set) var isOverviewVisible = false
+    @Published private(set) var isLoadingOverview = false
+    private var overviewRefreshTask: Task<Void, Never>?
+    private var restoredHole: Int?
+
+    /// Called only after the critical snapshot is ready, before score controls appear.
+    func restoreCurrentHole(_ hole: Int?) {
+        hasPerformedInitialHoleNudge = true
+        hasSelectedInitialVisibleGroupStartingHole = true
+        visibleGroupSwitchRequest = nil
+        let target = hole.flatMap { holeNumbers.contains($0) ? $0 : nil } ?? currentHoleNumber
+        restoredHole = target
+        selectHole(target)
+    }
+
+    func setOverviewVisible(_ visible: Bool) {
+        isOverviewVisible = visible
+        guard visible else { return }
+        if !availableLeaderboardModes.contains(leaderboardMode) { leaderboardMode = .individual }
+        refreshSeriesScoreboardProjection()
+        guard overviewRefreshTask == nil else { return }
+        overviewRefreshTask = Task { [weak self] in
+            guard let self else { return }
+            self.isLoadingOverview = true
+            let startedAt = Date()
+            defer {
+                self.isLoadingOverview = false
+                self.overviewRefreshTask = nil
+                self.addEvent("live_round.overview_loaded", eventProps: [
+                    "round_id": self.snapshot.round.id,
+                    "duration_ms": Int(Date().timeIntervalSince(startedAt) * 1_000)
+                ])
+            }
+            await self.loadSeriesAccessIfNeeded()
+            guard self.isOverviewVisible, let seriesID = self.resolvedSeriesID else { return }
+            await self.loadLiveSeriesScoreboardContext(seriesID: seriesID)
+        }
+    }
+
     @Published var selectedTeeID: String?
     @Published var nameDisplayFormat: NameDisplayFormat = .persisted {
         didSet {
@@ -288,6 +327,7 @@ final class LiveRoundViewModel: ObservableObject, Loggable {
     private static let matchupTimelineProjectionIterationCount = 100
     private var hasPerformedInitialHoleNudge = false
     private var hasSelectedInitialVisibleGroupStartingHole = false
+    private var scopedRoundID: String?
     private var loadedSeriesAccessRoundID: String?
     private var isLoadingSeriesAccess = false
     private var liveSeriesScoreboardContext: LiveSeriesScoreboardContext?
@@ -341,6 +381,9 @@ final class LiveRoundViewModel: ObservableObject, Loggable {
                 self.rebuildScoreIndex()
                 self.applySeriesAccessOverrideIfAvailable()
                 self.syncVisibleTeeGroupIfNeeded()
+                if let restoredHole = self.restoredHole {
+                    self.selectHole(restoredHole)
+                }
                 self.ensureHoleIndexInBounds()
                 self.selectVisibleGroupStartingHoleIfNeeded(
                     previousVisibleGroupID: previousVisibleGroupID,
@@ -349,8 +392,7 @@ final class LiveRoundViewModel: ObservableObject, Loggable {
                 self.updateSelectedTeeIfNeeded()
                 self.refreshSeriesScoreboardProjection()
 
-                let modes = self.availableLeaderboardModes
-                if !modes.contains(self.leaderboardMode) {
+                if self.isOverviewVisible && !self.availableLeaderboardModes.contains(self.leaderboardMode) {
                     self.leaderboardMode = .individual
                 }
 
@@ -441,6 +483,7 @@ final class LiveRoundViewModel: ObservableObject, Loggable {
     var currentHoleNumber: Int {
         let holes = holeNumbers
         guard !holes.isEmpty else { return 1 }
+        if let restoredHole, holes.contains(restoredHole) { return restoredHole }
         let idx = min(max(0, currentHoleIndex), holes.count - 1)
         return holes[idx]
     }
@@ -448,12 +491,14 @@ final class LiveRoundViewModel: ObservableObject, Loggable {
     func swipeHole(direction: Int) {
         // direction: -1 previous, +1 next
         let next = currentHoleIndex + direction
-        currentHoleIndex = min(max(0, next), max(0, holeNumbers.count - 1))
+        let index = min(max(0, next), max(0, holeNumbers.count - 1))
+        if holeNumbers.indices.contains(index) { selectHole(holeNumbers[index]) }
     }
     
     func selectHole(_ holeNumber: Int) {
         guard let idx = holeNumbers.firstIndex(of: holeNumber) else { return }
         currentHoleIndex = idx
+        if restoredHole != nil { restoredHole = holeNumber }
     }
 
     private var visibleGroupStartingHole: Int? {
@@ -465,6 +510,7 @@ final class LiveRoundViewModel: ObservableObject, Loggable {
         previousVisibleGroupID: String?,
         previousStartingHole: Int?
     ) {
+        guard restoredHole == nil else { return }
         let currentStartingHole = visibleGroupStartingHole
 
         guard let visibleTeeGroupID,
@@ -4882,7 +4928,8 @@ final class LiveRoundViewModel: ObservableObject, Loggable {
     }
     
     private func resetRoundScopedStateIfNeeded(for roundID: String) {
-        guard loadedSeriesAccessRoundID != roundID else { return }
+        guard scopedRoundID != roundID else { return }
+        scopedRoundID = roundID
         currentParticipantID = nil
         visibleTeeGroupID = nil
         resolvedSeriesID = nil
@@ -4894,6 +4941,7 @@ final class LiveRoundViewModel: ObservableObject, Loggable {
         loadedSeriesAccessRoundID = nil
         isLoadingSeriesAccess = false
         selectedTeeID = nil
+        restoredHole = nil
         hasPerformedInitialHoleNudge = false
         hasSelectedInitialVisibleGroupStartingHole = false
         currentHoleIndex = 0
@@ -4946,6 +4994,7 @@ final class LiveRoundViewModel: ObservableObject, Loggable {
         }
 
         visibleTeeGroupID = defaultGroupID
+        if let restoredHole { selectHole(restoredHole) }
         selectInitialVisibleGroupStartingHoleIfNeeded(groupID: defaultGroupID)
     }
 
@@ -4979,12 +5028,6 @@ final class LiveRoundViewModel: ObservableObject, Loggable {
             resolvedSeriesID = seriesAccessOverride.seriesID
             isSeriesCommissioner = seriesAccessOverride.isCommissioner
             applySeriesAccessOverrideIfAvailable()
-            if let seriesID = seriesAccessOverride.seriesID, seriesID.isPopulated {
-                await loadLiveSeriesScoreboardContext(seriesID: seriesID)
-            } else {
-                liveSeriesScoreboardContext = nil
-                seriesScoreboardSnapshot = nil
-            }
             loadedSeriesAccessRoundID = roundID
             if snapshot.round.id == roundID {
                 predictionContextRoundID = roundID
@@ -5037,7 +5080,6 @@ final class LiveRoundViewModel: ObservableObject, Loggable {
             members: activeMembers
         )
         isSeriesCommissioner = roundManagementAccess.isSeriesCommissioner
-        await loadLiveSeriesScoreboardContext(seriesID: seriesID, resolvedSeries: series, resolvedMembers: members)
         syncVisibleTeeGroupIfNeeded()
         updateSelectedTeeIfNeeded(force: true)
     }
@@ -5945,6 +5987,7 @@ final class LiveRoundViewModel: ObservableObject, Loggable {
     }
 
     private func refreshSeriesScoreboardProjection() {
+        guard isOverviewVisible else { return }
         guard let context = liveSeriesScoreboardContext,
               context.series.settings.showScoreboardTile,
               SeriesScoreboardEligibility.isEligible(teams: context.teams) else {
@@ -6248,9 +6291,12 @@ final class LiveRoundViewModel: ObservableObject, Loggable {
         guard !hasPerformedInitialHoleNudge else { return }
         guard activeTeeGroupParticipants.isPopulated else { return }
 
+        // Reserve once; a restored/user-selected hole cancels this delayed suggestion.
+        hasPerformedInitialHoleNudge = true
+        let roundID = snapshot.round.id
         DispatchQueue.main.asyncAfter(deadline: .now() + 0.6, execute: {
+            guard self.restoredHole == nil, self.snapshot.round.id == roundID else { return }
             self.navigateToNextUnscoredHole()
-            self.hasPerformedInitialHoleNudge = true
         })
     }
 

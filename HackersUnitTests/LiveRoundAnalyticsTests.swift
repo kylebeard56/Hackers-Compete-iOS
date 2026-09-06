@@ -986,3 +986,117 @@ final class PlayerInsightsRoundAnalyticsTests: XCTestCase {
         return (viewModel, participant)
     }
 }
+
+
+@MainActor
+final class LiveRoundResumeRegressionTests: XCTestCase {
+    private func store() -> UserDefaultsRoundResumeStore {
+        UserDefaultsRoundResumeStore(defaults: UserDefaults(suiteName: "LiveRoundResume.\(UUID())")!)
+    }
+
+    func testStandardAndShotgunRelaunchRestoreLastDisplayedHole() {
+        for (start, current) in [(1, 5), (7, 10)] {
+            let persistence = store()
+            let app = AppSession(roundResumeStore: persistence, restoresAuthentication: false)
+            app.activeRoundID = MockLiveRound2v2.roundID
+            app.updateLiveRoundResume(selectedHole: start, selectedTab: .scoring)
+            app.updateLiveRoundResume(selectedHole: current, selectedTab: .scoring)
+
+            let relaunched = AppSession(roundResumeStore: persistence, restoresAuthentication: false)
+            var snapshot = MockLiveRound2v2.snapshot
+            snapshot.teeGroups = snapshot.teeGroups.map { group in
+                var group = group
+                group.startingHole = start
+                return group
+            }
+            let model = LiveRoundViewModel()
+            model.set(snapshot: snapshot)
+            model.restoreCurrentHole(relaunched.roundResumeState?.selectedHole)
+            XCTAssertEqual(model.currentHoleNumber, current)
+            // Repeated cache/server snapshots and late access loading must not reset selection.
+            model.set(snapshot: snapshot)
+            XCTAssertEqual(model.currentHoleNumber, current)
+            XCTAssertFalse(model.isOverviewVisible)
+            XCTAssertFalse(model.isLoadingOverview)
+            XCTAssertNil(model.seriesScoreboardSnapshot)
+        }
+    }
+
+    func testDisplayedHoleIsCapturedByScoreSessionAcrossNavigation() throws {
+        let model = LiveRoundViewModel()
+        let snapshot = MockLiveRound2v2.snapshot
+        model.set(snapshot: snapshot)
+        model.restoreCurrentHole(10)
+        let participant = try XCTUnwrap(snapshot.participants.first)
+        let entry = model.scoringSession(for: participant, holeNumber: model.currentHoleNumber)
+        model.selectHole(11)
+        XCTAssertEqual(entry.holeNumber, 10)
+        XCTAssertNotEqual(
+            ScoreEntry.makeID(hole: entry.holeNumber, segment: "segment", scoringUnit: participant.id),
+            ScoreEntry.makeID(hole: 7, segment: "segment", scoringUnit: participant.id)
+        )
+    }
+
+    func testExitPreservesHoleAndSuppressesAutomaticResumeUntilReopened() async {
+        let persistence = store()
+        let app = AppSession(roundResumeStore: persistence, restoresAuthentication: false)
+        app.activeRoundID = "round"
+        app.updateLiveRoundResume(selectedHole: 5, selectedTab: .scoring)
+        app.routeTo(.liveRound)
+        app.exitLiveRound()
+        XCTAssertEqual(persistence.load()?.selectedHole, 5)
+        XCTAssertEqual(persistence.load()?.wasExplicitlyExited, true)
+        let relaunched = AppSession(roundResumeStore: persistence, restoresAuthentication: false)
+        await relaunched.restoreRoundOrRouteToDashboard()
+        XCTAssertNil(relaunched.activeRoundID)
+        relaunched.activeRoundID = "round"
+        relaunched.routeTo(.liveRound)
+        XCTAssertEqual(persistence.load()?.selectedHole, 5)
+        XCTAssertNotEqual(persistence.load()?.wasExplicitlyExited, true)
+    }
+
+    func testEachUnfinishedRoundRetainsItsOwnHole() {
+        let persistence = store()
+        let app = AppSession(roundResumeStore: persistence, restoresAuthentication: false)
+        app.activeRoundID = "first"
+        app.updateLiveRoundResume(selectedHole: 5, selectedTab: .scoring)
+        app.exitLiveRound()
+        app.activeRoundID = "second"
+        app.updateLiveRoundResume(selectedHole: 10, selectedTab: .scoring)
+        app.activeRoundID = "first"
+        app.routeTo(.liveRound)
+        XCTAssertEqual(app.roundResumeState?.selectedHole, 5)
+        XCTAssertEqual(persistence.load(roundID: "second")?.selectedHole, 10)
+    }
+
+    func testLiveRelaunchRoutesWithoutNetworkAndCompletionClearsResume() async {
+        let persistence = store()
+        persistence.save(RoundResumeState(roundID: "offline", destination: .liveRound, selectedHole: 10))
+        let app = AppSession(roundResumeStore: persistence, restoresAuthentication: false)
+        await app.restoreRoundOrRouteToDashboard()
+        XCTAssertEqual(app.activeRoundID, "offline")
+        XCTAssertEqual(app.roundResumeState?.selectedHole, 10)
+        app.clearRoundResume()
+        XCTAssertNil(persistence.load())
+        XCTAssertNil(persistence.load(roundID: "offline"))
+    }
+
+    func testRestoredHoleSurvivesDelayedStartupNudge() async throws {
+        let persistence = store()
+        let app = AppSession(roundResumeStore: persistence, restoresAuthentication: false)
+        let session = RoundSession()
+        session.snapshot = MockLiveRound2v2.snapshot
+        app.activeRoundID = session.snapshot.round.id
+        app.ephemeralParticipantID = session.snapshot.participants.first?.id
+        let model = LiveRoundViewModel()
+        model.seriesAccessOverride = .init(seriesID: nil, isCommissioner: false)
+        model.bind(appSession: app, roundSession: session)
+        await model.ensureParticipantResolved()
+        model.restoreCurrentHole(5)
+        try await Task.sleep(for: .milliseconds(750))
+        XCTAssertEqual(model.currentHoleNumber, 5)
+        session.snapshot = MockLiveRound2v2.snapshot
+        try await Task.sleep(for: .milliseconds(100))
+        XCTAssertEqual(model.currentHoleNumber, 5)
+    }
+}

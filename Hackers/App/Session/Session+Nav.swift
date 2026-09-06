@@ -25,6 +25,7 @@ struct RoundResumeState: Codable, Equatable, Sendable {
     var selectedHole: Int?
     var selectedTab: RoundResumeTab
     var timestamp: Date
+    var wasExplicitlyExited: Bool?
 
     init(
         roundID: String,
@@ -47,6 +48,16 @@ protocol RoundResumeStoring: AnyObject, Sendable {
     func load() -> RoundResumeState?
     func save(_ state: RoundResumeState)
     func clear()
+    func clearAll()
+    func load(roundID: String) -> RoundResumeState?
+}
+
+extension RoundResumeStoring {
+    func clearAll() { clear() }
+    func load(roundID: String) -> RoundResumeState? {
+        guard let state = load(), state.roundID == roundID else { return nil }
+        return state
+    }
 }
 
 final class UserDefaultsRoundResumeStore: RoundResumeStoring, @unchecked Sendable {
@@ -66,9 +77,27 @@ final class UserDefaultsRoundResumeStore: RoundResumeStoring, @unchecked Sendabl
     func save(_ state: RoundResumeState) {
         guard let data = try? JSONEncoder().encode(state) else { return }
         defaults.set(data, forKey: key)
+        defaults.set(data, forKey: "\(key).round.\(state.roundID)")
+    }
+
+    func load(roundID: String) -> RoundResumeState? {
+        guard let data = defaults.data(forKey: "\(key).round.\(roundID)") else {
+            return load().flatMap { $0.roundID == roundID ? $0 : nil }
+        }
+        return try? JSONDecoder().decode(RoundResumeState.self, from: data)
+    }
+
+    func clearAll() {
+        for storedKey in defaults.dictionaryRepresentation().keys
+            where storedKey == key || storedKey.hasPrefix("\(key).round.") {
+            defaults.removeObject(forKey: storedKey)
+        }
     }
 
     func clear() {
+        if let state = load() {
+            defaults.removeObject(forKey: "\(key).round.\(state.roundID)")
+        }
         defaults.removeObject(forKey: key)
     }
 }
@@ -99,7 +128,7 @@ extension AppSession {
         selectedTab: RoundResumeTab? = nil
     ) {
         guard let roundID = activeRoundID, roundID.isPopulated else { return }
-        let existing = roundResumeState?.roundID == roundID ? roundResumeState : nil
+        let existing = roundResumeState?.roundID == roundID ? roundResumeState : roundResumeStore.load(roundID: roundID)
         let state = RoundResumeState(
             roundID: roundID,
             seriesID: activeSeriesID,
@@ -119,14 +148,33 @@ extension AppSession {
         )
     }
 
+    func exitLiveRound() {
+        if var state = roundResumeState {
+            state.wasExplicitlyExited = true
+            roundResumeState = state
+            roundResumeStore.save(state)
+        }
+        path.removeLast(path.count)
+        routeTo(.dashboard)
+    }
+
     func clearRoundResume() {
         roundResumeState = nil
         roundResumeStore.clear()
     }
 
     func restoreRoundOrRouteToDashboard() async {
-        guard pendingJoinLink == nil, let state = roundResumeState else {
+        guard pendingJoinLink == nil, let state = roundResumeState, state.wasExplicitlyExited != true else {
             routeTo(.dashboard)
+            return
+        }
+
+        // Live listeners validate status from cache/server after routing. Network availability
+        // must never discard the saved hole or prevent an offline round from reopening.
+        if state.destination == .liveRound {
+            activeRoundID = state.roundID
+            activeSeriesID = state.seriesID
+            routeTo(.liveRound)
             return
         }
 

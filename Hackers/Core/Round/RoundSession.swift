@@ -72,6 +72,8 @@ final class RoundSession: ObservableObject, Loggable {
     var teeGroupListener: ListenerRegistration?
     var scoringGroupListener: ListenerRegistration?
     
+    @Published private(set) var isScoringSnapshotReady = false
+
     @Published var isLoadingLobbyListeners = false
     @Published var isLoadingActiveListeners = false
     
@@ -201,7 +203,7 @@ final class RoundSession: ObservableObject, Loggable {
         let targetListenerTypes = profile.listenerTypes
         recordSessionActivity(at: now)
 
-        let canReuseWarmSession = sameRound && !shouldRebuild && !profile.usesLiveListeners
+        let canReuseWarmSession = sameRound && !shouldRebuild
 
         emitRoundSessionActivated(
             roundID: requestedRoundID,
@@ -240,6 +242,7 @@ final class RoundSession: ObservableObject, Loggable {
         stopListeners()
         if !sameRound {
             snapshot = .init()
+            isScoringSnapshotReady = false
         }
 
         roundID = requestedRoundID
@@ -248,7 +251,11 @@ final class RoundSession: ObservableObject, Loggable {
         TelemetryService.shared.setContext(roundID: requestedRoundID)
 
         if profile.usesLiveListeners {
-            await loadSingleSnapshotIfNeeded(for: requestedRoundID, forceRefresh: true)
+            // Firestore listeners deliver cached data first, including pending offline scores.
+            // Avoid a server-first full snapshot fetch before attaching the scoring listeners.
+            if profile != .liveRound {
+                await loadSingleSnapshotIfNeeded(for: requestedRoundID, forceRefresh: true)
+            }
             beginInitialLoadTracking(for: profile, startedAt: now, source: "live_listeners")
             await startListeners(for: profile)
         } else {
@@ -299,6 +306,7 @@ final class RoundSession: ObservableObject, Loggable {
         addBreadcrumb()
         stopListeners()
         self.roundID = nil
+        isScoringSnapshotReady = false
         snapshot = .init()
         currentProfile = .oneShot
         lastActiveAt = nil
@@ -374,6 +382,9 @@ final class RoundSession: ObservableObject, Loggable {
         startedAt: Date = Date(),
         source: String
     ) {
+        if profile == .liveRound {
+            isScoringSnapshotReady = false
+        }
         initialLoadStartedAt = startedAt
         initialLoadExpectedTypes = profile.listenerTypes
         initialLoadReadyTypes = []
@@ -389,6 +400,7 @@ final class RoundSession: ObservableObject, Loggable {
 
         guard initialLoadReadyTypes.isSuperset(of: initialLoadExpectedTypes) else { return false }
         didEmitInitialSnapshotLoaded = true
+        if currentProfile == .liveRound { isScoringSnapshotReady = true }
         return true
     }
 
