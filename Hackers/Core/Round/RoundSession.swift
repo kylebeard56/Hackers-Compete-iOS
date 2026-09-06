@@ -195,6 +195,12 @@ final class RoundSession: ObservableObject, Loggable {
     func activate(roundID requestedRoundID: String, profile: RoundSubscriptionProfile) async {
         addBreadcrumb(message: "Activate round session: round=\(requestedRoundID), profile=\(profile.rawValue)")
 
+        guard requestedRoundID.trimmingCharacters(in: .whitespacesAndNewlines).isPopulated,
+              !requestedRoundID.contains("/") else {
+            addBreadcrumb(level: .error, message: "Refused to activate a round session with an invalid round ID")
+            return
+        }
+
         let now = Date()
         let sameRound = roundID == requestedRoundID
         let shouldRebuild = shouldRebuildSession(for: requestedRoundID, asOf: now)

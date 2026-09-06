@@ -169,6 +169,14 @@ extension AppSession {
             return
         }
 
+        guard state.roundID.trimmingCharacters(in: .whitespacesAndNewlines).isPopulated,
+              !state.roundID.contains("/") else {
+            addBreadcrumb(level: .error, message: "Discarding live-round resume state with an invalid round ID")
+            clearRoundResume()
+            routeTo(.dashboard)
+            return
+        }
+
         // Live listeners validate status from cache/server after routing. Network availability
         // must never discard the saved hole or prevent an offline round from reopening.
         if state.destination == .liveRound {

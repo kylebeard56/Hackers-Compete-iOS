@@ -314,6 +314,11 @@ extension FirebaseService {
     
     @discardableResult
     func updateDocument<T: FirebaseIdentifiable>(_ value: T, in collection: String) async -> Result<T, Error> {
+        guard value.id.trimmingCharacters(in: .whitespacesAndNewlines).isPopulated,
+              !value.id.contains("/") else {
+            addBreadcrumb(level: .error, message: "Refused to update \(T.self) with an invalid document ID")
+            return .failure(HackersError.invalidDocumentID)
+        }
         let ref = Firestore.firestore().collection(collection).document(value.id)
         do {
             var v = value
@@ -332,6 +337,11 @@ extension FirebaseService {
     
     @discardableResult
     func deleteDocument<T: FirebaseIdentifiable>(_ value: T, from collection: String) async -> Result<Bool, Error> {
+        guard value.id.trimmingCharacters(in: .whitespacesAndNewlines).isPopulated,
+              !value.id.contains("/") else {
+            addBreadcrumb(level: .error, message: "Refused to delete \(T.self) with an invalid document ID")
+            return .failure(HackersError.invalidDocumentID)
+        }
         let ref = Firestore.firestore().collection(collection).document(value.id)
         do {
             try await ref.delete()
@@ -350,6 +360,12 @@ extension FirebaseService {
     
     @discardableResult
     func updateDocument<T: FirebaseSubcollectable>(_ value: T) async -> Result<T, Error> {
+        guard value.id.trimmingCharacters(in: .whitespacesAndNewlines).isPopulated,
+              value.parentID.trimmingCharacters(in: .whitespacesAndNewlines).isPopulated,
+              !value.id.contains("/"), !value.parentID.contains("/") else {
+            addBreadcrumb(level: .error, message: "Refused to update \(T.self) with an invalid document path")
+            return .failure(HackersError.invalidDocumentID)
+        }
         let ref = T.documentReference(id: value.id, parentID: value.parentID)
         
         do {
@@ -369,6 +385,12 @@ extension FirebaseService {
     
     @discardableResult
     func deleteDocument<T: FirebaseSubcollectable>(_ value: T) async -> Result<Bool, Error> {
+        guard value.id.trimmingCharacters(in: .whitespacesAndNewlines).isPopulated,
+              value.parentID.trimmingCharacters(in: .whitespacesAndNewlines).isPopulated,
+              !value.id.contains("/"), !value.parentID.contains("/") else {
+            addBreadcrumb(level: .error, message: "Refused to delete \(T.self) with an invalid document path")
+            return .failure(HackersError.invalidDocumentID)
+        }
         let ref = T.documentReference(id: value.id, parentID: value.parentID)
         do {
             try await ref.delete()
