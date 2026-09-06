@@ -45,6 +45,7 @@ struct CarouselNumberPicker: View {
     @State private var displayedValue: Int
     @State private var scrollPosition: Int?
     @State private var scrollPhase: ScrollPhase = .idle
+    @State private var hasUserInitiatedSelection = false
     
     private var palette: DesignPalette { .init(theme: .primary, scheme: colorScheme) }
     
@@ -69,6 +70,7 @@ struct CarouselNumberPicker: View {
             LazyHStack(spacing: itemSpacing) {
                 ForEach(values, id: \.self) { value in
                     Button {
+                        hasUserInitiatedSelection = true
                         withAnimation(.easeOut(duration: 0.12)) {
                             scrollPosition = value
                         }
@@ -89,14 +91,14 @@ struct CarouselNumberPicker: View {
         .onChange(of: scrollPosition) { _, newValue in
             guard let newValue else { return }
             displayedValue = newValue
-            if scrollPhase == .idle {
-                commitSelection(newValue)
-            }
         }
         .onScrollPhaseChange { _, newPhase in
             scrollPhase = newPhase
-            if newPhase == .idle, let scrollPosition {
+            if newPhase == .interacting {
+                hasUserInitiatedSelection = true
+            } else if newPhase == .idle, hasUserInitiatedSelection, let scrollPosition {
                 commitSelection(scrollPosition)
+                hasUserInitiatedSelection = false
             }
         }
         .onChange(of: selectedValue) { _, newValue in
