@@ -42,7 +42,9 @@ struct CarouselNumberPicker: View {
     let leadingSignFontScale: CGFloat?
     let onChange: CallbackValue<Int>
     
+    @State private var displayedValue: Int
     @State private var scrollPosition: Int?
+    @State private var scrollPhase: ScrollPhase = .idle
     
     private var palette: DesignPalette { .init(theme: .primary, scheme: colorScheme) }
     
@@ -58,6 +60,7 @@ struct CarouselNumberPicker: View {
         self.labelForValue = labelForValue
         self.leadingSignFontScale = leadingSignFontScale
         self.onChange = onChange
+        self._displayedValue = State(initialValue: selectedValue.wrappedValue)
         self._scrollPosition = State(initialValue: selectedValue.wrappedValue)
     }
     
@@ -84,12 +87,21 @@ struct CarouselNumberPicker: View {
         .scrollTargetBehavior(.viewAligned)
         .scrollIndicators(.hidden)
         .onChange(of: scrollPosition) { _, newValue in
-            guard let newValue, newValue != selectedValue else { return }
-            selectedValue = newValue
-            onChange(newValue)
+            guard let newValue else { return }
+            displayedValue = newValue
+            if scrollPhase == .idle {
+                commitSelection(newValue)
+            }
+        }
+        .onScrollPhaseChange { _, newPhase in
+            scrollPhase = newPhase
+            if newPhase == .idle, let scrollPosition {
+                commitSelection(scrollPosition)
+            }
         }
         .onChange(of: selectedValue) { _, newValue in
             guard values.contains(newValue), newValue != scrollPosition else { return }
+            displayedValue = newValue
             var transaction = Transaction()
             transaction.disablesAnimations = true
             withTransaction(transaction) {
@@ -100,7 +112,7 @@ struct CarouselNumberPicker: View {
     
     @ViewBuilder
     private func numberItem(for value: Int) -> some View {
-        let isSelected = value == selectedValue
+        let isSelected = value == displayedValue
         let label = labelForValue(value)
         let bodySize = isSelected ? majorFontSize : minorFontSize
         let weight: FontModule.Weight = isSelected ? .regular : .light
@@ -121,6 +133,12 @@ struct CarouselNumberPicker: View {
                 .foregroundColor(foreground)
                 .frame(width: itemWidth, height: itemHeight)
         }
+    }
+
+    private func commitSelection(_ value: Int) {
+        guard value != selectedValue else { return }
+        selectedValue = value
+        onChange(value)
     }
 
     /// Splits `+N` / `-N` (ASCII sign) so the sign can use a smaller font; single-glyph labels (e.g. clear `−`) are not split.
