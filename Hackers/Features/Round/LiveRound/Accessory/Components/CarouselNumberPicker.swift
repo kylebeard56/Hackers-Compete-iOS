@@ -10,7 +10,6 @@ import SwiftUI
 private let itemWidth: CGFloat = 130
 private let itemHeight: CGFloat = 120
 private let majorFontSize: CGFloat = 100
-private let minorFontSize: CGFloat = 60
 private let itemSpacing: CGFloat = 0
 
 /// Keeps the score represented by the carousel independent from its displayed
@@ -42,9 +41,7 @@ struct CarouselNumberPicker: View {
     let leadingSignFontScale: CGFloat?
     let onChange: CallbackValue<Int>
     
-    @State private var displayedValue: Int
     @State private var scrollPosition: Int?
-    @State private var scrollPhase: ScrollPhase = .idle
     @State private var hasUserInitiatedSelection = false
     
     private var palette: DesignPalette { .init(theme: .primary, scheme: colorScheme) }
@@ -61,7 +58,6 @@ struct CarouselNumberPicker: View {
         self.labelForValue = labelForValue
         self.leadingSignFontScale = leadingSignFontScale
         self.onChange = onChange
-        self._displayedValue = State(initialValue: selectedValue.wrappedValue)
         self._scrollPosition = State(initialValue: selectedValue.wrappedValue)
     }
     
@@ -74,11 +70,18 @@ struct CarouselNumberPicker: View {
                         withAnimation(.easeOut(duration: 0.12)) {
                             scrollPosition = value
                         }
+                        commitSelection(value)
+                        hasUserInitiatedSelection = false
                     } label: {
                         numberItem(for: value)
                     }
                     .buttonStyle(.plain)
                     .frame(width: itemWidth)
+                    .scrollTransition(.interactive, axis: .horizontal) { content, phase in
+                        content
+                            .scaleEffect(phase.isIdentity ? 1 : 0.6)
+                            .opacity(phase.isIdentity ? 1 : 0.45)
+                    }
                     .id(value)
                 }
             }
@@ -86,14 +89,9 @@ struct CarouselNumberPicker: View {
         }
         .safeAreaPadding(.horizontal, (UIScreen.main.bounds.width - itemWidth) / 2)
         .scrollPosition(id: $scrollPosition, anchor: .center)
-        .scrollTargetBehavior(.viewAligned)
+        .scrollTargetBehavior(.viewAligned(limitBehavior: .always))
         .scrollIndicators(.hidden)
-        .onChange(of: scrollPosition) { _, newValue in
-            guard let newValue else { return }
-            displayedValue = newValue
-        }
         .onScrollPhaseChange { _, newPhase in
-            scrollPhase = newPhase
             if newPhase == .interacting {
                 hasUserInitiatedSelection = true
             } else if newPhase == .idle, hasUserInitiatedSelection, let scrollPosition {
@@ -103,7 +101,6 @@ struct CarouselNumberPicker: View {
         }
         .onChange(of: selectedValue) { _, newValue in
             guard values.contains(newValue), newValue != scrollPosition else { return }
-            displayedValue = newValue
             var transaction = Transaction()
             transaction.disablesAnimations = true
             withTransaction(transaction) {
@@ -114,25 +111,21 @@ struct CarouselNumberPicker: View {
     
     @ViewBuilder
     private func numberItem(for value: Int) -> some View {
-        let isSelected = value == displayedValue
         let label = labelForValue(value)
-        let bodySize = isSelected ? majorFontSize : minorFontSize
-        let weight: FontModule.Weight = isSelected ? .regular : .light
-        let foreground = isSelected ? palette.foregroundColor : Color.neutral2
 
         if let scale = leadingSignFontScale, let split = Self.splitLeadingSignForScaledTypography(label) {
             HStack(alignment: .lastTextBaseline, spacing: 0) {
                 Text(split.prefix)
-                    .fontStyle(.poppins, size: bodySize * scale, weight: weight)
+                    .fontStyle(.poppins, size: majorFontSize * scale, weight: .regular)
                 Text(split.rest)
-                    .fontStyle(.poppins, size: bodySize, weight: weight)
+                    .fontStyle(.poppins, size: majorFontSize, weight: .regular)
             }
-            .foregroundColor(foreground)
+            .foregroundColor(palette.foregroundColor)
             .frame(width: itemWidth, height: itemHeight)
         } else {
             Text(label)
-                .fontStyle(.poppins, size: bodySize, weight: weight)
-                .foregroundColor(foreground)
+                .fontStyle(.poppins, size: majorFontSize, weight: .regular)
+                .foregroundColor(palette.foregroundColor)
                 .frame(width: itemWidth, height: itemHeight)
         }
     }

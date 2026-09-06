@@ -20,7 +20,6 @@ struct LiveHoleScoringView: View, Loggable {
     @State private var currentScoringUnitIndex: Int = 0
     @State private var draftScore: Int = 0
     @State private var savedScore: Int?
-    @State private var navigationDirection: NavigationDirection = .forward
     @State private var didTrackScoringSheetOpen = false
 
     private var palette: DesignPalette { .init(theme: .primary, scheme: colorScheme) }
@@ -29,17 +28,6 @@ struct LiveHoleScoringView: View, Loggable {
     }
     private var effectiveAccentLabelColor: Color {
         Color.accessibleLabelOnSolidBackground(background: effectiveAccent, colorScheme: colorScheme)
-    }
-
-    private enum NavigationDirection {
-        case forward, backward
-
-        var edge: Edge {
-            switch self {
-            case .forward: return .trailing
-            case .backward: return .leading
-            }
-        }
     }
 
     private struct ScoringUnitItem: Identifiable {
@@ -236,11 +224,6 @@ private extension LiveHoleScoringView {
 
             playerNameText(title(for: currentScoringUnit, style: .compact))
         }
-        .id(currentScoringUnit.id)
-        .transition(.asymmetric(
-            insertion: .move(edge: navigationDirection.edge).combined(with: .opacity),
-            removal: .move(edge: navigationDirection == .forward ? .leading : .trailing).combined(with: .opacity)
-        ))
     }
 
     private func playerNameText(_ text: String) -> some View {
@@ -704,11 +687,7 @@ private extension LiveHoleScoringView {
             }
         }
 
-        navigationDirection = index > currentScoringUnitIndex ? .forward : .backward
-
-        withAnimation(.easeOut(duration: 0.12)) {
-            selectScoringUnit(at: index)
-        }
+        selectScoringUnit(at: index)
     }
 
     func selectScoringUnit(at index: Int) {
@@ -832,11 +811,7 @@ private extension LiveHoleScoringView {
             return
         }
 
-        navigationDirection = .forward
-
-        withAnimation(.easeOut(duration: 0.12)) {
-            selectScoringUnit(at: nextIdx)
-        }
+        selectScoringUnit(at: nextIdx)
 
         enqueueScoreSaveIfNeeded(needsSave, unit: unit, value: score, holeNumber: hole)
     }
