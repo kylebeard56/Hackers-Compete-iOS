@@ -199,10 +199,15 @@ struct LiveHoleScoringView: View, Loggable {
 
             scoreInput
 
-            Spacer(minLength: 0)
+            VStack(spacing: 0) {
+                Spacer(minLength: 0)
 
-            ctaSection
-                .padding(.horizontal, 16)
+                ctaSection
+                    .padding(.horizontal, 16)
+            }
+            .frame(maxWidth: .infinity)
+            .contentShape(Rectangle())
+            .simultaneousGesture(bottomScoreSwipeGesture)
         }
         .padding(.vertical, 16)
         .background(palette.backgroundColor)
@@ -217,6 +222,38 @@ struct LiveHoleScoringView: View, Loggable {
 }
 
 private extension LiveHoleScoringView {
+    var bottomScoreSwipeGesture: some Gesture {
+        DragGesture(minimumDistance: 20)
+            .onEnded { value in
+                let horizontalDistance = value.predictedEndTranslation.width
+                guard abs(horizontalDistance) > abs(value.predictedEndTranslation.height),
+                      abs(horizontalDistance) >= 44 else { return }
+
+                stepScore(by: horizontalDistance < 0 ? 1 : -1)
+            }
+    }
+
+    func stepScore(by offset: Int) {
+        guard let currentIndex = scoreOptions.firstIndex(of: draftScore) else { return }
+        let nextIndex = min(max(currentIndex + offset, scoreOptions.startIndex), scoreOptions.index(before: scoreOptions.endIndex))
+        guard nextIndex != currentIndex else { return }
+        handleScoreSelection(scoreOptions[nextIndex])
+    }
+
+    func handleScoreSelection(_ newValue: Int) {
+        if newValue == Self.clearScoreSentinel {
+            draftScore = Self.clearScoreSentinel
+            if savedScoreForCurrent != nil {
+                Task { await clearScore() }
+            } else {
+                Haptics.fire(.light)
+            }
+        } else {
+            draftScore = newValue
+            Haptics.fire(.light)
+        }
+    }
+
     var playerName: some View {
         ViewThatFits(in: .horizontal) {
             playerNameText(title(for: currentScoringUnit, style: .full))
@@ -467,17 +504,7 @@ private extension LiveHoleScoringView {
                     },
                     leadingSignFontScale: nil
                 ) { newValue in
-                    if newValue == Self.clearScoreSentinel {
-                        draftScore = Self.clearScoreSentinel
-                        if savedScoreForCurrent != nil {
-                            Task { await clearScore() }
-                        } else {
-                            Haptics.fire(.light)
-                        }
-                    } else {
-                        draftScore = newValue
-                        Haptics.fire(.light)
-                    }
+                    handleScoreSelection(newValue)
                 }
             }
             .frame(height: scoreInputHeight)
