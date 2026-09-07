@@ -470,7 +470,6 @@ struct LiveRound: View, Loggable {
                     )
                 }
             }
-            .padding(.top, tablePresentationState.isRotated ? 0 : UIApplication.shared.topSafeAreaInset)
             .padding(.bottom, tablePresentationState.isRotated ? 0 : 88)
         } else {
             ContentUnavailableView(
