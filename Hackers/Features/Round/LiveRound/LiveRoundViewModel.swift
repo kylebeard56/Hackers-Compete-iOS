@@ -108,17 +108,14 @@ enum GrossScoreOutcomeBucket: Int, CaseIterable, Hashable, Sendable {
     case bogey
     case doubleBogey
     case tripleBogey
-    case fourOrWorse
 
-    /// Hexagonal chart order, clockwise from north. Better outcomes occupy the upper half;
-    /// progressively worse outcomes descend toward the south point.
+    /// Hexagonal chart order, clockwise from north, from best to worst outcome.
     static let qualityRadarOrder: [Self] = [
         .birdieOrBetter,
         .par,
-        .doubleBogey,
-        .fourOrWorse,
-        .tripleBogey,
         .bogey,
+        .doubleBogey,
+        .tripleBogey,
     ]
 
     var label: String {
@@ -127,8 +124,7 @@ enum GrossScoreOutcomeBucket: Int, CaseIterable, Hashable, Sendable {
         case .par: "Par"
         case .bogey: "Bogey"
         case .doubleBogey: "Double"
-        case .tripleBogey: "Triple"
-        case .fourOrWorse: "+4 or worse"
+        case .tripleBogey: "Triple+"
         }
     }
 
@@ -138,8 +134,7 @@ enum GrossScoreOutcomeBucket: Int, CaseIterable, Hashable, Sendable {
         case 0: .par
         case 1: .bogey
         case 2: .doubleBogey
-        case 3: .tripleBogey
-        default: .fourOrWorse
+        default: .tripleBogey
         }
     }
 }

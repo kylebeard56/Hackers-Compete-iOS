@@ -2005,7 +2005,14 @@ private let mockTheme: GolfTheme = .purple
     }
 }
 
-private struct CumulativeStrokeBandPoint: Identifiable {
+private struct CumulativeScorePoint: Identifiable {
+    let holesCompleted: Int
+    let value: Int
+
+    var id: Int { holesCompleted }
+}
+
+private struct CumulativeScoreBandPoint: Identifiable {
     let holesCompleted: Int
     let lower: Int
     let median: Int
@@ -2033,10 +2040,7 @@ struct PlayerInsightsView: View {
     private var actualTrend: [ProjectionTrendPoint] {
         projection?.actualTrend ?? viewModel.actualScoreTrend(for: participant, basis: basis)
     }
-    private var cumulativeStrokeTrend: [CumulativeStrokeTrendPoint] {
-        viewModel.cumulativeStrokeTrend(for: participant, basis: basis)
-    }
-    private var holesCompleted: Int { cumulativeStrokeTrend.count }
+    private var holesCompleted: Int { actualTrend.count }
     private var totalHoleCount: Int { viewModel.holeNumbers.count }
     private var isPlayerRoundComplete: Bool {
         totalHoleCount > 0 && holesCompleted == totalHoleCount
@@ -2246,7 +2250,7 @@ struct PlayerInsightsView: View {
                     Text("Cumulative score")
                         .fontStyle(kFontName, size: 17, weight: .semibold)
                         .foregroundStyle(palette.foregroundColor)
-                    Text("\(basis.rawValue.capitalized) strokes by holes completed")
+                    Text("\(basis.rawValue.capitalized) score to par by holes completed")
                         .fontStyle(kFontName, size: 12, weight: .regular)
                         .foregroundStyle(Color.neutral)
                 }
@@ -2258,7 +2262,7 @@ struct PlayerInsightsView: View {
                 }
             }
 
-            if cumulativeStrokeTrend.isEmpty {
+            if actualTrend.isEmpty {
                 emptyTrendState
             } else {
                 scoreTrendChart
@@ -2280,7 +2284,7 @@ struct PlayerInsightsView: View {
                 ForEach(averageStrokeTrend) { point in
                     LineMark(
                         x: .value("Holes completed", point.holesCompleted),
-                        y: .value("Average pace", point.strokes),
+                        y: .value("Average pace", point.value),
                         series: .value("Series", "Average pace")
                     )
                     .foregroundStyle(Color.neutral2)
@@ -2310,7 +2314,7 @@ struct PlayerInsightsView: View {
                 AreaMark(
                     x: .value("Holes completed", point.holesCompleted),
                     yStart: .value("Baseline", 0),
-                    yEnd: .value("Recorded strokes", point.strokes)
+                    yEnd: .value("Score to par", point.value)
                 )
                 .foregroundStyle(
                     LinearGradient(
@@ -2322,7 +2326,7 @@ struct PlayerInsightsView: View {
 
                 LineMark(
                     x: .value("Holes completed", point.holesCompleted),
-                    y: .value("Recorded strokes", point.strokes),
+                    y: .value("Score to par", point.value),
                     series: .value("Series", "Actual")
                 )
                 .foregroundStyle(viewModel.theme.color)
@@ -2331,7 +2335,7 @@ struct PlayerInsightsView: View {
                 if point.holesCompleted != 0 {
                     PointMark(
                         x: .value("Holes completed", point.holesCompleted),
-                        y: .value("Recorded strokes", point.strokes)
+                        y: .value("Score to par", point.value)
                     )
                     .foregroundStyle(viewModel.theme.color)
                 }
@@ -2352,7 +2356,7 @@ struct PlayerInsightsView: View {
             AxisMarks(position: .leading) { value in
                 AxisGridLine().foregroundStyle(Color.neutral5.opacity(0.25))
                 AxisValueLabel {
-                    if let strokes = value.as(Int.self) { Text("\(strokes)") }
+                    if let score = value.as(Int.self) { Text(scoreLabel(score)) }
                 }
             }
         }
@@ -2400,7 +2404,7 @@ struct PlayerInsightsView: View {
                 Text("Gross scoring mix")
                     .fontStyle(kFontName, size: 17, weight: .semibold)
                     .foregroundStyle(palette.foregroundColor)
-                Text("Hole outcomes · better scores rise")
+                Text("Hole outcomes · clockwise from best to worst")
                     .fontStyle(kFontName, size: 12, weight: .regular)
                     .foregroundStyle(Color.neutral)
             }
@@ -2428,8 +2432,7 @@ struct PlayerInsightsView: View {
     }
 
     private var accessibilitySummary: String {
-        let strokes = cumulativeStrokeTrend.last?.strokes ?? 0
-        var summary = "Cumulative \(basis.rawValue) strokes through \(holesCompleted) holes, \(strokes) strokes. Current score \(scoreLabel(currentScore))."
+        var summary = "Cumulative \(basis.rawValue) score through \(holesCompleted) holes, \(scoreLabel(currentScore))."
         if let projection {
             summary += " Projected 80 percent finish interval \(scoreLabel(projection.lowerFinish)) to \(scoreLabel(projection.upperFinish)), median \(scoreLabel(projection.medianFinish)), \(projection.confidence.rawValue) confidence."
         } else if let average = averagePacePerHole {
@@ -2438,37 +2441,37 @@ struct PlayerInsightsView: View {
         return summary
     }
 
-    private var actualChartTrend: [CumulativeStrokeTrendPoint] {
-        guard cumulativeStrokeTrend.isPopulated else { return [] }
-        let baseline = CumulativeStrokeTrendPoint(
+    private var actualChartTrend: [CumulativeScorePoint] {
+        guard actualTrend.isPopulated else { return [] }
+        let baseline = CumulativeScorePoint(
             holesCompleted: 0,
-            holeNumber: viewModel.courseOrderHoleNumbers.first ?? 1,
-            strokes: 0
+            value: 0
         )
-        return [baseline] + cumulativeStrokeTrend
+        let points = actualTrend.enumerated().map { index, point in
+            CumulativeScorePoint(holesCompleted: index + 1, value: point.value)
+        }
+        return [baseline] + points
     }
 
-    private var projectedStrokeTrend: [CumulativeStrokeBandPoint] {
+    private var projectedStrokeTrend: [CumulativeScoreBandPoint] {
         guard let projection else { return [] }
         return projection.projectedTrend.compactMap { point in
             guard let holesCompleted = completionCount(for: point.holeNumber) else { return nil }
-            let par = cumulativePar(through: holesCompleted)
-            return CumulativeStrokeBandPoint(
+            return CumulativeScoreBandPoint(
                 holesCompleted: holesCompleted,
-                lower: par + point.lower,
-                median: par + point.median,
-                upper: par + point.upper
+                lower: point.lower,
+                median: point.median,
+                upper: point.upper
             )
         }
     }
 
-    private var averageStrokeTrend: [CumulativeStrokeTrendPoint]? {
+    private var averageStrokeTrend: [CumulativeScorePoint]? {
         averagePaceTrend?.compactMap { point in
             guard let holesCompleted = completionCount(for: point.holeNumber) else { return nil }
-            return CumulativeStrokeTrendPoint(
+            return CumulativeScorePoint(
                 holesCompleted: holesCompleted,
-                holeNumber: point.holeNumber,
-                strokes: cumulativePar(through: holesCompleted) + point.value
+                value: point.value
             )
         }
     }
@@ -2480,14 +2483,6 @@ struct PlayerInsightsView: View {
         guard let firstHole = viewModel.courseOrderHoleNumbers.first,
               holeNumber == max(0, firstHole - 1) else { return nil }
         return 0
-    }
-
-    private func cumulativePar(through holesCompleted: Int) -> Int {
-        viewModel.courseOrderHoleNumbers
-            .prefix(max(0, holesCompleted))
-            .reduce(0) { total, holeNumber in
-                total + (viewModel.hole(for: holeNumber, teeID: participant.teeBoxID)?.par ?? 0)
-            }
     }
 
     private var averagePacePerHole: Double? {
@@ -2514,7 +2509,7 @@ struct PlayerInsightsView: View {
 
     private var scoringMixAccessibilityLabel: String {
         let values = outcomeCounts.map { "\($0.bucket.label), \($0.count)" }
-        return "Gross scoring mix, arranged with better outcomes above worse outcomes. \(values.joined(separator: ", "))."
+        return "Gross scoring mix, arranged clockwise from best to worst outcome. \(values.joined(separator: ", "))."
     }
 
     private func strokeCountLabel(_ value: Int) -> String {
@@ -2559,16 +2554,12 @@ private struct GrossScoringRadarChart: View {
     }
 
     private var shapeGradient: AngularGradient {
-        AngularGradient(
-            gradient: Gradient(stops: [
-                .init(color: categoryColors[0], location: 0),
-                .init(color: categoryColors[1], location: 1.0 / 6.0),
-                .init(color: categoryColors[2], location: 2.0 / 6.0),
-                .init(color: categoryColors[3], location: 3.0 / 6.0),
-                .init(color: categoryColors[4], location: 4.0 / 6.0),
-                .init(color: categoryColors[5], location: 5.0 / 6.0),
-                .init(color: categoryColors[0], location: 1),
-            ]),
+        let count = max(1, categoryColors.count)
+        let stops = categoryColors.enumerated().map { index, color in
+            Gradient.Stop(color: color, location: Double(index) / Double(count))
+        } + [Gradient.Stop(color: categoryColors[0], location: 1)]
+        return AngularGradient(
+            gradient: Gradient(stops: stops),
             center: .center,
             startAngle: .degrees(-90),
             endAngle: .degrees(270)
@@ -2673,8 +2664,7 @@ private struct GrossScoringRadarChart: View {
         case .par: "Par"
         case .bogey: "Bogey"
         case .doubleBogey: "Double"
-        case .tripleBogey: "Triple"
-        case .fourOrWorse: "Worse"
+        case .tripleBogey: "Triple+"
         }
     }
 
@@ -2684,8 +2674,7 @@ private struct GrossScoringRadarChart: View {
         case .par: .accentPurple
         case .bogey: .systemPink.opacity(0.35)
         case .doubleBogey: .systemPink.opacity(0.5)
-        case .tripleBogey: .systemPink.opacity(0.65)
-        case .fourOrWorse: .systemError
+        case .tripleBogey: .systemError
         }
     }
 

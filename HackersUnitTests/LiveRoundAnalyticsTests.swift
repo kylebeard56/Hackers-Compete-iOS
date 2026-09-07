@@ -562,10 +562,10 @@ final class LiveRoundProjectionIntegrationTests: XCTestCase {
         )
     }
 
-    func testQualityRadarOrderPlacesBetterOutcomesAboveWorseOutcomes() {
+    func testQualityRadarOrderRunsClockwiseFromBestToWorst() {
         XCTAssertEqual(
             GrossScoreOutcomeBucket.qualityRadarOrder,
-            [.birdieOrBetter, .par, .doubleBogey, .fourOrWorse, .tripleBogey, .bogey]
+            [.birdieOrBetter, .par, .bogey, .doubleBogey, .tripleBogey]
         )
     }
 
@@ -901,8 +901,7 @@ final class PlayerInsightsRoundAnalyticsTests: XCTestCase {
         XCTAssertEqual(counts[.par], 1)
         XCTAssertEqual(counts[.bogey], 1)
         XCTAssertEqual(counts[.doubleBogey], 1)
-        XCTAssertEqual(counts[.tripleBogey], 1)
-        XCTAssertEqual(counts[.fourOrWorse], 1)
+        XCTAssertEqual(counts[.tripleBogey], 2)
 
         let usage = viewModel.handicapStrokeUsage(for: participant)
         let expectedUsed = viewModel.courseOrderHoleNumbers.prefix(6).reduce(0) {
