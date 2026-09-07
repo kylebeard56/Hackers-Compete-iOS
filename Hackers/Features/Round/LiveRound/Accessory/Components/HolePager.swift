@@ -194,7 +194,7 @@ struct PagedHoleScrollView<Content: View>: View {
             .scrollClipDisabled()
             .frame(maxHeight: .infinity, alignment: .top)
             //.clipped()
-            .scrollTargetBehavior(.paging)
+            .scrollTargetBehavior(.viewAligned(limitBehavior: .always))
             .scrollPosition(id: $scoringPageHole)
             // ── Key fix ──────────────────────────────────────────────────────
             // onScrollGeometryChange fires on EVERY frame during a drag gesture,

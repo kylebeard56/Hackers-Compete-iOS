@@ -116,7 +116,11 @@ final class RoundSession: ObservableObject, Loggable {
         activeListeners.count > 0
     }
     
-    let reference: CollectionReference = Firestore.firestore().collection(Collections.rounds.rawValue)
+    /// Resolve Firestore only when round work begins. SwiftUI creates this session
+    /// before AppDelegate finishes configuring the Firebase app on a cold launch.
+    var reference: CollectionReference {
+        Firestore.firestore().collection(Collections.rounds.rawValue)
+    }
     
     private var subscriptions = Set<AnyCancellable>()
     

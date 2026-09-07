@@ -2061,13 +2061,11 @@
 				B4336B792905E11000063677 /* Sources */,
 				B4336B7A2905E11000063677 /* Frameworks */,
 				B4336B7B2905E11000063677 /* Resources */,
-				A15000000000000000000041 /* Embed Watch Content */,
 				A15000000000000000000042 /* Embed Foundation Extensions */,
 			);
 			buildRules = (
 			);
 			dependencies = (
-				A15000000000000000000033 /* PBXTargetDependency */,
 				A15000000000000000000034 /* PBXTargetDependency */,
 			);
 			fileSystemSynchronizedGroups = (

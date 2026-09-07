@@ -70,10 +70,25 @@ extension LiveRound {
                 }
                 .padding(.top, UIApplication.shared.topSafeAreaInset)
 
-                swipeHintTile
-                    .padding(.horizontal, 16)
+                VStack(spacing: 0) {
+                    swipeHintTile
+                        .padding(.horizontal, 16)
 
-                Color.clear.frame(height: 100)
+                    if let scoreboard = viewModel.seriesScoreboardSnapshot {
+                        liveSeriesScoreboardTile(scoreboard)
+                            .padding(.horizontal, 16)
+                    }
+
+                    vegasSummaryTile
+                        .padding(.horizontal, 16)
+
+                    leaderboardSection
+                        .padding(.horizontal, 16)
+                        .padding(.bottom, 100)
+                }
+                .frame(maxWidth: .infinity)
+                .contentShape(Rectangle())
+                .simultaneousGesture(lowerScoreEntrySwipeGesture)
             }
         }
         .frame(maxHeight: .infinity)
@@ -548,6 +563,32 @@ private struct SwipeHintTileView: View {
 // MARK: - Leaderboard
 
 extension LiveRound {
+    private var lowerScoreEntrySwipeGesture: some Gesture {
+        DragGesture(minimumDistance: 20)
+            .onEnded { value in
+                let horizontalDistance = value.translation.width
+                guard abs(horizontalDistance) > abs(value.translation.height),
+                      abs(horizontalDistance) >= 50 else { return }
+
+                moveDisplayedHole(by: horizontalDistance < 0 ? 1 : -1)
+            }
+    }
+
+    private func moveDisplayedHole(by offset: Int) {
+        let holes = viewModel.holeNumbers
+        guard holes.isPopulated else { return }
+        let currentHole = scoringPageHole ?? viewModel.currentHoleNumber
+        guard let currentIndex = holes.firstIndex(of: currentHole) else { return }
+        let targetIndex = min(max(currentIndex + offset, holes.startIndex), holes.index(before: holes.endIndex))
+        guard targetIndex != currentIndex else { return }
+
+        Haptics.fire(.light)
+        dismissSwipeHintIfNeeded()
+        withAnimation(.spring(duration: holeScrollDuration(for: 1))) {
+            scoringPageHole = holes[targetIndex]
+        }
+    }
+
     private var pagerResetIdentity: String {
         let groupID = viewModel.visibleTeeGroupID ?? "all"
         let holeOrder = viewModel.holeNumbers.map(String.init).joined(separator: ",")
