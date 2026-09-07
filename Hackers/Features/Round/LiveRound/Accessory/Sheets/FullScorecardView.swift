@@ -2329,11 +2329,6 @@ struct PlayerInsightsView: View {
             RuleMark(y: .value("Even", 0))
                 .foregroundStyle(Color.neutral2.opacity(0.8))
                 .lineStyle(.init(lineWidth: 1.5, dash: [5, 4]))
-                .annotation(position: .top, alignment: .trailing) {
-                    Text("Even")
-                        .fontStyle(kFontName, size: 10, weight: .semibold)
-                        .foregroundStyle(Color.neutral)
-                }
 
             if let averageStrokeTrend {
                 ForEach(averageStrokeTrend) { point in
@@ -2354,14 +2349,14 @@ struct PlayerInsightsView: View {
                         yStart: .value("Low", point.lower),
                         yEnd: .value("High", point.upper)
                     )
-                    .foregroundStyle(viewModel.theme.color.opacity(0.16))
+                    .foregroundStyle(viewModel.theme.color.opacity(0.08))
 
                     LineMark(
                         x: .value("Holes completed", point.holesCompleted),
                         y: .value("Projection low", point.lower),
                         series: .value("Projection edge", "Low")
                     )
-                    .foregroundStyle(viewModel.theme.color.opacity(0.3))
+                    .foregroundStyle(viewModel.theme.color.opacity(0.18))
                     .lineStyle(.init(lineWidth: 1))
 
                     LineMark(
@@ -2369,36 +2364,28 @@ struct PlayerInsightsView: View {
                         y: .value("Projection high", point.upper),
                         series: .value("Projection edge", "High")
                     )
-                    .foregroundStyle(viewModel.theme.color.opacity(0.3))
+                    .foregroundStyle(viewModel.theme.color.opacity(0.18))
                     .lineStyle(.init(lineWidth: 1))
 
                     LineMark(
                         x: .value("Holes completed", point.holesCompleted),
                         y: .value("Projected median", point.median)
                     )
-                    .foregroundStyle(viewModel.theme.color.opacity(0.65))
-                    .lineStyle(.init(lineWidth: 2, dash: [5, 4]))
+                    .foregroundStyle(viewModel.theme.color.opacity(0.9))
+                    .lineStyle(.init(lineWidth: 2.5, dash: [5, 4]))
                 }
 
                 RuleMark(x: .value("Projection starts", holesCompleted))
                     .foregroundStyle(Color.neutral2.opacity(0.55))
                     .lineStyle(.init(lineWidth: 1, dash: [2, 4]))
-                    .annotation(position: .top, alignment: .leading) {
-                        Text("Projection")
-                            .fontStyle(kFontName, size: 9, weight: .semibold)
-                            .foregroundStyle(Color.neutral)
-                    }
 
                 if let finish = projectedStrokeTrend.last {
                     PointMark(
                         x: .value("Finish hole", finish.holesCompleted),
                         y: .value("Projected finish", finish.median)
                     )
-                    .foregroundStyle(viewModel.theme.color.opacity(0.75))
-                    .symbolSize(42)
-                    .annotation(position: .top, alignment: .trailing, spacing: 6) {
-                        scoreChartLabel("Projected \(scoreLabel(finish.median))")
-                    }
+                    .foregroundStyle(viewModel.theme.color)
+                    .symbolSize(48)
                 }
             }
 
@@ -2420,17 +2407,6 @@ struct PlayerInsightsView: View {
                 }
             }
 
-            if let current = actualChartTrend.last, current.holesCompleted > 0 {
-                PointMark(
-                    x: .value("Current hole", current.holesCompleted),
-                    y: .value("Current score", current.value)
-                )
-                .foregroundStyle(viewModel.theme.color)
-                .symbolSize(52)
-                .annotation(position: .top, alignment: .leading, spacing: 6) {
-                    scoreChartLabel("Now \(scoreLabel(current.value))")
-                }
-            }
         }
         .chartXScale(domain: 0...max(1, totalHoleCount))
         .chartYScale(domain: chartYDomain)
@@ -2452,15 +2428,6 @@ struct PlayerInsightsView: View {
                 }
             }
         }
-    }
-
-    private func scoreChartLabel(_ text: String) -> some View {
-        Text(text)
-            .fontStyle(kFontName, size: 10, weight: .semibold)
-            .foregroundStyle(palette.foregroundColor)
-            .padding(.horizontal, 7)
-            .padding(.vertical, 4)
-            .background(.thinMaterial, in: Capsule())
     }
 
     @ViewBuilder
@@ -2485,10 +2452,10 @@ struct PlayerInsightsView: View {
             .foregroundStyle(Color.neutral)
         } else if let projection {
             VStack(alignment: .leading, spacing: 5) {
-                Text("Projected \(basis.rawValue) finish: \(scoreLabel(projection.lowerFinish)) to \(scoreLabel(projection.upperFinish))")
-                    .fontStyle(kFontName, size: 15, weight: .semibold)
-                    .foregroundStyle(palette.foregroundColor)
-                Text("Most likely \(scoreLabel(projection.medianFinish)) · 80% range · based on \(projection.sampleCount) similar rounds")
+                Text("Projected \(basis.rawValue) finish: \(scoreLabel(projection.medianFinish))")
+                    .fontStyle(kFontName, size: 20, weight: .bold)
+                    .foregroundStyle(viewModel.theme.color)
+                Text("Likely range \(scoreLabel(projection.lowerFinish)) to \(scoreLabel(projection.upperFinish)) · 80% · based on \(projection.sampleCount) similar rounds")
                     .fontStyle(kFontName, size: 12, weight: .regular)
                     .foregroundStyle(Color.neutral)
             }
