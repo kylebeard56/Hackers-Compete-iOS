@@ -2456,7 +2456,7 @@ struct PlayerInsightsView: View {
                     .fontStyle(kFontName, size: 20, weight: .bold)
                     .foregroundStyle(viewModel.theme.color)
                 Text("Likely range \(scoreLabel(projection.lowerFinish)) to \(scoreLabel(projection.upperFinish)) · 80% · based on \(projection.sampleCount) similar rounds")
-                    .fontStyle(kFontName, size: 12, weight: .regular)
+                    .fontStyle(kFontName, size: 12, weight: .semibold)
                     .foregroundStyle(Color.neutral)
             }
         } else {
