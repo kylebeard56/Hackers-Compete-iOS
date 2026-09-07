@@ -566,9 +566,9 @@ extension LiveRound {
     private var lowerScoreEntrySwipeGesture: some Gesture {
         DragGesture(minimumDistance: 20)
             .onEnded { value in
-                let horizontalDistance = value.predictedEndTranslation.width
-                guard abs(horizontalDistance) > abs(value.predictedEndTranslation.height),
-                      abs(horizontalDistance) >= 44 else { return }
+                let horizontalDistance = value.translation.width
+                guard abs(horizontalDistance) > abs(value.translation.height),
+                      abs(horizontalDistance) >= 50 else { return }
 
                 moveDisplayedHole(by: horizontalDistance < 0 ? 1 : -1)
             }
@@ -584,7 +584,9 @@ extension LiveRound {
 
         Haptics.fire(.light)
         dismissSwipeHintIfNeeded()
-        pageCoordinator.scrollTo(index: targetIndex, duration: holeScrollDuration(for: 1))
+        withAnimation(.spring(duration: holeScrollDuration(for: 1))) {
+            scoringPageHole = holes[targetIndex]
+        }
     }
 
     private var pagerResetIdentity: String {
