@@ -54,41 +54,39 @@ extension LiveRound {
     
     private var holePagedScoringSections: some View {
         let holes = viewModel.holeNumbers
-        return ScrollView(.vertical, showsIndicators: false) {
-            VStack(spacing: 16) {
-                PagedHoleScrollView(
-                    holeNumbers: holes,
-                    scoringPageHole: $scoringPageHole,
-                    coordinator: pageCoordinator,
-                    resetIdentity: pagerResetIdentity
-                ) { holeNumber in
-                    VStack(spacing: 16) {
-                        navPadding
-                        holeDetailsCard(for: holeNumber)
-                        teeGroupScorecard(for: holeNumber)
-                    }
+        return VStack(spacing: 16) {
+            PagedHoleScrollView(
+                holeNumbers: holes,
+                scoringPageHole: $scoringPageHole,
+                coordinator: pageCoordinator,
+                resetIdentity: pagerResetIdentity
+            ) { holeNumber in
+                VStack(spacing: 16) {
+                    navPadding
+                    holeDetailsCard(for: holeNumber)
+                    teeGroupScorecard(for: holeNumber)
                 }
-                .padding(.top, UIApplication.shared.topSafeAreaInset)
-
-                VStack(spacing: 0) {
-                    swipeHintTile
-                        .padding(.horizontal, 16)
-
-                    if let scoreboard = viewModel.seriesScoreboardSnapshot {
-                        liveSeriesScoreboardTile(scoreboard)
-                            .padding(.horizontal, 16)
-                    }
-
-                    vegasSummaryTile
-                        .padding(.horizontal, 16)
-                }
-                .padding(.bottom, 100)
-                .frame(maxWidth: .infinity)
-                .contentShape(Rectangle())
-                .simultaneousGesture(lowerScoreEntrySwipeGesture)
             }
+            .padding(.top, UIApplication.shared.topSafeAreaInset)
+
+            VStack(spacing: 0) {
+                swipeHintTile
+                    .padding(.horizontal, 16)
+
+                if let scoreboard = viewModel.seriesScoreboardSnapshot {
+                    liveSeriesScoreboardTile(scoreboard)
+                        .padding(.horizontal, 16)
+                }
+
+                vegasSummaryTile
+                    .padding(.horizontal, 16)
+            }
+            .padding(.bottom, 100)
+            .frame(maxWidth: .infinity)
+            .contentShape(Rectangle())
+            .simultaneousGesture(lowerScoreEntrySwipeGesture)
         }
-        .frame(maxHeight: .infinity)
+        .frame(maxHeight: .infinity, alignment: .top)
         .onAppear {
             guard !holes.isEmpty else { return }
             if let current = scoringPageHole, holes.contains(current) { return }
