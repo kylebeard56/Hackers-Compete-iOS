@@ -54,46 +54,24 @@ extension LiveRound {
     
     private var holePagedScoringSections: some View {
         let holes = viewModel.holeNumbers
-        return ScrollView(.vertical, showsIndicators: false) {
+        return PagedHoleScrollView(
+            holeNumbers: holes,
+            scoringPageHole: $scoringPageHole,
+            coordinator: pageCoordinator,
+            resetIdentity: pagerResetIdentity
+        ) { holeNumber in
             VStack(spacing: 16) {
-                PagedHoleScrollView(
-                    holeNumbers: holes,
-                    scoringPageHole: $scoringPageHole,
-                    coordinator: pageCoordinator,
-                    resetIdentity: pagerResetIdentity
-                ) { holeNumber in
-                    VStack(spacing: 16) {
-                        navPadding
-                        holeDetailsCard(for: holeNumber)
-                        teeGroupScorecard(for: holeNumber)
+                navPadding
+                holeDetailsCard(for: holeNumber)
+                teeGroupScorecard(for: holeNumber)
 
-                        swipeHintTile
-                            .padding(.horizontal, 16)
+                swipeHintTile
+                    .padding(.horizontal, 16)
 
-                        Color.clear.frame(height: 100)
-                    }
-                }
-                .padding(.top, UIApplication.shared.topSafeAreaInset)
-
-                VStack(spacing: 0) {
-                    swipeHintTile
-                        .padding(.horizontal, 16)
-
-                    if let scoreboard = viewModel.seriesScoreboardSnapshot {
-                        liveSeriesScoreboardTile(scoreboard)
-                            .padding(.horizontal, 16)
-                    }
-
-                    vegasSummaryTile
-                        .padding(.horizontal, 16)
-
-                    leaderboardSection
-                        .padding(.horizontal, 16)
-                        .padding(.bottom, 100)
-                }
-                .frame(maxWidth: .infinity)
+                Color.clear.frame(height: 100)
             }
         }
+        .padding(.top, UIApplication.shared.topSafeAreaInset)
         .frame(maxHeight: .infinity)
         .onAppear {
             guard !holes.isEmpty else { return }
