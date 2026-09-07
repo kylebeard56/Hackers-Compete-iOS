@@ -2296,7 +2296,7 @@ struct PlayerInsightsView: View {
                     Text("\(basisDisplayName) score projection")
                         .fontStyle(kFontName, size: 17, weight: .semibold)
                         .foregroundStyle(palette.foregroundColor)
-                    Text("Running score to par after each hole")
+                    Text("Solid: played · Shaded: projected 80% range")
                         .fontStyle(kFontName, size: 12, weight: .regular)
                         .foregroundStyle(Color.neutral)
                 }
@@ -2326,6 +2326,15 @@ struct PlayerInsightsView: View {
 
     private var scoreTrendChart: some View {
         Chart {
+            RuleMark(y: .value("Even", 0))
+                .foregroundStyle(Color.neutral2.opacity(0.8))
+                .lineStyle(.init(lineWidth: 1.5, dash: [5, 4]))
+                .annotation(position: .top, alignment: .trailing) {
+                    Text("Even")
+                        .fontStyle(kFontName, size: 10, weight: .semibold)
+                        .foregroundStyle(Color.neutral)
+                }
+
             if let averageStrokeTrend {
                 ForEach(averageStrokeTrend) { point in
                     LineMark(
@@ -2357,19 +2366,6 @@ struct PlayerInsightsView: View {
             }
 
             ForEach(actualChartTrend) { point in
-                AreaMark(
-                    x: .value("Holes completed", point.holesCompleted),
-                    yStart: .value("Baseline", 0),
-                    yEnd: .value("Score to par", point.value)
-                )
-                .foregroundStyle(
-                    LinearGradient(
-                        colors: [viewModel.theme.color.opacity(0.3), .clear],
-                        startPoint: .top,
-                        endPoint: .bottom
-                    )
-                )
-
                 LineMark(
                     x: .value("Holes completed", point.holesCompleted),
                     y: .value("Score to par", point.value),
