@@ -2066,11 +2066,19 @@ struct PlayerInsightsView: View {
     @ObservedObject var viewModel: LiveRoundViewModel
     let participant: RoundParticipant
 
+    @State private var selectedBasis: ScoreBasis
     @State private var projection: PlayerFinishProjection?
     @State private var isLoadingProjection = false
 
+    init(viewModel: LiveRoundViewModel, participant: RoundParticipant) {
+        self.viewModel = viewModel
+        self.participant = participant
+        _selectedBasis = State(initialValue: viewModel.handicapsEnabled ? .net : .gross)
+    }
+
     private var palette: DesignPalette { .init(theme: .primary, scheme: colorScheme) }
-    private var basis: ScoreBasis { viewModel.scoreBasis }
+    private var basis: ScoreBasis { selectedBasis }
+    private var basisDisplayName: String { basis == .net ? "Net" : "Gross" }
     private var canRevealInsights: Bool { viewModel.canRevealInsights(for: participant) }
     private var projectionUnavailableReason: String? {
         viewModel.playerProjectionUnavailableReason(for: participant)
@@ -2105,7 +2113,7 @@ struct PlayerInsightsView: View {
 
                     if canRevealInsights {
                         if viewModel.handicapsEnabled {
-                            Picker("Score basis", selection: $viewModel.scoreBasis) {
+                            Picker("Score basis", selection: $selectedBasis) {
                                 Text("Gross").tag(ScoreBasis.gross)
                                 Text("Net").tag(ScoreBasis.net)
                             }
@@ -2285,10 +2293,10 @@ struct PlayerInsightsView: View {
         VStack(alignment: .leading, spacing: 12) {
             HStack(alignment: .firstTextBaseline) {
                 VStack(alignment: .leading, spacing: 2) {
-                    Text("Cumulative score")
+                    Text("\(basisDisplayName) score projection")
                         .fontStyle(kFontName, size: 17, weight: .semibold)
                         .foregroundStyle(palette.foregroundColor)
-                    Text("\(basis.rawValue.capitalized) score to par by holes completed")
+                    Text("Running score to par after each hole")
                         .fontStyle(kFontName, size: 12, weight: .regular)
                         .foregroundStyle(Color.neutral)
                 }
@@ -2422,10 +2430,10 @@ struct PlayerInsightsView: View {
             .foregroundStyle(Color.neutral)
         } else if let projection {
             VStack(alignment: .leading, spacing: 5) {
-                Text("Projected finish \(scoreLabel(projection.lowerFinish)) to \(scoreLabel(projection.upperFinish))")
+                Text("Projected \(basis.rawValue) finish: \(scoreLabel(projection.lowerFinish)) to \(scoreLabel(projection.upperFinish))")
                     .fontStyle(kFontName, size: 15, weight: .semibold)
                     .foregroundStyle(palette.foregroundColor)
-                Text("Median \(scoreLabel(projection.medianFinish)) · 80% interval · \(projection.sampleCount) historical samples")
+                Text("Most likely \(scoreLabel(projection.medianFinish)) · 80% range · based on \(projection.sampleCount) similar rounds")
                     .fontStyle(kFontName, size: 12, weight: .regular)
                     .foregroundStyle(Color.neutral)
             }
@@ -2584,7 +2592,11 @@ private struct GrossScoringRadarChart: View {
     }
 
     private var normalizedValues: [CGFloat] {
-        chartOutcomes.map { CGFloat($0.count) / CGFloat(maximumCount) }
+        chartOutcomes.map { outcome in
+            guard outcome.count > 0 else { return 0.12 }
+            let normalizedCount = CGFloat(outcome.count) / CGFloat(maximumCount)
+            return 0.2 + (normalizedCount * 0.8)
+        }
     }
 
     private var categoryColors: [Color] {

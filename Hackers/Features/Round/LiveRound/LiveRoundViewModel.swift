@@ -109,7 +109,7 @@ enum GrossScoreOutcomeBucket: Int, CaseIterable, Hashable, Sendable {
     case doubleBogey
     case tripleBogey
 
-    /// Hexagonal chart order, clockwise from north, from best to worst outcome.
+    /// Five-axis chart order, clockwise from 12 o'clock, from best to worst outcome.
     static let qualityRadarOrder: [Self] = [
         .birdieOrBetter,
         .par,
