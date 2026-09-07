@@ -2358,10 +2358,47 @@ struct PlayerInsightsView: View {
 
                     LineMark(
                         x: .value("Holes completed", point.holesCompleted),
+                        y: .value("Projection low", point.lower),
+                        series: .value("Projection edge", "Low")
+                    )
+                    .foregroundStyle(viewModel.theme.color.opacity(0.3))
+                    .lineStyle(.init(lineWidth: 1))
+
+                    LineMark(
+                        x: .value("Holes completed", point.holesCompleted),
+                        y: .value("Projection high", point.upper),
+                        series: .value("Projection edge", "High")
+                    )
+                    .foregroundStyle(viewModel.theme.color.opacity(0.3))
+                    .lineStyle(.init(lineWidth: 1))
+
+                    LineMark(
+                        x: .value("Holes completed", point.holesCompleted),
                         y: .value("Projected median", point.median)
                     )
                     .foregroundStyle(viewModel.theme.color.opacity(0.65))
                     .lineStyle(.init(lineWidth: 2, dash: [5, 4]))
+                }
+
+                RuleMark(x: .value("Projection starts", holesCompleted))
+                    .foregroundStyle(Color.neutral2.opacity(0.55))
+                    .lineStyle(.init(lineWidth: 1, dash: [2, 4]))
+                    .annotation(position: .top, alignment: .leading) {
+                        Text("Projection")
+                            .fontStyle(kFontName, size: 9, weight: .semibold)
+                            .foregroundStyle(Color.neutral)
+                    }
+
+                if let finish = projectedStrokeTrend.last {
+                    PointMark(
+                        x: .value("Finish hole", finish.holesCompleted),
+                        y: .value("Projected finish", finish.median)
+                    )
+                    .foregroundStyle(viewModel.theme.color.opacity(0.75))
+                    .symbolSize(42)
+                    .annotation(position: .top, alignment: .trailing, spacing: 6) {
+                        scoreChartLabel("Projected \(scoreLabel(finish.median))")
+                    }
                 }
             }
 
@@ -2382,11 +2419,24 @@ struct PlayerInsightsView: View {
                     .foregroundStyle(viewModel.theme.color)
                 }
             }
+
+            if let current = actualChartTrend.last, current.holesCompleted > 0 {
+                PointMark(
+                    x: .value("Current hole", current.holesCompleted),
+                    y: .value("Current score", current.value)
+                )
+                .foregroundStyle(viewModel.theme.color)
+                .symbolSize(52)
+                .annotation(position: .top, alignment: .leading, spacing: 6) {
+                    scoreChartLabel("Now \(scoreLabel(current.value))")
+                }
+            }
         }
         .chartXScale(domain: 0...max(1, totalHoleCount))
+        .chartYScale(domain: chartYDomain)
         .chartXAxis {
             AxisMarks(values: .automatic(desiredCount: 6)) { value in
-                AxisGridLine().foregroundStyle(Color.neutral5.opacity(0.25))
+                AxisGridLine().foregroundStyle(Color.neutral5.opacity(0.14))
                 AxisValueLabel {
                     if let holes = value.as(Int.self) {
                         Text(holes == 0 ? "Start" : "\(holes)")
@@ -2396,12 +2446,21 @@ struct PlayerInsightsView: View {
         }
         .chartYAxis {
             AxisMarks(position: .leading) { value in
-                AxisGridLine().foregroundStyle(Color.neutral5.opacity(0.25))
+                AxisGridLine().foregroundStyle(Color.neutral5.opacity(0.14))
                 AxisValueLabel {
                     if let score = value.as(Int.self) { Text(scoreLabel(score)) }
                 }
             }
         }
+    }
+
+    private func scoreChartLabel(_ text: String) -> some View {
+        Text(text)
+            .fontStyle(kFontName, size: 10, weight: .semibold)
+            .foregroundStyle(palette.foregroundColor)
+            .padding(.horizontal, 7)
+            .padding(.vertical, 4)
+            .background(.thinMaterial, in: Capsule())
     }
 
     @ViewBuilder
@@ -2493,6 +2552,18 @@ struct PlayerInsightsView: View {
             CumulativeScorePoint(holesCompleted: index + 1, value: point.value)
         }
         return [baseline] + points
+    }
+
+    private var chartYDomain: ClosedRange<Int> {
+        var values = actualChartTrend.map(\.value)
+        values.append(contentsOf: projectedStrokeTrend.flatMap { [$0.lower, $0.median, $0.upper] })
+        values.append(contentsOf: averageStrokeTrend?.map(\.value) ?? [])
+
+        let lowerValue = min(0, values.min() ?? 0)
+        let upperValue = max(0, values.max() ?? 0)
+        let span = max(1, upperValue - lowerValue)
+        let padding = max(2, Int(ceil(Double(span) * 0.12)))
+        return (lowerValue - padding)...(upperValue + padding)
     }
 
     private var projectedStrokeTrend: [CumulativeScoreBandPoint] {
@@ -2718,8 +2789,8 @@ private struct GrossScoringRadarChart: View {
         switch bucket {
         case .birdieOrBetter: .accentGreen
         case .par: .accentPurple
-        case .bogey: .systemPink.opacity(0.35)
-        case .doubleBogey: .systemPink.opacity(0.5)
+        case .bogey: .accentYellow
+        case .doubleBogey: .systemOrange
         case .tripleBogey: .systemError
         }
     }
