@@ -432,11 +432,21 @@ struct LiveRound: View, Loggable {
     @ViewBuilder
     private var tableContent: some View {
         if let participant = viewModel.currentParticipant ?? snapshot.participants.first {
-            VStack(spacing: 8) {
+            VStack(spacing: 0) {
                 if !tablePresentationState.isRotated {
                     navPadding
                 }
 
+                if !tablePresentationState.isRotated {
+                    Picker("Overview", selection: $overviewTab) {
+                        ForEach(LiveRoundOverviewTab.allCases, id: \.self) { tab in
+                            Text(tab.rawValue).tag(tab)
+                        }
+                    }
+                    .pickerStyle(.segmented)
+                    .padding(.horizontal, 16)
+                    .padding(.bottom, 8)
+                }
                 if overviewTab == .leaderboard {
                     ScrollView {
                         VStack(spacing: 16) {
@@ -509,21 +519,11 @@ extension LiveRound {
             if selectedTab == .scoring && hasRestoredScoringContext {
                 navHoleSelector
             } else if selectedTab == .table {
-                HStack(spacing: 10) {
-                    Text("Overview".uppercased())
-                        .fontStyle(kFontName, size: 15, weight: .semibold)
-                        .foregroundStyle(palette.foregroundColor)
-                        .lineLimit(1)
-                        .minimumScaleFactor(0.7)
-
-                    Picker("Overview", selection: $overviewTab) {
-                        ForEach(LiveRoundOverviewTab.allCases, id: \.self) { tab in
-                            Text(tab.rawValue).tag(tab)
-                        }
-                    }
-                    .pickerStyle(.segmented)
-                    .frame(width: 176)
-                }
+                Text("Overview".uppercased())
+                    .fontStyle(kFontName, size: 15, weight: .semibold)
+                    .foregroundStyle(palette.foregroundColor)
+                    .lineLimit(1)
+                    .minimumScaleFactor(0.7)
             } else if selectedTab == .matchups {
                 Text("Matchups".uppercased())
                     .fontStyle(kFontName, size: 15, weight: .semibold)
