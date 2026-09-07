@@ -356,9 +356,10 @@ struct LiveRound: View, Loggable {
 
     private func restoreDurableRoundContextIfNeeded() {
         guard !hasRestoredScoringContext,
-              roundSession.isScoringSnapshotReady,
-              viewModel.snapshot.round.id == appSession.activeRoundID,
-              !viewModel.snapshot.participants.isEmpty else { return }
+              roundSession.isScoringSnapshotReady else { return }
+        let hasUsableSnapshot = viewModel.snapshot.round.id == appSession.activeRoundID
+            && !viewModel.snapshot.participants.isEmpty
+        guard hasUsableSnapshot || roundSession.didTimeOutInitialLoad else { return }
         let state = appSession.roundResumeState
         let hole = state?.roundID == appSession.activeRoundID ? state?.selectedHole : nil
         viewModel.restoreCurrentHole(hole)
@@ -891,6 +892,7 @@ extension LiveRound {
         let startedAt = Date()
         while !hasRestoredScoringContext {
             guard !Task.isCancelled else { return }
+            roundSession.completeInitialLoadTrackingIfTimedOut()
             await viewModel.ensureParticipantResolved()
             restoreDurableRoundContextIfNeeded()
             if !hasRestoredScoringContext {

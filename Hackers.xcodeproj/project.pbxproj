@@ -2061,11 +2061,13 @@
 				B4336B792905E11000063677 /* Sources */,
 				B4336B7A2905E11000063677 /* Frameworks */,
 				B4336B7B2905E11000063677 /* Resources */,
+				A15000000000000000000041 /* Embed Watch Content */,
 				A15000000000000000000042 /* Embed Foundation Extensions */,
 			);
 			buildRules = (
 			);
 			dependencies = (
+				A15000000000000000000033 /* PBXTargetDependency */,
 				A15000000000000000000034 /* PBXTargetDependency */,
 			);
 			fileSystemSynchronizedGroups = (
@@ -2812,6 +2814,8 @@
 				ENABLE_STRICT_OBJC_MSGSEND = YES;
 				ENABLE_TESTABILITY = YES;
 				ENABLE_TESTING_SEARCH_PATHS = YES;
+				EXCLUDED_EXPLICIT_TARGET_DEPENDENCIES = "Hackers\\ Watch\\ App";
+				EXCLUDED_SOURCE_FILE_NAMES = "Hackers\\ Watch\\ App.app";
 				GCC_C_LANGUAGE_STANDARD = gnu11;
 				GCC_DYNAMIC_NO_PIC = NO;
 				GCC_NO_COMMON_BLOCKS = YES;

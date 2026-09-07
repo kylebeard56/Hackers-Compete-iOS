@@ -54,6 +54,7 @@ enum RoundSessionStaleReason: String {
 final class RoundSession: ObservableObject, Loggable {
     static let staleSessionInterval: TimeInterval = 30 * 60
     static let listenerErrorThrottleInterval: TimeInterval = 5 * 60
+    static let initialListenerReadinessTimeout: TimeInterval = 12
 
     @Published var roundID: String?
     @Published var snapshot: RoundSnapshot = .init()
@@ -89,6 +90,8 @@ final class RoundSession: ObservableObject, Loggable {
     private var initialLoadStartedAt: Date?
     private var initialLoadExpectedTypes: Set<RoundRegistrationType> = []
     private var initialLoadReadyTypes: Set<RoundRegistrationType> = []
+    private var initialLoadProfile: RoundSubscriptionProfile = .oneShot
+    private(set) var didTimeOutInitialLoad = false
     private var didEmitInitialSnapshotLoaded = false
     private var initialLoadSource: String?
     private var listenerErrorThrottle: [String: Date] = [:]
@@ -296,7 +299,12 @@ final class RoundSession: ObservableObject, Loggable {
         )
 
         if profile.usesLiveListeners {
-            beginInitialLoadTracking(for: profile, startedAt: Date(), source: "live_listeners")
+            beginInitialLoadTracking(
+                for: profile,
+                startedAt: Date(),
+                source: "live_listeners",
+                retainingReadyTypes: initialLoadReadyTypes
+            )
             await startListeners(for: profile)
             stopListeners(excluding: profile.listenerTypes)
         } else {
@@ -327,6 +335,8 @@ final class RoundSession: ObservableObject, Loggable {
         initialLoadStartedAt = nil
         initialLoadExpectedTypes = []
         initialLoadReadyTypes = []
+        initialLoadProfile = .oneShot
+        didTimeOutInitialLoad = false
         didEmitInitialSnapshotLoaded = false
         initialLoadSource = nil
     }
@@ -390,14 +400,17 @@ final class RoundSession: ObservableObject, Loggable {
     func beginInitialLoadTracking(
         for profile: RoundSubscriptionProfile,
         startedAt: Date = Date(),
-        source: String
+        source: String,
+        retainingReadyTypes: Set<RoundRegistrationType> = []
     ) {
         if profile == .liveRound {
             isScoringSnapshotReady = false
         }
         initialLoadStartedAt = startedAt
+        initialLoadProfile = profile
         initialLoadExpectedTypes = profile.listenerTypes
-        initialLoadReadyTypes = []
+        initialLoadReadyTypes = retainingReadyTypes.intersection(profile.listenerTypes)
+        didTimeOutInitialLoad = false
         didEmitInitialSnapshotLoaded = false
         initialLoadSource = source
     }
@@ -410,7 +423,27 @@ final class RoundSession: ObservableObject, Loggable {
 
         guard initialLoadReadyTypes.isSuperset(of: initialLoadExpectedTypes) else { return false }
         didEmitInitialSnapshotLoaded = true
-        if currentProfile == .liveRound { isScoringSnapshotReady = true }
+        if initialLoadProfile == .liveRound { isScoringSnapshotReady = true }
+        return true
+    }
+
+    @discardableResult
+    func completeInitialLoadTrackingIfTimedOut(asOf date: Date = Date()) -> Bool {
+        guard !didEmitInitialSnapshotLoaded,
+              let initialLoadStartedAt,
+              date.timeIntervalSince(initialLoadStartedAt) >= Self.initialListenerReadinessTimeout else {
+            return false
+        }
+
+        didEmitInitialSnapshotLoaded = true
+        didTimeOutInitialLoad = true
+        if initialLoadProfile == .liveRound {
+            isScoringSnapshotReady = true
+        }
+        addBreadcrumb(
+            level: .error,
+            message: "Initial listener readiness timed out; continuing with the latest available snapshot"
+        )
         return true
     }
 
