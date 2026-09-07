@@ -438,7 +438,12 @@ struct LiveRound: View, Loggable {
                 }
 
                 if !tablePresentationState.isRotated {
-                    overviewTabSelector
+                    Picker("Overview", selection: $overviewTab) {
+                        ForEach(LiveRoundOverviewTab.allCases, id: \.self) { tab in
+                            Text(tab.rawValue).tag(tab)
+                        }
+                    }
+                    .pickerStyle(.segmented)
                     .padding(.top, 12)
                     .padding(.horizontal, 16)
                     .padding(.bottom, 8)
@@ -477,41 +482,6 @@ struct LiveRound: View, Loggable {
         }
     }
 
-    private var overviewTabSelector: some View {
-        HStack(spacing: 4) {
-            ForEach(LiveRoundOverviewTab.allCases, id: \.self) { tab in
-                let isSelected = overviewTab == tab
-
-                Button {
-                    Haptics.fire(.light)
-                    overviewTab = tab
-                } label: {
-                    Text(tab.rawValue)
-                        .fontStyle(kFontName, size: 15, weight: isSelected ? .semibold : .medium)
-                        .foregroundStyle(isSelected ? palette.backgroundColor : palette.foregroundColor)
-                        .frame(maxWidth: .infinity, minHeight: 42)
-                        .contentShape(Rectangle())
-                }
-                .buttonStyle(.plain)
-                .background {
-                    RoundedRectangle(cornerRadius: 12, style: .continuous)
-                        .fill(isSelected ? palette.foregroundColor : Color.clear)
-                }
-                .accessibilityAddTraits(isSelected ? .isSelected : [])
-            }
-        }
-        .padding(4)
-        .background {
-            RoundedRectangle(cornerRadius: 16, style: .continuous)
-                .fill(Color.neutral3)
-        }
-        .overlay {
-            RoundedRectangle(cornerRadius: 16, style: .continuous)
-                .stroke(Color.neutral2.opacity(0.35), lineWidth: 1)
-        }
-        .accessibilityElement(children: .contain)
-    }
-    
 //    func updateTabBarScale(
 //        shrinkSpeed: CGFloat = 0.015,
 //        expandSpeed: CGFloat = 0.02,
