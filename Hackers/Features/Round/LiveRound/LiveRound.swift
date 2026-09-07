@@ -432,7 +432,7 @@ struct LiveRound: View, Loggable {
     @ViewBuilder
     private var tableContent: some View {
         if let participant = viewModel.currentParticipant ?? snapshot.participants.first {
-            VStack(spacing: 8) {
+            VStack(spacing: 0) {
                 if !tablePresentationState.isRotated {
                     navPadding
                 }
@@ -444,7 +444,9 @@ struct LiveRound: View, Loggable {
                         }
                     }
                     .pickerStyle(.segmented)
+                    .padding(.top, 12)
                     .padding(.horizontal, 16)
+                    .padding(.bottom, 8)
                 }
                 if overviewTab == .leaderboard {
                     ScrollView {
@@ -469,7 +471,6 @@ struct LiveRound: View, Loggable {
                     )
                 }
             }
-            .padding(.top, tablePresentationState.isRotated ? 0 : UIApplication.shared.topSafeAreaInset)
             .padding(.bottom, tablePresentationState.isRotated ? 0 : 88)
         } else {
             ContentUnavailableView(
@@ -480,7 +481,7 @@ struct LiveRound: View, Loggable {
             .padding(24)
         }
     }
-    
+
 //    func updateTabBarScale(
 //        shrinkSpeed: CGFloat = 0.015,
 //        expandSpeed: CGFloat = 0.02,
