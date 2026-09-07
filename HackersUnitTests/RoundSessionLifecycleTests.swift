@@ -105,6 +105,52 @@ final class RoundSessionLifecycleTests: XCTestCase {
         XCTAssertFalse(session.recordInitialSnapshotReady(for: .round))
     }
 
+    func testLobbyToLiveRoundTransitionRetainsReadinessForExistingListeners() {
+        let session = RoundSession()
+        let lobbyTypes = RoundSubscriptionProfile.lobby.listenerTypes
+        session.beginInitialLoadTracking(for: .lobby, startedAt: Date(), source: "live_listeners")
+
+        for type in lobbyTypes {
+            _ = session.recordInitialSnapshotReady(for: type)
+        }
+
+        session.beginInitialLoadTracking(
+            for: .liveRound,
+            startedAt: Date(),
+            source: "live_listeners",
+            retainingReadyTypes: lobbyTypes
+        )
+
+        XCTAssertTrue(session.recordInitialSnapshotReady(for: .scoring))
+        XCTAssertTrue(session.isScoringSnapshotReady)
+    }
+
+    func testLiveRoundReadinessTimesOutInsteadOfWaitingForever() {
+        let session = RoundSession()
+        let startedAt = Date()
+        session.beginInitialLoadTracking(
+            for: .liveRound,
+            startedAt: startedAt,
+            source: "live_listeners"
+        )
+
+        XCTAssertFalse(
+            session.completeInitialLoadTrackingIfTimedOut(
+                asOf: startedAt.addingTimeInterval(RoundSession.initialListenerReadinessTimeout - 1)
+            )
+        )
+        XCTAssertFalse(session.isScoringSnapshotReady)
+        XCTAssertFalse(session.didTimeOutInitialLoad)
+
+        XCTAssertTrue(
+            session.completeInitialLoadTrackingIfTimedOut(
+                asOf: startedAt.addingTimeInterval(RoundSession.initialListenerReadinessTimeout)
+            )
+        )
+        XCTAssertTrue(session.isScoringSnapshotReady)
+        XCTAssertTrue(session.didTimeOutInitialLoad)
+    }
+
     func testListenerErrorThrottleSuppressesDuplicateEventsInsideCooldown() {
         let session = RoundSession()
         let error = NSError(domain: "Firestore", code: 7)
