@@ -81,11 +81,8 @@ extension LiveRound {
 
                     vegasSummaryTile
                         .padding(.horizontal, 16)
-
-                    leaderboardSection
-                        .padding(.horizontal, 16)
-                        .padding(.bottom, 100)
                 }
+                .padding(.bottom, 100)
                 .frame(maxWidth: .infinity)
                 .contentShape(Rectangle())
                 .simultaneousGesture(lowerScoreEntrySwipeGesture)
