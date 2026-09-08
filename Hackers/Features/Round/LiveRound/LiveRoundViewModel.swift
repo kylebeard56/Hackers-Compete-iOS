@@ -181,7 +181,11 @@ final class LiveRoundViewModel: ObservableObject, Loggable {
         hasPerformedInitialHoleNudge = true
         hasSelectedInitialVisibleGroupStartingHole = true
         visibleGroupSwitchRequest = nil
-        let target = hole.flatMap { holeNumbers.contains($0) ? $0 : nil } ?? currentHoleNumber
+        let holes = holeNumbers
+        let target = hole.flatMap { candidate in
+            guard candidate > 0 else { return nil }
+            return holes.isEmpty || holes.contains(candidate) ? candidate : nil
+        } ?? currentHoleNumber
         restoredHole = target
         selectHole(target)
     }
@@ -477,8 +481,13 @@ final class LiveRoundViewModel: ObservableObject, Loggable {
     
     var currentHoleNumber: Int {
         let holes = holeNumbers
+        // Keep a durable restore target while listeners are still hydrating. If the
+        // timeout opens score entry before holes arrive, returning the generic
+        // fallback here would immediately overwrite the user's saved hole.
+        if let restoredHole, holes.isEmpty || holes.contains(restoredHole) {
+            return restoredHole
+        }
         guard !holes.isEmpty else { return 1 }
-        if let restoredHole, holes.contains(restoredHole) { return restoredHole }
         let idx = min(max(0, currentHoleIndex), holes.count - 1)
         return holes[idx]
     }
@@ -4924,6 +4933,9 @@ final class LiveRoundViewModel: ObservableObject, Loggable {
     
     private func resetRoundScopedStateIfNeeded(for roundID: String) {
         guard scopedRoundID != roundID else { return }
+        let isInitialSnapshotHydration = scopedRoundID?.isEmpty == true
+            && roundID.isPopulated
+            && restoredHole != nil
         scopedRoundID = roundID
         currentParticipantID = nil
         visibleTeeGroupID = nil
@@ -4936,9 +4948,11 @@ final class LiveRoundViewModel: ObservableObject, Loggable {
         loadedSeriesAccessRoundID = nil
         isLoadingSeriesAccess = false
         selectedTeeID = nil
-        restoredHole = nil
-        hasPerformedInitialHoleNudge = false
-        hasSelectedInitialVisibleGroupStartingHole = false
+        if !isInitialSnapshotHydration {
+            restoredHole = nil
+            hasPerformedInitialHoleNudge = false
+            hasSelectedInitialVisibleGroupStartingHole = false
+        }
         currentHoleIndex = 0
     }
 

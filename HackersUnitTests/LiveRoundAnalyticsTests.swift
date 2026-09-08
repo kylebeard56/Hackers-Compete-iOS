@@ -1098,4 +1098,24 @@ final class LiveRoundResumeRegressionTests: XCTestCase {
         try await Task.sleep(for: .milliseconds(100))
         XCTAssertEqual(model.currentHoleNumber, 5)
     }
+
+    func testRestoredHoleSurvivesReadinessTimeoutBeforeSnapshotHydration() throws {
+        let persistence = store()
+        let app = AppSession(roundResumeStore: persistence, restoresAuthentication: false)
+        app.activeRoundID = MockLiveRound2v2.roundID
+        app.updateLiveRoundResume(selectedHole: 5, selectedTab: .scoring)
+
+        let model = LiveRoundViewModel()
+        model.set(snapshot: .init())
+        model.restoreCurrentHole(app.roundResumeState?.selectedHole)
+
+        // This is the value LiveRound persists when the readiness timeout opens
+        // score entry before any cached or server snapshot is usable.
+        app.updateLiveRoundResume(selectedHole: model.currentHoleNumber, selectedTab: .scoring)
+        XCTAssertEqual(persistence.load()?.selectedHole, 5)
+
+        model.set(snapshot: MockLiveRound2v2.snapshot)
+        XCTAssertEqual(model.currentHoleNumber, 5)
+        XCTAssertEqual(persistence.load()?.selectedHole, 5)
+    }
 }
