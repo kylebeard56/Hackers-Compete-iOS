@@ -1105,16 +1105,31 @@ final class LiveRoundResumeRegressionTests: XCTestCase {
         app.activeRoundID = MockLiveRound2v2.roundID
         app.updateLiveRoundResume(selectedHole: 5, selectedTab: .scoring)
 
+        let session = RoundSession()
+        let startedAt = Date()
+        session.beginInitialLoadTracking(
+            for: .liveRound,
+            startedAt: startedAt,
+            source: "live_listeners"
+        )
+        XCTAssertTrue(
+            session.completeInitialLoadTrackingIfTimedOut(
+                asOf: startedAt.addingTimeInterval(RoundSession.initialListenerReadinessTimeout)
+            )
+        )
+        XCTAssertFalse(session.isScoringSnapshotReady)
+
+        // A timeout must not restore or persist against the empty startup snapshot.
         let model = LiveRoundViewModel()
         model.set(snapshot: .init())
-        model.restoreCurrentHole(app.roundResumeState?.selectedHole)
-
-        // This is the value LiveRound persists when the readiness timeout opens
-        // score entry before any cached or server snapshot is usable.
-        app.updateLiveRoundResume(selectedHole: model.currentHoleNumber, selectedTab: .scoring)
         XCTAssertEqual(persistence.load()?.selectedHole, 5)
 
         model.set(snapshot: MockLiveRound2v2.snapshot)
+        for type in RoundSubscriptionProfile.liveRound.listenerTypes {
+            _ = session.recordInitialSnapshotReady(for: type)
+        }
+        XCTAssertTrue(session.isScoringSnapshotReady)
+        model.restoreCurrentHole(app.roundResumeState?.selectedHole)
         XCTAssertEqual(model.currentHoleNumber, 5)
         XCTAssertEqual(persistence.load()?.selectedHole, 5)
     }

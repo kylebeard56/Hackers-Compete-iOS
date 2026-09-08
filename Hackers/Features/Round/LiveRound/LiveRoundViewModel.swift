@@ -4560,6 +4560,10 @@ final class LiveRoundViewModel: ObservableObject, Loggable {
         addBreadcrumb()
         
         guard let roundSession else { return }
+        guard roundSession.canPersistScores else {
+            addBreadcrumb(level: .error, message: "Blocked score clear before the scoring snapshot was ready")
+            return
+        }
         guard var entry = scoreEntryForScoringUnit(scoringUnitID: scoringUnitID, holeNumber: holeNumber) ?? scoreEntry(for: participant.id, holeNumber: holeNumber) else { return }
         let beforeSnapshot = roundSession.snapshot
         let beforeProgress = holeCompletionProgress(
@@ -4613,6 +4617,10 @@ final class LiveRoundViewModel: ObservableObject, Loggable {
         guard isPresenceActive(participant) else { return }
         
         guard let roundSession else { return }
+        guard roundSession.canPersistScores else {
+            addBreadcrumb(level: .error, message: "Blocked score write before the scoring snapshot was ready")
+            return
+        }
         let beforeSnapshot = roundSession.snapshot
         let beforeProgress = holeCompletionProgress(
             holeNumber: holeNumber,
@@ -4726,6 +4734,10 @@ final class LiveRoundViewModel: ObservableObject, Loggable {
 
         guard isPresenceActive(participant) else { return }
         guard let roundSession else { return }
+        guard roundSession.canPersistScores else {
+            addBreadcrumb(level: .error, message: "Blocked relative score write before the scoring snapshot was ready")
+            return
+        }
 
         let beforeSnapshot = roundSession.snapshot
         let beforeProgress = holeCompletionProgress(
