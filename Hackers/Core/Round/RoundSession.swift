@@ -54,6 +54,7 @@ enum RoundSessionStaleReason: String {
 final class RoundSession: ObservableObject, Loggable {
     static let staleSessionInterval: TimeInterval = 30 * 60
     static let listenerErrorThrottleInterval: TimeInterval = 5 * 60
+    static let initialListenerReadinessTimeout: TimeInterval = 12
 
     @Published var roundID: String?
     @Published var snapshot: RoundSnapshot = .init()
@@ -72,6 +73,8 @@ final class RoundSession: ObservableObject, Loggable {
     var teeGroupListener: ListenerRegistration?
     var scoringGroupListener: ListenerRegistration?
     
+    @Published private(set) var isScoringSnapshotReady = false
+
     @Published var isLoadingLobbyListeners = false
     @Published var isLoadingActiveListeners = false
     
@@ -87,6 +90,8 @@ final class RoundSession: ObservableObject, Loggable {
     private var initialLoadStartedAt: Date?
     private var initialLoadExpectedTypes: Set<RoundRegistrationType> = []
     private var initialLoadReadyTypes: Set<RoundRegistrationType> = []
+    private var initialLoadProfile: RoundSubscriptionProfile = .oneShot
+    private(set) var didTimeOutInitialLoad = false
     private var didEmitInitialSnapshotLoaded = false
     private var initialLoadSource: String?
     private var listenerErrorThrottle: [String: Date] = [:]
@@ -114,7 +119,11 @@ final class RoundSession: ObservableObject, Loggable {
         activeListeners.count > 0
     }
     
-    let reference: CollectionReference = Firestore.firestore().collection(Collections.rounds.rawValue)
+    /// Resolve Firestore only when round work begins. SwiftUI creates this session
+    /// before AppDelegate finishes configuring the Firebase app on a cold launch.
+    var reference: CollectionReference {
+        Firestore.firestore().collection(Collections.rounds.rawValue)
+    }
     
     private var subscriptions = Set<AnyCancellable>()
     
@@ -193,6 +202,12 @@ final class RoundSession: ObservableObject, Loggable {
     func activate(roundID requestedRoundID: String, profile: RoundSubscriptionProfile) async {
         addBreadcrumb(message: "Activate round session: round=\(requestedRoundID), profile=\(profile.rawValue)")
 
+        guard requestedRoundID.trimmingCharacters(in: .whitespacesAndNewlines).isPopulated,
+              !requestedRoundID.contains("/") else {
+            addBreadcrumb(level: .error, message: "Refused to activate a round session with an invalid round ID")
+            return
+        }
+
         let now = Date()
         let sameRound = roundID == requestedRoundID
         let shouldRebuild = shouldRebuildSession(for: requestedRoundID, asOf: now)
@@ -201,7 +216,7 @@ final class RoundSession: ObservableObject, Loggable {
         let targetListenerTypes = profile.listenerTypes
         recordSessionActivity(at: now)
 
-        let canReuseWarmSession = sameRound && !shouldRebuild && !profile.usesLiveListeners
+        let canReuseWarmSession = sameRound && !shouldRebuild
 
         emitRoundSessionActivated(
             roundID: requestedRoundID,
@@ -240,6 +255,7 @@ final class RoundSession: ObservableObject, Loggable {
         stopListeners()
         if !sameRound {
             snapshot = .init()
+            isScoringSnapshotReady = false
         }
 
         roundID = requestedRoundID
@@ -248,7 +264,11 @@ final class RoundSession: ObservableObject, Loggable {
         TelemetryService.shared.setContext(roundID: requestedRoundID)
 
         if profile.usesLiveListeners {
-            await loadSingleSnapshotIfNeeded(for: requestedRoundID, forceRefresh: true)
+            // Firestore listeners deliver cached data first, including pending offline scores.
+            // Avoid a server-first full snapshot fetch before attaching the scoring listeners.
+            if profile != .liveRound {
+                await loadSingleSnapshotIfNeeded(for: requestedRoundID, forceRefresh: true)
+            }
             beginInitialLoadTracking(for: profile, startedAt: now, source: "live_listeners")
             await startListeners(for: profile)
         } else {
@@ -279,7 +299,12 @@ final class RoundSession: ObservableObject, Loggable {
         )
 
         if profile.usesLiveListeners {
-            beginInitialLoadTracking(for: profile, startedAt: Date(), source: "live_listeners")
+            beginInitialLoadTracking(
+                for: profile,
+                startedAt: Date(),
+                source: "live_listeners",
+                retainingReadyTypes: initialLoadReadyTypes
+            )
             await startListeners(for: profile)
             stopListeners(excluding: profile.listenerTypes)
         } else {
@@ -299,6 +324,7 @@ final class RoundSession: ObservableObject, Loggable {
         addBreadcrumb()
         stopListeners()
         self.roundID = nil
+        isScoringSnapshotReady = false
         snapshot = .init()
         currentProfile = .oneShot
         lastActiveAt = nil
@@ -309,6 +335,8 @@ final class RoundSession: ObservableObject, Loggable {
         initialLoadStartedAt = nil
         initialLoadExpectedTypes = []
         initialLoadReadyTypes = []
+        initialLoadProfile = .oneShot
+        didTimeOutInitialLoad = false
         didEmitInitialSnapshotLoaded = false
         initialLoadSource = nil
     }
@@ -372,11 +400,17 @@ final class RoundSession: ObservableObject, Loggable {
     func beginInitialLoadTracking(
         for profile: RoundSubscriptionProfile,
         startedAt: Date = Date(),
-        source: String
+        source: String,
+        retainingReadyTypes: Set<RoundRegistrationType> = []
     ) {
+        if profile == .liveRound {
+            isScoringSnapshotReady = false
+        }
         initialLoadStartedAt = startedAt
+        initialLoadProfile = profile
         initialLoadExpectedTypes = profile.listenerTypes
-        initialLoadReadyTypes = []
+        initialLoadReadyTypes = retainingReadyTypes.intersection(profile.listenerTypes)
+        didTimeOutInitialLoad = false
         didEmitInitialSnapshotLoaded = false
         initialLoadSource = source
     }
@@ -389,6 +423,27 @@ final class RoundSession: ObservableObject, Loggable {
 
         guard initialLoadReadyTypes.isSuperset(of: initialLoadExpectedTypes) else { return false }
         didEmitInitialSnapshotLoaded = true
+        if initialLoadProfile == .liveRound { isScoringSnapshotReady = true }
+        return true
+    }
+
+    @discardableResult
+    func completeInitialLoadTrackingIfTimedOut(asOf date: Date = Date()) -> Bool {
+        guard !didEmitInitialSnapshotLoaded,
+              let initialLoadStartedAt,
+              date.timeIntervalSince(initialLoadStartedAt) >= Self.initialListenerReadinessTimeout else {
+            return false
+        }
+
+        didEmitInitialSnapshotLoaded = true
+        didTimeOutInitialLoad = true
+        if initialLoadProfile == .liveRound {
+            isScoringSnapshotReady = true
+        }
+        addBreadcrumb(
+            level: .error,
+            message: "Initial listener readiness timed out; continuing with the latest available snapshot"
+        )
         return true
     }
 

@@ -47,6 +47,14 @@ struct IndividualScorecardView: View {
     private var effectiveAccent: Color {
         viewModel.teamColor(for: participant) ?? viewModel.theme.color
     }
+    private var teamColorStyle: AccessibleTeamColorStyle {
+        AccessibleTeamColorStyle.resolve(
+            teamColor: effectiveAccent,
+            palette: palette,
+            colorScheme: colorScheme,
+            surface: .card
+        )
+    }
 
     var body: some View {
         ZStack {
@@ -224,9 +232,16 @@ struct IndividualScorecardView: View {
             )
 
             VStack(alignment: .leading, spacing: 2) {
-                Text(participantName)
-                    .fontStyle(kFontName, size: 17, weight: .semibold)
-                    .foregroundStyle(palette.foregroundColor)
+                HStack(spacing: 7) {
+                    Circle()
+                        .fill(teamColorStyle.accent)
+                        .frame(width: 9, height: 9)
+                        .accessibilityHidden(true)
+
+                    Text(participantName)
+                        .fontStyle(kFontName, size: 17, weight: .semibold)
+                        .foregroundStyle(teamColorStyle.readableText)
+                }
                 if handicapsEnabled {
                     Text("HCP \(participant.adjustedHandicap)")
                         .fontStyle(kFontName, size: 13, weight: .regular)
@@ -248,7 +263,11 @@ struct IndividualScorecardView: View {
         }
         .padding(16)
         .frame(maxWidth: .infinity)
-        .glassCardEffect(interactive: false)
+        .glassCardEffect(
+            interactive: false,
+            tint: effectiveAccent.opacity(0.12),
+            strokeOpacity: 0.5
+        )
     }
 
     private var totalScoreCallout: some View {
@@ -256,16 +275,20 @@ struct IndividualScorecardView: View {
             if handicapsEnabled {
                 Text("Gross \(totalGross) / Net \(totalNet)")
                     .fontStyle(kFontName, size: 18, weight: .bold)
-                    .foregroundStyle(palette.foregroundColor)
+                    .foregroundStyle(teamColorStyle.readableText)
             } else {
                 Text("Gross \(totalGross)")
                     .fontStyle(kFontName, size: 18, weight: .bold)
-                    .foregroundStyle(palette.foregroundColor)
+                    .foregroundStyle(teamColorStyle.readableText)
             }
         }
         .frame(maxWidth: .infinity)
         .padding(.vertical, 12)
-        .glassCardEffect(interactive: false)
+        .glassCardEffect(
+            interactive: false,
+            tint: effectiveAccent.opacity(0.1),
+            strokeOpacity: 0.45
+        )
     }
 
     @ViewBuilder
@@ -289,7 +312,7 @@ struct IndividualScorecardView: View {
             scorecardHeaderRow(holes: holes, label: label)
                 .padding(.horizontal, 12)
                 .padding(.top, 8)
-                .background(viewModel.theme.color.opacity(0.6))
+                .background(effectiveAccent.opacity(0.82))
             
             scorecardParRow(holes: holes)
                 .padding(.horizontal, 16)
@@ -317,27 +340,27 @@ struct IndividualScorecardView: View {
         HStack(spacing: 4) {
             Text("Hole")
                 .fontStyle(kFontName, size: 11, weight: .bold)
-                .foregroundStyle(palette.backgroundColor)
+                .foregroundStyle(teamColorStyle.solidFillText)
                 .frame(width: 36, alignment: .leading)
             ForEach(holes, id: \.self) { h in
                 let isStartingHole = participantStartingHole == h
                 VStack(spacing: 2) {
                     Circle()
-                        .fill(.white)
+                        .fill(teamColorStyle.solidFillText)
                         .frame(width: 5, height: 5)
                         .opacity(isStartingHole ? 1 : 0)
                         .accessibilityHidden(true)
 
                     Text("\(h)")
                         .fontStyle(kFontName, size: 11, weight: .bold)
-                        .foregroundStyle(palette.backgroundColor)
+                        .foregroundStyle(teamColorStyle.solidFillText)
                 }
                 .frame(maxWidth: .infinity)
                 .accessibilityLabel(isStartingHole ? "Hole \(h), starting hole" : "Hole \(h)")
             }
             Text(label.uppercased())
                 .fontStyle(kFontName, size: 11, weight: .bold)
-                .foregroundStyle(palette.backgroundColor)
+                .foregroundStyle(teamColorStyle.solidFillText)
                 .frame(width: 36)
         }
         .padding(.vertical, 6)

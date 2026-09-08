@@ -24,6 +24,7 @@ private extension View {
 enum FullScorecardPresentation: Equatable {
     case modal
     case embeddedLiveTable
+    case embeddedInsights
 }
 
 enum ScorecardInteractionMode: String, CaseIterable, Equatable {
@@ -42,6 +43,8 @@ enum ScorecardInteractionMode: String, CaseIterable, Equatable {
             return true
         case .embeddedLiveTable:
             return self == .edit
+        case .embeddedInsights:
+            return false
         }
     }
 }
@@ -72,6 +75,7 @@ struct FullScorecardView: View {
     let allowsScoreEditing: Bool
     let initialSelectedScoringUnitID: String?
     let presentation: FullScorecardPresentation
+    let includedParticipantIDs: Set<String>?
     
     @State private var selectedParticipantID: String?
     @State private var horizontalOffset: CGFloat = 0
@@ -99,7 +103,13 @@ struct FullScorecardView: View {
     }
     
     private var orderedParticipants: [LiveRoundViewModel.LeaderboardRow] {
-        viewModel.scorecardParticipants
+        guard let includedParticipantIDs else {
+            return viewModel.scorecardParticipants
+        }
+        return viewModel.scorecardParticipants.filter { row in
+            includedParticipantIDs.contains(row.participant.id)
+                || row.participants.contains(where: { includedParticipantIDs.contains($0.id) })
+        }
     }
 
     private var isRotated: Bool { presentationState.isRotated }
@@ -116,7 +126,8 @@ struct FullScorecardView: View {
         allowsScoreEditing: Bool = true,
         initialSelectedScoringUnitID: String? = nil,
         presentation: FullScorecardPresentation = .modal,
-        presentationState: FullScorecardPresentationState? = nil
+        presentationState: FullScorecardPresentationState? = nil,
+        includedParticipantIDs: Set<String>? = nil
     ) {
         _viewModel = ObservedObject(wrappedValue: viewModel)
         _presentationState = StateObject(
@@ -126,6 +137,7 @@ struct FullScorecardView: View {
         self.allowsScoreEditing = allowsScoreEditing
         self.initialSelectedScoringUnitID = initialSelectedScoringUnitID
         self.presentation = presentation
+        self.includedParticipantIDs = includedParticipantIDs
     }
     
     // MARK: - Main Body ✅
@@ -176,7 +188,12 @@ struct FullScorecardView: View {
                         }
                     }
                 }
-                .padding(.top, presentation == .embeddedLiveTable && !isRotated ? 0 : layout.topPadding)
+                .padding(
+                    .top,
+                    (presentation == .embeddedLiveTable || presentation == .embeddedInsights) && !isRotated
+                        ? 0
+                        : layout.topPadding
+                )
             }
             //.padding(layout.screenEdgePadding)
             .rotationEffect(.degrees(isRotated ? 90 : 0))
@@ -772,13 +789,13 @@ private extension FullScorecardView {
     func playerLabel(_ row: LiveRoundViewModel.LeaderboardRow) -> some View {
         let name = scorecardPrimaryName(for: row)
         let partnerNames = scorecardSecondaryNames(for: row)
-        let isSelected = row.id == selectedParticipantID
+        let teamStyle = participantHighlightStyle(for: row.participant)
         let canEditParticipant = presentationState.interactionMode.allowsScoreEditing(
             presentation: presentation,
             hasPermission: allowsScoreEditing && viewModel.canEditScorecard(participant: row.participant)
         )
         let accrued = accruedScoreLabel(for: row)
-        let accruedColor = isSelected ? participantHighlightStyle(for: row.participant).readableText : palette.foregroundColor
+        let accruedColor = teamStyle.readableText
         
         return VStack(alignment: .leading, spacing: 1) {
             HStack(spacing: 8) {
@@ -795,6 +812,11 @@ private extension FullScorecardView {
             }
             
             HStack(spacing: 4) {
+                Circle()
+                    .fill(teamStyle.accent)
+                    .frame(width: 7, height: 7)
+                    .accessibilityHidden(true)
+
                 if canEditParticipant {
                     Icon(name: "f0c0", size: 10, weight: .regular)
                         .foregroundStyle(Color.neutral)
@@ -802,7 +824,7 @@ private extension FullScorecardView {
                 
                 Text(name)
                     .fontStyle(kFontName, size: 12, weight: .semibold)
-                    .foregroundStyle(palette.foregroundColor)
+                    .foregroundStyle(teamStyle.readableText)
                     .lineLimit(1)
                     .minimumScaleFactor(0.75)
             }
@@ -824,6 +846,13 @@ private extension FullScorecardView {
         .padding(.leading, layout.labelHorizontalPadding)
         .padding(.trailing, layout.cellHorizontalPadding)
         .padding(.vertical, layout.cellVerticalPadding)
+        .overlay(alignment: .leading) {
+            Capsule()
+                .fill(teamStyle.accent)
+                .frame(width: 4)
+                .padding(.vertical, 7)
+                .accessibilityHidden(true)
+        }
         .contentShape(Rectangle())
         .onTapGesture {
             Haptics.fire(.light)
@@ -843,13 +872,13 @@ private extension FullScorecardView {
     
     func leftOverlayCell(_ row: LiveRoundViewModel.LeaderboardRow) -> some View {
         let initials = row.isSharedScoreUnit ? scorecardSharedInitials(for: row) : row.participant.name.initials
-        let isSelected = row.id == selectedParticipantID
+        let teamStyle = participantHighlightStyle(for: row.participant)
         let canEditParticipant = presentationState.interactionMode.allowsScoreEditing(
             presentation: presentation,
             hasPermission: allowsScoreEditing && viewModel.canEditScorecard(participant: row.participant)
         )
         let accrued = accruedScoreLabel(for: row)
-        let accruedColor = isSelected ? participantHighlightStyle(for: row.participant).readableText : palette.foregroundColor
+        let accruedColor = teamStyle.readableText
         
         return VStack(alignment: .leading, spacing: 1) {
             Text(accrued)
@@ -859,9 +888,14 @@ private extension FullScorecardView {
                 .minimumScaleFactor(0.65)
             
             HStack(spacing: 4) {
+                Circle()
+                    .fill(teamStyle.accent)
+                    .frame(width: 7, height: 7)
+                    .accessibilityHidden(true)
+
                 Text(initials)
                     .fontStyle(kFontName, size: 12, weight: .semibold)
-                    .foregroundStyle(palette.foregroundColor)
+                    .foregroundStyle(teamStyle.readableText)
                     .lineLimit(1)
                 
                 if canEditParticipant {
@@ -879,6 +913,13 @@ private extension FullScorecardView {
         .padding(.leading, layout.labelHorizontalPadding)
         .padding(.trailing, layout.cellHorizontalPadding)
         .padding(.vertical, layout.cellVerticalPadding)
+        .overlay(alignment: .leading) {
+            Capsule()
+                .fill(teamStyle.accent)
+                .frame(width: 4)
+                .padding(.vertical, 7)
+                .accessibilityHidden(true)
+        }
         .alignLeading()
     }
     
@@ -955,10 +996,11 @@ private extension FullScorecardView {
     func totalScoreLabel(for participant: RoundParticipant) -> some View {
         let score = viewModel.scoreToPar(for: participant, basis: viewModel.scoreBasis)
         let label = scoreToParLabel(score)
+        let teamStyle = participantHighlightStyle(for: participant)
         
         return Text(label)
             .fontStyle(kFontName, size: 17, weight: .semibold)
-            .foregroundStyle(palette.foregroundColor)
+            .foregroundStyle(teamStyle.readableText)
             .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .center)
             .padding(.horizontal, layout.cellHorizontalPadding)
             .padding(.vertical, layout.cellVerticalPadding)
@@ -966,10 +1008,11 @@ private extension FullScorecardView {
 
     func totalScoreLabel(for row: LiveRoundViewModel.LeaderboardRow) -> some View {
         let label = accruedScoreLabel(for: row)
+        let teamStyle = participantHighlightStyle(for: row.participant)
 
         return Text(label)
             .fontStyle(kFontName, size: 17, weight: .semibold)
-            .foregroundStyle(palette.foregroundColor)
+            .foregroundStyle(teamStyle.readableText)
             .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .center)
             .padding(.horizontal, layout.cellHorizontalPadding)
             .padding(.vertical, layout.cellVerticalPadding)
@@ -1518,18 +1561,13 @@ private extension FullScorecardView {
     }
     
     func rowBackgroundColor(for row: ScorecardRow, index: Int) -> Color {
-        //let zebra = palette.backgroundColor.opacity(index.isEven ? 0.0 : 1.0)
-        let opacity = colorScheme.isLight ? 0.75 : 0.2
-        let zebra = Color.systemWhite.opacity(index.isEven ? 0.0 : opacity)
-        
         switch row {
         case .player(let row):
+            let teamStyle = participantHighlightStyle(for: row.participant)
             if row.id == selectedParticipantID {
-                //let highlight = participantHighlightColor(for: row.participant)
-                //return highlight.opacity(0.25)
-                return zebra
+                return teamStyle.accent.opacity(colorScheme.translucent(0.16, 0.22))
             }
-            return zebra
+            return teamStyle.subtleFill.opacity(index.isEven ? 0.72 : 1)
         }
     }
     
@@ -2005,7 +2043,14 @@ private let mockTheme: GolfTheme = .purple
     }
 }
 
-private struct CumulativeStrokeBandPoint: Identifiable {
+private struct CumulativeScorePoint: Identifiable {
+    let holesCompleted: Int
+    let value: Int
+
+    var id: Int { holesCompleted }
+}
+
+private struct CumulativeScoreBandPoint: Identifiable {
     let holesCompleted: Int
     let lower: Int
     let median: Int
@@ -2021,11 +2066,19 @@ struct PlayerInsightsView: View {
     @ObservedObject var viewModel: LiveRoundViewModel
     let participant: RoundParticipant
 
+    @State private var selectedBasis: ScoreBasis
     @State private var projection: PlayerFinishProjection?
     @State private var isLoadingProjection = false
 
+    init(viewModel: LiveRoundViewModel, participant: RoundParticipant) {
+        self.viewModel = viewModel
+        self.participant = participant
+        _selectedBasis = State(initialValue: viewModel.handicapsEnabled ? .net : .gross)
+    }
+
     private var palette: DesignPalette { .init(theme: .primary, scheme: colorScheme) }
-    private var basis: ScoreBasis { viewModel.scoreBasis }
+    private var basis: ScoreBasis { selectedBasis }
+    private var basisDisplayName: String { basis == .net ? "Net" : "Gross" }
     private var canRevealInsights: Bool { viewModel.canRevealInsights(for: participant) }
     private var projectionUnavailableReason: String? {
         viewModel.playerProjectionUnavailableReason(for: participant)
@@ -2033,10 +2086,7 @@ struct PlayerInsightsView: View {
     private var actualTrend: [ProjectionTrendPoint] {
         projection?.actualTrend ?? viewModel.actualScoreTrend(for: participant, basis: basis)
     }
-    private var cumulativeStrokeTrend: [CumulativeStrokeTrendPoint] {
-        viewModel.cumulativeStrokeTrend(for: participant, basis: basis)
-    }
-    private var holesCompleted: Int { cumulativeStrokeTrend.count }
+    private var holesCompleted: Int { actualTrend.count }
     private var totalHoleCount: Int { viewModel.holeNumbers.count }
     private var isPlayerRoundComplete: Bool {
         totalHoleCount > 0 && holesCompleted == totalHoleCount
@@ -2063,7 +2113,7 @@ struct PlayerInsightsView: View {
 
                     if canRevealInsights {
                         if viewModel.handicapsEnabled {
-                            Picker("Score basis", selection: $viewModel.scoreBasis) {
+                            Picker("Score basis", selection: $selectedBasis) {
                                 Text("Gross").tag(ScoreBasis.gross)
                                 Text("Net").tag(ScoreBasis.net)
                             }
@@ -2243,10 +2293,10 @@ struct PlayerInsightsView: View {
         VStack(alignment: .leading, spacing: 12) {
             HStack(alignment: .firstTextBaseline) {
                 VStack(alignment: .leading, spacing: 2) {
-                    Text("Cumulative score")
+                    Text("\(basisDisplayName) score projection")
                         .fontStyle(kFontName, size: 17, weight: .semibold)
                         .foregroundStyle(palette.foregroundColor)
-                    Text("\(basis.rawValue.capitalized) strokes by holes completed")
+                    Text("Solid: played · Shaded: projected 80% range")
                         .fontStyle(kFontName, size: 12, weight: .regular)
                         .foregroundStyle(Color.neutral)
                 }
@@ -2258,7 +2308,7 @@ struct PlayerInsightsView: View {
                 }
             }
 
-            if cumulativeStrokeTrend.isEmpty {
+            if actualTrend.isEmpty {
                 emptyTrendState
             } else {
                 scoreTrendChart
@@ -2276,11 +2326,15 @@ struct PlayerInsightsView: View {
 
     private var scoreTrendChart: some View {
         Chart {
+            RuleMark(y: .value("Even", 0))
+                .foregroundStyle(Color.neutral2.opacity(0.8))
+                .lineStyle(.init(lineWidth: 1.5, dash: [5, 4]))
+
             if let averageStrokeTrend {
                 ForEach(averageStrokeTrend) { point in
                     LineMark(
                         x: .value("Holes completed", point.holesCompleted),
-                        y: .value("Average pace", point.strokes),
+                        y: .value("Average pace", point.value),
                         series: .value("Series", "Average pace")
                     )
                     .foregroundStyle(Color.neutral2)
@@ -2295,34 +2349,50 @@ struct PlayerInsightsView: View {
                         yStart: .value("Low", point.lower),
                         yEnd: .value("High", point.upper)
                     )
-                    .foregroundStyle(viewModel.theme.color.opacity(0.16))
+                    .foregroundStyle(viewModel.theme.color.opacity(0.08))
+
+                    LineMark(
+                        x: .value("Holes completed", point.holesCompleted),
+                        y: .value("Projection low", point.lower),
+                        series: .value("Projection edge", "Low")
+                    )
+                    .foregroundStyle(viewModel.theme.color.opacity(0.18))
+                    .lineStyle(.init(lineWidth: 1))
+
+                    LineMark(
+                        x: .value("Holes completed", point.holesCompleted),
+                        y: .value("Projection high", point.upper),
+                        series: .value("Projection edge", "High")
+                    )
+                    .foregroundStyle(viewModel.theme.color.opacity(0.18))
+                    .lineStyle(.init(lineWidth: 1))
 
                     LineMark(
                         x: .value("Holes completed", point.holesCompleted),
                         y: .value("Projected median", point.median)
                     )
-                    .foregroundStyle(viewModel.theme.color.opacity(0.65))
-                    .lineStyle(.init(lineWidth: 2, dash: [5, 4]))
+                    .foregroundStyle(viewModel.theme.color.opacity(0.9))
+                    .lineStyle(.init(lineWidth: 2.5, dash: [5, 4]))
+                }
+
+                RuleMark(x: .value("Projection starts", holesCompleted))
+                    .foregroundStyle(Color.neutral2.opacity(0.55))
+                    .lineStyle(.init(lineWidth: 1, dash: [2, 4]))
+
+                if let finish = projectedStrokeTrend.last {
+                    PointMark(
+                        x: .value("Finish hole", finish.holesCompleted),
+                        y: .value("Projected finish", finish.median)
+                    )
+                    .foregroundStyle(viewModel.theme.color)
+                    .symbolSize(48)
                 }
             }
 
             ForEach(actualChartTrend) { point in
-                AreaMark(
-                    x: .value("Holes completed", point.holesCompleted),
-                    yStart: .value("Baseline", 0),
-                    yEnd: .value("Recorded strokes", point.strokes)
-                )
-                .foregroundStyle(
-                    LinearGradient(
-                        colors: [viewModel.theme.color.opacity(0.3), .clear],
-                        startPoint: .top,
-                        endPoint: .bottom
-                    )
-                )
-
                 LineMark(
                     x: .value("Holes completed", point.holesCompleted),
-                    y: .value("Recorded strokes", point.strokes),
+                    y: .value("Score to par", point.value),
                     series: .value("Series", "Actual")
                 )
                 .foregroundStyle(viewModel.theme.color)
@@ -2331,16 +2401,18 @@ struct PlayerInsightsView: View {
                 if point.holesCompleted != 0 {
                     PointMark(
                         x: .value("Holes completed", point.holesCompleted),
-                        y: .value("Recorded strokes", point.strokes)
+                        y: .value("Score to par", point.value)
                     )
                     .foregroundStyle(viewModel.theme.color)
                 }
             }
+
         }
         .chartXScale(domain: 0...max(1, totalHoleCount))
+        .chartYScale(domain: chartYDomain)
         .chartXAxis {
             AxisMarks(values: .automatic(desiredCount: 6)) { value in
-                AxisGridLine().foregroundStyle(Color.neutral5.opacity(0.25))
+                AxisGridLine().foregroundStyle(Color.neutral5.opacity(0.14))
                 AxisValueLabel {
                     if let holes = value.as(Int.self) {
                         Text(holes == 0 ? "Start" : "\(holes)")
@@ -2350,9 +2422,9 @@ struct PlayerInsightsView: View {
         }
         .chartYAxis {
             AxisMarks(position: .leading) { value in
-                AxisGridLine().foregroundStyle(Color.neutral5.opacity(0.25))
+                AxisGridLine().foregroundStyle(Color.neutral5.opacity(0.14))
                 AxisValueLabel {
-                    if let strokes = value.as(Int.self) { Text("\(strokes)") }
+                    if let score = value.as(Int.self) { Text(scoreLabel(score)) }
                 }
             }
         }
@@ -2380,11 +2452,11 @@ struct PlayerInsightsView: View {
             .foregroundStyle(Color.neutral)
         } else if let projection {
             VStack(alignment: .leading, spacing: 5) {
-                Text("Projected finish \(scoreLabel(projection.lowerFinish)) to \(scoreLabel(projection.upperFinish))")
-                    .fontStyle(kFontName, size: 15, weight: .semibold)
-                    .foregroundStyle(palette.foregroundColor)
-                Text("Median \(scoreLabel(projection.medianFinish)) · 80% interval · \(projection.sampleCount) historical samples")
-                    .fontStyle(kFontName, size: 12, weight: .regular)
+                Text("Projected \(basis.rawValue) finish: \(scoreLabel(projection.medianFinish))")
+                    .fontStyle(kFontName, size: 20, weight: .bold)
+                    .foregroundStyle(viewModel.theme.color)
+                Text("Likely range \(scoreLabel(projection.lowerFinish)) to \(scoreLabel(projection.upperFinish)) · 80% · based on \(projection.sampleCount) similar rounds")
+                    .fontStyle(kFontName, size: 12, weight: .semibold)
                     .foregroundStyle(Color.neutral)
             }
         } else {
@@ -2400,7 +2472,7 @@ struct PlayerInsightsView: View {
                 Text("Gross scoring mix")
                     .fontStyle(kFontName, size: 17, weight: .semibold)
                     .foregroundStyle(palette.foregroundColor)
-                Text("Hole outcomes · better scores rise")
+                Text("Hole outcomes · clockwise from best to worst")
                     .fontStyle(kFontName, size: 12, weight: .regular)
                     .foregroundStyle(Color.neutral)
             }
@@ -2428,8 +2500,7 @@ struct PlayerInsightsView: View {
     }
 
     private var accessibilitySummary: String {
-        let strokes = cumulativeStrokeTrend.last?.strokes ?? 0
-        var summary = "Cumulative \(basis.rawValue) strokes through \(holesCompleted) holes, \(strokes) strokes. Current score \(scoreLabel(currentScore))."
+        var summary = "Cumulative \(basis.rawValue) score through \(holesCompleted) holes, \(scoreLabel(currentScore))."
         if let projection {
             summary += " Projected 80 percent finish interval \(scoreLabel(projection.lowerFinish)) to \(scoreLabel(projection.upperFinish)), median \(scoreLabel(projection.medianFinish)), \(projection.confidence.rawValue) confidence."
         } else if let average = averagePacePerHole {
@@ -2438,37 +2509,49 @@ struct PlayerInsightsView: View {
         return summary
     }
 
-    private var actualChartTrend: [CumulativeStrokeTrendPoint] {
-        guard cumulativeStrokeTrend.isPopulated else { return [] }
-        let baseline = CumulativeStrokeTrendPoint(
+    private var actualChartTrend: [CumulativeScorePoint] {
+        guard actualTrend.isPopulated else { return [] }
+        let baseline = CumulativeScorePoint(
             holesCompleted: 0,
-            holeNumber: viewModel.courseOrderHoleNumbers.first ?? 1,
-            strokes: 0
+            value: 0
         )
-        return [baseline] + cumulativeStrokeTrend
+        let points = actualTrend.enumerated().map { index, point in
+            CumulativeScorePoint(holesCompleted: index + 1, value: point.value)
+        }
+        return [baseline] + points
     }
 
-    private var projectedStrokeTrend: [CumulativeStrokeBandPoint] {
+    private var chartYDomain: ClosedRange<Int> {
+        var values = actualChartTrend.map(\.value)
+        values.append(contentsOf: projectedStrokeTrend.flatMap { [$0.lower, $0.median, $0.upper] })
+        values.append(contentsOf: averageStrokeTrend?.map(\.value) ?? [])
+
+        let lowerValue = min(0, values.min() ?? 0)
+        let upperValue = max(0, values.max() ?? 0)
+        let span = max(1, upperValue - lowerValue)
+        let padding = max(2, Int(ceil(Double(span) * 0.12)))
+        return (lowerValue - padding)...(upperValue + padding)
+    }
+
+    private var projectedStrokeTrend: [CumulativeScoreBandPoint] {
         guard let projection else { return [] }
         return projection.projectedTrend.compactMap { point in
             guard let holesCompleted = completionCount(for: point.holeNumber) else { return nil }
-            let par = cumulativePar(through: holesCompleted)
-            return CumulativeStrokeBandPoint(
+            return CumulativeScoreBandPoint(
                 holesCompleted: holesCompleted,
-                lower: par + point.lower,
-                median: par + point.median,
-                upper: par + point.upper
+                lower: point.lower,
+                median: point.median,
+                upper: point.upper
             )
         }
     }
 
-    private var averageStrokeTrend: [CumulativeStrokeTrendPoint]? {
+    private var averageStrokeTrend: [CumulativeScorePoint]? {
         averagePaceTrend?.compactMap { point in
             guard let holesCompleted = completionCount(for: point.holeNumber) else { return nil }
-            return CumulativeStrokeTrendPoint(
+            return CumulativeScorePoint(
                 holesCompleted: holesCompleted,
-                holeNumber: point.holeNumber,
-                strokes: cumulativePar(through: holesCompleted) + point.value
+                value: point.value
             )
         }
     }
@@ -2480,14 +2563,6 @@ struct PlayerInsightsView: View {
         guard let firstHole = viewModel.courseOrderHoleNumbers.first,
               holeNumber == max(0, firstHole - 1) else { return nil }
         return 0
-    }
-
-    private func cumulativePar(through holesCompleted: Int) -> Int {
-        viewModel.courseOrderHoleNumbers
-            .prefix(max(0, holesCompleted))
-            .reduce(0) { total, holeNumber in
-                total + (viewModel.hole(for: holeNumber, teeID: participant.teeBoxID)?.par ?? 0)
-            }
     }
 
     private var averagePacePerHole: Double? {
@@ -2514,7 +2589,7 @@ struct PlayerInsightsView: View {
 
     private var scoringMixAccessibilityLabel: String {
         let values = outcomeCounts.map { "\($0.bucket.label), \($0.count)" }
-        return "Gross scoring mix, arranged with better outcomes above worse outcomes. \(values.joined(separator: ", "))."
+        return "Gross scoring mix, arranged clockwise from best to worst outcome. \(values.joined(separator: ", "))."
     }
 
     private func strokeCountLabel(_ value: Int) -> String {
@@ -2551,7 +2626,11 @@ private struct GrossScoringRadarChart: View {
     }
 
     private var normalizedValues: [CGFloat] {
-        chartOutcomes.map { CGFloat($0.count) / CGFloat(maximumCount) }
+        chartOutcomes.map { outcome in
+            guard outcome.count > 0 else { return 0.12 }
+            let normalizedCount = CGFloat(outcome.count) / CGFloat(maximumCount)
+            return 0.2 + (normalizedCount * 0.8)
+        }
     }
 
     private var categoryColors: [Color] {
@@ -2559,16 +2638,12 @@ private struct GrossScoringRadarChart: View {
     }
 
     private var shapeGradient: AngularGradient {
-        AngularGradient(
-            gradient: Gradient(stops: [
-                .init(color: categoryColors[0], location: 0),
-                .init(color: categoryColors[1], location: 1.0 / 6.0),
-                .init(color: categoryColors[2], location: 2.0 / 6.0),
-                .init(color: categoryColors[3], location: 3.0 / 6.0),
-                .init(color: categoryColors[4], location: 4.0 / 6.0),
-                .init(color: categoryColors[5], location: 5.0 / 6.0),
-                .init(color: categoryColors[0], location: 1),
-            ]),
+        let count = max(1, categoryColors.count)
+        let stops = categoryColors.enumerated().map { index, color in
+            Gradient.Stop(color: color, location: Double(index) / Double(count))
+        } + [Gradient.Stop(color: categoryColors[0], location: 1)]
+        return AngularGradient(
+            gradient: Gradient(stops: stops),
             center: .center,
             startAngle: .degrees(-90),
             endAngle: .degrees(270)
@@ -2673,8 +2748,7 @@ private struct GrossScoringRadarChart: View {
         case .par: "Par"
         case .bogey: "Bogey"
         case .doubleBogey: "Double"
-        case .tripleBogey: "Triple"
-        case .fourOrWorse: "Worse"
+        case .tripleBogey: "Triple+"
         }
     }
 
@@ -2682,10 +2756,9 @@ private struct GrossScoringRadarChart: View {
         switch bucket {
         case .birdieOrBetter: .accentGreen
         case .par: .accentPurple
-        case .bogey: .systemPink.opacity(0.35)
-        case .doubleBogey: .systemPink.opacity(0.5)
-        case .tripleBogey: .systemPink.opacity(0.65)
-        case .fourOrWorse: .systemError
+        case .bogey: .accentYellow
+        case .doubleBogey: .systemOrange
+        case .tripleBogey: .systemError
         }
     }
 

@@ -54,38 +54,24 @@ extension LiveRound {
     
     private var holePagedScoringSections: some View {
         let holes = viewModel.holeNumbers
-        return ScrollView(.vertical, showsIndicators: false) {
+        return PagedHoleScrollView(
+            holeNumbers: holes,
+            scoringPageHole: $scoringPageHole,
+            coordinator: pageCoordinator,
+            resetIdentity: pagerResetIdentity
+        ) { holeNumber in
             VStack(spacing: 16) {
-                PagedHoleScrollView(
-                    holeNumbers: holes,
-                    scoringPageHole: $scoringPageHole,
-                    coordinator: pageCoordinator,
-                    resetIdentity: pagerResetIdentity
-                ) { holeNumber in
-                    VStack(spacing: 16) {
-                        navPadding
-                        holeDetailsCard(for: holeNumber)
-                        teeGroupScorecard(for: holeNumber)
-                    }
-                }
-                .padding(.top, UIApplication.shared.topSafeAreaInset)
+                navPadding
+                holeDetailsCard(for: holeNumber)
+                teeGroupScorecard(for: holeNumber)
 
                 swipeHintTile
                     .padding(.horizontal, 16)
 
-                if let scoreboard = viewModel.seriesScoreboardSnapshot {
-                    liveSeriesScoreboardTile(scoreboard)
-                        .padding(.horizontal, 16)
-                }
-
-                vegasSummaryTile
-                    .padding(.horizontal, 16)
-
-                leaderboardSection
-                    .padding(.horizontal, 16)
-                    .padding(.bottom, 100)
+                Color.clear.frame(height: 100)
             }
         }
+        .padding(.top, UIApplication.shared.topSafeAreaInset)
         .frame(maxHeight: .infinity)
         .onAppear {
             guard !holes.isEmpty else { return }
@@ -99,7 +85,7 @@ extension LiveRound {
         }
     }
 
-    private func liveSeriesScoreboardTile(_ scoreboard: SeriesScoreboardSnapshot) -> some View {
+    func liveSeriesScoreboardTile(_ scoreboard: SeriesScoreboardSnapshot) -> some View {
         VStack(spacing: 16) {
             HStack {
                 Text(liveScoreboardTitle(scoreboard))
@@ -589,13 +575,13 @@ extension LiveRound {
     }
 
     @ViewBuilder
-    private var vegasSummaryTile: some View {
+    var vegasSummaryTile: some View {
         if !shouldShowScoringSkeleton, let summary = viewModel.vegasLiveSummary {
             VegasSummaryTileView(summary: summary, palette: palette, viewModel: viewModel)
         }
     }
 
-    private var leaderboardSection: some View {
+    var leaderboardSection: some View {
         VStack(spacing: 12) {
             VStack(spacing: 4) {
                 Text("Leaderboard".uppercased())

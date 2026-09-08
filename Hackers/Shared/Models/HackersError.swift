@@ -16,6 +16,7 @@ enum HackersError: Error {
     // MARK: - Firebase
     
     case documentNotFound
+    case invalidDocumentID
     case failedToEncodeDocument
     case sessionWriteFailed
     case unknownSnapshotError

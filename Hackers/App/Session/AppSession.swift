@@ -57,10 +57,11 @@ final class AppSession: ObservableObject, Sendable, Loggable {
     
     let roundResumeStore: any RoundResumeStoring
 
-    init(roundResumeStore: any RoundResumeStoring = UserDefaultsRoundResumeStore()) {
+    init(roundResumeStore: any RoundResumeStoring = UserDefaultsRoundResumeStore(), restoresAuthentication: Bool = true) {
         self.roundResumeStore = roundResumeStore
         self.roundResumeState = roundResumeStore.load()
         print("init AppSession")
+        guard restoresAuthentication else { return }
         Task {
             if let fullyAuthenticated = try? await self.load(), fullyAuthenticated {
                 await restoreRoundOrRouteToDashboard()
@@ -101,6 +102,7 @@ extension AppSession {
         ephemeralParticipantID = nil
         isSpectating = false
         clearRoundResume()
+        roundResumeStore.clearAll()
         
         // 1. Clear user and sync state to session
         Task {

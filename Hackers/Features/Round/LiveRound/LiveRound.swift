@@ -38,8 +38,8 @@ private enum Tab: String, CaseIterable {
 
     var title: String {
         switch self {
-        case .scoring: "Scorecard"
-        case .table: "Table"
+        case .scoring: "Score Entry"
+        case .table: "Overview"
         case .matchups: "Matchups"
         }
     }
@@ -69,8 +69,10 @@ func holeScrollDuration(for distance: Int) -> Double {
     0.28 + Double(max(0, distance - 1)) * 0.02
 }
 
-fileprivate let kMinSkeletonTime: CGFloat = 1.2
-fileprivate let kMaxSkeletonTime: CGFloat = 12
+enum LiveRoundOverviewTab: String, CaseIterable {
+    case leaderboard = "Leaderboard"
+    case scorecard = "Scorecard"
+}
 
 struct LiveRound: View, Loggable {
     @Environment(\.accessibilityReduceMotion) var accessibilityReduceMotion
@@ -99,7 +101,9 @@ struct LiveRound: View, Loggable {
     @StateObject var viewModel: LiveRoundViewModel
     @StateObject private var tablePresentationState: FullScorecardPresentationState
     
-    @State private var isShowingInitialScoringSkeleton = false
+    @State private var isShowingInitialScoringSkeleton = true
+    @State private var hasRestoredScoringContext = false
+    @State private var overviewTab: LiveRoundOverviewTab = .leaderboard
     @State private var hasHandledInitialScoringSkeleton = false
     @State var pageCoordinator = PageCoordinator()
     @State var scoringPageHole: Int?
@@ -170,8 +174,12 @@ struct LiveRound: View, Loggable {
             BackgroundTheme(palette: palette, theme: viewModel.theme)
             
             if selectedTab == .scoring {
-                scoringContent
-                    .edgesIgnoringSafeArea(.vertical)
+                if hasRestoredScoringContext {
+                    scoringContent
+                        .edgesIgnoringSafeArea(.vertical)
+                } else {
+                    ProgressView("Loading score entry…")
+                }
             } else if selectedTab == .table {
                 tableContent
             } else if selectedTab == .matchups {
@@ -184,7 +192,7 @@ struct LiveRound: View, Loggable {
                     .alignTop()
             }
 
-            if visibleTabs.count > 1 && showsLiveRoundChrome {
+            if hasRestoredScoringContext && visibleTabs.count > 1 && showsLiveRoundChrome {
                 HStack(spacing: 8) {
                     liveTabStrip
                         .padding(.vertical, 4)
@@ -203,7 +211,7 @@ struct LiveRound: View, Loggable {
                 .alignBottom()
             }
 
-            if shouldShowCompleteRoundButton && showsLiveRoundChrome {
+            if hasRestoredScoringContext && shouldShowCompleteRoundButton && showsLiveRoundChrome {
                 HStack {
                     Spacer(minLength: 0)
                     NavButton(style: .glass, icon: "f00c", size: 24) {
@@ -211,6 +219,7 @@ struct LiveRound: View, Loggable {
                         showCompleteRoundSheet = true
                     }
                 }
+                .accessibilityLabel("Finish / Sign Card")
                 .padding(.horizontal, 16)
                 .transition(.scale.combined(with: .opacity))
                 .animation(.spring(response: 0.35, dampingFraction: 0.8), value: shouldShowCompleteRoundButton)
@@ -227,11 +236,11 @@ struct LiveRound: View, Loggable {
             activateCompanionsIfPossible()
             print(roundSession.snapshot.round.id)
             viewModel.bind(appSession: appSession, roundSession: roundSession)
-            viewModel.startMatchupProbabilityPrecomputation()
+            // Score entry owns the critical path; review work starts with its tab.
+            await viewModel.ensureParticipantResolved()
             restoreDurableRoundContextIfNeeded()
             trackLiveRoundViewedIfNeeded(snapshot: roundSession.snapshot)
             await runInitialScoringSkeletonIfNeeded()
-            await viewModel.ensureParticipantResolved()
 //            DispatchQueue.main.asyncAfter(deadline: .now() + 1.2, execute: {
 //                viewModel.navigateToNextUnscoredHole()
 //            })
@@ -239,15 +248,20 @@ struct LiveRound: View, Loggable {
         }
         // ── ViewModel intent → UI scroll state (single display source: scoringPageHole) ────
         .onChange(of: viewModel.currentHoleNumber) { old, new in
-            guard scoringPageHole != new else { return }
+            guard hasRestoredScoringContext, scoringPageHole != new else { return }
             withAnimation(.spring(duration: holeScrollDuration(for: abs(new - old)))) {
                 scoringPageHole = new
             }
         }
         .onChange(of: scoringPageHole) { _, hole in
+            guard hasRestoredScoringContext, let hole else { return }
+            viewModel.selectHole(hole)
             persistDurableRoundContext(hole: hole)
         }
-        .onChange(of: selectedTab) { oldTab, _ in
+        .onChange(of: selectedTab) { oldTab, newTab in
+            if newTab == .table { overviewTab = .leaderboard }
+            viewModel.setOverviewVisible(newTab == .table)
+            if newTab == .matchups { viewModel.startMatchupProbabilityPrecomputation() }
             if oldTab == .table {
                 tablePresentationState.resetForTabExit()
             }
@@ -296,7 +310,14 @@ struct LiveRound: View, Loggable {
             .presentationDragIndicator(.visible)
             .presentationBackground(.ultraThinMaterial)
         }
-        .onReceive(roundSession.$snapshot, perform: { _ in
+        .onReceive(roundSession.$snapshot, perform: { updated in
+            if updated.round.id == appSession.activeRoundID,
+               updated.round.status == .complete || updated.round.status == .archived {
+                appSession.clearRoundResume()
+                appSession.path.removeLast(appSession.path.count)
+                appSession.routeTo(.dashboard)
+                return
+            }
             trackLiveRoundViewedIfNeeded(snapshot: roundSession.snapshot)
             if mapInit { return }
 
@@ -320,38 +341,36 @@ struct LiveRound: View, Loggable {
                 mapInit = true
             }
         })
+        .onReceive(HackersNotification.appSceneDidEnterBackground.publisher()) { _ in
+            persistDurableRoundContext(hole: scoringPageHole)
+        }
         .onReceive(HackersNotification.appSceneDidBecomeActive.publisher()) { _ in
             guard let id = appSession.activeRoundID else { return }
             Task { await roundSession.activate(roundID: id, profile: .liveRound) }
         }
         .onDisappear {
+            viewModel.setOverviewVisible(false)
             tablePresentationState.resetForTabExit()
         }
     }
 
     private func restoreDurableRoundContextIfNeeded() {
-        guard let state = appSession.roundResumeState,
-              state.roundID == appSession.activeRoundID else {
-            persistDurableRoundContext(hole: viewModel.currentHoleNumber)
-            return
-        }
-
-        if let selectedHole = state.selectedHole, viewModel.holeNumbers.contains(selectedHole) {
-            viewModel.selectHole(selectedHole)
-            scoringPageHole = selectedHole
-        }
-
-        let restoredTab: Tab
-        switch state.selectedTab {
-        case .scoring: restoredTab = .scoring
-        case .table: restoredTab = .table
-        case .matchups: restoredTab = .matchups
-        }
-        selectedTab = visibleTabs.contains(restoredTab) ? restoredTab : .scoring
-        persistDurableRoundContext(hole: scoringPageHole ?? viewModel.currentHoleNumber)
+        guard !hasRestoredScoringContext,
+              roundSession.isScoringSnapshotReady else { return }
+        let hasUsableSnapshot = viewModel.snapshot.round.id == appSession.activeRoundID
+            && !viewModel.snapshot.participants.isEmpty
+        guard hasUsableSnapshot || roundSession.didTimeOutInitialLoad else { return }
+        let state = appSession.roundResumeState
+        let hole = state?.roundID == appSession.activeRoundID ? state?.selectedHole : nil
+        viewModel.restoreCurrentHole(hole)
+        scoringPageHole = viewModel.currentHoleNumber
+        selectedTab = .scoring
+        hasRestoredScoringContext = true
+        persistDurableRoundContext(hole: scoringPageHole)
     }
 
     private func persistDurableRoundContext(hole: Int?) {
+        guard hasRestoredScoringContext else { return }
         appSession.updateLiveRoundResume(
             selectedHole: hole,
             selectedTab: {
@@ -414,21 +433,45 @@ struct LiveRound: View, Loggable {
     @ViewBuilder
     private var tableContent: some View {
         if let participant = viewModel.currentParticipant ?? snapshot.participants.first {
-            VStack(spacing: 8) {
+            VStack(spacing: 0) {
                 if !tablePresentationState.isRotated {
                     navPadding
                 }
 
-                FullScorecardView(
-                    viewModel: viewModel,
-                    participant: participant,
-                    allowsScoreEditing: viewModel.canEditActualGroupScores,
-                    initialSelectedScoringUnitID: participant.id,
-                    presentation: .embeddedLiveTable,
-                    presentationState: tablePresentationState
-                )
+                if !tablePresentationState.isRotated {
+                    Picker("Overview", selection: $overviewTab) {
+                        ForEach(LiveRoundOverviewTab.allCases, id: \.self) { tab in
+                            Text(tab.rawValue).tag(tab)
+                        }
+                    }
+                    .pickerStyle(.segmented)
+                    .padding(.top, 12)
+                    .padding(.horizontal, 16)
+                    .padding(.bottom, 8)
+                }
+                if overviewTab == .leaderboard {
+                    ScrollView {
+                        VStack(spacing: 16) {
+                            leaderboardSection
+                            if let scoreboard = viewModel.seriesScoreboardSnapshot {
+                                liveSeriesScoreboardTile(scoreboard)
+                            }
+                            if viewModel.isLoadingOverview { ProgressView("Refreshing standings…") }
+                            vegasSummaryTile
+                        }
+                        .padding(.horizontal, 16)
+                    }
+                } else {
+                    FullScorecardView(
+                        viewModel: viewModel,
+                        participant: participant,
+                        allowsScoreEditing: viewModel.canEditActualGroupScores,
+                        initialSelectedScoringUnitID: participant.id,
+                        presentation: .embeddedLiveTable,
+                        presentationState: tablePresentationState
+                    )
+                }
             }
-            .padding(.top, tablePresentationState.isRotated ? 0 : UIApplication.shared.topSafeAreaInset)
             .padding(.bottom, tablePresentationState.isRotated ? 0 : 88)
         } else {
             ContentUnavailableView(
@@ -439,7 +482,7 @@ struct LiveRound: View, Loggable {
             .padding(24)
         }
     }
-    
+
 //    func updateTabBarScale(
 //        shrinkSpeed: CGFloat = 0.015,
 //        expandSpeed: CGFloat = 0.02,
@@ -468,23 +511,16 @@ extension LiveRound {
     private var scoringNavHeader: some View {
         HStack(spacing: 12) {
             NavButton(style: .glass, icon: "f00d", color: palette.foregroundColor) {
-                appSession.clearRoundResume()
-                dismiss()
+                appSession.exitLiveRound()
             }
-            .highPriorityGesture(
-                TapGesture().onEnded { _ in
-                    Haptics.fire(.light)
-                    appSession.clearRoundResume()
-                    dismiss()
-                }
-            )
+            .accessibilityLabel("Exit Round")
             
             Spacer(minLength: 0)
             
-            if selectedTab == .scoring {
+            if selectedTab == .scoring && hasRestoredScoringContext {
                 navHoleSelector
             } else if selectedTab == .table {
-                Text("Score table".uppercased())
+                Text("Overview".uppercased())
                     .fontStyle(kFontName, size: 15, weight: .semibold)
                     .foregroundStyle(palette.foregroundColor)
                     .lineLimit(1)
@@ -506,8 +542,17 @@ extension LiveRound {
             Spacer(minLength: 0)
             
             Menu {
-                if selectedTab == .table {
-                    Section(header: Text("Score table")) {
+                Button("Exit Round", systemImage: "rectangle.portrait.and.arrow.right") {
+                    appSession.exitLiveRound()
+                }
+                if hasRestoredScoringContext && viewModel.canCompleteActualGroup {
+                    Button("Finish / Sign Card", systemImage: "signature") {
+                        showCompleteRoundSheet = true
+                    }
+                }
+                Divider()
+                if selectedTab == .table && overviewTab == .scorecard {
+                    Section(header: Text("Scorecard")) {
                         Button {
                             Haptics.fire(.light)
                             tablePresentationState.showPlayerVisibilitySheet = true
@@ -844,40 +889,26 @@ extension LiveRound {
 
     private func runInitialScoringSkeletonIfNeeded() async {
         guard !hasHandledInitialScoringSkeleton else { return }
-        hasHandledInitialScoringSkeleton = true
-
-        let minimumDuration = TimeInterval(max(0, kMinSkeletonTime))
-        let needsLoadingSkeleton = viewModel.snapshot.participants.isEmpty
-        
-        guard needsLoadingSkeleton else {
-            isShowingInitialScoringSkeleton = false
-            return
-        }
-
-        isShowingInitialScoringSkeleton = true
         let startedAt = Date()
-
-        while true {
-            let elapsed = Date().timeIntervalSince(startedAt)
-            let metMinimumDuration = elapsed >= minimumDuration
-            let isDataReady = !viewModel.snapshot.participants.isEmpty
-            
-            if metMinimumDuration && isDataReady {
-                break
+        while !hasRestoredScoringContext {
+            guard !Task.isCancelled else { return }
+            roundSession.completeInitialLoadTrackingIfTimedOut()
+            await viewModel.ensureParticipantResolved()
+            restoreDurableRoundContextIfNeeded()
+            if !hasRestoredScoringContext {
+                do { try await Task.sleep(for: .milliseconds(50)) }
+                catch { return }
             }
-            
-            // Safety exit: avoid an indefinite skeleton if listeners fail.
-            if elapsed >= kMaxSkeletonTime {
-                break
-            }
-
-            try? await Task.sleep(for: .milliseconds(50))
         }
-
-        withAnimation(.easeOut(duration: 0.18)) {
-            isShowingInitialScoringSkeleton = false
-        }
+        hasHandledInitialScoringSkeleton = true
+        isShowingInitialScoringSkeleton = false
+        addEvent("live_round.score_entry_ready", eventProps: [
+            "round_id": viewModel.snapshot.round.id,
+            "hole": viewModel.currentHoleNumber,
+            "duration_ms": Int(Date().timeIntervalSince(startedAt) * 1_000)
+        ])
     }
+
 }
 
 //@MainActor

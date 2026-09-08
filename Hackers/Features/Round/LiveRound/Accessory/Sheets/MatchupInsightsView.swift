@@ -18,7 +18,6 @@ struct MatchupInsightsView: View {
     @State private var probabilityTimeline: MatchupProbabilityTimeline?
     @State private var scoreTimeline: [MatchupScoreTrendPoint] = []
     @State private var isLoadingProbabilityTimeline = false
-    @State private var presentedParticipant: RoundParticipant?
 
     private var palette: DesignPalette {
         .init(theme: .primary, scheme: colorScheme)
@@ -37,33 +36,6 @@ struct MatchupInsightsView: View {
             || viewModel.isLiveMatchupFullyScored(currentSection)
     }
 
-    private var outcomeStatus: LiveRoundViewModel.OutcomeMatchupStatus {
-        viewModel.outcomeMatchupStatus(for: currentSection)
-    }
-
-    private var statusTitle: String {
-        if isFinal {
-            return outcomeStatus.title
-        }
-        if presentation.isTie, presentation.hasCompleteSides {
-            return "Match tied"
-        }
-        if let winningSideID = presentation.winningSideID,
-           let leadingSide = presentation.side(id: winningSideID) {
-            return "\(leadingSide.title) leads"
-        }
-        return "Matchup in progress"
-    }
-
-    private var statusDetail: String {
-        if isFinal {
-            return outcomeStatus.detail
-        }
-        return presentation.hasCompleteSides
-            ? presentation.scorelineDetail
-            : "Waiting for both sides to post scores"
-    }
-
     private var leftColor: Color {
         presentation.sides.first?.accentColor ?? viewModel.theme.color
     }
@@ -73,18 +45,15 @@ struct MatchupInsightsView: View {
         return presentation.sides[1].accentColor ?? .accentPurple
     }
 
-    private var totalHoles: Int {
-        viewModel.snapshot.segments.first {
-            $0.matchups?.contains(where: { $0.id == section.matchup.id }) == true
-        }?.holeRange.count ?? viewModel.courseOrderHoleNumbers.count
+    private var matchupParticipants: [RoundParticipant] {
+        var seenParticipantIDs = Set<String>()
+        return presentation.sides.flatMap(\.participants).filter {
+            seenParticipantIDs.insert($0.id).inserted
+        }
     }
 
-    private var holesCompleted: Int {
-        scoreTimeline.last?.holesCompleted
-            ?? presentation.sides.flatMap(\.participants)
-                .map { viewModel.holesPlayedCount(for: $0.id) }
-                .max()
-            ?? 0
+    private var matchupScorecardHeight: CGFloat {
+        min(620, max(360, CGFloat(matchupParticipants.count) * 54 + 230))
     }
 
     private var currentProbability: MatchupProbability? {
@@ -109,28 +78,6 @@ struct MatchupInsightsView: View {
         NavigationStack {
             ScrollView(.vertical, showsIndicators: false) {
                 LazyVStack(spacing: 16) {
-                    MatchupScoreboardCard(
-                        presentation: presentation,
-                        matchIndex: matchIndex,
-                        statusTitle: statusTitle,
-                        statusDetail: statusDetail,
-                        isFinal: isFinal,
-                        holesCompleted: holesCompleted,
-                        totalHoles: totalHoles,
-                        leftColor: leftColor,
-                        rightColor: rightColor,
-                        palette: palette
-                    )
-
-                    if viewModel.handicapsEnabled {
-                        Picker("Matchup scoring basis", selection: $viewModel.matchupScoreBasis) {
-                            Text("Gross").tag(ScoreBasis.gross)
-                            Text("Net").tag(ScoreBasis.net)
-                        }
-                        .pickerStyle(.segmented)
-                        .accessibilityHint("Changes displayed matchup scores; win probability remains on the competition basis")
-                    }
-
                     MatchupMomentumCard(
                         probabilityTimeline: probabilityTimeline,
                         currentProbability: currentProbability,
@@ -147,26 +94,7 @@ struct MatchupInsightsView: View {
                         palette: palette
                     )
 
-                    if !isFinal,
-                       let probabilities = currentProbability?.participantCountingProbabilities,
-                       probabilities.isPopulated {
-                        MatchupCountingChancesCard(
-                            sides: presentation.sides,
-                            probabilities: probabilities,
-                            isFinal: isFinal,
-                            palette: palette
-                        )
-                    }
-
-                    MatchupPlayersCard(
-                        sides: presentation.sides,
-                        scoreBasis: viewModel.matchupScoreBasis,
-                        isPointsFormat: presentation.isPointsFormat,
-                        isFinal: isFinal,
-                        viewModel: viewModel,
-                        palette: palette,
-                        onSelectParticipant: presentParticipant
-                    )
+                    matchupScorecard
                 }
                 .padding(16)
                 .padding(.bottom, 24)
@@ -184,18 +112,32 @@ struct MatchupInsightsView: View {
         .task(id: analyticsTaskID) {
             await loadAnalytics()
         }
-        .sheet(item: $presentedParticipant) { participant in
-            PlayerInsightsView(viewModel: viewModel, participant: participant)
-                .presentationDetents([.large])
-                .presentationDragIndicator(.visible)
-                .presentationBackground(.ultraThinMaterial)
-        }
         .captureScreen("matchup_insights")
     }
 
-    private func presentParticipant(_ participant: RoundParticipant) {
-        Haptics.fire(.light)
-        presentedParticipant = participant
+    @ViewBuilder
+    private var matchupScorecard: some View {
+        if let participant = matchupParticipants.first {
+            VStack(alignment: .leading, spacing: 12) {
+                Text("Scorecard")
+                    .fontStyle(kFontName, size: 17, weight: .semibold)
+                    .foregroundStyle(palette.foregroundColor)
+
+                FullScorecardView(
+                    viewModel: viewModel,
+                    participant: participant,
+                    allowsScoreEditing: false,
+                    initialSelectedScoringUnitID: participant.id,
+                    presentation: .embeddedInsights,
+                    includedParticipantIDs: Set(matchupParticipants.map(\.id))
+                )
+                .frame(height: matchupScorecardHeight)
+                .clipShape(RoundedRectangle(cornerRadius: 18, style: .continuous))
+            }
+            .padding(16)
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .glassCardEffect(interactive: false, forceMaterial: true)
+        }
     }
 
     private func loadAnalytics() async {

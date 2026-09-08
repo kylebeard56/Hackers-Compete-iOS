@@ -362,6 +362,7 @@ struct CompleteRoundSheet: View, Loggable {
             )
             appSession.clearRoundResume()
             dismiss()
+            appSession.path.removeLast(appSession.path.count)
             appSession.routeTo(.dashboard)
         } catch {
             Haptics.fire(.error)
