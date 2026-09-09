@@ -242,6 +242,19 @@ extension Course {
         return id == Self.golfCourseAPIDocumentID(for: apiID)
     }
 
+    /// Accepts a legacy UUID-backed cache record for the requested provider ID and returns it
+    /// with the deterministic identity used by the current cache. Records for another provider
+    /// ID (or a non-provider origin) are rejected instead of leaking stale course data.
+    func canonicalizedGolfCourseAPICacheEntry(expectedAPIID: Int) -> Course? {
+        guard expectedAPIID > 0,
+              origin == CourseOrigin.golfCourseAPI.rawValue,
+              golfCourseApiID == expectedAPIID else { return nil }
+
+        var course = self
+        course.id = Self.golfCourseAPIDocumentID(for: expectedAPIID)
+        return course
+    }
+
     var isSimpleRoundCourse: Bool {
         origin == CourseOrigin.simple.rawValue
     }

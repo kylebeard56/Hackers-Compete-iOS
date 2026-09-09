@@ -48,6 +48,40 @@ struct GolfCourseRepositoryTests {
         #expect(!canonical.matchesCachedSearch(query: "Club"))
     }
 
+    @Test("Legacy UUID cache identity is canonicalized for recent-course loading")
+    func legacyCacheIdentityIsCanonicalized() async throws {
+        let legacy = Course(
+            id: "legacy-generated-uuid",
+            golfCourseApiID: 42,
+            origin: .golfCourseAPI,
+            clubName: "Cached Club",
+            courseName: "Cached Course"
+        )
+        let remote = MockGolfCourseRemote(courseModel: makeAPIModel(id: 42))
+        let cache = MockGolfCourseCache(coursesByID: [42: legacy])
+        let repository = GolfCourseRepository(remote: remote, cache: cache)
+
+        let recovered = try await repository.course(by: 42)
+
+        #expect(recovered.id == "42")
+        #expect(recovered.golfCourseApiID == 42)
+        #expect(recovered.hasCanonicalGolfCourseAPIIdentity)
+        #expect(remote.detailRequestIDs.isEmpty)
+    }
+
+    @Test("Legacy cache lookup rejects a different provider course")
+    func legacyCacheIdentityRejectsMismatchedCourse() {
+        let legacy = Course(
+            id: "legacy-generated-uuid",
+            golfCourseApiID: 7,
+            origin: .golfCourseAPI,
+            clubName: "Wrong Club",
+            courseName: "Wrong Course"
+        )
+
+        #expect(legacy.canonicalizedGolfCourseAPICacheEntry(expectedAPIID: 42) == nil)
+    }
+
     @Test("Cache miss fetches API course and writes it through")
     func cacheMissFetchesAndCachesRemoteCourse() async throws {
         let remote = MockGolfCourseRemote(courseModel: makeAPIModel(id: 42))
@@ -75,6 +109,20 @@ struct GolfCourseRepositoryTests {
 
         #expect(models.map(\.id) == [37140])
         #expect(cache.searchQueries == ["Test Club"])
+        #expect(remote.searchQueries.isEmpty)
+    }
+
+    @Test("Legacy UUID cached search result avoids GolfCourseAPI")
+    func legacyCachedSearchAvoidsRemoteRequest() async throws {
+        var legacy = Course(canonicalGolfCourseAPI: makeAPIModel(id: 37140))
+        legacy.id = "legacy-generated-uuid"
+        let remote = MockGolfCourseRemote(courseModel: makeAPIModel(id: 1))
+        let cache = MockGolfCourseCache(searchResults: [legacy])
+        let repository = GolfCourseRepository(remote: remote, cache: cache)
+
+        let models = try await repository.searchCourseModels(with: "Test Club")
+
+        #expect(models.map(\.id) == [37140])
         #expect(remote.searchQueries.isEmpty)
     }
 

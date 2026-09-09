@@ -194,9 +194,10 @@ final class GolfCourseRepository: Loggable {
     }
 
     func course(by id: Int) async throws -> Course {
-        if let cached = await cache.course(byGolfCourseAPIID: id) {
+        if let cached = await cache.course(byGolfCourseAPIID: id),
+           let canonical = cached.canonicalizedGolfCourseAPICacheEntry(expectedAPIID: id) {
             addBreadcrumb(message: "GolfCourseAPI cache hit for id: \(id)")
-            return cached
+            return canonical
         }
 
         addBreadcrumb(message: "GolfCourseAPI cache miss for id: \(id)")
@@ -210,7 +211,13 @@ final class GolfCourseRepository: Loggable {
     /// result is written through so later matching searches can avoid the external API entirely.
     func searchCourseModels(with query: String) async throws -> [GolfCourseAPIModel] {
         let cached = await cache.courses(matching: query)
-        let cachedModels = cached.compactMap(GolfCourseAPIModel.init(cachedCourse:))
+        let cachedModels = cached.compactMap { course -> GolfCourseAPIModel? in
+            guard let apiID = course.golfCourseApiID,
+                  let canonical = course.canonicalizedGolfCourseAPICacheEntry(expectedAPIID: apiID) else {
+                return nil
+            }
+            return GolfCourseAPIModel(cachedCourse: canonical)
+        }
         if cachedModels.isPopulated {
             addBreadcrumb(message: "GolfCourseAPI cached search hit for query: \(query)")
             return cachedModels
