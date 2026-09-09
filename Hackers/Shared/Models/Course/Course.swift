@@ -55,7 +55,7 @@ struct Course: FirebaseIdentifiable {
     let venueDetails: CourseVenueDetails?
     /// Top-level geohash for Firestore queries (e.g. fetchCourses near location)
     let locationGeohash: String?
-    let tees: [Tee]
+    private(set) var tees: [Tee]
     
     /// Conformance for FirebaseIdentifiable
     var id: String
@@ -252,6 +252,24 @@ extension Course {
 
         var course = self
         course.id = Self.golfCourseAPIDocumentID(for: expectedAPIID)
+        // Search consumers reconstruct stable tee IDs from name and gender. Apply the same
+        // identity on detail loads without round-tripping (and losing) saved scoring data.
+        course.tees = tees.map { tee in
+            guard let gender = Gender(rawValue: tee.gender), gender != .unknown else { return tee }
+            return Tee(
+                id: Self.stableTeeID(teeName: tee.name, gender: gender),
+                name: tee.name,
+                gender: tee.gender,
+                totalHoles: tee.totalHoles,
+                holes: tee.holes,
+                ratingFull: tee.ratingFull,
+                slopeFull: tee.slopeFull,
+                ratingFront: tee.ratingFront,
+                slopeFront: tee.slopeFront,
+                ratingBack: tee.ratingBack,
+                slopeBack: tee.slopeBack
+            )
+        }
         return course
     }
 

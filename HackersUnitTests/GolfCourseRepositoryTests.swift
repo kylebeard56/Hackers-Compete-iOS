@@ -82,6 +82,81 @@ struct GolfCourseRepositoryTests {
         #expect(legacy.canonicalizedGolfCourseAPICacheEntry(expectedAPIID: 42) == nil)
     }
 
+
+    @Test("Legacy cache rejects non-provider origins even when the provider ID matches")
+    func legacyCacheRejectsOtherOrigins() {
+        for origin in [CourseOrigin.hackers, .manual, .ocr, .unknown] {
+            let course = Course(golfCourseApiID: 42, origin: origin)
+            #expect(course.canonicalizedGolfCourseAPICacheEntry(expectedAPIID: 42) == nil)
+        }
+    }
+
+    @Test("Legacy detail and search preserve the same selected tee identity and scoring data")
+    func legacyTeeIdentityMatchesSearch() async throws {
+        let holes = (1...18).map { number in
+            Hole(from: GolfCourseAPIHole(par: 4, yardage: 400, handicap: number), number: number)
+        }
+        let tee = Tee(
+            id: "legacy-tee-uuid",
+            name: "Blue",
+            gender: Gender.male.rawValue,
+            totalHoles: 18,
+            holes: holes,
+            ratingFull: 72.4,
+            slopeFull: 131,
+            ratingFront: 36.1,
+            slopeFront: 129,
+            ratingBack: 36.3,
+            slopeBack: 133
+        )
+        let femaleTee = Tee(
+            id: "legacy-female-tee",
+            name: "Blue",
+            gender: Gender.female.rawValue,
+            totalHoles: 18,
+            holes: holes,
+            ratingFull: 76.4,
+            slopeFull: 139,
+            ratingFront: nil,
+            slopeFront: nil,
+            ratingBack: nil,
+            slopeBack: nil
+        )
+        let legacy = Course(
+            id: "legacy-course-uuid",
+            golfCourseApiID: 42,
+            origin: .golfCourseAPI,
+            clubName: "Test Club",
+            courseName: "Test Course",
+            location: CourseLocation(from: makeAPIModel(id: 42).location),
+            tees: [femaleTee, tee]
+        )
+        let remote = MockGolfCourseRemote(courseModel: makeAPIModel(id: 42))
+        let cache = MockGolfCourseCache(coursesByID: [42: legacy], searchResults: [legacy])
+        let repository = GolfCourseRepository(remote: remote, cache: cache)
+
+        let searchModels = try await repository.searchCourseModels(with: "Test Club")
+        let searchCourse = Course(canonicalGolfCourseAPI: try #require(searchModels.first))
+        let selectedTee = try #require(searchCourse.tees.first { $0.id == "blue_male" })
+        let detail = try await repository.course(by: 42)
+        let restoredTee = try #require(detail.tees.first { $0.id == selectedTee.id })
+
+        #expect(Set(detail.tees.map(\.id)) == Set(searchCourse.tees.map(\.id)))
+        #expect(restoredTee.name == tee.name)
+        #expect(restoredTee.gender == tee.gender)
+        #expect(restoredTee.totalHoles == tee.totalHoles)
+        #expect(restoredTee.holes == tee.holes)
+        #expect(restoredTee.ratingFull == tee.ratingFull)
+        #expect(restoredTee.slopeFull == tee.slopeFull)
+        #expect(restoredTee.ratingFront == tee.ratingFront)
+        #expect(restoredTee.slopeFront == tee.slopeFront)
+        #expect(restoredTee.ratingBack == tee.ratingBack)
+        #expect(restoredTee.slopeBack == tee.slopeBack)
+        #expect(detail.canonicalizedGolfCourseAPICacheEntry(expectedAPIID: 42) == detail)
+        #expect(remote.detailRequestIDs.isEmpty)
+        #expect(remote.searchQueries.isEmpty)
+    }
+
     @Test("Cache miss fetches API course and writes it through")
     func cacheMissFetchesAndCachesRemoteCourse() async throws {
         let remote = MockGolfCourseRemote(courseModel: makeAPIModel(id: 42))

@@ -50,21 +50,32 @@ extension FirebaseService {
         // provider field keeps recent-course and series-round startup working while those records
         // age out, even when GolfCourseAPI is temporarily unavailable.
         do {
-            let snapshot = try await courses
+            let pageSize = 20
+            let query = courses
                 .whereField("golf_course_api_id", isEqualTo: id)
-                .limit(to: 1)
-                .getDocuments()
-            guard let document = snapshot.documents.first else { return nil }
-            let course = try document.data(as: Course.self)
-            guard let canonical = course.canonicalizedGolfCourseAPICacheEntry(expectedAPIID: id) else {
-                addBreadcrumb(
-                    level: .warning,
-                    message: "Ignoring mismatched legacy GolfCourseAPI cache document \(document.documentID)"
-                )
-                return nil
+                .whereField("origin", isEqualTo: CourseOrigin.golfCourseAPI.rawValue)
+                .limit(to: pageSize)
+            var cursor: DocumentSnapshot?
+
+            while true {
+                let pageQuery = cursor.map { query.start(afterDocument: $0) } ?? query
+                let snapshot = try await pageQuery.getDocuments()
+                for document in snapshot.documents {
+                    guard let course = try? document.data(as: Course.self),
+                          let canonical = course.canonicalizedGolfCourseAPICacheEntry(expectedAPIID: id) else {
+                        addBreadcrumb(
+                            level: .warning,
+                            message: "Ignoring invalid legacy GolfCourseAPI cache document \(document.documentID)"
+                        )
+                        continue
+                    }
+                    addBreadcrumb(message: "Recovered legacy GolfCourseAPI cache record for id: \(id)")
+                    return canonical
+                }
+                guard snapshot.documents.count == pageSize,
+                      let lastDocument = snapshot.documents.last else { return nil }
+                cursor = lastDocument
             }
-            addBreadcrumb(message: "Recovered legacy GolfCourseAPI cache record for id: \(id)")
-            return canonical
         } catch {
             addBreadcrumb(
                 level: .warning,
@@ -145,8 +156,10 @@ extension FirebaseService {
             let (forward, reverse) = try await (forwardSnapshot, reverseSnapshot)
 
             let candidates = (forward.documents + reverse.documents)
-                .compactMap { try? $0.data(as: Course.self) }
-                .compactMap { course in
+                .compactMap { document -> Course? in
+                    try? document.data(as: Course.self)
+                }
+                .compactMap { (course: Course) -> Course? in
                     guard let apiID = course.golfCourseApiID else { return nil }
                     return course.canonicalizedGolfCourseAPICacheEntry(expectedAPIID: apiID)
                 }
@@ -173,8 +186,10 @@ extension FirebaseService {
                 .limit(to: max(limit, 200))
                 .getDocuments()
             let matches = legacySnapshot.documents
-                .compactMap { try? $0.data(as: Course.self) }
-                .compactMap { course in
+                .compactMap { document -> Course? in
+                    try? document.data(as: Course.self)
+                }
+                .compactMap { (course: Course) -> Course? in
                     guard let apiID = course.golfCourseApiID else { return nil }
                     return course.canonicalizedGolfCourseAPICacheEntry(expectedAPIID: apiID)
                 }
