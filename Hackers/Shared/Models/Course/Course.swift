@@ -55,7 +55,7 @@ struct Course: FirebaseIdentifiable {
     let venueDetails: CourseVenueDetails?
     /// Top-level geohash for Firestore queries (e.g. fetchCourses near location)
     let locationGeohash: String?
-    let tees: [Tee]
+    private(set) var tees: [Tee]
     
     /// Conformance for FirebaseIdentifiable
     var id: String
@@ -240,6 +240,37 @@ extension Course {
               let apiID = golfCourseApiID,
               apiID > 0 else { return false }
         return id == Self.golfCourseAPIDocumentID(for: apiID)
+    }
+
+    /// Accepts a legacy UUID-backed cache record for the requested provider ID and returns it
+    /// with the deterministic identity used by the current cache. Records for another provider
+    /// ID (or a non-provider origin) are rejected instead of leaking stale course data.
+    func canonicalizedGolfCourseAPICacheEntry(expectedAPIID: Int) -> Course? {
+        guard expectedAPIID > 0,
+              origin == CourseOrigin.golfCourseAPI.rawValue,
+              golfCourseApiID == expectedAPIID else { return nil }
+
+        var course = self
+        course.id = Self.golfCourseAPIDocumentID(for: expectedAPIID)
+        // Search consumers reconstruct stable tee IDs from name and gender. Apply the same
+        // identity on detail loads without round-tripping (and losing) saved scoring data.
+        course.tees = tees.map { tee in
+            guard let gender = Gender(rawValue: tee.gender), gender != .unknown else { return tee }
+            return Tee(
+                id: Self.stableTeeID(teeName: tee.name, gender: gender),
+                name: tee.name,
+                gender: tee.gender,
+                totalHoles: tee.totalHoles,
+                holes: tee.holes,
+                ratingFull: tee.ratingFull,
+                slopeFull: tee.slopeFull,
+                ratingFront: tee.ratingFront,
+                slopeFront: tee.slopeFront,
+                ratingBack: tee.ratingBack,
+                slopeBack: tee.slopeBack
+            )
+        }
+        return course
     }
 
     var isSimpleRoundCourse: Bool {

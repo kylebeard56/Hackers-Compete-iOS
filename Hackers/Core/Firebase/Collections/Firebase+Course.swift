@@ -17,34 +17,69 @@ extension FirebaseService {
         return await fetch(where: "id", isEqualTo: value, in: collection)
     }
 
-    /// Reads an API-backed course directly by its deterministic Firebase document ID.
-    /// Returns nil for a missing, malformed, or mismatched document so callers can fall back to
-    /// GolfCourseAPI without making Firebase availability part of the course-selection failure path.
+    /// Reads an API-backed course from the deterministic cache document, with a compatibility
+    /// lookup for cache records written before provider IDs became the document ID.
+    /// Returns nil for a missing or mismatched document so callers can fall back to GolfCourseAPI.
     func getCachedGolfCourseAPIByID(_ id: Int) async -> Course? {
         guard id > 0 else { return nil }
         let documentID = Course.golfCourseAPIDocumentID(for: id)
-        let reference = Firestore.firestore()
-            .collection(Collections.courses.name)
-            .document(documentID)
+        let courses = Firestore.firestore().collection(Collections.courses.name)
+        let reference = courses.document(documentID)
 
         do {
             let snapshot = try await reference.getDocument()
-            guard snapshot.exists else { return nil }
-
-            let course = try snapshot.data(as: Course.self)
-            guard course.hasCanonicalGolfCourseAPIIdentity,
-                  course.golfCourseApiID == id else {
+            if snapshot.exists {
+                let course = try snapshot.data(as: Course.self)
+                if let canonical = course.canonicalizedGolfCourseAPICacheEntry(expectedAPIID: id) {
+                    return canonical
+                }
                 addBreadcrumb(
                     level: .warning,
                     message: "Ignoring mismatched GolfCourseAPI cache document \(documentID)"
                 )
-                return nil
             }
-            return course
         } catch {
             addBreadcrumb(
                 level: .warning,
                 message: "Failed to read GolfCourseAPI cache document \(documentID)",
+                error: error
+            )
+        }
+
+        // Older releases cached provider courses under generated UUID document IDs. Querying the
+        // provider field keeps recent-course and series-round startup working while those records
+        // age out, even when GolfCourseAPI is temporarily unavailable.
+        do {
+            let pageSize = 20
+            let query = courses
+                .whereField("golf_course_api_id", isEqualTo: id)
+                .whereField("origin", isEqualTo: CourseOrigin.golfCourseAPI.rawValue)
+                .limit(to: pageSize)
+            var cursor: DocumentSnapshot?
+
+            while true {
+                let pageQuery = cursor.map { query.start(afterDocument: $0) } ?? query
+                let snapshot = try await pageQuery.getDocuments()
+                for document in snapshot.documents {
+                    guard let course = try? document.data(as: Course.self),
+                          let canonical = course.canonicalizedGolfCourseAPICacheEntry(expectedAPIID: id) else {
+                        addBreadcrumb(
+                            level: .warning,
+                            message: "Ignoring invalid legacy GolfCourseAPI cache document \(document.documentID)"
+                        )
+                        continue
+                    }
+                    addBreadcrumb(message: "Recovered legacy GolfCourseAPI cache record for id: \(id)")
+                    return canonical
+                }
+                guard snapshot.documents.count == pageSize,
+                      let lastDocument = snapshot.documents.last else { return nil }
+                cursor = lastDocument
+            }
+        } catch {
+            addBreadcrumb(
+                level: .warning,
+                message: "Failed to read legacy GolfCourseAPI cache record for id: \(id)",
                 error: error
             )
             return nil
@@ -121,16 +156,18 @@ extension FirebaseService {
             let (forward, reverse) = try await (forwardSnapshot, reverseSnapshot)
 
             let candidates = (forward.documents + reverse.documents)
-                .compactMap { try? $0.data(as: Course.self) }
-                .filter(\.hasCanonicalGolfCourseAPIIdentity)
+                .compactMap { document -> Course? in
+                    try? document.data(as: Course.self)
+                }
+                .compactMap { (course: Course) -> Course? in
+                    guard let apiID = course.golfCourseApiID else { return nil }
+                    return course.canonicalizedGolfCourseAPICacheEntry(expectedAPIID: apiID)
+                }
                 .filter { $0.matchesCachedSearch(query: normalized) }
             let deduplicated = Dictionary(candidates.map { ($0.id, $0) }, uniquingKeysWith: { first, _ in first })
 
-            return deduplicated.values.sorted { lhs, rhs in
-                let lhsExactPrefix = lhs.searchKey.hasPrefix(normalized) || lhs.searchKeyReverse.hasPrefix(normalized)
-                let rhsExactPrefix = rhs.searchKey.hasPrefix(normalized) || rhs.searchKeyReverse.hasPrefix(normalized)
-                if lhsExactPrefix != rhsExactPrefix { return lhsExactPrefix }
-                return lhs.courseName.localizedCaseInsensitiveCompare(rhs.courseName) == .orderedAscending
+            if deduplicated.isPopulated {
+                return sortedCachedCourses(Array(deduplicated.values), query: normalized)
             }
         } catch {
             addBreadcrumb(
@@ -138,7 +175,46 @@ extension FirebaseService {
                 message: "Failed to search cached GolfCourseAPI courses for \(normalized)",
                 error: error
             )
+        }
+
+        // Cache records created before search keys were introduced cannot satisfy the indexed
+        // prefix queries above. A bounded compatibility read keeps search usable during migration
+        // and still lets the repository fall back to GolfCourseAPI when there is no local match.
+        do {
+            let legacySnapshot = try await courses
+                .whereField("origin", isEqualTo: CourseOrigin.golfCourseAPI.rawValue)
+                .limit(to: max(limit, 200))
+                .getDocuments()
+            let matches = legacySnapshot.documents
+                .compactMap { document -> Course? in
+                    try? document.data(as: Course.self)
+                }
+                .compactMap { (course: Course) -> Course? in
+                    guard let apiID = course.golfCourseApiID else { return nil }
+                    return course.canonicalizedGolfCourseAPICacheEntry(expectedAPIID: apiID)
+                }
+                .filter { $0.matchesCachedSearch(query: normalized) }
+            let deduplicated = Dictionary(matches.map { ($0.id, $0) }, uniquingKeysWith: { first, _ in first })
+            if deduplicated.isPopulated {
+                addBreadcrumb(message: "Recovered \(deduplicated.count) legacy cached course(s) for \(normalized)")
+            }
+            return sortedCachedCourses(Array(deduplicated.values), query: normalized)
+        } catch {
+            addBreadcrumb(
+                level: .warning,
+                message: "Failed to search legacy GolfCourseAPI cache for \(normalized)",
+                error: error
+            )
             return []
+        }
+    }
+
+    private func sortedCachedCourses(_ courses: [Course], query: String) -> [Course] {
+        courses.sorted { lhs, rhs in
+            let lhsExactPrefix = lhs.searchKey.hasPrefix(query) || lhs.searchKeyReverse.hasPrefix(query)
+            let rhsExactPrefix = rhs.searchKey.hasPrefix(query) || rhs.searchKeyReverse.hasPrefix(query)
+            if lhsExactPrefix != rhsExactPrefix { return lhsExactPrefix }
+            return lhs.courseName.localizedCaseInsensitiveCompare(rhs.courseName) == .orderedAscending
         }
     }
 
