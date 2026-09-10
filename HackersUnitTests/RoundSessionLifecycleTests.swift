@@ -125,7 +125,7 @@ final class RoundSessionLifecycleTests: XCTestCase {
         XCTAssertTrue(session.isScoringSnapshotReady)
     }
 
-    func testLiveRoundReadinessTimesOutInsteadOfWaitingForever() {
+    func testLiveRoundReadinessTimeoutKeepsScoringDisabledUntilListenersFinish() {
         let session = RoundSession()
         let startedAt = Date()
         session.beginInitialLoadTracking(
@@ -141,14 +141,25 @@ final class RoundSessionLifecycleTests: XCTestCase {
         )
         XCTAssertFalse(session.isScoringSnapshotReady)
         XCTAssertFalse(session.didTimeOutInitialLoad)
+        XCTAssertFalse(session.canPersistScores)
 
         XCTAssertTrue(
             session.completeInitialLoadTrackingIfTimedOut(
                 asOf: startedAt.addingTimeInterval(RoundSession.initialListenerReadinessTimeout)
             )
         )
-        XCTAssertTrue(session.isScoringSnapshotReady)
+        XCTAssertFalse(session.isScoringSnapshotReady)
         XCTAssertTrue(session.didTimeOutInitialLoad)
+        XCTAssertFalse(session.canPersistScores)
+
+        for type in RoundSubscriptionProfile.liveRound.listenerTypes where type != .scoring {
+            XCTAssertFalse(session.recordInitialSnapshotReady(for: type))
+        }
+        XCTAssertFalse(session.isScoringSnapshotReady)
+        XCTAssertTrue(session.recordInitialSnapshotReady(for: .scoring))
+        XCTAssertTrue(session.isScoringSnapshotReady)
+        XCTAssertEqual(session.initialLoadState, .ready)
+        XCTAssertTrue(session.canPersistScores)
     }
 
     func testListenerErrorThrottleSuppressesDuplicateEventsInsideCooldown() {

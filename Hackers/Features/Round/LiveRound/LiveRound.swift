@@ -178,7 +178,7 @@ struct LiveRound: View, Loggable {
                     scoringContent
                         .edgesIgnoringSafeArea(.vertical)
                 } else {
-                    ProgressView("Loading score entry…")
+                    scoringLoadStateContent
                 }
             } else if selectedTab == .table {
                 tableContent
@@ -354,12 +354,31 @@ struct LiveRound: View, Loggable {
         }
     }
 
+    @ViewBuilder
+    private var scoringLoadStateContent: some View {
+        if roundSession.initialLoadState == .timedOut {
+            ContentUnavailableView {
+                Label("Scores couldn’t load", systemImage: "wifi.exclamationmark")
+            } description: {
+                Text("Score entry will stay locked until the latest round and scores are available.")
+            } actions: {
+                Button("Try Again") {
+                    Task { await roundSession.retryInitialLoad() }
+                }
+                .buttonStyle(.borderedProminent)
+            }
+            .padding(24)
+        } else {
+            ProgressView("Loading score entry…")
+        }
+    }
+
     private func restoreDurableRoundContextIfNeeded() {
         guard !hasRestoredScoringContext,
               roundSession.isScoringSnapshotReady else { return }
         let hasUsableSnapshot = viewModel.snapshot.round.id == appSession.activeRoundID
             && !viewModel.snapshot.participants.isEmpty
-        guard hasUsableSnapshot || roundSession.didTimeOutInitialLoad else { return }
+        guard hasUsableSnapshot else { return }
         let state = appSession.roundResumeState
         let hole = state?.roundID == appSession.activeRoundID ? state?.selectedHole : nil
         viewModel.restoreCurrentHole(hole)

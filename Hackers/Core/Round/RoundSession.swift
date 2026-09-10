@@ -50,6 +50,13 @@ enum RoundSessionStaleReason: String {
     case inactiveTimeout = "inactive_timeout"
 }
 
+enum RoundInitialLoadState: Equatable {
+    case idle
+    case loading
+    case ready
+    case timedOut
+}
+
 @MainActor
 final class RoundSession: ObservableObject, Loggable {
     static let staleSessionInterval: TimeInterval = 30 * 60
@@ -74,6 +81,7 @@ final class RoundSession: ObservableObject, Loggable {
     var scoringGroupListener: ListenerRegistration?
     
     @Published private(set) var isScoringSnapshotReady = false
+    @Published private(set) var initialLoadState: RoundInitialLoadState = .idle
 
     @Published var isLoadingLobbyListeners = false
     @Published var isLoadingActiveListeners = false
@@ -91,7 +99,6 @@ final class RoundSession: ObservableObject, Loggable {
     private var initialLoadExpectedTypes: Set<RoundRegistrationType> = []
     private var initialLoadReadyTypes: Set<RoundRegistrationType> = []
     private var initialLoadProfile: RoundSubscriptionProfile = .oneShot
-    private(set) var didTimeOutInitialLoad = false
     private var didEmitInitialSnapshotLoaded = false
     private var initialLoadSource: String?
     private var listenerErrorThrottle: [String: Date] = [:]
@@ -117,6 +124,15 @@ final class RoundSession: ObservableObject, Loggable {
     
     var isRunning: Bool {
         activeListeners.count > 0
+    }
+
+    var didTimeOutInitialLoad: Bool {
+        initialLoadState == .timedOut
+    }
+
+    var canPersistScores: Bool {
+        guard currentProfile == .liveRound || initialLoadProfile == .liveRound else { return true }
+        return isScoringSnapshotReady
     }
     
     /// Resolve Firestore only when round work begins. SwiftUI creates this session
@@ -336,7 +352,7 @@ final class RoundSession: ObservableObject, Loggable {
         initialLoadExpectedTypes = []
         initialLoadReadyTypes = []
         initialLoadProfile = .oneShot
-        didTimeOutInitialLoad = false
+        initialLoadState = .idle
         didEmitInitialSnapshotLoaded = false
         initialLoadSource = nil
     }
@@ -410,7 +426,7 @@ final class RoundSession: ObservableObject, Loggable {
         initialLoadProfile = profile
         initialLoadExpectedTypes = profile.listenerTypes
         initialLoadReadyTypes = retainingReadyTypes.intersection(profile.listenerTypes)
-        didTimeOutInitialLoad = false
+        initialLoadState = .loading
         didEmitInitialSnapshotLoaded = false
         initialLoadSource = source
     }
@@ -423,28 +439,45 @@ final class RoundSession: ObservableObject, Loggable {
 
         guard initialLoadReadyTypes.isSuperset(of: initialLoadExpectedTypes) else { return false }
         didEmitInitialSnapshotLoaded = true
+        initialLoadState = .ready
         if initialLoadProfile == .liveRound { isScoringSnapshotReady = true }
         return true
     }
 
     @discardableResult
     func completeInitialLoadTrackingIfTimedOut(asOf date: Date = Date()) -> Bool {
-        guard !didEmitInitialSnapshotLoaded,
+        guard initialLoadState == .loading,
+              !didEmitInitialSnapshotLoaded,
               let initialLoadStartedAt,
               date.timeIntervalSince(initialLoadStartedAt) >= Self.initialListenerReadinessTimeout else {
             return false
         }
 
-        didEmitInitialSnapshotLoaded = true
-        didTimeOutInitialLoad = true
-        if initialLoadProfile == .liveRound {
-            isScoringSnapshotReady = true
-        }
+        initialLoadState = .timedOut
         addBreadcrumb(
             level: .error,
-            message: "Initial listener readiness timed out; continuing with the latest available snapshot"
+            message: "Initial listener readiness timed out; keeping score entry disabled"
         )
         return true
+    }
+
+    func retryInitialLoad() async {
+        guard initialLoadState == .timedOut,
+              let roundID,
+              currentProfile.usesLiveListeners else { return }
+
+        let readyTypes = initialLoadReadyTypes
+        addBreadcrumb(
+            message: "Retry initial listener readiness: round=\(roundID), missing=\(initialLoadExpectedTypes.subtracting(readyTypes).map(\.rawValue).sorted())"
+        )
+        stopListeners(excluding: readyTypes)
+        beginInitialLoadTracking(
+            for: currentProfile,
+            startedAt: Date(),
+            source: "manual_retry",
+            retainingReadyTypes: readyTypes
+        )
+        await startListeners(for: currentProfile)
     }
 
     private func loadSingleSnapshotIfNeeded(for roundID: String, forceRefresh: Bool) async {
