@@ -35,4 +35,7 @@ jobs:
           -configuration Sandbox
           -destination 'platform=iOS Simulator,name=iPhone 17 Pro,OS=26.2'
           -only-testing:HackersUnitTests/ScoreCarouselSelectionTests
+          -only-testing:HackersUnitTests/RoundSessionLifecycleTests
+          -only-testing:HackersUnitTests/RoundSessionReloadTests
+          -only-testing:HackersUnitTests/LiveRoundResumeRegressionTests
           CODE_SIGNING_ALLOWED=NO
