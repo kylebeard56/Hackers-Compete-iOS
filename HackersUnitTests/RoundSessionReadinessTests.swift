@@ -28,7 +28,7 @@ final class RoundSessionReadinessTests: XCTestCase {
         XCTAssertTrue(session.isScoringSnapshotReady)
     }
 
-    func testLiveRoundReadinessTimesOutSetsFlags() {
+    func testLiveRoundReadinessTimeoutKeepsScoringDisabled() {
         let session = RoundSession()
         let startedAt = Date()
         session.beginInitialLoadTracking(for: .liveRound, startedAt: startedAt, source: "test")
@@ -44,7 +44,8 @@ final class RoundSessionReadinessTests: XCTestCase {
             asOf: startedAt.addingTimeInterval(RoundSession.initialListenerReadinessTimeout)
         )
         XCTAssertTrue(atTimeout)
-        XCTAssertTrue(session.isScoringSnapshotReady)
+        XCTAssertFalse(session.isScoringSnapshotReady)
         XCTAssertTrue(session.didTimeOutInitialLoad)
+        XCTAssertFalse(session.canPersistScores)
     }
 }
