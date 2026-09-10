@@ -96,6 +96,9 @@ final class RoundSession: ObservableObject, Loggable {
     var suppressParticipantListener = false
     private var needsRefreshAfterLongBackground = false
     private var initialLoadStartedAt: Date?
+    private var initialLoadID = UUID()
+    private var initialLoadTimeoutTask: Task<Void, Never>?
+    private let snapshotLoader: (@MainActor (String, Bool) async throws -> RoundSnapshot)?
     private var initialLoadExpectedTypes: Set<RoundRegistrationType> = []
     private var initialLoadReadyTypes: Set<RoundRegistrationType> = []
     private var initialLoadProfile: RoundSubscriptionProfile = .oneShot
@@ -143,7 +146,8 @@ final class RoundSession: ObservableObject, Loggable {
     
     private var subscriptions = Set<AnyCancellable>()
     
-    init() {
+    init(snapshotLoader: (@MainActor (String, Bool) async throws -> RoundSnapshot)? = nil) {
+        self.snapshotLoader = snapshotLoader
         observeSceneLifecycle()
     }
     
@@ -349,6 +353,9 @@ final class RoundSession: ObservableObject, Loggable {
         lastBackgroundAt = nil
         needsRefreshAfterLongBackground = false
         initialLoadStartedAt = nil
+        initialLoadID = UUID()
+        initialLoadTimeoutTask?.cancel()
+        initialLoadTimeoutTask = nil
         initialLoadExpectedTypes = []
         initialLoadReadyTypes = []
         initialLoadProfile = .oneShot
@@ -419,6 +426,8 @@ final class RoundSession: ObservableObject, Loggable {
         source: String,
         retainingReadyTypes: Set<RoundRegistrationType> = []
     ) {
+        initialLoadTimeoutTask?.cancel()
+        initialLoadID = UUID()
         if profile == .liveRound {
             isScoringSnapshotReady = false
         }
@@ -429,19 +438,34 @@ final class RoundSession: ObservableObject, Loggable {
         initialLoadState = .loading
         didEmitInitialSnapshotLoaded = false
         initialLoadSource = source
+        // Reloads can begin after LiveRound's initial presentation task has finished.
+        // Keep the timeout with the session so every load can expose the retry state.
+        initialLoadTimeoutTask = Task { [weak self] in
+            do {
+                try await Task.sleep(for: .seconds(Self.initialListenerReadinessTimeout))
+            } catch { return }
+            guard !Task.isCancelled else { return }
+            self?.completeInitialLoadTrackingIfTimedOut()
+        }
     }
 
     func recordInitialSnapshotReady(for type: RoundRegistrationType) -> Bool {
         guard initialLoadExpectedTypes.contains(type) else { return false }
-        guard !didEmitInitialSnapshotLoaded else { return false }
+        guard initialLoadState != .ready else { return false }
 
         initialLoadReadyTypes.insert(type)
 
         guard initialLoadReadyTypes.isSuperset(of: initialLoadExpectedTypes) else { return false }
-        didEmitInitialSnapshotLoaded = true
+        markInitialLoadReady()
+        return true
+    }
+
+    private func markInitialLoadReady() {
+        initialLoadTimeoutTask?.cancel()
+        initialLoadTimeoutTask = nil
+        initialLoadReadyTypes = initialLoadExpectedTypes
         initialLoadState = .ready
         if initialLoadProfile == .liveRound { isScoringSnapshotReady = true }
-        return true
     }
 
     @discardableResult
@@ -484,10 +508,20 @@ final class RoundSession: ObservableObject, Loggable {
         guard forceRefresh || snapshot.round.id != roundID else { return }
 
         beginInitialLoadTracking(for: currentProfile, source: "one_shot")
+        let loadID = initialLoadID
 
         do {
-            snapshot = try await fetchSingleInstance(for: roundID, preferServer: forceRefresh)
+            let loadedSnapshot: RoundSnapshot
+            if let snapshotLoader {
+                loadedSnapshot = try await snapshotLoader(roundID, forceRefresh)
+            } else {
+                loadedSnapshot = try await fetchSingleInstance(for: roundID, preferServer: forceRefresh)
+            }
+            // A superseded refresh must not publish data or unlock a newer load.
+            guard initialLoadID == loadID else { return }
+            snapshot = loadedSnapshot
             lastSnapshotReceivedAt = Date()
+            markInitialLoadReady()
             emitInitialSnapshotLoaded(loadSource: "one_shot")
         } catch {
             addBreadcrumb(level: .error, message: "Failed to load single round snapshot for \(roundID)", error: error)
