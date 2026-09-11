@@ -655,6 +655,7 @@ final class LiveRoundViewModel: ObservableObject, Loggable {
 
     var canCompleteActualGroup: Bool {
         canEditActualGroupScores && !isViewingAlternateGroup
+            && (roundSession?.canPersistScores ?? true)
     }
 
     var canChangeVisibleGroup: Bool {
@@ -667,6 +668,7 @@ final class LiveRoundViewModel: ObservableObject, Loggable {
 
     func canEditScorecard(participant: RoundParticipant) -> Bool {
         canEditActualGroupScores
+            && (roundSession?.canPersistScores ?? true)
             && isPresenceActive(participant)
             && activeActualTeeGroupParticipants.contains(where: { $0.id == participant.id })
     }
@@ -4560,6 +4562,10 @@ final class LiveRoundViewModel: ObservableObject, Loggable {
         addBreadcrumb()
         
         guard let roundSession else { return }
+        guard roundSession.canPersistScores else {
+            addBreadcrumb(level: .error, message: "Blocked score clear before the scoring snapshot was ready")
+            return
+        }
         guard var entry = scoreEntryForScoringUnit(scoringUnitID: scoringUnitID, holeNumber: holeNumber) ?? scoreEntry(for: participant.id, holeNumber: holeNumber) else { return }
         let beforeSnapshot = roundSession.snapshot
         let beforeProgress = holeCompletionProgress(
@@ -4613,6 +4619,10 @@ final class LiveRoundViewModel: ObservableObject, Loggable {
         guard isPresenceActive(participant) else { return }
         
         guard let roundSession else { return }
+        guard roundSession.canPersistScores else {
+            addBreadcrumb(level: .error, message: "Blocked score write before the scoring snapshot was ready")
+            return
+        }
         let beforeSnapshot = roundSession.snapshot
         let beforeProgress = holeCompletionProgress(
             holeNumber: holeNumber,
@@ -4726,6 +4736,10 @@ final class LiveRoundViewModel: ObservableObject, Loggable {
 
         guard isPresenceActive(participant) else { return }
         guard let roundSession else { return }
+        guard roundSession.canPersistScores else {
+            addBreadcrumb(level: .error, message: "Blocked relative score write before the scoring snapshot was ready")
+            return
+        }
 
         let beforeSnapshot = roundSession.snapshot
         let beforeProgress = holeCompletionProgress(
@@ -6367,6 +6381,10 @@ final class LiveRoundViewModel: ObservableObject, Loggable {
     /// Uses a single Firestore batch write instead of N individual writes.
     func applyMaxScoresToUnscoredHoles() async {
         guard let roundSession else { return }
+        guard roundSession.canPersistScores else {
+            addBreadcrumb(level: .error, message: "Blocked max-score fill before the scoring snapshot was ready")
+            return
+        }
 
         let players = actualTeeGroupParticipants
         guard players.isPopulated else { return }
