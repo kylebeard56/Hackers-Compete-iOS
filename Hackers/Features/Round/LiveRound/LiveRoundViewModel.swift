@@ -655,6 +655,7 @@ final class LiveRoundViewModel: ObservableObject, Loggable {
 
     var canCompleteActualGroup: Bool {
         canEditActualGroupScores && !isViewingAlternateGroup
+            && (roundSession?.canPersistScores ?? true)
     }
 
     var canChangeVisibleGroup: Bool {
@@ -667,6 +668,7 @@ final class LiveRoundViewModel: ObservableObject, Loggable {
 
     func canEditScorecard(participant: RoundParticipant) -> Bool {
         canEditActualGroupScores
+            && (roundSession?.canPersistScores ?? true)
             && isPresenceActive(participant)
             && activeActualTeeGroupParticipants.contains(where: { $0.id == participant.id })
     }
@@ -6379,6 +6381,10 @@ final class LiveRoundViewModel: ObservableObject, Loggable {
     /// Uses a single Firestore batch write instead of N individual writes.
     func applyMaxScoresToUnscoredHoles() async {
         guard let roundSession else { return }
+        guard roundSession.canPersistScores else {
+            addBreadcrumb(level: .error, message: "Blocked max-score fill before the scoring snapshot was ready")
+            return
+        }
 
         let players = actualTeeGroupParticipants
         guard players.isPopulated else { return }

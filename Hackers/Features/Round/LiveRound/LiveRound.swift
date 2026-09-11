@@ -174,7 +174,7 @@ struct LiveRound: View, Loggable {
             BackgroundTheme(palette: palette, theme: viewModel.theme)
             
             if selectedTab == .scoring {
-                if hasRestoredScoringContext {
+                if hasRestoredScoringContext && roundSession.isScoringSnapshotReady {
                     scoringContent
                         .edgesIgnoringSafeArea(.vertical)
                 } else {
@@ -211,7 +211,7 @@ struct LiveRound: View, Loggable {
                 .alignBottom()
             }
 
-            if hasRestoredScoringContext && shouldShowCompleteRoundButton && showsLiveRoundChrome {
+            if hasRestoredScoringContext && roundSession.isScoringSnapshotReady && shouldShowCompleteRoundButton && showsLiveRoundChrome {
                 HStack {
                     Spacer(minLength: 0)
                     NavButton(style: .glass, icon: "f00c", size: 24) {
@@ -248,13 +248,14 @@ struct LiveRound: View, Loggable {
         }
         // ── ViewModel intent → UI scroll state (single display source: scoringPageHole) ────
         .onChange(of: viewModel.currentHoleNumber) { old, new in
-            guard hasRestoredScoringContext, scoringPageHole != new else { return }
+            guard hasRestoredScoringContext, roundSession.isScoringSnapshotReady,
+                  scoringPageHole != new else { return }
             withAnimation(.spring(duration: holeScrollDuration(for: abs(new - old)))) {
                 scoringPageHole = new
             }
         }
         .onChange(of: scoringPageHole) { _, hole in
-            guard hasRestoredScoringContext, let hole else { return }
+            guard hasRestoredScoringContext, roundSession.isScoringSnapshotReady, let hole else { return }
             viewModel.selectHole(hole)
             persistDurableRoundContext(hole: hole)
         }
@@ -273,6 +274,15 @@ struct LiveRound: View, Loggable {
         .onChange(of: visibleTabs) { _, tabs in
             if !tabs.contains(selectedTab) {
                 selectedTab = .scoring
+            }
+        }
+        .onChange(of: roundSession.isScoringSnapshotReady) { _, isReady in
+            if !isReady {
+                showCompleteRoundSheet = false
+            } else if hasRestoredScoringContext {
+                // Keep the user's hole across a reload without restoring the whole view again.
+                viewModel.restoreCurrentHole(scoringPageHole)
+                scoringPageHole = viewModel.currentHoleNumber
             }
         }
         .fullScreenCover(isPresented: $showEditRoundSheet) {
@@ -389,7 +399,7 @@ struct LiveRound: View, Loggable {
     }
 
     private func persistDurableRoundContext(hole: Int?) {
-        guard hasRestoredScoringContext else { return }
+        guard hasRestoredScoringContext, roundSession.isScoringSnapshotReady else { return }
         appSession.updateLiveRoundResume(
             selectedHole: hole,
             selectedTab: {
@@ -911,7 +921,6 @@ extension LiveRound {
         let startedAt = Date()
         while !hasRestoredScoringContext {
             guard !Task.isCancelled else { return }
-            roundSession.completeInitialLoadTrackingIfTimedOut()
             await viewModel.ensureParticipantResolved()
             restoreDurableRoundContextIfNeeded()
             if !hasRestoredScoringContext {
