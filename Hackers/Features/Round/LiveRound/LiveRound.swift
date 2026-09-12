@@ -174,11 +174,11 @@ struct LiveRound: View, Loggable {
             BackgroundTheme(palette: palette, theme: viewModel.theme)
             
             if selectedTab == .scoring {
-                if hasRestoredScoringContext {
+                if hasRestoredScoringContext && roundSession.isScoringSnapshotReady {
                     scoringContent
                         .edgesIgnoringSafeArea(.vertical)
                 } else {
-                    ProgressView("Loading score entry…")
+                    scoringLoadStateContent
                 }
             } else if selectedTab == .table {
                 tableContent
@@ -211,7 +211,7 @@ struct LiveRound: View, Loggable {
                 .alignBottom()
             }
 
-            if hasRestoredScoringContext && shouldShowCompleteRoundButton && showsLiveRoundChrome {
+            if hasRestoredScoringContext && roundSession.isScoringSnapshotReady && shouldShowCompleteRoundButton && showsLiveRoundChrome {
                 HStack {
                     Spacer(minLength: 0)
                     NavButton(style: .glass, icon: "f00c", size: 24) {
@@ -248,13 +248,14 @@ struct LiveRound: View, Loggable {
         }
         // ── ViewModel intent → UI scroll state (single display source: scoringPageHole) ────
         .onChange(of: viewModel.currentHoleNumber) { old, new in
-            guard hasRestoredScoringContext, scoringPageHole != new else { return }
+            guard hasRestoredScoringContext, roundSession.isScoringSnapshotReady,
+                  scoringPageHole != new else { return }
             withAnimation(.spring(duration: holeScrollDuration(for: abs(new - old)))) {
                 scoringPageHole = new
             }
         }
         .onChange(of: scoringPageHole) { _, hole in
-            guard hasRestoredScoringContext, let hole else { return }
+            guard hasRestoredScoringContext, roundSession.isScoringSnapshotReady, let hole else { return }
             viewModel.selectHole(hole)
             persistDurableRoundContext(hole: hole)
         }
@@ -273,6 +274,15 @@ struct LiveRound: View, Loggable {
         .onChange(of: visibleTabs) { _, tabs in
             if !tabs.contains(selectedTab) {
                 selectedTab = .scoring
+            }
+        }
+        .onChange(of: roundSession.isScoringSnapshotReady) { _, isReady in
+            if !isReady {
+                showCompleteRoundSheet = false
+            } else if hasRestoredScoringContext {
+                // Keep the user's hole across a reload without restoring the whole view again.
+                viewModel.restoreCurrentHole(scoringPageHole)
+                scoringPageHole = viewModel.currentHoleNumber
             }
         }
         .fullScreenCover(isPresented: $showEditRoundSheet) {
@@ -354,12 +364,31 @@ struct LiveRound: View, Loggable {
         }
     }
 
+    @ViewBuilder
+    private var scoringLoadStateContent: some View {
+        if roundSession.initialLoadState == .timedOut {
+            ContentUnavailableView {
+                Label("Scores couldn’t load", systemImage: "wifi.exclamationmark")
+            } description: {
+                Text("Score entry will stay locked until the latest round and scores are available.")
+            } actions: {
+                Button("Try Again") {
+                    Task { await roundSession.retryInitialLoad() }
+                }
+                .buttonStyle(.borderedProminent)
+            }
+            .padding(24)
+        } else {
+            ProgressView("Loading score entry…")
+        }
+    }
+
     private func restoreDurableRoundContextIfNeeded() {
         guard !hasRestoredScoringContext,
               roundSession.isScoringSnapshotReady else { return }
         let hasUsableSnapshot = viewModel.snapshot.round.id == appSession.activeRoundID
             && !viewModel.snapshot.participants.isEmpty
-        guard hasUsableSnapshot || roundSession.didTimeOutInitialLoad else { return }
+        guard hasUsableSnapshot else { return }
         let state = appSession.roundResumeState
         let hole = state?.roundID == appSession.activeRoundID ? state?.selectedHole : nil
         viewModel.restoreCurrentHole(hole)
@@ -370,7 +399,7 @@ struct LiveRound: View, Loggable {
     }
 
     private func persistDurableRoundContext(hole: Int?) {
-        guard hasRestoredScoringContext else { return }
+        guard hasRestoredScoringContext, roundSession.isScoringSnapshotReady else { return }
         appSession.updateLiveRoundResume(
             selectedHole: hole,
             selectedTab: {
@@ -892,7 +921,6 @@ extension LiveRound {
         let startedAt = Date()
         while !hasRestoredScoringContext {
             guard !Task.isCancelled else { return }
-            roundSession.completeInitialLoadTrackingIfTimedOut()
             await viewModel.ensureParticipantResolved()
             restoreDurableRoundContextIfNeeded()
             if !hasRestoredScoringContext {
