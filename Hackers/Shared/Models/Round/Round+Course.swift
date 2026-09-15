@@ -77,7 +77,7 @@ struct CourseInfo_WithCourseToReduceDuplication: Hashable, Codable {
 /// Friendly, usable snapshot of canonical `Course` which may or may not live in the DB.
 struct CourseInfo: Hashable, Codable {
     var id: String                  // Matches the stable, external ID in the `courses` collection
-    let golfCourseApiID: Int?       // ID of the course from the Golf Course API (if not manual)
+    let golfCourseApiID: GolfCourseID?       // ID of the course from the Golf Course API (if not manual)
     var name: String
     var totalHoles: Int
     var location: CourseLocation?
@@ -90,7 +90,7 @@ struct CourseInfo: Hashable, Codable {
     
     init(
         id: String = "",
-        golfCourseApiID: Int? = nil,
+        golfCourseApiID: GolfCourseID? = nil,
         name: String = "",
         totalHoles: Int = 0,
         location: CourseLocation? = nil,

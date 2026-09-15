@@ -87,6 +87,13 @@ struct SimpleRoundSetup: Equatable {
 
 @MainActor
 final class CourseSelectionViewModel: ObservableObject, Loggable {
+    private let courseRepository: GolfCourseRepository
+    private var searchRequestID = UUID()
+    @Published var recoveryCourseName: String?
+    @Published var searchError: String?
+    @Published var courseFetchErrorMessage = "Please try again or search for the course."
+    @Published var isLoadingSelectedCourse = false
+
     private let ocrService: CourseScorecardOCRService
     private let enrichmentService: CourseScorecardEnrichmentService
     private let askAIService: CourseTextLookupService
@@ -133,6 +140,11 @@ final class CourseSelectionViewModel: ObservableObject, Loggable {
     @Published var askAIMessages: [AskAICourseChatMessage] = []
     @Published var isSendingAskAIMessage = false
     @Published var askAIError: String?
+    private var askAIRequest: Task<AskAICourseLookupResult, Error>?
+    private var askAISelection: Task<Course, Error>?
+    private var askAITurnID: UUID?
+    private var lastAskAIContext = AskAICourseLookupContext()
+
 
     /// Modify/Change
     @Published var modifyingCourse: Course?
@@ -147,7 +159,7 @@ final class CourseSelectionViewModel: ObservableObject, Loggable {
     
     /// When true, confirmation saves as home course instead of creating a round.
     var isSetHomeCourseMode: Bool = false
-    var onSetHomeCourse: ((Int, String, String?, String?) -> Void)?
+    var onSetHomeCourse: ((GolfCourseID, String, String?, String?) -> Void)?
 
     /// When true, confirmation saves as series default course instead of creating a round.
     var isSetSeriesDefaultCourseMode: Bool = false
@@ -167,9 +179,11 @@ final class CourseSelectionViewModel: ObservableObject, Loggable {
         holeSegment: HoleSegment = .full18,
         ocrService: CourseScorecardOCRService? = nil,
         enrichmentService: CourseScorecardEnrichmentService? = nil,
-        askAIService: CourseTextLookupService? = nil
+        askAIService: CourseTextLookupService? = nil,
+        courseRepository: GolfCourseRepository? = nil
     ) {
         print("init CourseSelectionViewModel")
+        self.courseRepository = courseRepository ?? .shared
         self.ocrService = ocrService ?? .shared
         self.enrichmentService = enrichmentService ?? .shared
         self.askAIService = askAIService ?? .shared
@@ -220,20 +234,32 @@ extension CourseSelectionViewModel {
     
     func selectFromRecent(entry: CourseHistoryEntry) async {
         addBreadcrumb(message: "\(#function) [\(entry.compositeKey)]")
+        guard !isLoadingSelectedCourse else { return }
+        isLoadingSelectedCourse = true
+        showCourseFetchError = false
+        defer { isLoadingSelectedCourse = false }
         Haptics.fire(.light)
         
         let course: Course?
         switch entry.courseIDType {
         case .courseAPI:
-            guard let id = Int(entry.courseID) else {
+            guard let id = GolfCourseID(entry.courseID) else {
                 showCourseFetchError = true
                 Haptics.fire(.error)
                 return
             }
             do {
-                course = try await GolfCourseRepository.shared.course(by: id)
+                course = try await courseRepository.course(by: id)
             } catch {
+                guard !Task.isCancelled, !(error is CancellationError),
+                      (error as? URLError)?.code != .cancelled else { return }
                 addBreadcrumb(level: .error, message: "Failed to fetch course by API id \(id)", error: error)
+                if id.isLegacy, !entry.name.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
+                    recoveryCourseName = entry.name
+                    await searchCourses(for: entry.name)
+                    return
+                }
+                courseFetchErrorMessage = Self.courseErrorMessage(error)
                 showCourseFetchError = true
                 Haptics.fire(.error)
                 return
@@ -291,7 +317,14 @@ extension CourseSelectionViewModel {
 extension CourseSelectionViewModel {
     func searchCourses(for query: String, using location: CLLocation? = nil) async {
         addBreadcrumb(message: "\(#function) [\(query)]")
-        guard query.isPopulated else { return }
+        let requestID = UUID()
+        searchRequestID = requestID
+        searchedCourses = []
+        searchError = nil
+        guard !query.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else {
+            isSearching = false
+            return
+        }
 
         if shouldTrackRoundSetup {
             addEvent(
@@ -305,10 +338,11 @@ extension CourseSelectionViewModel {
         }
         
         isSearching = true
-        defer { isSearching = false }
-        
+        defer { if searchRequestID == requestID { isSearching = false } }
+
         do {
-            let courses = try await GolfCourseRepository.shared.searchCourseModels(with: query)
+            let courses = try await courseRepository.searchCourseModels(with: query, includeScorecards: false)
+            guard searchRequestID == requestID, !Task.isCancelled else { return }
             searchedCourses = courses.map(Course.init(canonicalGolfCourseAPI:))
             
             if let location {
@@ -341,16 +375,46 @@ extension CourseSelectionViewModel {
                 )
             }
         } catch let error {
+            guard searchRequestID == requestID, !Task.isCancelled,
+                  !(error is CancellationError), (error as? URLError)?.code != .cancelled else { return }
             addBreadcrumb(level: .error, message: "error searching API from course selection", error: error)
+            searchError = Self.courseErrorMessage(error)
         }
     }
-    
+
+    func selectSearchCourse(_ course: Course) async {
+        guard !isLoadingSelectedCourse else { return }
+        guard let id = course.golfCourseApiID, course.tees.isEmpty else {
+            select(course: course, source: .search)
+            return
+        }
+        isLoadingSelectedCourse = true
+        defer { isLoadingSelectedCourse = false }
+        do {
+            let detailed = try await courseRepository.course(by: id)
+            guard !Task.isCancelled else { return }
+            select(course: detailed, source: .search)
+        } catch {
+            guard !Task.isCancelled, !(error is CancellationError),
+                  (error as? URLError)?.code != .cancelled else { return }
+            courseFetchErrorMessage = Self.courseErrorMessage(error)
+            showCourseFetchError = true
+        }
+    }
+
+    private static func courseErrorMessage(_ error: Error) -> String {
+        if let error = error as? GolfCourseAPIError { return error.localizedDescription }
+        if error is DecodingError { return GolfCourseAPIError.invalidResponse.localizedDescription }
+        if error is URLError { return "Unable to connect to the course provider. Check your connection and try again." }
+        return "Couldn't load courses. Please try again."
+    }
+
     func getClosestCourse(from query: String, using location: CLLocation?) async throws -> Course? {
         addBreadcrumb(message: "\(#function) [\(query)]")
         guard query.isPopulated else { return nil }
         guard let location else { return nil }
         
-        let courses = try await GolfCourseRepository.shared.searchCourseModels(with: query)
+        let courses = try await courseRepository.searchCourseModels(with: query)
             .map(Course.init(canonicalGolfCourseAPI:))
         printPretty(courses)
         
@@ -417,13 +481,13 @@ extension CourseSelectionViewModel {
                 )
             }
             select(course: course, source: .scorecardScan)
+        } catch CourseAIGatewayError.signInRequired {
+            scorecardScanError = CourseAIGatewayError.signInRequired.localizedDescription
         } catch CourseScorecardOCRError.apiKeyMissing {
-            let provider = vision.config.provider
-            let keyName = provider == .anthropic ? "ANTHROPIC_API_KEY" : "OPENAI_API_KEY"
-            addBreadcrumb(level: .error, message: "Failed to read scorecard: \(keyName) missing")
-            scorecardScanError = "API key missing. Add \(keyName) to your config."
+            addBreadcrumb(level: .error, message: "Scorecard AI service unavailable")
+            scorecardScanError = "Scorecard scanning is temporarily unavailable. Please try again later."
             trackScorecardScanFailure(
-                reason: "api_key_missing",
+                reason: "ai_service_unavailable",
                 scanSource: scanSource,
                 vision: vision,
                 scanContext: scanContext
@@ -512,99 +576,120 @@ extension CourseSelectionViewModel {
         }
     }
 
+    func cancelAskAIRequest() {
+        askAITurnID = nil
+        askAIRequest?.cancel()
+        askAISelection?.cancel()
+        askAIRequest = nil
+        askAISelection = nil
+        isSendingAskAIMessage = false
+    }
+
     func resetAskAIConversation() {
+        cancelAskAIRequest()
         askAIMessages = []
         askAIError = nil
     }
 
+    func retryAskAIMessage(context: AskAICourseLookupContext? = nil) async {
+        guard let text = askAIMessages.last(where: \.isUser)?.text else { return }
+        await sendAskAIMessage(text, context: context ?? lastAskAIContext, appendUserMessage: false)
+    }
+
     func sendAskAIMessage(
         _ text: String,
-        context: AskAICourseLookupContext = .init()
+        context: AskAICourseLookupContext = .init(),
+        appendUserMessage: Bool = true
     ) async {
         let trimmed = text.trimmingCharacters(in: .whitespacesAndNewlines)
-        guard trimmed.isPopulated else { return }
-
-        addBreadcrumb(message: "\(#function) [\(trimmed)]")
+        guard trimmed.isPopulated, !isSendingAskAIMessage else { return }
         askAIError = nil
         isSendingAskAIMessage = true
-        let userMessage = AskAICourseChatMessage(role: .user, text: trimmed)
-        askAIMessages.append(userMessage)
-
-        if shouldTrackRoundSetup {
-            addEvent(
-                "round_setup.course_ask_ai_prompt_sent",
-                eventProps: askAITelemetryProps(
-                    context: context,
-                    extra: [
-                        "prompt_length": trimmed.count,
-                        "message_count": askAIMessages.count,
-                        "is_existing_round_change": isModifying
-                    ]
-                )
-            )
+        lastAskAIContext = context
+        if appendUserMessage {
+            askAIMessages.append(AskAICourseChatMessage(role: .user, text: trimmed))
         }
-
-        defer { isSendingAskAIMessage = false }
-
-        do {
-            let result = try await askAIService.resolveCourse(
-                from: askAIMessages,
-                context: context
-            )
-            askAIMessages.append(
-                AskAICourseChatMessage(
-                    role: .assistant,
-                    text: result.assistantMessage,
-                    candidates: result.candidates
-                )
-            )
-
-            if shouldTrackRoundSetup {
-                var sourceValues: [String] = []
-                for source in result.candidates.flatMap(\.sources) {
-                    guard !sourceValues.contains(source.rawValue) else { continue }
-                    sourceValues.append(source.rawValue)
-                }
-                addEvent(
-                    "round_setup.course_ask_ai_result_received",
-                    eventProps: askAITelemetryProps(
-                        context: context,
-                        extra: [
-                            "has_candidate": result.candidates.isPopulated,
-                            "candidate_count": result.candidates.count,
-                            "source_list": sourceValues.joined(separator: ","),
-                            "is_canonical_match": result.candidates.contains { $0.isCanonicalMatch },
-                            "lookup_source": result.source.rawValue,
-                            "message_count": askAIMessages.count,
-                            "is_existing_round_change": isModifying
-                        ]
-                    )
-                )
+        let turnID = UUID()
+        askAITurnID = turnID
+        let transcript = askAIMessages
+        let request = Task { try await askAIService.resolveCourse(from: transcript, context: context) }
+        askAIRequest = request
+        if shouldTrackRoundSetup {
+            addEvent("round_setup.course_ask_ai_prompt_sent", eventProps: askAITelemetryProps(
+                context: context, extra: ["prompt_length": trimmed.count, "message_count": transcript.count]
+            ))
+        }
+        defer {
+            if askAITurnID == turnID {
+                askAITurnID = nil
+                askAIRequest = nil
+                isSendingAskAIMessage = false
             }
-        } catch CourseTextLookupError.apiKeyMissing {
-            addBreadcrumb(level: .error, message: "Ask AI failed: API key missing")
-            askAIError = "API key missing. Add your AI provider key to continue."
-            trackAskAIFailure(reason: "api_key_missing", context: context)
-        } catch CourseTextLookupError.decodingFailed {
-            addBreadcrumb(level: .error, message: "Ask AI failed to decode structured response")
-            askAIError = "I couldn't understand that result. Try rephrasing the course details."
-            trackAskAIFailure(reason: "decoding_failed", context: context)
-        } catch CourseTextLookupError.requestTooLarge {
-            addBreadcrumb(level: .error, message: "Ask AI request too large")
-            askAIError = "That message was too large. Try a shorter description."
-            trackAskAIFailure(reason: "request_too_large", context: context)
-        } catch CourseTextLookupError.rateLimitExceeded {
-            addBreadcrumb(level: .error, message: "Ask AI rate limit exceeded")
-            askAIError = "AI rate limit exceeded. Try again in a moment."
-            trackAskAIFailure(reason: "rate_limit_exceeded", context: context)
-        } catch CourseTextLookupError.overloaded {
-            addBreadcrumb(level: .error, message: "Ask AI overloaded")
-            askAIError = "AI is busy right now. Try again in a moment."
-            trackAskAIFailure(reason: "service_overloaded", context: context)
+        }
+        do {
+            let result = try await request.value
+            guard askAITurnID == turnID, !Task.isCancelled else { return }
+            askAIMessages.append(AskAICourseChatMessage(
+                role: .assistant, text: result.assistantMessage,
+                candidates: result.candidates, lookupQuery: result.lookupQuery
+            ))
+            if shouldTrackRoundSetup {
+                addEvent("round_setup.course_ask_ai_result_received", eventProps: askAITelemetryProps(
+                    context: context, extra: ["candidate_count": result.candidates.count, "lookup_source": result.source.rawValue]
+                ))
+            }
         } catch {
-            addBreadcrumb(level: .error, message: "Ask AI failed", error: error)
-            askAIError = "Ask AI failed. Please try again."
-            trackAskAIFailure(reason: "unknown", context: context)
+            guard askAITurnID == turnID, !Task.isCancelled,
+                  !(error is CancellationError), (error as? URLError)?.code != .cancelled else { return }
+            switch error {
+            case CourseTextLookupError.apiKeyMissing:
+                askAIError = "Course research is temporarily unavailable. You can still search courses from the course picker."
+            case CourseTextLookupError.requestTooLarge:
+                askAIError = "That message was too long. Try a shorter course name and location."
+            case CourseTextLookupError.rateLimitExceeded, CourseTextLookupError.overloaded:
+                askAIError = "Course research is busy. Try again in a moment."
+            case is GolfCourseAPIError, is URLError:
+                askAIError = Self.courseErrorMessage(error)
+            default:
+                askAIError = "I couldn’t finish that search. Please try again."
+            }
+            trackAskAIFailure(reason: "lookup_failed", context: context)
+        }
+    }
+
+    /// Keep the conversation visible until the selected summary has a real scorecard.
+    func loadAskAICandidate(_ candidate: AskAICourseCandidate) async -> Bool {
+        guard !isSendingAskAIMessage else { return false }
+        guard candidate.needsScorecard || !candidate.course.tees.contains(where: { !$0.holes.isEmpty }), let id = candidate.course.golfCourseApiID else {
+            selectAskAICandidate(candidate)
+            return true
+        }
+        askAIError = nil
+        isSendingAskAIMessage = true
+        let turnID = UUID()
+        askAITurnID = turnID
+        let request = Task { try await courseRepository.course(by: id) }
+        askAISelection = request
+        defer {
+            if askAITurnID == turnID {
+                askAITurnID = nil
+                askAISelection = nil
+                isSendingAskAIMessage = false
+            }
+        }
+        do {
+            let course = try await request.value
+            guard askAITurnID == turnID, !Task.isCancelled else { return false }
+            guard course.tees.contains(where: { !$0.holes.isEmpty }) else { throw GolfCourseAPIError.invalidResponse }
+            selectAskAICandidate(AskAICourseCandidate(
+                course: course, requiresReview: false, isCanonicalMatch: true, sources: candidate.sources
+            ))
+            return true
+        } catch {
+            guard askAITurnID == turnID, !Task.isCancelled,
+                  !(error is CancellationError), (error as? URLError)?.code != .cancelled else { return false }
+            askAIError = Self.courseErrorMessage(error) + " Choose the course again to retry its scorecard."
+            return false
         }
     }
 

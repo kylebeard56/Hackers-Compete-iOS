@@ -47,7 +47,7 @@ enum Gender: String, CaseIterable, Identifiable {
 }
 
 struct Course: FirebaseIdentifiable {
-    let golfCourseApiID: Int?
+    let golfCourseApiID: GolfCourseID?
     let origin: String
     let clubName: String
     let courseName: String
@@ -55,7 +55,7 @@ struct Course: FirebaseIdentifiable {
     let venueDetails: CourseVenueDetails?
     /// Top-level geohash for Firestore queries (e.g. fetchCourses near location)
     let locationGeohash: String?
-    let tees: [Tee]
+    private(set) var tees: [Tee]
     
     /// Conformance for FirebaseIdentifiable
     var id: String
@@ -66,7 +66,7 @@ struct Course: FirebaseIdentifiable {
     
     init(
         id: String = HackersID.string(),
-        golfCourseApiID: Int? = nil,
+        golfCourseApiID: GolfCourseID? = nil,
         origin: CourseOrigin = .unknown,
         clubName: String = "",
         courseName: String = "",
@@ -183,7 +183,7 @@ extension Course {
     init(from decoder: Decoder) throws {
         let c = try decoder.container(keyedBy: CodingKeys.self)
         id = try c.decode(String.self, forKey: .id)
-        golfCourseApiID = try c.decodeIfPresent(Int.self, forKey: .golfCourseApiID)
+        golfCourseApiID = try c.decodeIfPresent(GolfCourseID.self, forKey: .golfCourseApiID)
         origin = try c.decode(String.self, forKey: .origin)
         clubName = try c.decode(String.self, forKey: .clubName)
         courseName = try c.decode(String.self, forKey: .courseName)
@@ -222,7 +222,7 @@ extension Course {
     ///
     /// Keeping the provider ID deterministic gives cache lookups a direct document read and
     /// prevents concurrent clients from creating duplicate UUID-backed copies of the same course.
-    static func golfCourseAPIDocumentID(for apiID: Int) -> String {
+    static func golfCourseAPIDocumentID(for apiID: GolfCourseID) -> String {
         String(apiID)
     }
 
@@ -238,8 +238,27 @@ extension Course {
     var hasCanonicalGolfCourseAPIIdentity: Bool {
         guard origin == CourseOrigin.golfCourseAPI.rawValue,
               let apiID = golfCourseApiID,
-              apiID > 0 else { return false }
+              apiID.isValid else { return false }
         return id == Self.golfCourseAPIDocumentID(for: apiID)
+    }
+
+    func canonicalizedGolfCourseAPICacheEntry(expectedAPIID: GolfCourseID) -> Course? {
+        guard expectedAPIID.isValid,
+              origin == CourseOrigin.golfCourseAPI.rawValue,
+              golfCourseApiID == expectedAPIID else { return nil }
+        var course = self
+        course.id = Self.golfCourseAPIDocumentID(for: expectedAPIID)
+        course.tees = tees.map { tee in
+            guard let gender = Gender(rawValue: tee.gender), gender != .unknown else { return tee }
+            return Tee(
+                id: Self.stableTeeID(teeName: tee.name, gender: gender),
+                name: tee.name, gender: tee.gender, totalHoles: tee.totalHoles, holes: tee.holes,
+                ratingFull: tee.ratingFull, slopeFull: tee.slopeFull,
+                ratingFront: tee.ratingFront, slopeFront: tee.slopeFront,
+                ratingBack: tee.ratingBack, slopeBack: tee.slopeBack
+            )
+        }
+        return course
     }
 
     var isSimpleRoundCourse: Bool {

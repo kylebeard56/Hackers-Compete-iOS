@@ -59,8 +59,8 @@ protocol Defaultable: Sendable {
     func setGoogleAuthID(_ value: String) async
 
     /// Home Course
-    func getHomeCourseApiID() async -> Int?
-    func setHomeCourseApiID(_ value: Int?) async
+    func getHomeCourseApiID() async -> GolfCourseID?
+    func setHomeCourseApiID(_ value: GolfCourseID?) async
     func getHomeCourseName() async -> String?
     func setHomeCourseName(_ value: String?) async
     func getHomeCourseTeeID() async -> String?
@@ -136,6 +136,9 @@ actor Defaults: Defaultable {
     @UserDefault(key: "homeCourseApiID", defaultValue: 0)
     private var homeCourseApiID: Int
 
+    @UserDefault(key: "homeCourseProviderID", defaultValue: "")
+    private var homeCourseProviderID: String
+
     @UserDefault(key: "homeCourseName", defaultValue: "")
     private var homeCourseName: String
 
@@ -195,12 +198,14 @@ actor Defaults: Defaultable {
     func setGoogleAuthID(_ value: String) async { googleAuthID = value }
 
     // Home Course
-    func getHomeCourseApiID() async -> Int? {
-        let id = homeCourseApiID
-        return id > 0 ? id : nil
+    func getHomeCourseApiID() async -> GolfCourseID? {
+        if let current = GolfCourseID(homeCourseProviderID) { return current }
+        return homeCourseApiID > 0 ? .legacy(homeCourseApiID) : nil
     }
-    func setHomeCourseApiID(_ value: Int?) async {
-        homeCourseApiID = value ?? 0
+    func setHomeCourseApiID(_ value: GolfCourseID?) async {
+        homeCourseProviderID = value?.description ?? ""
+        if case .legacy(let numeric) = value { homeCourseApiID = numeric }
+        else { homeCourseApiID = 0 }
     }
     func getHomeCourseName() async -> String? {
         let name = homeCourseName

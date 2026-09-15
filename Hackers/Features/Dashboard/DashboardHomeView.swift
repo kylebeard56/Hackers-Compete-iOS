@@ -669,7 +669,7 @@ struct DashboardHomeView: View {
             let course: Course?
             switch entry.courseIDType {
             case .courseAPI:
-                if let id = Int(entry.courseID),
+                if let id = GolfCourseID(entry.courseID),
                    let cachedOrRemoteCourse = try? await GolfCourseRepository.shared.course(by: id) {
                     course = cachedOrRemoteCourse
                 } else {

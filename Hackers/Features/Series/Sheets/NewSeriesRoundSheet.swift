@@ -3764,7 +3764,7 @@ enum SeriesRoundCourseHandicapAvailability {
     }
 
     private static func loadCourse(for selection: SeriesCourseSelection) async -> Course? {
-        if let apiID = Int(selection.courseID) {
+        if let apiID = GolfCourseID(selection.courseID) {
             do {
                 return try await GolfCourseRepository.shared.course(by: apiID)
             } catch {

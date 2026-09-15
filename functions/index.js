@@ -91,3 +91,6 @@ exports.applySeriesDefaultsV2 = applySeriesDefaultsV2;
 exports.adoptRoundIntoSeriesV2 = adoptRoundIntoSeriesV2;
 exports.setSeriesMigrationPhaseV2 = setSeriesMigrationPhaseV2;
 exports.propagateSeriesMemberV2 = propagateSeriesMemberV2;
+
+// Authenticated course lookup and scorecard OCR; provider credentials stay on the server.
+exports.courseAI = require("./course-ai").courseAI;

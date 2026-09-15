@@ -81,3 +81,7 @@ vendor/bundle
 
 # dataconnect generated files
 .dataconnect
+
+# AI provider secrets: use Secret Manager; local emulator overrides must never be tracked.
+.secret.local
+.env.*

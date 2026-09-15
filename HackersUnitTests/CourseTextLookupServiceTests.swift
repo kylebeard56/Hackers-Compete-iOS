@@ -4,6 +4,7 @@
 //
 
 import Testing
+import Foundation
 @testable import Hackers
 
 @MainActor
@@ -29,7 +30,8 @@ struct CourseTextLookupServiceTests {
             enrichmentService: CourseScorecardEnrichmentService(
                 searchProvider: searchProvider,
                 venueLookupProvider: MockTextLookupVenueLookupProvider()
-            )
+            ),
+            searchProvider: MockTextLookupSearchProvider(results: [])
         )
 
         _ = try await service.resolveCourse(
@@ -99,7 +101,8 @@ struct CourseTextLookupServiceTests {
             enrichmentService: CourseScorecardEnrichmentService(
                 searchProvider: searchProvider,
                 venueLookupProvider: MockTextLookupVenueLookupProvider()
-            )
+            ),
+            searchProvider: MockTextLookupSearchProvider(results: [])
         )
 
         let result = try await service.resolveCourse(
@@ -117,7 +120,7 @@ struct CourseTextLookupServiceTests {
         #expect(candidateResult.course.origin == CourseOrigin.golfCourseAPI.rawValue)
         #expect(candidateResult.course.golfCourseApiID == 101)
         #expect(searchProvider.queries == ["Wade Hampton Golf Club"])
-        #expect(result.assistantMessage.contains("Internet + Golf Course API"))
+        #expect(result.assistantMessage.contains("I found "))
     }
 
     @Test("High-confidence web scorecard plus distinct API returns two candidates")
@@ -177,7 +180,8 @@ struct CourseTextLookupServiceTests {
             enrichmentService: CourseScorecardEnrichmentService(
                 searchProvider: searchProvider,
                 venueLookupProvider: MockTextLookupVenueLookupProvider()
-            )
+            ),
+            searchProvider: MockTextLookupSearchProvider(results: [])
         )
 
         let result = try await service.resolveCourse(
@@ -193,7 +197,7 @@ struct CourseTextLookupServiceTests {
         #expect(result.candidates[1].sources == [.golfCourseAPI])
         #expect(result.candidates[1].course.golfCourseApiID == 202)
         #expect(searchProvider.queries == ["Twin Lakes South", "Twin Lakes", "North Course", "Twin Lakes Golf Club", "Twin Lakes Golf Club North Course"])
-        #expect(result.assistantMessage.contains("2 possible confirmed course matches"))
+        #expect(result.assistantMessage.contains("2 possible course matches"))
     }
 
     @Test("Resolved identity returns API-only candidate using ordered search strings")
@@ -238,7 +242,8 @@ struct CourseTextLookupServiceTests {
                         101: .init(websiteURL: "https://wadehampton.example", phoneNumber: "8285551111")
                     ]
                 )
-            )
+            ),
+            searchProvider: MockTextLookupSearchProvider()
         )
 
         let result = try await service.resolveCourse(
@@ -258,7 +263,7 @@ struct CourseTextLookupServiceTests {
         #expect(candidate.course.golfCourseApiID == 101)
         #expect(searchProvider.queries == ["Wade Hampton", "Wade Hampton Golf Club"])
         #expect(provider.lastModel == AskAITextModel.claudeSonnet46.config.model)
-        #expect(result.assistantMessage.contains("Golf Course API"))
+        #expect(result.assistantMessage.contains("I found "))
     }
 
     @Test("Resolved identity with failed API fallback asks for more info")
@@ -284,7 +289,8 @@ struct CourseTextLookupServiceTests {
             enrichmentService: CourseScorecardEnrichmentService(
                 searchProvider: searchProvider,
                 venueLookupProvider: MockTextLookupVenueLookupProvider()
-            )
+            ),
+            searchProvider: MockTextLookupSearchProvider(results: [])
         )
 
         let result = try await service.resolveCourse(
@@ -296,7 +302,114 @@ struct CourseTextLookupServiceTests {
         #expect(result.candidates.isEmpty)
         #expect(result.source == .noMatch)
         #expect(searchProvider.queries == ["Oxmoor Valley Ridge", "Oxmoor Valley", "Ridge Course", "Oxmoor Valley Ridge Course"])
-        #expect(result.assistantMessage.contains("neither the public web result nor Golf Course API confirmed"))
+        #expect(result.assistantMessage.contains("couldn’t confirm a usable scorecard"))
+    }
+
+    @Test("Course names return summaries without calling AI or loading scorecards")
+    func courseNameFastPath() async throws {
+        let provider = MockTextLookupLLMProvider(response: "invalid if called")
+        let summary = try Self.summary(id: "xnmmcgzp", city: "Greenville", state: "SC")
+        let search = MockTextLookupSearchProvider(results: [summary])
+        let service = CourseTextLookupService(provider: provider, searchProvider: search)
+        let result = try await service.resolveCourse(from: [.init(role: .user, text: "Verdae")])
+        #expect(provider.lastMessages.isEmpty)
+        #expect(search.queries == ["Verdae"])
+        #expect(result.candidates.count == 1)
+        #expect(result.candidates.first?.needsScorecard == true)
+        #expect(result.candidates.first?.course.tees.isEmpty == true)
+        #expect(result.candidates.first?.locationText == "Greenville, SC, US")
+    }
+
+    @Test("Location clarification retains the original course and avoids another request")
+    func locationClarification() async throws {
+        let provider = MockTextLookupLLMProvider(response: "invalid if called")
+        let search = MockTextLookupSearchProvider(results: [
+            try Self.summary(id: "xnmmcgzp", city: "Greenville", state: "SC"),
+            try Self.summary(id: "ach6dj3v", city: "Austin", state: "TX")
+        ])
+        let service = CourseTextLookupService(provider: provider, searchProvider: search)
+        let user = AskAICourseChatMessage(role: .user, text: "Verdae")
+        let first = try await service.resolveCourse(from: [user])
+        #expect(first.candidates.count == 2)
+        #expect(first.assistantMessage.contains("Which city or state"))
+        let result = try await service.resolveCourse(from: [user,
+            .init(role: .assistant, text: first.assistantMessage, candidates: first.candidates, lookupQuery: first.lookupQuery),
+            .init(role: .user, text: "It’s in Austin, Texas")
+        ], context: .init(isLocationAssistEnabled: true, approximateLocation: .init(latitude: 34.85, longitude: -82.39)))
+        #expect(result.candidates.count == 1)
+        #expect(result.candidates.first?.course.golfCourseApiID == "ach6dj3v")
+        #expect(search.queries == ["Verdae"])
+        #expect(provider.lastMessages.isEmpty)
+    }
+
+    @Test("Device locality narrows summaries even when the provider omits coordinates")
+    func localityWithoutCourseCoordinates() async throws {
+        let search = MockTextLookupSearchProvider(results: [
+            try Self.summary(id: "xnmmcgzp", city: "Greenville", state: "SC"),
+            try Self.summary(id: "ach6dj3v", city: "Austin", state: "TX")
+        ])
+        var localityCalls = 0
+        let service = CourseTextLookupService(searchProvider: search, localityLookup: { _ in
+            localityCalls += 1
+            return "Greenville"
+        })
+        let result = try await service.resolveCourse(from: [.init(role: .user, text: "Verdae")],
+            context: .init(isLocationAssistEnabled: true, approximateLocation: .init(latitude: 34.85, longitude: -82.39)))
+        #expect(localityCalls == 1)
+        #expect(result.candidates.count == 1)
+        #expect(result.candidates.first?.course.golfCourseApiID == "xnmmcgzp")
+    }
+
+    @Test("Missing or disabled location asks a short location question without AI")
+    func noLocationOrResults() async throws {
+        let provider = MockTextLookupLLMProvider(response: "invalid if called")
+        let service = CourseTextLookupService(provider: provider,
+            searchProvider: MockTextLookupSearchProvider(), localityLookup: { _ in
+                Issue.record("Disabled location must not be used")
+                return nil
+            })
+        let result = try await service.resolveCourse(from: [.init(role: .user, text: "Verdae")],
+            context: .init(isLocationAssistEnabled: false, approximateLocation: .init(latitude: 34.85, longitude: -82.39)))
+        #expect(result.lookupQuery == "Verdae")
+        #expect(result.assistantMessage.contains("Which city and state"))
+        #expect(provider.lastMessages.isEmpty)
+    }
+
+    @Test("Web-only scorecards require review even with high model confidence")
+    func webScorecardRequiresReview() async throws {
+        let provider = MockTextLookupLLMProvider(response: """
+        {"courseLookup":{"clubName":"Test","courseName":"Test","confidence":"high",
+        "scorecard":{"tees":[{"name":"Blue","holes":[{"number":1,"par":4,"yardage":400}]}]}}}
+        """)
+        let service = CourseTextLookupService(provider: provider,
+            enrichmentService: CourseScorecardEnrichmentService(searchProvider: MockTextLookupSearchProvider(),
+                venueLookupProvider: MockTextLookupVenueLookupProvider()),
+            searchProvider: MockTextLookupSearchProvider())
+        let result = try await service.resolveCourse(from: [.init(role: .user, text: "Test in Greenville")])
+        #expect(result.candidates.first?.requiresReview == true)
+        #expect(result.candidates.first?.isCanonicalMatch == false)
+    }
+
+    @Test("Live chat search returns Verdae without AI", .enabled(if: ProcessInfo.processInfo.environment["RUN_LIVE_GOLFCOURSE_API_TEST"] == "1"))
+    func liveChatSearch() async throws {
+        let provider = MockTextLookupLLMProvider(response: "AI should not be called")
+        let service = CourseTextLookupService(provider: provider)
+        let start = ContinuousClock.now
+        let result = try await service.resolveCourse(from: [.init(role: .user, text: "Verdae")])
+        print("LIVE_CHAT_SEARCH elapsed=\(start.duration(to: .now)) candidates=\(result.candidates.count) aiCalls=\(provider.lastMessages.isEmpty ? 0 : 1)")
+        #expect(!result.candidates.isEmpty)
+        #expect(provider.lastMessages.isEmpty)
+        let candidate = try #require(result.candidates.first)
+        let id = try #require(candidate.course.golfCourseApiID)
+        let course = try await GolfCourseRepository.shared.course(by: id)
+        #expect(!course.tees.isEmpty)
+        #expect(course.tees.contains { $0.totalHoles == 18 })
+    }
+
+    private static func summary(id: String, city: String, state: String) throws -> GolfCourseAPIModel {
+        try JSONDecoder().decode(GolfCourseAPIModel.self, from: Data("""
+        {"id":"\(id)","club_name":"Verdae","course_name":"Verdae", "location":{"city":"\(city)","state":"\(state)","country":"US"},"tees":{"male":3,"female":2}}
+        """.utf8))
     }
 
     private static func joinedText(from message: LLMMessage) -> String {
@@ -310,7 +423,7 @@ struct CourseTextLookupServiceTests {
     }
 
     private static func makeCandidate(
-        id: Int,
+        id: GolfCourseID,
         clubName: String,
         courseName: String,
         city: String,
@@ -397,9 +510,9 @@ private final class MockTextLookupSearchProvider: CourseScorecardSearchProviding
 
 @MainActor
 private final class MockTextLookupVenueLookupProvider: CourseScorecardVenueLookupProviding {
-    let detailsByCourseID: [Int: CourseVenueDetails]
+    let detailsByCourseID: [GolfCourseID: CourseVenueDetails]
 
-    init(detailsByCourseID: [Int: CourseVenueDetails] = [:]) {
+    init(detailsByCourseID: [GolfCourseID: CourseVenueDetails] = [:]) {
         self.detailsByCourseID = detailsByCourseID
     }
 

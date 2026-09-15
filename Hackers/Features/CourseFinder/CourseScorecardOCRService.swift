@@ -2,7 +2,7 @@
 //  CourseScorecardOCRService.swift
 //  Hackers
 //
-//  Vision API client for OCR scorecard scanning. Uses injectable LLM provider (OpenAI/Anthropic).
+//  Scorecard OCR through authenticated Cloud Functions; injectable completion for tests.
 //
 
 import CoreLocation
@@ -181,7 +181,7 @@ final class CourseScorecardEnrichmentService: Loggable {
         let queries = searchQueries(for: ocrCourse)
         guard queries.isPopulated else { return ocrCourse }
 
-        var candidatesByID: [Int: GolfCourseAPIModel] = [:]
+        var candidatesByID: [GolfCourseID: GolfCourseAPIModel] = [:]
         for query in queries {
             do {
                 let candidates = try await searchProvider.searchCourses(query: query)
@@ -233,7 +233,7 @@ final class CourseScorecardEnrichmentService: Loggable {
         let queries = orderedUniqueQueries(preferredQueries + searchQueries(for: draftCourse))
         guard queries.isPopulated else { return nil }
 
-        var candidatesByID: [Int: GolfCourseAPIModel] = [:]
+        var candidatesByID: [GolfCourseID: GolfCourseAPIModel] = [:]
         for query in queries {
             do {
                 let candidates = try await searchProvider.searchCourses(query: query)
@@ -319,7 +319,7 @@ final class CourseScorecardEnrichmentService: Loggable {
                 if lhsDistance != rhsDistance {
                     return lhsDistance < rhsDistance
                 }
-                return lhs.model.id > rhs.model.id
+                return lhs.model.id.description > rhs.model.id.description
             }
 
         guard let top = evaluated.first else { return nil }
@@ -476,7 +476,7 @@ final class CourseScorecardEnrichmentService: Loggable {
                 ? mergedVenueDetails
                 : nil,
             locationGeohash: mergedLocation?.geohash,
-            tees: ocrCourse.tees,
+            tees: ocrCourse.tees.isEmpty ? canonicalCourse.tees : ocrCourse.tees,
             createdAt: ocrCourse.createdAt,
             lastUpdatedAt: .init()
         )
@@ -529,7 +529,7 @@ final class CourseScorecardEnrichmentService: Loggable {
 final class CourseScorecardOCRService: Loggable {
     static let shared = CourseScorecardOCRService()
 
-    /// When set (e.g. unit tests), used instead of resolving a provider from `vision.config`.
+    /// Injectable completion for deterministic extraction tests; live requests use the gateway.
     private let injectedProvider: LLMProviderProtocol?
 
     init(provider: LLMProviderProtocol? = nil) {
@@ -545,11 +545,6 @@ final class CourseScorecardOCRService: Loggable {
         vision: ScorecardScanVisionModel = .defaultSelection
     ) async throws -> Course {
         let config = vision.config
-        guard let provider = injectedProvider ?? LLMProviderRegistry.provider(for: config) else {
-            addBreadcrumb(level: .error, message: "LLM provider not available; check AI config and API keys")
-            throw CourseScorecardOCRError.apiKeyMissing
-        }
-
         guard let base64 = image.base64 else {
             addBreadcrumb(level: .error, message: "Failed to compress JPEG data for scorecard scanning")
             throw CourseScorecardOCRError.invalidResponse
@@ -560,32 +555,22 @@ final class CourseScorecardOCRService: Loggable {
 
         let dto: CourseScorecardDTO
         do {
-            if let anthropic = provider as? AnthropicProvider {
-                dto = try await anthropic.extractScorecardWithTools(
-                    imageBase64: base64,
-                    model: config.model,
-                    maxTokens: maxTokens,
-                    scanContext: scanContext
-                )
-            } else if let openai = provider as? OpenAIProvider {
-                dto = try await openai.extractScorecardWithTools(
-                    imageBase64: base64,
-                    model: config.model,
-                    maxTokens: maxTokens,
-                    scanContext: scanContext
-                )
-            } else {
+            if let provider = injectedProvider {
                 let messages = buildOCRMessages(imageBase64: base64, scanContext: scanContext)
                 let rawResponse = try await provider.complete(messages: messages, model: config.model, maxTokens: maxTokens)
                 dto = try parseDTO(from: rawResponse)
+            } else {
+                dto = try await CourseAIGateway().extractScorecard(
+                    imageBase64: base64, model: config.model, context: scanContext
+                )
             }
-        } catch OpenAIProviderError.apiKeyMissing, AnthropicProviderError.apiKeyMissing {
+        } catch CourseAIGatewayError.unavailable {
             throw CourseScorecardOCRError.apiKeyMissing
-        } catch OpenAIProviderError.requestTooLarge, AnthropicProviderError.requestTooLarge {
+        } catch CourseAIGatewayError.requestTooLarge {
             throw CourseScorecardOCRError.requestTooLarge
-        } catch OpenAIProviderError.rateLimitExceeded, AnthropicProviderError.rateLimitExceeded {
+        } catch CourseAIGatewayError.rateLimitExceeded {
             throw CourseScorecardOCRError.rateLimitExceeded
-        } catch OpenAIProviderError.overloaded, AnthropicProviderError.overloaded {
+        } catch CourseAIGatewayError.invalidResponse {
             throw CourseScorecardOCRError.overloaded
         } catch {
             throw error
@@ -634,7 +619,7 @@ final class CourseScorecardOCRService: Loggable {
     }
 
     private func mapToCourse(_ dto: CourseScorecardDTO) -> Course {
-        CourseScorecardDTOMapper.mapToCourse(dto, origin: .ocr)
+        CourseScorecardDTOMapper.mapToCourse(dto, origin: .ocr, defaultTeeIfEmpty: false)
     }
 }
 

@@ -193,9 +193,7 @@
 		B4ABCD012FA000100ABCDEF /* SeriesTeamInsightBuilder.swift in Sources */ = {isa = PBXBuildFile; fileRef = B4ABCD022FA000100ABCDEF /* SeriesTeamInsightBuilder.swift */; };
 		B4AI00012F6C0001007D8846 /* AIModelConfig.swift in Sources */ = {isa = PBXBuildFile; fileRef = B4AI00022F6C0001007D8846 /* AIModelConfig.swift */; };
 		B4AI00032F6C0002007D8846 /* LLMProviderProtocol.swift in Sources */ = {isa = PBXBuildFile; fileRef = B4AI00042F6C0002007D8846 /* LLMProviderProtocol.swift */; };
-		B4AI00052F6C0003007D8846 /* OpenAIProvider.swift in Sources */ = {isa = PBXBuildFile; fileRef = B4AI00062F6C0003007D8846 /* OpenAIProvider.swift */; };
-		B4AI00072F6C0004007D8846 /* AnthropicProvider.swift in Sources */ = {isa = PBXBuildFile; fileRef = B4AI00082F6C0004007D8846 /* AnthropicProvider.swift */; };
-		B4AI00092F6C0005007D8846 /* LLMProviderRegistry.swift in Sources */ = {isa = PBXBuildFile; fileRef = B4AI000A2F6C0005007D8846 /* LLMProviderRegistry.swift */; };
+		B4AI00092F6C0005007D8846 /* CourseAIGateway.swift in Sources */ = {isa = PBXBuildFile; fileRef = B4AI000A2F6C0005007D8846 /* CourseAIGateway.swift */; };
 		B4AI000F2F6C0007007D8846 /* ScorecardScanVisionModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = B4AI000E2F6C0007007D8846 /* ScorecardScanVisionModel.swift */; };
 		B4ANN1012F90000300ABCDEF /* SeriesAnnouncementEditorSheet.swift in Sources */ = {isa = PBXBuildFile; fileRef = B4ANN1022F90000300ABCDEF /* SeriesAnnouncementEditorSheet.swift */; };
 		B4ANN1032F90000300ABCDEF /* SeriesAnnouncementsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = B4ANN1042F90000300ABCDEF /* SeriesAnnouncementsView.swift */; };
@@ -632,9 +630,7 @@
 		B4ABCD022FA000100ABCDEF /* SeriesTeamInsightBuilder.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SeriesTeamInsightBuilder.swift; sourceTree = "<group>"; };
 		B4AI00022F6C0001007D8846 /* AIModelConfig.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AIModelConfig.swift; sourceTree = "<group>"; };
 		B4AI00042F6C0002007D8846 /* LLMProviderProtocol.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LLMProviderProtocol.swift; sourceTree = "<group>"; };
-		B4AI00062F6C0003007D8846 /* OpenAIProvider.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OpenAIProvider.swift; sourceTree = "<group>"; };
-		B4AI00082F6C0004007D8846 /* AnthropicProvider.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AnthropicProvider.swift; sourceTree = "<group>"; };
-		B4AI000A2F6C0005007D8846 /* LLMProviderRegistry.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LLMProviderRegistry.swift; sourceTree = "<group>"; };
+		B4AI000A2F6C0005007D8846 /* CourseAIGateway.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CourseAIGateway.swift; sourceTree = "<group>"; };
 		B4AI000E2F6C0007007D8846 /* ScorecardScanVisionModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ScorecardScanVisionModel.swift; sourceTree = "<group>"; };
 		B4ANN1022F90000300ABCDEF /* SeriesAnnouncementEditorSheet.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SeriesAnnouncementEditorSheet.swift; sourceTree = "<group>"; };
 		B4ANN1042F90000300ABCDEF /* SeriesAnnouncementsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SeriesAnnouncementsView.swift; sourceTree = "<group>"; };
@@ -1404,9 +1400,7 @@
 				B4AI00022F6C0001007D8846 /* AIModelConfig.swift */,
 				B4AI000E2F6C0007007D8846 /* ScorecardScanVisionModel.swift */,
 				B4AI00042F6C0002007D8846 /* LLMProviderProtocol.swift */,
-				B4AI00062F6C0003007D8846 /* OpenAIProvider.swift */,
-				B4AI00082F6C0004007D8846 /* AnthropicProvider.swift */,
-				B4AI000A2F6C0005007D8846 /* LLMProviderRegistry.swift */,
+				B4AI000A2F6C0005007D8846 /* CourseAIGateway.swift */,
 			);
 			path = AI;
 			sourceTree = "<group>";
@@ -2473,9 +2467,7 @@
 				B4C50C0B2F6B0006007D8846 /* ScorecardImagePickers.swift in Sources */,
 				B4AI00012F6C0001007D8846 /* AIModelConfig.swift in Sources */,
 				B4AI00032F6C0002007D8846 /* LLMProviderProtocol.swift in Sources */,
-				B4AI00052F6C0003007D8846 /* OpenAIProvider.swift in Sources */,
-				B4AI00072F6C0004007D8846 /* AnthropicProvider.swift in Sources */,
-				B4AI00092F6C0005007D8846 /* LLMProviderRegistry.swift in Sources */,
+				B4AI00092F6C0005007D8846 /* CourseAIGateway.swift in Sources */,
 				B4AI000F2F6C0007007D8846 /* ScorecardScanVisionModel.swift in Sources */,
 				B4CA89A62E2012850048003A /* Firebase+User.swift in Sources */,
 				B4CA89BD2E2027330048003A /* Firebase+Auth.swift in Sources */,

@@ -236,7 +236,7 @@ final class CourseEditViewModel: ObservableObject {
     let originalOrigin: String
 
     @Published var courseId: String
-    @Published var golfCourseApiID: Int?
+    @Published var golfCourseApiID: GolfCourseID?
     @Published var clubName: String
     @Published var courseName: String
     @Published var address: String

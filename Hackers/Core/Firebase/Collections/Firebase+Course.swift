@@ -17,36 +17,39 @@ extension FirebaseService {
         return await fetch(where: "id", isEqualTo: value, in: collection)
     }
 
-    /// Reads an API-backed course directly by its deterministic Firebase document ID.
-    /// Returns nil for a missing, malformed, or mismatched document so callers can fall back to
-    /// GolfCourseAPI without making Firebase availability part of the course-selection failure path.
-    func getCachedGolfCourseAPIByID(_ id: Int) async -> Course? {
-        guard id > 0 else { return nil }
+    /// Resolve canonical documents first, then legacy UUID documents by their provider field.
+    func getCachedGolfCourseAPIByID(_ id: GolfCourseID) async -> Course? {
+        guard id.isValid else { return nil }
         let documentID = Course.golfCourseAPIDocumentID(for: id)
-        let reference = Firestore.firestore()
-            .collection(Collections.courses.name)
-            .document(documentID)
-
+        let courses = Firestore.firestore().collection(Collections.courses.name)
         do {
-            let snapshot = try await reference.getDocument()
-            guard snapshot.exists else { return nil }
-
-            let course = try snapshot.data(as: Course.self)
-            guard course.hasCanonicalGolfCourseAPIIdentity,
-                  course.golfCourseApiID == id else {
-                addBreadcrumb(
-                    level: .warning,
-                    message: "Ignoring mismatched GolfCourseAPI cache document \(documentID)"
-                )
-                return nil
+            let snapshot = try await courses.document(documentID).getDocument()
+            if snapshot.exists,
+               let course = try? snapshot.data(as: Course.self),
+               let canonical = course.canonicalizedGolfCourseAPICacheEntry(expectedAPIID: id) {
+                return canonical
             }
-            return course
         } catch {
-            addBreadcrumb(
-                level: .warning,
-                message: "Failed to read GolfCourseAPI cache document \(documentID)",
-                error: error
-            )
+            addBreadcrumb(level: .warning, message: "Failed to read course cache \(documentID)", error: error)
+        }
+
+        guard id.isLegacy else { return nil }
+        do {
+            let query = courses.whereField("golf_course_api_id", isEqualTo: id.storageValue).limit(to: 20)
+            var cursor: DocumentSnapshot?
+            while true {
+                let page = try await (cursor.map { query.start(afterDocument: $0) } ?? query).getDocuments()
+                for document in page.documents {
+                    if let course = try? document.data(as: Course.self),
+                       let canonical = course.canonicalizedGolfCourseAPICacheEntry(expectedAPIID: id) {
+                        return canonical
+                    }
+                }
+                guard page.documents.count == 20, let last = page.documents.last else { return nil }
+                cursor = last
+            }
+        } catch {
+            addBreadcrumb(level: .warning, message: "Failed to recover legacy course \(id)", error: error)
             return nil
         }
     }
@@ -122,7 +125,10 @@ extension FirebaseService {
 
             let candidates = (forward.documents + reverse.documents)
                 .compactMap { try? $0.data(as: Course.self) }
-                .filter(\.hasCanonicalGolfCourseAPIIdentity)
+                .compactMap { course -> Course? in
+                    guard let apiID = course.golfCourseApiID else { return nil }
+                    return course.canonicalizedGolfCourseAPICacheEntry(expectedAPIID: apiID)
+                }
                 .filter { $0.matchesCachedSearch(query: normalized) }
             let deduplicated = Dictionary(candidates.map { ($0.id, $0) }, uniquingKeysWith: { first, _ in first })
 

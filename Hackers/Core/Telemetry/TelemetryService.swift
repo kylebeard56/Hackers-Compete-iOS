@@ -182,7 +182,7 @@ enum TelemetryEventProps {
         ]
 
         if let golfCourseApiID = course.golfCourseApiID {
-            props["course_api_id"] = golfCourseApiID
+            props["course_api_id"] = golfCourseApiID.storageValue
         }
 
         if courseName.isPopulated {

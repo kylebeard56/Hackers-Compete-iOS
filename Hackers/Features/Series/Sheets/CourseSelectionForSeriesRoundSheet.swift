@@ -78,7 +78,7 @@ struct CourseSelectionForSeriesRoundSheet: View {
         guard let selection = seriesRound.resolvedCourse(using: viewModel.series),
               !selection.courseID.isEmpty else { return }
         let course: Course?
-        if let apiID = Int(selection.courseID) {
+        if let apiID = GolfCourseID(selection.courseID) {
             do {
                 course = try await GolfCourseRepository.shared.course(by: apiID)
             } catch {

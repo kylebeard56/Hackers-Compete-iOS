@@ -94,7 +94,7 @@ struct CourseScorecardOCRServiceTests {
             vision: .magnolia
         )
 
-        #expect(provider.lastModel == "claude-sonnet-4-6")
+        #expect(provider.lastModel == "sonnet")
     }
 
     @Test("Service preserves multiple tees and front back ratings from OCR JSON")
@@ -122,6 +122,14 @@ struct CourseScorecardOCRServiceTests {
 
         let blended = try #require(course.tees.first(where: { $0.name == "White/Red" }))
         #expect(blended.gender == Gender.female.rawValue)
+    }
+
+    @Test("A course cover without hole data cannot create an invented scorecard")
+    func identityOnlyImageHasNoPlaceholderHoles() async throws {
+        let provider = MockLLMProvider(response: #"{"clubName":"The Preserve at Verdae","tees":[]}"#)
+        let course = try await CourseScorecardOCRService(provider: provider).extractCourse(from: makeImage(), scanContext: .init())
+        #expect(course.clubName == "The Preserve at Verdae")
+        #expect(course.tees.isEmpty)
     }
 
     private static func joinedText(from message: LLMMessage) -> String {
@@ -249,6 +257,20 @@ struct CourseScorecardEnrichmentServiceTests {
         #expect(searchProvider.queries.contains("North"))
     }
 
+    @Test("A named cover image can use a confirmed provider scorecard")
+    func identityOnlyImageUsesMatchedScorecard() async {
+        let candidate = Self.makeCandidate(id: "xnmmcgzp", clubName: "The Preserve at Verdae",
+            courseName: "The Preserve at Verdae", city: "Greenville", state: "SC", latitude: 34.85, longitude: -82.39)
+        let service = CourseScorecardEnrichmentService(
+            searchProvider: MockScorecardSearchProvider(results: [candidate]),
+            venueLookupProvider: MockVenueLookupProvider())
+        let result = await service.enrich(course: Course(origin: .ocr, clubName: "The Preserve at Verdae",
+            courseName: "The Preserve at Verdae", tees: []))
+        #expect(result.golfCourseApiID == "xnmmcgzp")
+        #expect(!result.tees.isEmpty)
+        #expect(result.tees.first?.holes == Course(canonicalGolfCourseAPI: candidate).tees.first?.holes)
+    }
+
     @Test("Unresolved equally plausible matches fall back to OCR data without enrichment")
     func unresolvedTieFallsBackToOCRData() async {
         let firstCandidate = Self.makeCandidate(
@@ -363,7 +385,7 @@ struct CourseScorecardEnrichmentServiceTests {
     }
 
     private static func makeCandidate(
-        id: Int,
+        id: GolfCourseID,
         clubName: String,
         courseName: String,
         city: String?,
@@ -445,10 +467,10 @@ private final class MockScorecardSearchProvider: CourseScorecardSearchProviding 
 
 @MainActor
 private final class MockVenueLookupProvider: CourseScorecardVenueLookupProviding {
-    let detailsByCourseID: [Int: CourseVenueDetails]
-    private(set) var requestedCourseIDs: [Int] = []
+    let detailsByCourseID: [GolfCourseID: CourseVenueDetails]
+    private(set) var requestedCourseIDs: [GolfCourseID] = []
 
-    init(detailsByCourseID: [Int: CourseVenueDetails] = [:]) {
+    init(detailsByCourseID: [GolfCourseID: CourseVenueDetails] = [:]) {
         self.detailsByCourseID = detailsByCourseID
     }
 
@@ -458,5 +480,119 @@ private final class MockVenueLookupProvider: CourseScorecardVenueLookupProviding
     ) async -> CourseVenueDetails? {
         requestedCourseIDs.append(course.id)
         return detailsByCourseID[course.id]
+    }
+}
+
+/// Explicitly enabled diagnostics exercise the real image encoding, provider, and DTO mapping.
+@MainActor
+@Suite("Live scorecard OCR diagnostic", .serialized,
+       .enabled(if: ProcessInfo.processInfo.environment["RUN_LIVE_SCORECARD_OCR"] == "1"))
+struct LiveScorecardOCRDiagnosticTests {
+    @Test("Official course cover resolves to a real scorecard")
+    func officialCourseCoverLookup() async throws {
+        let url = try #require(URL(string: "https://www.thepreserveatverdae.com/wp-content/uploads/sites/7866/2022/12/2022-Scorecard.jpg"))
+        let (data, response) = try await URLSession.shared.data(from: url)
+        #expect((response as? HTTPURLResponse)?.statusCode == 200)
+        let image = try #require(UIImage(data: data))
+        let start = ContinuousClock.now
+        let extracted = try await CourseScorecardOCRService.shared.extractCourse(from: image, scanContext: .init(), vision: .juniper)
+        #expect((extracted.clubName + extracted.courseName).localizedCaseInsensitiveContains("Verdae"))
+        #expect(extracted.tees.isEmpty)
+        let matched = await CourseScorecardEnrichmentService.shared.enrich(course: extracted)
+        print("LIVE_IMAGE_LOOKUP elapsed=\(start.duration(to: .now)) matched=\(matched.golfCourseApiID?.description ?? "none") tees=\(matched.tees.count)")
+        #expect(matched.golfCourseApiID != nil)
+        #expect(matched.tees.contains { $0.holes.count == 18 })
+    }
+
+    @Test("Bundled scorecard preserves its Blue tee", arguments: [ScorecardScanVisionModel.juniper, .magnolia])
+    func bundledScorecard(vision: ScorecardScanVisionModel) async throws {
+        let image = try #require(UIImage(named: "MockScorecard", in: Bundle.main, compatibleWith: nil))
+        let start = ContinuousClock.now
+        let course = try await CourseScorecardOCRService.shared.extractCourse(
+            from: image, scanContext: .init(), vision: vision
+        )
+        print("LIVE_OCR tier=\(vision.rawValue) elapsed=\(start.duration(to: .now)) tees=\(course.tees.count)")
+        let blue = try #require(course.tees.first { $0.name.lowercased() == "blue" })
+        #expect(blue.holes.count == 18)
+        #expect(blue.holes.reduce(0) { $0 + $1.par } == 72)
+        #expect(blue.holes.reduce(0) { $0 + $1.yardage } == 6197)
+        #expect(blue.holes.first?.yardage == 327)
+        #expect(blue.holes.last?.yardage == 385)
+        #expect(abs(blue.ratingFull - 71.1) < 0.001)
+        #expect(blue.slopeFull == 133)
+        // This side of the sample card has no course name: location cannot manufacture one.
+        #expect(course.clubName.isEmpty)
+        #expect(course.courseName.isEmpty)
+    }
+}
+
+@MainActor
+@Suite("Course AI Gateway")
+struct CourseAIGatewayTests {
+    @Test("Gateway sends selected model, user transcript, and only consented location")
+    func lookupPayloadAndDecoding() async throws {
+        let gateway = CourseAIGateway { payload in
+            #expect(payload["operation"] as? String == "courseLookup")
+            #expect(payload["model"] as? String == "sonnet")
+            let messages = try #require(payload["messages"] as? [[String: String]])
+            #expect(messages == [["role": "user", "text": "Example Links in Greenville"]])
+            let context = try #require(payload["context"] as? [String: Any])
+            #expect(context["latitude"] == nil)
+            #expect(context["longitude"] == nil)
+            #expect(payload["tools"] == nil)
+            #expect(payload["apiKey"] == nil)
+            return ["courseLookup": ["courseName": "Example Links", "confidence": "medium", "apiSearchStrings": ["Example Links"]]]
+        }
+        let dto = try await gateway.lookupCourse(
+            messages: [.init(role: "system", content: [.text("not sent")]), .init(role: "user", content: [.text("Example Links in Greenville")])],
+            model: AskAITextModel.claudeSonnet46.config.model,
+            context: .init(isLocationAssistEnabled: false, approximateLocation: .init(latitude: 34, longitude: -82))
+        )
+        #expect(dto.courseName == "Example Links")
+        let context = CourseAIGateway.contextPayload(.init(isLocationAssistEnabled: true, approximateLocation: .init(latitude: 34, longitude: -82)))
+        #expect(context["latitude"] as? Double == 34)
+        #expect(context["longitude"] as? Double == -82)
+    }
+
+    @Test("OCR gateway preserves empty scorecards without inventing holes")
+    func ocrPayloadAndDecoding() async throws {
+        let gateway = CourseAIGateway { payload in
+            #expect(payload["operation"] as? String == "scorecard")
+            #expect(payload["model"] as? String == "luna")
+            #expect(payload["imageBase64"] as? String == "fixture")
+            return ["scorecard": ["courseName": "Example Links", "tees": []]]
+        }
+        let dto = try await gateway.extractScorecard(imageBase64: "fixture", model: AIModelConfig.defaultForVision.model, context: .init())
+        #expect(dto.tees?.isEmpty == true)
+    }
+
+    @Test("Gateway rejects malformed response and oversized image")
+    func invalidPayloads() async throws {
+        let gateway = CourseAIGateway { _ in ["scorecard": ["tees": "invalid"]] }
+        await #expect(throws: CourseAIGatewayError.self) {
+            try await gateway.extractScorecard(imageBase64: "fixture", model: "luna", context: .init())
+        }
+        let neverCalled = CourseAIGateway { _ in
+            Issue.record("Oversized input must not reach the network")
+            return [:]
+        }
+        await #expect(throws: CourseAIGatewayError.self) {
+            try await neverCalled.extractScorecard(imageBase64: String(repeating: "a", count: 7_000_001), model: "luna", context: .init())
+        }
+    }
+
+    @Test("Gateway strips raw server messages and retains cancellation")
+    func errorSanitization() {
+        let error = CourseAIGateway.mappedError(NSError(domain: "network", code: 401, userInfo: [NSLocalizedDescriptionKey: "PRIVATE-KEY"]))
+        #expect(!error.localizedDescription.contains("PRIVATE-KEY"))
+        #expect(CourseAIGateway.mappedError(CancellationError()) is CancellationError)
+    }
+
+    @Test("Built app contains no AI provider keys; legacy chat choice migrates to Luna")
+    func noBundledSecretsAndModelMigration() {
+        #expect(Bundle.main.object(forInfoDictionaryKey: "OPENAI_API_KEY") == nil)
+        #expect(Bundle.main.object(forInfoDictionaryKey: "ANTHROPIC_API_KEY") == nil)
+        #expect(AskAITextModel.fromStoredRawValue("gpt-4.1-mini") == .luna)
+        #expect(AskAITextModel.fromStoredRawValue("claude-sonnet-4-6") == .claudeSonnet46)
     }
 }

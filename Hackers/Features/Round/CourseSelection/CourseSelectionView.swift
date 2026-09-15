@@ -147,37 +147,35 @@ struct CourseSelectionView: View, Loggable {
                 .presentationDragIndicator(.visible)
             }
             .sheet(isPresented: $showAskAI, onDismiss: {
-                viewModel.resetAskAIConversation()
+                viewModel.cancelAskAIRequest()
             }) {
                 AskAICourseSheet(
                     messages: viewModel.askAIMessages,
                     isSending: viewModel.isSendingAskAIMessage,
                     isLocationAssistEnabled: locationAssistBinding(for: .askAI),
-                    selectedModel: askAITextModel,
                     approximateLocation: locationService.location.map(ScorecardScanApproximateLocation.init),
                     examplePrompts: askAIExamplePrompts,
                     onCancel: {
                         showAskAI = false
                     },
-                    onSelectModel: { askAITextModelRaw = $0.rawValue },
                     onSend: { prompt in
-                        let shouldUseLocationAssist = resolvedAskAILocationAssistEnabled()
-                        let approximateLocation = shouldUseLocationAssist
-                            ? locationService.location.map(ScorecardScanApproximateLocation.init)
-                            : nil
-                        await viewModel.sendAskAIMessage(
-                            prompt,
-                            context: AskAICourseLookupContext(
-                                isLocationAssistEnabled: shouldUseLocationAssist,
-                                approximateLocation: approximateLocation,
-                                model: askAITextModel
-                            )
-                        )
+                        await viewModel.sendAskAIMessage(prompt, context: currentAskAILookupContext)
                     },
                     onUseCandidate: { candidate in
-                        showAskAI = false
-                        viewModel.selectAskAICandidate(candidate)
-                    }
+                        Task {
+                            if await viewModel.loadAskAICandidate(candidate) { showAskAI = false }
+                        }
+                    },
+                    errorMessage: viewModel.askAIError,
+                    onRetry: { Task { await viewModel.retryAskAIMessage(context: currentAskAILookupContext) } },
+                    onStop: {
+                        viewModel.cancelAskAIRequest()
+                        viewModel.askAIError = "Search stopped. Retry when you’re ready."
+                    },
+                    onStartOver: { viewModel.resetAskAIConversation() },
+                    selectedModel: askAITextModel,
+                    onSelectModel: { askAITextModelRaw = $0.rawValue }
+
                 )
                 .sheet(isPresented: $showAskAIDraftEditor) {
                     CourseEditView(
@@ -266,20 +264,17 @@ struct CourseSelectionView: View, Loggable {
         .toast(isPresenting: $viewModel.isSearchingNearby) {
             .loader()
         }
+        .toast(isPresenting: $viewModel.isLoadingSelectedCourse) {
+            .loader()
+        }
         .toast(isPresenting: $viewModel.showCourseFetchError) {
-            .errorBanner("Couldn't load course", "Please try again or search for the course.")
+            .errorBanner("Couldn't load course", viewModel.courseFetchErrorMessage)
         }
         .toast(isPresenting: Binding(
             get: { viewModel.scorecardScanError != nil },
             set: { if !$0 { viewModel.scorecardScanError = nil } }
         )) {
             .errorBanner("Scan failed", viewModel.scorecardScanError ?? "Please try again.")
-        }
-        .toast(isPresenting: Binding(
-            get: { viewModel.askAIError != nil },
-            set: { if !$0 { viewModel.askAIError = nil } }
-        )) {
-            .errorBanner("Ask AI failed", viewModel.askAIError ?? "Please try again.")
         }
         .onChange(of: viewModel.showCourseFetchError) { _, new in
             if new {
@@ -439,11 +434,12 @@ struct CourseSelectionView: View, Loggable {
                 onDebounce: { text in
                     print("onDebounce \(text)")
                     searchText = text
+                    viewModel.recoveryCourseName = nil
                     await viewModel.searchCourses(for: text, using: kGreenville)
                 }
             )
             
-            if searchText.isEmpty {
+            if searchText.isEmpty && viewModel.recoveryCourseName == nil {
                 ScrollView(.horizontal, showsIndicators: false) {
                     HStack(spacing: 16) {
                         ForEach(CourseSelectionChip.allCases, id: \.self) { chip in
@@ -480,9 +476,28 @@ struct CourseSelectionView: View, Loggable {
     
     private var content: some View {
         VStack(spacing: 16) {
-            if searchText.isPopulated {
+            if searchText.isPopulated || viewModel.recoveryCourseName != nil {
+                if let name = viewModel.recoveryCourseName {
+                    Text("Choose a match for \(name) to confirm its current scorecard.")
+                        .fontStyle(kFontName, size: 15, weight: .medium)
+                        .foregroundStyle(Color.foregroundPrimary)
+                        .alignLeading()
+                    Button("Back to recent courses") {
+                        viewModel.recoveryCourseName = nil
+                    }
+                }
                 if viewModel.isSearching {
                     skeletonView
+                } else if let error = viewModel.searchError {
+                    Text(error)
+                        .fontStyle(kFontName, size: 15, weight: .medium)
+                        .foregroundStyle(Color.foregroundPrimary)
+                        .alignLeading()
+                    Button("Try again") {
+                        Task {
+                            await viewModel.searchCourses(for: viewModel.recoveryCourseName ?? searchText)
+                        }
+                    }
                 } else if viewModel.searchedCourses.isPopulated {
                     let count = viewModel.searchedCourses.count
                     Text("\(count) course\(count.pluralized) found")
@@ -746,7 +761,7 @@ struct CourseSelectionView: View, Loggable {
     private func row(for course: Course) -> some View {
         Button(action: {
             Haptics.fire(.light)
-            viewModel.select(course: course, source: .search)
+            Task { await viewModel.selectSearchCourse(course) }
         }) {
             VStack {
                 HStack(spacing: 16) {
@@ -956,14 +971,21 @@ struct CourseSelectionView: View, Loggable {
 
     private var askAIExamplePrompts: [String] {
         [
-            "I’m playing Oxmoor Valley on the RTJ Trail in Alabama.",
-            "I’m at Twin Lakes in Austin and I think it’s the North course.",
-            "I’m playing a municipal course in Greenville with a blue and gold scorecard."
+            "Verdae", "Oxmoor Valley", "Twin Lakes"
         ]
     }
 
     private var askAIDraftNotice: String {
         "We didn’t confidently confirm this course yet. Review these details before continuing. Any default hole values shown here are editable scaffolding, not confirmed course facts."
+    }
+
+    private var currentAskAILookupContext: AskAICourseLookupContext {
+        let enabled = resolvedAskAILocationAssistEnabled()
+        return AskAICourseLookupContext(
+            isLocationAssistEnabled: enabled,
+            approximateLocation: enabled ? locationService.location.map(ScorecardScanApproximateLocation.init) : nil,
+            model: askAITextModel
+        )
     }
 
     private func resolvedAskAILocationAssistEnabled() -> Bool {
@@ -975,8 +997,8 @@ struct CourseSelectionView: View, Loggable {
     }
 
     private func openAskAI() {
-        viewModel.resetAskAIConversation()
         showAskAI = true
+        if askAILocationAssistEnabled { locationService.requestLocation() }
 
         guard viewModel.shouldTrackRoundSetup else { return }
         addEvent(
@@ -1146,446 +1168,213 @@ private struct ScorecardScanNotesSheet: View {
     }
 }
 
-private struct AskAICourseSheet: View {
-    @Environment(\.colorScheme) private var colorScheme
-
+struct AskAICourseSheet: View {
     let messages: [AskAICourseChatMessage]
     let isSending: Bool
     @Binding var isLocationAssistEnabled: Bool
-    let selectedModel: AskAITextModel
     let approximateLocation: ScorecardScanApproximateLocation?
     let examplePrompts: [String]
-    var onCancel: Callback? = nil
-    var onSelectModel: CallbackValue<AskAITextModel>? = nil
-    var onSend: ((String) async -> Void)? = nil
-    var onUseCandidate: CallbackValue<AskAICourseCandidate>? = nil
+    var onCancel: Callback?
+    var onSend: ((String) async -> Void)?
+    var onUseCandidate: CallbackValue<AskAICourseCandidate>?
+    var errorMessage: String?
+    var onRetry: Callback?
+    var onStop: Callback?
+    var onStartOver: Callback?
+    var selectedModel: AskAITextModel
+    var onSelectModel: CallbackValue<AskAITextModel>?
 
-    @State private var prompt = ""
+    @State private var prompt: String
     @FocusState private var isPromptFocused: Bool
 
     init(
-        messages: [AskAICourseChatMessage],
-        isSending: Bool,
+        messages: [AskAICourseChatMessage], isSending: Bool,
         isLocationAssistEnabled: Binding<Bool>,
-        selectedModel: AskAITextModel,
-        approximateLocation: ScorecardScanApproximateLocation?,
-        examplePrompts: [String],
-        initialPrompt: String = "",
-        onCancel: Callback? = nil,
-        onSelectModel: CallbackValue<AskAITextModel>? = nil,
+        approximateLocation: ScorecardScanApproximateLocation?, examplePrompts: [String],
+        initialPrompt: String = "", onCancel: Callback? = nil,
         onSend: ((String) async -> Void)? = nil,
-        onUseCandidate: CallbackValue<AskAICourseCandidate>? = nil
+        onUseCandidate: CallbackValue<AskAICourseCandidate>? = nil,
+        errorMessage: String? = nil, onRetry: Callback? = nil,
+        onStop: Callback? = nil, onStartOver: Callback? = nil,
+        selectedModel: AskAITextModel = .defaultSelection,
+        onSelectModel: CallbackValue<AskAITextModel>? = nil
     ) {
         self.messages = messages
         self.isSending = isSending
         _isLocationAssistEnabled = isLocationAssistEnabled
-        self.selectedModel = selectedModel
         self.approximateLocation = approximateLocation
         self.examplePrompts = examplePrompts
         self.onCancel = onCancel
-        self.onSelectModel = onSelectModel
         self.onSend = onSend
         self.onUseCandidate = onUseCandidate
+        self.errorMessage = errorMessage
+        self.onRetry = onRetry
+        self.onStop = onStop
+        self.onStartOver = onStartOver
+        self.selectedModel = selectedModel
+        self.onSelectModel = onSelectModel
         _prompt = State(initialValue: initialPrompt)
     }
 
-    private var palette: DesignPalette { .init(theme: .primary, scheme: colorScheme) }
-
     var body: some View {
-        VStack(spacing: 0) {
-            header
-
+        NavigationStack {
             ScrollViewReader { proxy in
-                VStack(spacing: 0) {
-                    ZStack(alignment: .bottomLeading) {
-                        ScrollView(showsIndicators: false) {
-                            VStack(alignment: .leading, spacing: 12) {
-                                ForEach(messages) { message in
-                                    messageBubble(message)
-                                }
-
-                                if isSending {
-                                    typingIndicator
-                                }
-
-                                Color.clear
-                                    .frame(height: 1)
-                                    .id("ASK_AI_BOTTOM")
+                ScrollView {
+                    LazyVStack(alignment: .leading, spacing: 16) {
+                        if messages.isEmpty {
+                            messageBubble(.init(role: .assistant, text: "What course are you playing? Send its name. I’ll use your location when available, or ask for the city if I need more detail."))
+                            Text("Try a course name")
+                                .font(.caption).foregroundStyle(.secondary)
+                            ForEach(examplePrompts, id: \.self) { example in
+                                Button(example) { send(example) }
+                                    .buttonStyle(.bordered).tint(.accentGreen)
+                                    .disabled(isSending)
                             }
-                            .padding(.horizontal, 16)
-                            .padding(.vertical, 12)
                         }
-                        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
-                        .scrollDismissesKeyboard(.interactively)
-                        .simultaneousGesture(
-                            DragGesture(minimumDistance: 12)
-                                .onEnded { value in
-                                    guard value.translation.height > 36 else { return }
-                                    isPromptFocused = false
-                                }
-                        )
-                        .onTapGesture {
-                            isPromptFocused = false
+                        ForEach(messages) { message in
+                            messageBubble(message)
                         }
-
-                        if showEmptyState {
-                            AskAIEmptyState(examplePrompts: examplePrompts)
-                                .padding(.horizontal, 20)
-                                .padding(.bottom, 12)
-                                .transition(.opacity)
+                        if isSending {
+                            HStack(spacing: 12) {
+                                ProgressView().tint(.accentGreen)
+                                Text("Finding your course…").font(.subheadline)
+                            }
+                            .padding(14)
+                            .background(Color.neutral6, in: RoundedRectangle(cornerRadius: 16))
+                            .accessibilityLabel("Finding your course")
                         }
+                        if let errorMessage {
+                            VStack(alignment: .leading, spacing: 8) {
+                                Text(errorMessage).font(.subheadline)
+                                Button("Retry search") { onRetry?() }
+                                    .disabled(isSending)
+                            }
+                            .padding(14)
+                            .background(Color.neutral6, in: RoundedRectangle(cornerRadius: 16))
+                        }
+                        if !isSending, errorMessage == nil, messages.last?.isUser == true {
+                            Button("Continue search") { onRetry?() }
+                                .buttonStyle(.bordered)
+                        }
+                        Color.clear.frame(height: 1).id("ASK_AI_BOTTOM")
                     }
-                    .frame(maxWidth: .infinity, maxHeight: .infinity)
-
-                    composer
-                        .padding(.horizontal, 16)
-                        .padding(.top, 8)
-                        .padding(.bottom, 20)
-                        .animation(.easeInOut(duration: 0.18), value: isPromptFocused)
-                        .background(palette.backgroundColor)
+                    .padding(16)
                 }
+                .scrollDismissesKeyboard(.interactively)
+                .safeAreaInset(edge: .bottom, spacing: 0) { composer }
                 .onAppear {
-                    scrollToBottom(with: proxy, animated: false)
+                    if !messages.isEmpty { proxy.scrollTo("ASK_AI_BOTTOM", anchor: .bottom) }
                 }
-                .onChange(of: messages.count) { _, _ in
-                    scrollToBottom(with: proxy)
+                .onChange(of: messages.count) { _, _ in scrollToBottom(proxy) }
+                .onChange(of: isSending) { _, _ in scrollToBottom(proxy) }
+                .onChange(of: errorMessage) { _, _ in scrollToBottom(proxy) }
+                .onChange(of: isPromptFocused) { _, _ in scrollToBottom(proxy) }
+            }
+            .background(Color.backgroundPrimary)
+            .navigationTitle("Find a course")
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .cancellationAction) {
+                    Button("Close", systemImage: "xmark") { onCancel?() }
+                        .labelStyle(.iconOnly)
                 }
-                .onChange(of: isSending) { _, _ in
-                    guard isSending else { return }
-                    scrollToBottom(with: proxy)
-                }
-                .onChange(of: isPromptFocused) { _, focused in
-                    guard focused else { return }
-                    scrollToBottom(with: proxy)
+                ToolbarItem(placement: .primaryAction) {
+                    Menu {
+                        Button("Start over", systemImage: "arrow.counterclockwise") { onStartOver?() }
+                        Toggle("Use my location", isOn: $isLocationAssistEnabled)
+                        if let onSelectModel {
+                            Picker("Assistant", selection: Binding(
+                                get: { selectedModel }, set: { onSelectModel($0) }
+                            )) {
+                                ForEach(AskAITextModel.allCases) { model in
+                                    Text(model.displayName).tag(model)
+                                }
+                            }
+                            .disabled(isSending)
+                        }
+                    } label: {
+                        Image(systemName: "ellipsis.circle")
+                    }
+                    .accessibilityLabel("Conversation options")
                 }
             }
         }
-        .background(palette.backgroundColor)
-    }
-
-    private var showEmptyState: Bool {
-        messages.isEmpty && !isSending
-    }
-
-    private var header: some View {
-        HStack(spacing: 12) {
-            Text("Ask AI")
-                .fontStyle(kFontName, size: 22, weight: .semibold)
-                .foregroundStyle(Color.foregroundPrimary)
-
-            Spacer(minLength: 0)
-
-            NavButton(icon: "f00d", theme: .primary, onTap: { onCancel?() })
-        }
-        .padding(.horizontal, 16)
-        .padding(.top, 16)
-        .padding(.bottom, 8)
     }
 
     private func messageBubble(_ message: AskAICourseChatMessage) -> some View {
-        VStack(alignment: message.isUser ? .trailing : .leading, spacing: 8) {
+        VStack(alignment: .leading, spacing: 12) {
             HStack {
-                if message.isUser {
-                    Spacer(minLength: 32)
-                }
-
-                VStack(alignment: .leading, spacing: 8) {
-                    Text(message.text)
-                        .fontStyle(kFontName, size: 15, weight: .regular)
-                        .foregroundStyle(message.isUser ? Color.white : Color.foregroundPrimary)
-                        .fixedSize(horizontal: false, vertical: true)
-
-                    ForEach(Array(message.candidates.enumerated()), id: \.offset) { _, candidate in
-                        AskAICourseCandidateCard(
-                            candidate: candidate,
-                            onUse: { onUseCandidate?(candidate) }
-                        )
-                    }
-                }
-                .padding(.horizontal, 14)
-                .padding(.vertical, 12)
-                .background(message.isUser ? Color.accentGreen : Color.neutral6)
-                .cornerRadius(radius: 16)
-
-                if !message.isUser {
-                    Spacer(minLength: 32)
-                }
+                if message.isUser { Spacer(minLength: 40) }
+                Text(message.text)
+                    .font(.body)
+                    .textSelection(.enabled)
+                    .foregroundStyle(message.isUser ? Color.white : Color.foregroundPrimary)
+                    .padding(14)
+                    .background(message.isUser ? Color.accentGreen : Color.neutral6,
+                                in: RoundedRectangle(cornerRadius: 18))
+                if !message.isUser { Spacer(minLength: 24) }
             }
-        }
-    }
-
-    private var typingIndicator: some View {
-        HStack {
-            VStack(alignment: .leading, spacing: 8) {
-                HStack(spacing: 10) {
-                    ProgressView()
-                        .tint(Color.accentGreen)
-
-                    Text("Looking for the best course match...")
-                        .fontStyle(kFontName, size: 14, weight: .medium)
-                        .foregroundStyle(Color.foregroundPrimary)
-                }
+            ForEach(Array(message.candidates.prefix(5).enumerated()), id: \.offset) { _, candidate in
+                AskAICourseCandidateCard(candidate: candidate, onUse: { onUseCandidate?(candidate) })
+                    .disabled(isSending)
             }
-            .padding(.horizontal, 14)
-            .padding(.vertical, 12)
-            .background(Color.neutral6)
-            .cornerRadius(radius: 16)
-
-            Spacer(minLength: 32)
+            if message.candidates.count > 5 {
+                Text("More matches are available. Send the city or state to narrow the list.")
+                    .font(.subheadline).foregroundStyle(.secondary)
+            }
         }
     }
 
     private var composer: some View {
-        VStack(alignment: .leading, spacing: 10) {
-            if isLocationAssistEnabled {
-                AskAILocationPill {
-                    isLocationAssistEnabled = false
-                }
-                .transition(.opacity.combined(with: .move(edge: .bottom)))
+        VStack(alignment: .leading, spacing: 8) {
+            Button {
+                isLocationAssistEnabled.toggle()
+            } label: {
+                Label(locationLabel, systemImage: isLocationAssistEnabled ? "location" : "location.slash")
+                    .font(.caption)
             }
-
-            HStack(alignment: .bottom, spacing: 12) {
-                composerMenu
-
-                HStack(alignment: .bottom, spacing: 12) {
-                    TextField(
-                        "Describe your course...",
-                        text: $prompt,
-                        axis: .vertical
-                    )
-                    .fontStyle(kFontName, size: 15, weight: .regular)
-                    .foregroundStyle(Color.foregroundPrimary)
+            .tint(.secondary)
+            HStack(alignment: .bottom, spacing: 8) {
+                TextField("Course name or a reply…", text: $prompt, axis: .vertical)
+                    .font(.body)
                     .focused($isPromptFocused)
                     .lineLimit(1...5)
-                    .padding(.horizontal, 16)
-                    .padding(.vertical, 14)
-                    .frame(maxWidth: .infinity, alignment: .leading)
-
-                    sendButton
-                        .padding(.trailing, 8)
-                        .padding(.bottom, 6)
-                }
-                .background(
-                    RoundedRectangle(cornerRadius: 18)
-                        .fill(Color.neutral6)
-                )
-                .overlay(
-                    RoundedRectangle(cornerRadius: 18)
-                        .stroke(
-                            isPromptFocused ? Color.accentGreen.opacity(colorScheme.translucent(0.35, 0.22)) : Color.clear,
-                            lineWidth: 1.5
-                        )
-                )
-                .shadow(
-                    color: isPromptFocused ? Color.black.opacity(colorScheme.isDark ? 0.12 : 0.06) : .clear,
-                    radius: 10,
-                    y: 2
-                )
-            }
-        }
-    }
-
-    private var composerMenu: some View {
-        Menu {
-            if isLocationAssistEnabled {
-                Button(role: .destructive) {
-                    isLocationAssistEnabled = false
-                } label: {
-                    Label("Stop sharing location", systemImage: "location.slash")
-                }
-            } else {
+                    .padding(12)
+                    .accessibilityIdentifier("courseChatInput")
                 Button {
-                    isLocationAssistEnabled = true
+                    if isSending { onStop?() } else { send(prompt) }
                 } label: {
-                    Label("Share location", systemImage: "location")
-                }
-            }
-
-            Section("Model") {
-                ForEach(AskAITextModel.allCases) { model in
-                    Button {
-                        onSelectModel?(model)
-                    } label: {
-                        HStack {
-                            Text(model.displayName)
-                            Spacer(minLength: 8)
-                            if model == selectedModel {
-                                Image(systemName: "checkmark")
-                            }
-                        }
-                    }
-                }
-            }
-        } label: {
-            ZStack {
-                Circle()
-                    .fill(Color.neutral6)
-                    .frame(width: 44, height: 44)
-
-                Image(systemName: "plus")
-                    .font(.system(size: 20, weight: .semibold))
-                    .foregroundStyle(Color.foregroundPrimary)
-            }
-        }
-        .buttonStyle(.plain)
-        .padding(.bottom, 4)
-    }
-
-    private var sendButton: some View {
-        Button {
-            sendCurrentPrompt()
-        } label: {
-            ZStack {
-                Circle()
-                    .fill(canSend ? Color.foregroundPrimary : Color.neutral5)
-                    .frame(width: 40, height: 40)
-
-                if isSending {
-                    ProgressView()
-                        .tint(.white)
-                } else {
-                    Image(systemName: "arrow.up")
-                        .font(.system(size: 16, weight: .semibold))
+                    Image(systemName: isSending ? "stop.fill" : "arrow.up")
+                        .font(.body.weight(.semibold))
                         .foregroundStyle(.white)
+                        .frame(width: 44, height: 44)
+                        .background(Color.accentGreen, in: Circle())
                 }
+                .disabled(!isSending && prompt.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
+                .opacity(isSending || !prompt.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty ? 1 : 0.4)
+                .accessibilityLabel(isSending ? "Stop search" : "Send message")
+                .padding(4)
             }
+            .background(Color.neutral6, in: RoundedRectangle(cornerRadius: 24))
         }
-        .buttonStyle(.plain)
-        .disabled(!canSend)
+        .padding(.horizontal, 16).padding(.vertical, 8)
+        .background(Color.backgroundPrimary)
     }
 
-    private var canSend: Bool {
-        prompt.trimmingCharacters(in: .whitespacesAndNewlines).isPopulated && !isSending
+    private var locationLabel: String {
+        guard isLocationAssistEnabled else { return "Use my location" }
+        return approximateLocation == nil ? "Location unavailable · you can type a city" : "Using approximate location"
     }
 
-    private func sendCurrentPrompt() {
-        let trimmed = prompt.trimmingCharacters(in: .whitespacesAndNewlines)
-        guard trimmed.isPopulated else { return }
+    private func send(_ text: String) {
+        let trimmed = text.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !isSending, !trimmed.isEmpty else { return }
         prompt = ""
-        Task {
-            await onSend?(trimmed)
-        }
+        Task { await onSend?(trimmed) }
     }
 
-    private func scrollToBottom(with proxy: ScrollViewProxy, animated: Bool = true) {
-        let action = {
-            proxy.scrollTo("ASK_AI_BOTTOM", anchor: .bottom)
-        }
-
-        if animated {
-            withAnimation(.easeOut(duration: 0.2)) {
-                action()
-            }
-        } else {
-            action()
-        }
-    }
-}
-
-private struct AskAIEmptyState: View {
-    let examplePrompts: [String]
-
-    var body: some View {
-        VStack(alignment: .leading, spacing: 4) {
-            Text("Try typing...")
-                .fontStyle(kFontName, size: 15, weight: .medium)
-                .foregroundStyle(Color.neutral2)
-
-            if !examplePrompts.isEmpty {
-                AskAIExamplePromptCarousel(prompts: examplePrompts)
-            }
-        }
-    }
-}
-
-private struct AskAIExamplePromptCarousel: View {
-    let prompts: [String]
-
-    @State private var promptIndex = 0
-    @State private var isVisible = true
-    @State private var rotationTask: Task<Void, Never>?
-
-    var body: some View {
-        Text(currentPrompt)
-            .fontStyle(kFontName, size: 14, weight: .regular)
-            .foregroundStyle(Color.neutral)
-            .fixedSize(horizontal: false, vertical: true)
-            .opacity(isVisible ? 1 : 0)
-            .animation(.easeInOut(duration: 0.3), value: isVisible)
-            .onAppear {
-                startRotation()
-            }
-            .onDisappear {
-                rotationTask?.cancel()
-                rotationTask = nil
-            }
-    }
-
-    private var currentPrompt: String {
-        guard !prompts.isEmpty else { return "" }
-        return prompts[promptIndex % prompts.count]
-    }
-
-    private func startRotation() {
-        rotationTask?.cancel()
-        guard prompts.count > 1 else { return }
-
-        rotationTask = Task {
-            while !Task.isCancelled {
-                try? await Task.sleep(nanoseconds: 4_000_000_000)
-                guard !Task.isCancelled else { return }
-
-                await MainActor.run {
-                    isVisible = false
-                }
-
-                try? await Task.sleep(nanoseconds: 300_000_000)
-                guard !Task.isCancelled else { return }
-
-                await MainActor.run {
-                    promptIndex = (promptIndex + 1) % prompts.count
-                    isVisible = true
-                }
-
-                try? await Task.sleep(nanoseconds: 300_000_000)
-            }
-        }
-    }
-}
-
-private struct AskAILocationPill: View {
-    var onRemove: Callback? = nil
-
-    var body: some View {
-        HStack(spacing: 8) {
-            Image(systemName: "location.fill")
-                .font(.system(size: 12, weight: .semibold))
-                .foregroundStyle(Color.accentGreen)
-
-            Text("Sharing approximate location")
-                .fontStyle(kFontName, size: 13, weight: .medium)
-                .foregroundStyle(Color.accentGreen)
-
-            Button {
-                onRemove?()
-            } label: {
-                Image(systemName: "xmark")
-                    .font(.system(size: 11, weight: .bold))
-                    .foregroundStyle(Color.accentGreen)
-                    .frame(width: 18, height: 18)
-                    .background(Color.accentGreen.opacity(0.12))
-                    .clipShape(Circle())
-            }
-            .buttonStyle(.plain)
-        }
-        .padding(.horizontal, 12)
-        .padding(.vertical, 8)
-        .background(Color.accentGreen.opacity(0.12))
-        .overlay(
-            Capsule()
-                .stroke(Color.accentGreen.opacity(0.18), lineWidth: 1)
-        )
-        .clipShape(Capsule())
+    private func scrollToBottom(_ proxy: ScrollViewProxy) {
+        withAnimation(.easeOut(duration: 0.2)) { proxy.scrollTo("ASK_AI_BOTTOM", anchor: .bottom) }
     }
 }
 
@@ -1598,54 +1387,42 @@ private struct AskAICourseCandidateCard: View {
     var body: some View {
         VStack(alignment: .leading, spacing: 10) {
             VStack(alignment: .leading, spacing: 4) {
-                HStack(spacing: 6) {
-                    ForEach(candidate.sources, id: \.self) { source in
-                        sourceBadge(source)
-                    }
-                }
-
                 Text(course.prettyCourseName.isPopulated ? course.prettyCourseName : course.prettyClubName)
-                    .fontStyle(kFontName, size: 15, weight: .semibold)
+                    .font(.headline)
                     .foregroundStyle(Color.foregroundPrimary)
 
                 if course.prettyClubName.isPopulated,
                    course.prettyClubName != course.prettyCourseName {
                     Text(course.prettyClubName)
-                        .fontStyle(kFontName, size: 13, weight: .medium)
+                        .font(.subheadline)
                         .foregroundStyle(Color.neutral)
                 }
 
-                if let location = course.location,
-                   let city = location.city,
-                   let state = location.state,
-                   city.isPopulated,
-                   state.isPopulated {
-                    Text("\(city), \(state)")
-                        .fontStyle(kFontName, size: 13, weight: .medium)
+                if let location = candidate.locationText ?? course.location.map({ [$0.city, $0.state].compactMap { $0 }.joined(separator: ", ") }),
+                   !location.isEmpty {
+                    Text(location)
+                        .font(.subheadline)
                         .foregroundStyle(Color.neutral)
                 }
             }
 
-            if let tee = preferredSummaryTee {
-                HStack(spacing: 8) {
-                    candidateMetric("\(tee.totalHoles) holes")
-                    candidateMetric("Par \(tee.par(for: course.defaultSegment))")
-                    candidateMetric("\(tee.yardage(for: course.defaultSegment)) yds")
-                }
+            if !candidate.needsScorecard, let tee = preferredSummaryTee {
+                Text("\(tee.totalHoles) holes · \(course.tees.count) tees")
+                    .font(.subheadline).foregroundStyle(.secondary)
             }
 
             if let website = course.venueDetails?.websiteURL, website.isPopulated {
                 Text(website)
-                    .fontStyle(kFontName, size: 12, weight: .medium)
+                    .font(.caption)
                     .foregroundStyle(Color.accentGreen)
                     .lineLimit(1)
             }
 
             PrimaryButton(
                 appearance: .fill,
-                title: "Use this course",
-                labelColor: .backgroundPrimary,
-                buttonColor: .foregroundPrimary,
+                title: candidate.requiresReview ? "Review scorecard" : "Use this course",
+                labelColor: .white,
+                buttonColor: .accentGreen,
                 fillWidth: true,
                 isDisabled: .false,
                 isLoading: .false,
@@ -1667,25 +1444,7 @@ private struct AskAICourseCandidateCard: View {
         return course.tees.first
     }
 
-    private func candidateMetric(_ value: String) -> some View {
-        Text(value)
-            .fontStyle(kFontName, size: 12, weight: .semibold)
-            .foregroundStyle(Color.foregroundPrimary)
-            .padding(.horizontal, 10)
-            .padding(.vertical, 8)
-            .background(Color.neutral6)
-            .cornerRadius(radius: 10)
-    }
 
-    private func sourceBadge(_ source: AskAICourseCandidateSource) -> some View {
-        Text(source.label)
-            .fontStyle(kFontName, size: 11, weight: .semibold)
-            .foregroundStyle(source == .internet ? Color.accentGreen : Color.foregroundPrimary)
-            .padding(.horizontal, 8)
-            .padding(.vertical, 5)
-            .background(source == .internet ? Color.accentGreen.opacity(0.12) : Color.neutral6)
-            .cornerRadius(radius: 8)
-    }
 }
 
 private struct SimpleRoundSetupSheet: View {
@@ -2081,7 +1840,7 @@ private enum AskAICourseSheetPreviewData {
         messages: [],
         isSending: false,
         isLocationAssistEnabled: .constant(true),
-        selectedModel: .defaultSelection,
+
         approximateLocation: AskAICourseSheetPreviewData.approximateLocation,
         examplePrompts: AskAICourseSheetPreviewData.prompts
     )
@@ -2092,7 +1851,7 @@ private enum AskAICourseSheetPreviewData {
         messages: AskAICourseSheetPreviewData.messages,
         isSending: false,
         isLocationAssistEnabled: .constant(false),
-        selectedModel: .defaultSelection,
+
         approximateLocation: AskAICourseSheetPreviewData.approximateLocation,
         examplePrompts: AskAICourseSheetPreviewData.prompts
     )
@@ -2103,7 +1862,7 @@ private enum AskAICourseSheetPreviewData {
         messages: AskAICourseSheetPreviewData.messages,
         isSending: false,
         isLocationAssistEnabled: .constant(true),
-        selectedModel: .defaultSelection,
+
         approximateLocation: AskAICourseSheetPreviewData.approximateLocation,
         examplePrompts: AskAICourseSheetPreviewData.prompts,
         initialPrompt: "I’m pretty sure this is a municipal course in Greenville.\nThe scorecard is blue and gold.\nCan you help me narrow it down?"

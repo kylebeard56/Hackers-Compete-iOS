@@ -327,7 +327,7 @@ struct SeriesRoundCreationService: Loggable {
         guard let selection, selection.courseID.isPopulated else { return nil }
 
         let course: Course?
-        if let apiID = Int(selection.courseID) {
+        if let apiID = GolfCourseID(selection.courseID) {
             do {
                 course = try await GolfCourseRepository.shared.course(by: apiID)
             } catch {

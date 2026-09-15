@@ -2710,7 +2710,7 @@ struct SeriesRoundCoursePickerSheet: View {
         guard let initialSelection, initialSelection.courseID.isPopulated else { return }
 
         let course: Course?
-        if let apiID = Int(initialSelection.courseID) {
+        if let apiID = GolfCourseID(initialSelection.courseID) {
             do {
                 course = try await GolfCourseRepository.shared.course(by: apiID)
             } catch {

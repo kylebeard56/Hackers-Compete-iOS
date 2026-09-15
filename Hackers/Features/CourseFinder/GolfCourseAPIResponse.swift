@@ -15,6 +15,66 @@ import Foundation
 import CoreLocation
 import SwiftUI
 
+/// Preserves the wire type of old numeric IDs while supporting the provider's new opaque IDs.
+enum GolfCourseID: Hashable, Codable, Sendable, LosslessStringConvertible,
+                   ExpressibleByIntegerLiteral, ExpressibleByStringLiteral {
+    case legacy(Int)
+    case current(String)
+
+    init(integerLiteral value: Int) { self = .legacy(value) }
+    init(stringLiteral value: String) { self = .current(value) }
+    init(_ value: Int) { self = .legacy(value) }
+
+    init?(_ description: String) {
+        let value = description.lowercased()
+        if value.count == 8, value.allSatisfy({ "0123456789abcdefghjkmnpqrstvwxyz".contains($0) }) {
+            self = .current(value)
+        } else if let numeric = Int(value), numeric > 0 {
+            self = .legacy(numeric)
+        } else {
+            return nil
+        }
+    }
+
+    var description: String {
+        switch self {
+        case .legacy(let id): String(id)
+        case .current(let id): id
+        }
+    }
+
+    var isLegacy: Bool {
+        if case .legacy = self { return true }
+        return false
+    }
+
+    var isValid: Bool { GolfCourseID(description) != nil }
+
+    var storageValue: Any {
+        switch self {
+        case .legacy(let id): id
+        case .current(let id): id
+        }
+    }
+
+    init(from decoder: Decoder) throws {
+        let container = try decoder.singleValueContainer()
+        if let numeric = try? container.decode(Int.self) {
+            self = .legacy(numeric)
+        } else {
+            self = .current(try container.decode(String.self))
+        }
+    }
+
+    func encode(to encoder: Encoder) throws {
+        var container = encoder.singleValueContainer()
+        switch self {
+        case .legacy(let id): try container.encode(id)
+        case .current(let id): try container.encode(id)
+        }
+    }
+}
+
 // MARK: - API Response (Decodable only)
 
 struct GolfCourseAPIResponse: Decodable {
@@ -24,14 +84,18 @@ struct GolfCourseAPIResponse: Decodable {
     init(from decoder: Decoder) throws {
         // The provider has returned both a top-level course and `{ "course": ... }` over time.
         // Support both shapes so cache misses can still be populated across response variants.
-        if let topLevelCourse = try? GolfCourseAPIModel(from: decoder) {
+        let c = try decoder.container(keyedBy: CodingKeys.self)
+        if c.contains(.id) {
+            let topLevelCourse = try GolfCourseAPIModel(from: decoder)
             self.courses = []
             self.course = topLevelCourse
             return
         }
 
-        let c = try decoder.container(keyedBy: CodingKeys.self)
-        self.courses = try c.decodeLossyArray(GolfCourseAPIModel.self, forKey: .courses)
+        guard c.contains(.courses) || c.contains(.course) else {
+            throw DecodingError.dataCorrupted(.init(codingPath: decoder.codingPath, debugDescription: "Missing course or courses in provider response"))
+        }
+        self.courses = try c.decodeIfPresent([GolfCourseAPIModel].self, forKey: .courses) ?? []
         // The /search endpoint only returns `courses`; `course` (singular) is only present
         // on the by-id endpoint. Do not suppress a malformed `course` value: surfacing its
         // decoding error makes provider schema changes diagnosable instead of looking empty.
@@ -39,20 +103,22 @@ struct GolfCourseAPIResponse: Decodable {
     }
     
     enum CodingKeys: String, CodingKey {
-        case courses, course
+        case id, courses, course
     }
 }
 
 // MARK: - Raw DTOs (mirror JSON only)
 
 struct GolfCourseAPIModel: Codable, Identifiable {
-    let id: Int
+    let id: GolfCourseID
     let clubName: String
     let courseName: String
     let location: GolfCourseAPILocation
     let websiteURL: String?
     let phoneNumber: String?
     var tees: GolfCourseAPITees
+    let isSummary: Bool
+    private var summaryTeeCounts: [String: Int]?
 
     enum CodingKeys: String, CodingKey {
         case id
@@ -69,7 +135,7 @@ struct GolfCourseAPIModel: Codable, Identifiable {
     }
 
     init(
-        id: Int,
+        id: GolfCourseID,
         clubName: String,
         courseName: String,
         location: GolfCourseAPILocation,
@@ -84,15 +150,23 @@ struct GolfCourseAPIModel: Codable, Identifiable {
         self.websiteURL = websiteURL
         self.phoneNumber = phoneNumber
         self.tees = tees
+        self.isSummary = false
     }
 
     init(from decoder: Decoder) throws {
         let c = try decoder.container(keyedBy: CodingKeys.self)
-        id = try c.decode(Int.self, forKey: .id)
+        id = try c.decode(GolfCourseID.self, forKey: .id)
         clubName = try c.decode(String.self, forKey: .clubName)
         courseName = try c.decode(String.self, forKey: .courseName)
         location = try c.decode(GolfCourseAPILocation.self, forKey: .location)
-        tees = try c.decode(GolfCourseAPITees.self, forKey: .tees)
+        if let counts = try? c.decode([String: Int].self, forKey: .tees), !counts.isEmpty {
+            tees = GolfCourseAPITees(female: nil, male: nil)
+            isSummary = true
+            summaryTeeCounts = counts
+        } else {
+            tees = try c.decode(GolfCourseAPITees.self, forKey: .tees)
+            isSummary = false
+        }
         websiteURL =
             try c.decodeIfPresent(String.self, forKey: .websiteURL)
             ?? c.decodeIfPresent(String.self, forKey: .website)
@@ -109,7 +183,11 @@ struct GolfCourseAPIModel: Codable, Identifiable {
         try c.encode(clubName, forKey: .clubName)
         try c.encode(courseName, forKey: .courseName)
         try c.encode(location, forKey: .location)
-        try c.encode(tees, forKey: .tees)
+        if isSummary {
+            try c.encode(summaryTeeCounts, forKey: .tees)
+        } else {
+            try c.encode(tees, forKey: .tees)
+        }
         try c.encodeIfPresent(websiteURL, forKey: .websiteURL)
         try c.encodeIfPresent(phoneNumber, forKey: .phoneNumber)
     }
@@ -238,8 +316,7 @@ extension GolfCourseAPIModel {
     /// they are derived from the saved holes and are not used for scoring.
     init?(cachedCourse course: Course) {
         guard course.hasCanonicalGolfCourseAPIIdentity,
-              let apiID = course.golfCourseApiID,
-              let location = course.location else {
+              let apiID = course.golfCourseApiID else {
             return nil
         }
 
@@ -248,12 +325,12 @@ extension GolfCourseAPIModel {
             clubName: course.clubName,
             courseName: course.courseName,
             location: GolfCourseAPILocation(
-                address: location.address,
-                city: location.city,
-                state: location.state,
-                country: location.country,
-                latitude: location.latitude,
-                longitude: location.longitude
+                address: course.location?.address,
+                city: course.location?.city,
+                state: course.location?.state,
+                country: course.location?.country,
+                latitude: course.location?.latitude ?? 0,
+                longitude: course.location?.longitude ?? 0
             ),
             websiteURL: course.venueDetails?.websiteURL,
             phoneNumber: course.venueDetails?.phoneNumber,

@@ -4,6 +4,9 @@
 //
 
 import Testing
+import Foundation
+import SwiftUI
+import UIKit
 @testable import Hackers
 
 @MainActor
@@ -166,7 +169,8 @@ struct CourseSelectionViewModelTests {
             enrichmentService: CourseScorecardEnrichmentService(
                 searchProvider: MockCourseSelectionSearchProvider(results: []),
                 venueLookupProvider: MockCourseSelectionVenueLookupProvider()
-            )
+            ),
+            searchProvider: MockCourseSelectionSearchProvider(results: [])
         )
         let viewModel = CourseSelectionViewModel(askAIService: askAIService)
 
@@ -174,11 +178,61 @@ struct CourseSelectionViewModelTests {
 
         #expect(viewModel.askAIMessages.count == 2)
         #expect(viewModel.askAIMessages.last?.candidates.isEmpty == true)
-        #expect(viewModel.askAIMessages.last?.text.contains("Can you send the city/state") == true)
+        #expect(viewModel.askAIMessages.last?.text.contains("Which city and state") == true)
         #expect(viewModel.showCourseEdit == false)
         #expect(viewModel.showConfirmation == false)
         #expect(viewModel.lastSelectionSource == nil)
     }
+    @Test("Reset cancels a turn and ignores a late search response")
+    func resetIgnoresLateResponse() async {
+        let search = SuspendedChatSearchProvider()
+        let model = CourseSelectionViewModel(askAIService: CourseTextLookupService(searchProvider: search))
+        model.isSetHomeCourseMode = true
+        let send = Task { await model.sendAskAIMessage("Verdae") }
+        await search.waitUntilStarted()
+        #expect(model.isSendingAskAIMessage)
+        await model.sendAskAIMessage("Duplicate")
+        #expect(search.calls == 1)
+        model.resetAskAIConversation()
+        search.finish()
+        await send.value
+        #expect(model.askAIMessages.isEmpty)
+        #expect(!model.isSendingAskAIMessage)
+        #expect(model.askAIError == nil)
+    }
+
+    @Test("Stopping preserves the conversation without a late assistant response")
+    func stopPreservesConversation() async {
+        let search = SuspendedChatSearchProvider()
+        let model = CourseSelectionViewModel(askAIService: CourseTextLookupService(searchProvider: search))
+        model.isSetHomeCourseMode = true
+        let send = Task { await model.sendAskAIMessage("Verdae") }
+        await search.waitUntilStarted()
+        model.cancelAskAIRequest()
+        search.finish()
+        await send.value
+        #expect(model.askAIMessages.count == 1)
+        #expect(model.askAIMessages.first?.text == "Verdae")
+        #expect(!model.isSendingAskAIMessage)
+        #expect(model.askAIError == nil)
+    }
+
+    @Test("Retry clears an inline error without duplicating the user message")
+    func retryDoesNotDuplicateUserMessage() async {
+        let search = RetryingChatSearchProvider()
+        let model = CourseSelectionViewModel(askAIService: CourseTextLookupService(searchProvider: search))
+        model.isSetHomeCourseMode = true
+        await model.sendAskAIMessage("Verdae", context: .init(isLocationAssistEnabled: true,
+            approximateLocation: .init(latitude: 34.85, longitude: -82.39)))
+        #expect(model.askAIError != nil)
+        #expect(model.askAIMessages.count == 1)
+        await model.retryAskAIMessage(context: .init(isLocationAssistEnabled: false))
+        #expect(search.calls == 2)
+        #expect(model.askAIMessages.filter(\.isUser).count == 1)
+        #expect(model.askAIMessages.count == 2)
+        #expect(model.askAIError == nil)
+    }
+
 }
 
 @MainActor
@@ -214,5 +268,88 @@ private final class MockCourseSelectionVenueLookupProvider: CourseScorecardVenue
         approximateLocation: ScorecardScanApproximateLocation?
     ) async -> CourseVenueDetails? {
         nil
+    }
+}
+
+@MainActor
+private final class SuspendedChatSearchProvider: CourseScorecardSearchProviding {
+    var calls = 0
+    private var request: CheckedContinuation<[GolfCourseAPIModel], Error>?
+    private var started: CheckedContinuation<Void, Never>?
+
+    func searchCourses(query: String) async throws -> [GolfCourseAPIModel] {
+        calls += 1
+        return try await withCheckedThrowingContinuation { continuation in
+            request = continuation
+            started?.resume()
+            started = nil
+        }
+    }
+
+    func waitUntilStarted() async {
+        if request != nil { return }
+        await withCheckedContinuation { started = $0 }
+    }
+
+    func finish() {
+        request?.resume(returning: [])
+        request = nil
+    }
+}
+
+@MainActor
+private final class RetryingChatSearchProvider: CourseScorecardSearchProviding {
+    var calls = 0
+    func searchCourses(query: String) async throws -> [GolfCourseAPIModel] {
+        calls += 1
+        if calls == 1 { throw URLError(.timedOut) }
+        return []
+    }
+}
+
+/// Opt-in visual diagnostic: render the actual chat view without requiring a signed-in account.
+@MainActor
+@Suite("Course chat previews", .serialized, .enabled(if: ProcessInfo.processInfo.environment["RENDER_COURSE_CHAT"] == "1"))
+struct CourseChatPreviewTests {
+    @Test
+    func renderStates() async throws {
+        let course = Course(clubName: "Preserve At Verdae, The", courseName: "Preserve At Verdae, The")
+        let candidate = AskAICourseCandidate(course: course, requiresReview: false, isCanonicalMatch: true,
+            sources: [.golfCourseAPI], locationText: "Greenville, SC", needsScorecard: true)
+        let conversation: [AskAICourseChatMessage] = [
+            .init(role: .user, text: "Verdae"),
+            .init(role: .assistant, text: "Does this look like your course? Choose it to continue to the scorecard.", candidates: [candidate])
+        ]
+        for state in ["empty-light", "candidate-light", "candidate-dark", "error-large", "loading"] {
+            let view = AskAICourseSheet(
+                messages: state == "empty-light" ? [] : conversation,
+                isSending: state == "loading", isLocationAssistEnabled: .constant(true),
+                approximateLocation: nil, examplePrompts: ["Verdae", "Oxmoor Valley", "Twin Lakes"],
+                errorMessage: state == "error-large" ? "Couldn’t connect. Check your connection and try again." : nil
+            )
+            .environment(\.colorScheme, state == "candidate-dark" ? .dark : .light)
+            .environment(\.dynamicTypeSize, state == "error-large" ? .accessibility2 : .large)
+            let host = UIHostingController(rootView: view)
+            let scene = try #require(UIApplication.shared.connectedScenes.compactMap { $0 as? UIWindowScene }.first)
+            let previousKeyWindow = scene.windows.first(where: \.isKeyWindow)
+            let window = UIWindow(windowScene: scene)
+            window.frame = CGRect(x: 0, y: 0, width: 402, height: 874)
+            window.overrideUserInterfaceStyle = state == "candidate-dark" ? .dark : .light
+            window.windowLevel = .alert + 1
+            window.rootViewController = host
+            window.makeKeyAndVisible()
+            host.view.frame = window.bounds
+            host.view.setNeedsLayout()
+            host.view.layoutIfNeeded()
+            try await Task.sleep(for: .milliseconds(500))
+            let image = UIGraphicsImageRenderer(bounds: window.bounds).image { _ in
+                window.drawHierarchy(in: window.bounds, afterScreenUpdates: true)
+            }
+            let path = FileManager.default.temporaryDirectory.appendingPathComponent("course-chat-\(state).png")
+            try image.pngData()?.write(to: path)
+            print("CHAT_PREVIEW \(path.path)")
+            window.isHidden = true
+            previousKeyWindow?.makeKeyAndVisible()
+        }
     }
 }

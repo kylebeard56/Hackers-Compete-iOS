@@ -7590,7 +7590,7 @@ final class SeriesViewModel: ObservableObject, Loggable {
             }
         }
 
-        if let apiID = Int(courseID) {
+        if let apiID = GolfCourseID(courseID) {
             do {
                 let built = try await GolfCourseRepository.shared.course(by: apiID)
                 seriesCourseTeesByCourseID[courseID] = built.tees

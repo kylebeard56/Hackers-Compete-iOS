@@ -2,12 +2,12 @@
 //  CourseTextLookupService.swift
 //  Hackers
 //
-//  Natural-language course lookup using the app's text LLM provider with a server-side
-//  web_search tool. The provider is asked to identify the exact course AND return its
-//  current scorecard (par/yardage/HCP per hole) by browsing the web for the official card.
+//  Course-name lookup with location clarification and web-assisted fallback.
+//  Database summaries stay lightweight until the user chooses a scorecard.
 //
 
 import Foundation
+import CoreLocation
 
 enum CourseTextLookupError: Error {
     case apiKeyMissing
@@ -39,17 +39,23 @@ struct AskAICourseCandidate {
     let requiresReview: Bool
     let isCanonicalMatch: Bool
     let sources: [AskAICourseCandidateSource]
+    let locationText: String?
+    let needsScorecard: Bool
 
     init(
         course: Course,
         requiresReview: Bool,
         isCanonicalMatch: Bool,
-        sources: [AskAICourseCandidateSource]
+        sources: [AskAICourseCandidateSource],
+        locationText: String? = nil,
+        needsScorecard: Bool = false
     ) {
         self.course = course
         self.requiresReview = requiresReview
         self.isCanonicalMatch = isCanonicalMatch
         self.sources = sources
+        self.locationText = locationText
+        self.needsScorecard = needsScorecard
     }
 }
 
@@ -57,14 +63,7 @@ enum AskAICourseCandidateSource: String, CaseIterable, Hashable {
     case internet
     case golfCourseAPI = "golf_course_api"
 
-    var label: String {
-        switch self {
-        case .internet:
-            return "Internet"
-        case .golfCourseAPI:
-            return "Golf Course API"
-        }
-    }
+
 }
 
 struct AskAICourseChatMessage: Identifiable {
@@ -77,17 +76,20 @@ struct AskAICourseChatMessage: Identifiable {
     let role: Role
     let text: String
     let candidates: [AskAICourseCandidate]
+    let lookupQuery: String?
 
     init(
         id: String = HackersID.string(),
         role: Role,
         text: String,
         candidate: AskAICourseCandidate? = nil,
-        candidates: [AskAICourseCandidate] = []
+        candidates: [AskAICourseCandidate] = [],
+        lookupQuery: String? = nil
     ) {
         self.id = id
         self.role = role
         self.text = text
+        self.lookupQuery = lookupQuery
         if let candidate {
             self.candidates = [candidate]
         } else {
@@ -112,12 +114,13 @@ struct AskAICourseLookupResult {
     let assistantMessage: String
     let candidates: [AskAICourseCandidate]
     let source: AskAICourseLookupSource
+    var lookupQuery: String? = nil
 }
 
 private enum CourseTextLookupPrompt {
     static func systemPrompt(context: AskAICourseLookupContext) -> String {
         var prompt = """
-        Identify the exact golf course the user is about to play. Ask AI is web-first and deterministic.
+        Identify the exact golf course the user is about to play. A quick course database search has already been attempted. Use the conversation, including any city or state clarification, to resolve the remaining ambiguity.
 
         Tools:
         - web_search (max 2 uses) — resolve the exact course identity and look for public scorecard data.
@@ -186,22 +189,30 @@ final class CourseTextLookupService: Loggable {
 
     private let injectedProvider: LLMProviderProtocol?
     private let enrichmentService: CourseScorecardEnrichmentService
+    private let searchProvider: CourseScorecardSearchProviding
+    private let localityLookup: (ScorecardScanApproximateLocation) async -> String?
 
     init(
         provider: LLMProviderProtocol? = nil,
-        enrichmentService: CourseScorecardEnrichmentService? = nil
+        enrichmentService: CourseScorecardEnrichmentService? = nil,
+        searchProvider: CourseScorecardSearchProviding? = nil,
+        localityLookup: ((ScorecardScanApproximateLocation) async -> String?)? = nil
     ) {
         self.injectedProvider = provider
         self.enrichmentService = enrichmentService ?? .shared
+        self.searchProvider = searchProvider ?? CourseChatSearchProvider()
+        self.localityLookup = localityLookup ?? Self.locality
     }
 
     func resolveCourse(
         from transcript: [AskAICourseChatMessage],
         context: AskAICourseLookupContext = .init()
     ) async throws -> AskAICourseLookupResult {
-        let provider = injectedProvider ?? lookupProvider(for: context.model)
-
-        let messages = buildMessages(from: transcript, context: context)
+        try Task.checkCancellation()
+        if let result = try await quickLookup(from: transcript, context: context) {
+            return result
+        }
+        try Task.checkCancellation()
         let scanContext = ScorecardScanContext(
             isLocationAssistEnabled: context.isLocationAssistEnabled,
             approximateLocation: context.approximateLocation
@@ -209,24 +220,33 @@ final class CourseTextLookupService: Loggable {
 
         let lookup: AskAICourseLookupDTO
         do {
-            lookup = try await callProvider(
-                provider,
-                messages: messages,
-                model: context.model.config.model,
-                scanContext: scanContext
-            )
-        } catch OpenAIProviderError.apiKeyMissing, AnthropicProviderError.apiKeyMissing {
+            if let provider = injectedProvider {
+                lookup = try await callProvider(
+                    provider, messages: buildMessages(from: transcript, context: context),
+                    model: context.model.config.model, scanContext: scanContext
+                )
+            } else {
+                var gatewayContext = scanContext
+                gatewayContext.notes = transcript.last(where: { !$0.isUser })?.lookupQuery
+                    .map { "Course name being clarified: \($0)" }
+                lookup = try await CourseAIGateway().lookupCourse(
+                    messages: transcript.suffix(12).map { LLMMessage(role: $0.role.rawValue, content: [.text($0.text)]) },
+                    model: context.model.config.model, context: gatewayContext
+                )
+            }
+        } catch CourseAIGatewayError.unavailable {
             throw CourseTextLookupError.apiKeyMissing
-        } catch OpenAIProviderError.requestTooLarge, AnthropicProviderError.requestTooLarge {
+        } catch CourseAIGatewayError.requestTooLarge {
             throw CourseTextLookupError.requestTooLarge
-        } catch OpenAIProviderError.rateLimitExceeded, AnthropicProviderError.rateLimitExceeded {
+        } catch CourseAIGatewayError.rateLimitExceeded {
             throw CourseTextLookupError.rateLimitExceeded
-        } catch OpenAIProviderError.overloaded, AnthropicProviderError.overloaded {
+        } catch CourseAIGatewayError.invalidResponse {
             throw CourseTextLookupError.overloaded
         } catch {
             throw error
         }
 
+        try Task.checkCancellation()
         let webCourse = draftCourse(from: lookup)
         let webCandidate = confirmedWebCandidate(from: lookup, course: webCourse)
         let apiCandidate: AskAICourseCandidate?
@@ -250,6 +270,7 @@ final class CourseTextLookupService: Loggable {
             apiCandidate = nil
         }
 
+        try Task.checkCancellation()
         let candidates = mergedCandidates(webCandidate: webCandidate, apiCandidate: apiCandidate)
         if candidates.isPopulated {
             return AskAICourseLookupResult(
@@ -262,8 +283,130 @@ final class CourseTextLookupService: Loggable {
         return AskAICourseLookupResult(
             assistantMessage: followUpMessage(for: lookup),
             candidates: [],
-            source: .noMatch
+            source: .noMatch,
+            lookupQuery: orderedFallbackQueries(from: lookup).first
+                ?? transcript.last(where: { !$0.isUser })?.lookupQuery
+                ?? transcript.last(where: \.isUser)?.text
         )
+    }
+
+    /// The database returns light summaries. Fetch the chosen scorecard at handoff.
+    private func quickLookup(
+        from transcript: [AskAICourseChatMessage],
+        context: AskAICourseLookupContext
+    ) async throws -> AskAICourseLookupResult? {
+        guard let input = transcript.last(where: \.isUser)?.text
+            .trimmingCharacters(in: .whitespacesAndNewlines), !input.isEmpty else { return nil }
+        let previous = transcript.last(where: { !$0.isUser })
+        let name = input.replacingOccurrences(of: "(?i)^(?:i[’']?m (?:playing|at)|find|search for)\\s+", with: "", options: .regularExpression)
+        let parts = name.components(separatedBy: " in ")
+        let explicitLocation = parts.count > 1 ? parts.dropFirst().joined(separator: " in ") : nil
+        let query = previous?.lookupQuery ?? parts[0]
+        let isClarification = previous?.lookupQuery != nil
+        var candidates: [AskAICourseCandidate]
+        if isClarification, let previous, !previous.candidates.isEmpty {
+            candidates = previous.candidates
+        } else {
+            let models = try await searchProvider.searchCourses(query: query)
+            try Task.checkCancellation()
+            var seen = Set<GolfCourseID>()
+            candidates = models.filter { seen.insert($0.id).inserted }.map { model in
+                AskAICourseCandidate(
+                    course: Course(canonicalGolfCourseAPI: model),
+                    requiresReview: false,
+                    isCanonicalMatch: true,
+                    sources: [.golfCourseAPI],
+                    locationText: [model.location.city, model.location.state, model.location.country]
+                        .compactMap { $0 }.filter { !$0.isEmpty }.joined(separator: ", "),
+                    needsScorecard: model.isSummary
+                )
+            }
+        }
+
+        if isClarification {
+            // An explicit answer takes precedence over the device's location.
+            candidates = candidates.filter { Self.matches(input, candidate: $0) }
+        } else if let explicitLocation {
+            candidates = candidates.filter { Self.matches(explicitLocation, candidate: $0) }
+        } else if candidates.count > 1, context.isLocationAssistEnabled,
+                  let location = context.approximateLocation {
+            let nearby = candidates.filter { candidate in
+                guard let courseLocation = candidate.course.location else { return false }
+                return CLLocation(latitude: courseLocation.latitude, longitude: courseLocation.longitude)
+                    .distance(from: location.clLocation) < 80_000
+            }
+            if !nearby.isEmpty {
+                candidates = nearby
+            } else if let locality = await localityLookup(location) {
+                try Task.checkCancellation()
+                let local = candidates.filter { Self.matches(locality, candidate: $0) }
+                if !local.isEmpty { candidates = local }
+            }
+        }
+        try Task.checkCancellation()
+        if !candidates.isEmpty {
+            let needsClarification = candidates.count > 1
+            return AskAICourseLookupResult(
+                assistantMessage: needsClarification
+                    ? "I found a few matches. Which city or state is the course in? You can also choose a course below."
+                    : "Does this look like your course? Choose it to continue to the scorecard.",
+                candidates: candidates,
+                source: needsClarification ? .multiple : .apiFallback,
+                lookupQuery: needsClarification ? query : nil
+            )
+        }
+        if !isClarification, explicitLocation == nil, !input.contains("://"), !input.contains(".com"),
+           !(context.isLocationAssistEnabled && context.approximateLocation != nil) {
+            return AskAICourseLookupResult(
+                assistantMessage: "I couldn’t find an exact match yet. Which city and state is \(query) in?",
+                candidates: [], source: .noMatch, lookupQuery: query
+            )
+        }
+        // A location answer that the database cannot resolve gets one web-assisted turn.
+        return nil
+    }
+
+    private static func matches(_ detail: String, candidate: AskAICourseCandidate) -> Bool {
+        let answer = detail.replacingOccurrences(of: "(?i)^(?:it[’']?s )?(?:in )?", with: "", options: .regularExpression)
+        let words = locationWords(answer)
+        let description = locationWords("\(candidate.course.clubName) \(candidate.course.courseName) \(candidate.locationText ?? "")")
+        return !words.isEmpty && words.allSatisfy { description.contains($0) }
+    }
+
+    // Course results commonly use postal abbreviations while people type state names.
+    private static func locationWords(_ value: String) -> [String] {
+        var text = value.folding(options: [.diacriticInsensitive, .caseInsensitive], locale: .current)
+        let states = [
+            "alabama": "al", "alaska": "ak", "arizona": "az", "arkansas": "ar", "california": "ca",
+            "colorado": "co", "connecticut": "ct", "delaware": "de", "florida": "fl", "georgia": "ga",
+            "hawaii": "hi", "idaho": "id", "illinois": "il", "indiana": "in", "iowa": "ia", "kansas": "ks",
+            "kentucky": "ky", "louisiana": "la", "maine": "me", "maryland": "md", "massachusetts": "ma",
+            "michigan": "mi", "minnesota": "mn", "mississippi": "ms", "missouri": "mo", "montana": "mt",
+            "nebraska": "ne", "nevada": "nv", "new hampshire": "nh", "new jersey": "nj", "new mexico": "nm",
+            "new york": "ny", "north carolina": "nc", "north dakota": "nd", "ohio": "oh", "oklahoma": "ok",
+            "oregon": "or", "pennsylvania": "pa", "rhode island": "ri", "south carolina": "sc",
+            "south dakota": "sd", "tennessee": "tn", "texas": "tx", "utah": "ut", "vermont": "vt",
+            "virginia": "va", "washington": "wa", "west virginia": "wv", "wisconsin": "wi", "wyoming": "wy",
+            "district of columbia": "dc", "united states": "us"
+        ]
+        // Longer names first so West Virginia is not reduced to West VA.
+        for (name, abbreviation) in states.sorted(by: { $0.key.count > $1.key.count }) {
+            text = text.replacingOccurrences(of: "\\b" + name + "\\b", with: abbreviation, options: .regularExpression)
+        }
+        return text.components(separatedBy: CharacterSet.alphanumerics.inverted).filter { !$0.isEmpty }
+    }
+
+    private static func locality(_ location: ScorecardScanApproximateLocation) async -> String? {
+        let geocoder = CLGeocoder()
+        // Location assistance must not hold up the conversation indefinitely.
+        let timeout = Task { @MainActor in
+            try await Task.sleep(for: .seconds(3))
+            geocoder.cancelGeocode()
+        }
+        defer { timeout.cancel() }
+        let placemark = try? await geocoder.reverseGeocodeLocation(location.clLocation).first
+        let parts = [placemark?.locality, placemark?.administrativeArea].compactMap { $0 }
+        return parts.isEmpty ? nil : parts.joined(separator: " ")
     }
 
     private func confirmedWebCandidate(
@@ -273,7 +416,7 @@ final class CourseTextLookupService: Loggable {
         guard lookup.confidence == .high, lookup.hasRealScorecard else { return nil }
         return AskAICourseCandidate(
             course: course,
-            requiresReview: false,
+            requiresReview: true,
             isCanonicalMatch: false,
             sources: [.internet]
         )
@@ -411,15 +554,6 @@ final class CourseTextLookupService: Loggable {
         return draft
     }
 
-    private func lookupProvider(for model: AskAITextModel) -> LLMProviderProtocol {
-        switch model.config.provider {
-        case .openAI:
-            return OpenAIProvider()
-        case .anthropic:
-            return AnthropicProvider()
-        }
-    }
-
     private func normalizedWebsiteURL(_ raw: String?) -> String? {
         guard let raw = raw?.trimmingCharacters(in: .whitespacesAndNewlines), raw.isPopulated else {
             return nil
@@ -467,21 +601,6 @@ final class CourseTextLookupService: Loggable {
         model: String,
         scanContext: ScorecardScanContext
     ) async throws -> AskAICourseLookupDTO {
-        if let anthropic = provider as? AnthropicProvider {
-            return try await anthropic.extractCourseFromConversation(
-                messages: messages,
-                model: model,
-                scanContext: scanContext
-            )
-        }
-        if let openai = provider as? OpenAIProvider {
-            return try await openai.extractCourseFromConversation(
-                messages: messages,
-                model: model,
-                scanContext: scanContext
-            )
-        }
-
         do {
             let content = try await provider.complete(
                 messages: messages,
@@ -509,17 +628,21 @@ final class CourseTextLookupService: Loggable {
             )
         ]
 
-        messages += transcript.map { message in
+        messages += transcript.suffix(12).map { message in
             LLMMessage(
                 role: message.role.rawValue,
                 content: [.text(message.text)]
             )
         }
 
+        var instruction = CourseTextLookupPrompt.finalInstruction(context: context)
+        if let query = transcript.last(where: { !$0.isUser })?.lookupQuery {
+            instruction += "\nCourse name being clarified: \(query)"
+        }
         messages.append(
             LLMMessage(
                 role: "user",
-                content: [.text(CourseTextLookupPrompt.finalInstruction(context: context))]
+                content: [.text(instruction)]
             )
         )
 
@@ -529,8 +652,7 @@ final class CourseTextLookupService: Loggable {
     private func candidateMessage(for candidates: [AskAICourseCandidate]) -> String {
         if candidates.count == 1, let candidate = candidates.first {
             let name = displayName(for: candidate.course)
-            let sourceText = candidate.sources.map(\.label).joined(separator: " + ")
-            var parts = ["I found a confirmed \(sourceText) match for \(name)."]
+            var parts = ["I found \(name)."]
 
             if let summary = courseSummary(for: candidate.course) {
                 parts.append(summary)
@@ -539,7 +661,7 @@ final class CourseTextLookupService: Loggable {
             return parts.joined(separator: " ")
         }
 
-        return "I found \(candidates.count) possible confirmed course matches. Pick the one that looks right, or send another detail and I’ll narrow it down."
+        return "I found \(candidates.count) possible course matches. Pick the one that looks right, or send another detail and I’ll narrow it down."
     }
 
     private func followUpMessage(for lookup: AskAICourseLookupDTO) -> String {
@@ -549,7 +671,7 @@ final class CourseTextLookupService: Loggable {
             .joined(separator: " ")
 
         if name.isPopulated {
-            return "I found hints for \(name), but neither the public web result nor Golf Course API confirmed a usable scorecard. Can you send the city/state, the exact course routing, or a more specific scorecard URL?"
+            return "I found hints for \(name), but couldn’t confirm a usable scorecard. Which city and state is it in? If you already shared that, send the course website or scorecard link."
         }
 
         return "I need a bit more detail to pin it down. Try the course name, club name, city/state, resort or trail, or a more specific scorecard URL."
@@ -589,5 +711,12 @@ final class CourseTextLookupService: Loggable {
             return other
         }
         return course.tees.first
+    }
+}
+
+@MainActor
+private final class CourseChatSearchProvider: CourseScorecardSearchProviding {
+    func searchCourses(query: String) async throws -> [GolfCourseAPIModel] {
+        try await GolfCourseRepository.shared.searchCourseModels(with: query, includeScorecards: false)
     }
 }

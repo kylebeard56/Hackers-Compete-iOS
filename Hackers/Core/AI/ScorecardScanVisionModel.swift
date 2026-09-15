@@ -2,7 +2,7 @@
 //  ScorecardScanVisionModel.swift
 //  Hackers
 //
-//  User-selectable scorecard OCR tiers (Hackers-branded names). API ids must match provider docs.
+//  User-selectable scorecard OCR tiers (Hackers-branded names). Provider models are configured on the server.
 //
 
 import Foundation
@@ -10,7 +10,7 @@ import Foundation
 /// Tiers offered in the Scan notes sheet. Raw value is persisted via `AppStorage`.
 /// `CaseIterable` order is the menu order: Juniper (default), Azalea, Magnolia.
 enum ScorecardScanVisionModel: String, CaseIterable, Identifiable {
-    /// Fast, easy reads — OpenAI `gpt-4.1-mini`.
+    /// Fast, easy reads — Luna (server configured).
     case juniper = "juniper"
     /// Complex scorecards & small type — OpenAI `gpt-4.1`.
     case azalea = "azalea"
