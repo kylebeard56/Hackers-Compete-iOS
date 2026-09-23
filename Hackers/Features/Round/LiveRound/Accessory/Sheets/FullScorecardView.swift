@@ -971,10 +971,14 @@ private extension FullScorecardView {
                     .foregroundStyle(textColor)
             }
             
+            let visibleDotCount = ScorecardStrokeDotPolicy.visibleCount(
+                strokesReceived: strokesReceived,
+                basis: viewModel.scoreBasis
+            )
             if viewModel.scoreBasis == .gross {
-                if strokesReceived > 0, isScored {
+                if visibleDotCount > 0 {
                     HStack(spacing: 3) {
-                        ForEach(0..<strokesReceived, id: \.self) { _ in
+                        ForEach(0..<visibleDotCount, id: \.self) { _ in
                             Circle()
                                 .fill((palette.foregroundColor).opacity(0.7))
                                 .frame(width: 3, height: 3)
@@ -2067,7 +2071,7 @@ struct PlayerInsightsView: View {
     let participant: RoundParticipant
 
     @State private var selectedBasis: ScoreBasis
-    @State private var projection: PlayerFinishProjection?
+    @State private var loadedProjection: PlayerFinishProjection?
     @State private var isLoadingProjection = false
 
     init(viewModel: LiveRoundViewModel, participant: RoundParticipant) {
@@ -2079,6 +2083,10 @@ struct PlayerInsightsView: View {
     private var palette: DesignPalette { .init(theme: .primary, scheme: colorScheme) }
     private var basis: ScoreBasis { selectedBasis }
     private var basisDisplayName: String { basis == .net ? "Net" : "Gross" }
+    private var projection: PlayerFinishProjection? {
+        guard loadedProjection?.scoreBasis == basis else { return nil }
+        return loadedProjection
+    }
     private var canRevealInsights: Bool { viewModel.canRevealInsights(for: participant) }
     private var projectionUnavailableReason: String? {
         viewModel.playerProjectionUnavailableReason(for: participant)
@@ -2099,7 +2107,7 @@ struct PlayerInsightsView: View {
         viewModel.handicapStrokeUsage(for: participant)
     }
     private var outcomeCounts: [GrossScoreOutcomeCount] {
-        viewModel.grossScoreOutcomeCounts(for: participant)
+        viewModel.scoreOutcomeCounts(for: participant, basis: basis)
     }
     private var projectionTaskID: String {
         viewModel.playerProjectionRevision(for: participant, scoreBasis: basis)
@@ -2118,7 +2126,7 @@ struct PlayerInsightsView: View {
                                 Text("Net").tag(ScoreBasis.net)
                             }
                             .pickerStyle(.segmented)
-                            .accessibilityHint("Changes the player summary and cumulative score chart")
+                            .accessibilityHint("Changes the player summary, projection, and scoring mix")
                         }
 
                         currentRoundCard
@@ -2160,14 +2168,20 @@ struct PlayerInsightsView: View {
             }
         }
         .task(id: projectionTaskID) {
-            projection = nil
+            let requestedBasis = basis
+            loadedProjection = nil
             isLoadingProjection = false
             guard canRevealInsights,
                   holesCompleted >= 3,
                   !isPlayerRoundComplete,
                   projectionUnavailableReason == nil else { return }
             isLoadingProjection = true
-            projection = await viewModel.playerProjection(for: participant, scoreBasis: basis)
+            let result = await viewModel.playerProjection(
+                for: participant,
+                scoreBasis: requestedBasis
+            )
+            guard !Task.isCancelled, selectedBasis == requestedBasis else { return }
+            loadedProjection = result
             isLoadingProjection = false
         }
     }
@@ -2469,7 +2483,7 @@ struct PlayerInsightsView: View {
     private var scoringMixCard: some View {
         VStack(alignment: .leading, spacing: 12) {
             VStack(alignment: .leading, spacing: 2) {
-                Text("Gross scoring mix")
+                Text("\(basisDisplayName) scoring mix")
                     .fontStyle(kFontName, size: 17, weight: .semibold)
                     .foregroundStyle(palette.foregroundColor)
                 Text("Hole outcomes · clockwise from best to worst")
@@ -2589,7 +2603,7 @@ struct PlayerInsightsView: View {
 
     private var scoringMixAccessibilityLabel: String {
         let values = outcomeCounts.map { "\($0.bucket.label), \($0.count)" }
-        return "Gross scoring mix, arranged clockwise from best to worst outcome. \(values.joined(separator: ", "))."
+        return "\(basisDisplayName) scoring mix, arranged clockwise from best to worst outcome. \(values.joined(separator: ", "))."
     }
 
     private func strokeCountLabel(_ value: Int) -> String {

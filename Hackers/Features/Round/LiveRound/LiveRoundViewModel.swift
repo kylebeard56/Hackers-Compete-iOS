@@ -2075,14 +2075,24 @@ final class LiveRoundViewModel: ObservableObject, Loggable {
     }
 
     func grossScoreOutcomeCounts(for participant: RoundParticipant) -> [GrossScoreOutcomeCount] {
+        scoreOutcomeCounts(for: participant, basis: .gross)
+    }
+
+    func scoreOutcomeCounts(
+        for participant: RoundParticipant,
+        basis: ScoreBasis
+    ) -> [GrossScoreOutcomeCount] {
         var counts = Dictionary(
             uniqueKeysWithValues: GrossScoreOutcomeBucket.allCases.map { ($0, 0) }
         )
         for holeNumber in courseOrderHoleNumbers {
-            guard let relative = grossRelativeToPar(
-                for: participant.id,
-                holeNumber: holeNumber
-            ) else { continue }
+            let relative = switch basis {
+            case .gross:
+                grossRelativeToPar(for: participant.id, holeNumber: holeNumber)
+            case .net:
+                netRelativeToParOnHole(participant: participant, holeNumber: holeNumber)
+            }
+            guard let relative else { continue }
             counts[GrossScoreOutcomeBucket.resolve(relativeToPar: relative), default: 0] += 1
         }
         return GrossScoreOutcomeBucket.allCases.map {

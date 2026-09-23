@@ -7,6 +7,12 @@
 
 import SwiftUI
 
+enum ScorecardStrokeDotPolicy {
+    static func visibleCount(strokesReceived: Int, basis: ScoreBasis) -> Int {
+        basis == .gross ? max(0, strokesReceived) : 0
+    }
+}
+
 struct ScorecardHoleCell: View {
     let palette: DesignPalette
     let holeNumber: Int
@@ -57,9 +63,13 @@ struct ScorecardHoleCell: View {
     
     @ViewBuilder
     private var popDots: some View {
-        if basis == .gross && strokesReceived > 0 {
+        let visibleDotCount = ScorecardStrokeDotPolicy.visibleCount(
+            strokesReceived: strokesReceived,
+            basis: basis
+        )
+        if visibleDotCount > 0 {
             HStack(spacing: 2) {
-                ForEach(0..<strokesReceived, id: \.self) { _ in
+                ForEach(0..<visibleDotCount, id: \.self) { _ in
                     Circle()
                         .fill(palette.foregroundColor.opacity(0.7))
                         .frame(width: 4, height: 4)

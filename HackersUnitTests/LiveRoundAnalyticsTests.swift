@@ -585,6 +585,8 @@ final class LiveRoundProjectionIntegrationTests: XCTestCase {
         XCTAssertEqual(gross.grossHoleScenarios, net.grossHoleScenarios)
         XCTAssertTrue(gross.finishScenarios.isEmpty)
         XCTAssertTrue(net.finishScenarios.isEmpty)
+        XCTAssertEqual(gross.projection.scoreBasis, .gross)
+        XCTAssertEqual(net.projection.scoreBasis, .net)
         XCTAssertNotEqual(gross.projection.medianFinish, net.projection.medianFinish)
         XCTAssertNotEqual(
             viewModel.projectionRevision(scoreBasis: .gross),
@@ -914,6 +916,71 @@ final class PlayerInsightsRoundAnalyticsTests: XCTestCase {
         XCTAssertEqual(usage.total, expectedTotal)
         XCTAssertEqual(usage.used + usage.remaining, expectedTotal)
         XCTAssertNil(viewModel.completedAveragePaceTrend(for: participant, basis: .gross))
+    }
+
+    func testScoreOutcomeMixUsesSelectedGrossOrNetBasis() throws {
+        let (viewModel, participant) = try makeViewModel(relativeScores: [0, 1, -1, 2, 3, 4])
+
+        let gross = Dictionary(
+            uniqueKeysWithValues: viewModel.scoreOutcomeCounts(for: participant, basis: .gross).map {
+                ($0.bucket, $0.count)
+            }
+        )
+        let net = Dictionary(
+            uniqueKeysWithValues: viewModel.scoreOutcomeCounts(for: participant, basis: .net).map {
+                ($0.bucket, $0.count)
+            }
+        )
+
+        XCTAssertEqual(gross, Dictionary(
+            uniqueKeysWithValues: viewModel.grossScoreOutcomeCounts(for: participant).map {
+                ($0.bucket, $0.count)
+            }
+        ))
+        XCTAssertNotEqual(net, gross)
+
+        var expectedNet = Dictionary(
+            uniqueKeysWithValues: GrossScoreOutcomeBucket.allCases.map { ($0, 0) }
+        )
+        for holeNumber in viewModel.courseOrderHoleNumbers.prefix(6) {
+            guard let netRelative = viewModel.netRelativeToParOnHole(
+                participant: participant,
+                holeNumber: holeNumber
+            ) else {
+                XCTFail("Expected a recorded net score for hole \(holeNumber)")
+                continue
+            }
+            let bucket = GrossScoreOutcomeBucket.resolve(relativeToPar: netRelative)
+            expectedNet[bucket, default: 0] += 1
+        }
+        XCTAssertEqual(net, expectedNet)
+    }
+
+    func testStrokeDotsRemainVisibleForAllocatedUnscoredHoles() throws {
+        let (viewModel, participant) = try makeViewModel(relativeScores: [0])
+        let unscoredAllocation = try XCTUnwrap(
+            viewModel.handicapStrokeUsage(for: participant).remainingAllocations.first
+        )
+        let strokesReceived = viewModel.strokesReceivedOnHole(
+            participant: participant,
+            holeNumber: unscoredAllocation.holeNumber
+        )
+
+        XCTAssertEqual(strokesReceived, unscoredAllocation.strokes)
+        XCTAssertEqual(
+            ScorecardStrokeDotPolicy.visibleCount(
+                strokesReceived: strokesReceived,
+                basis: .gross
+            ),
+            max(0, strokesReceived)
+        )
+        XCTAssertEqual(
+            ScorecardStrokeDotPolicy.visibleCount(
+                strokesReceived: strokesReceived,
+                basis: .net
+            ),
+            0
+        )
     }
 
     func testCompletedRoundAveragePaceConnectsEvenToFinalScore() throws {
