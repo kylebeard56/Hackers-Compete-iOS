@@ -24,6 +24,7 @@ struct SearchBar: View {
     
     @State private var text: Debounce = .init(value: "")
     @FocusState private var focus: Bool
+    @State private var searchTask: Task<Void, Never>?
     
     init(
         placeholder: String = "Search...",
@@ -83,10 +84,10 @@ struct SearchBar: View {
             onTextChange?(newValue)
         }
         .onReceive(text.$debouncedValue, perform: { value in
-            Task {
-                await onDebounce?(value)
-            }
+            searchTask?.cancel()
+            searchTask = Task { await onDebounce?(value) }
         })
+        .onDisappear { searchTask?.cancel() }
     }
     
     private var searchBarContent: some View {

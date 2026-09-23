@@ -46,6 +46,22 @@ enum Gender: String, CaseIterable, Identifiable {
     var id: String { rawValue }
 }
 
+struct CourseSourceReference: Hashable, Codable {
+    let provider: String
+    let identifier: String
+}
+
+/// Textual locality survives directory responses that omit coordinates.
+struct CourseLocality: Hashable, Codable {
+    let city: String?
+    let state: String?
+    let country: String?
+
+    var text: String {
+        [city, state, country].compactMap { $0 }.filter { !$0.isEmpty }.joined(separator: ", ")
+    }
+}
+
 struct Course: FirebaseIdentifiable {
     let golfCourseApiID: GolfCourseID?
     let origin: String
@@ -56,6 +72,9 @@ struct Course: FirebaseIdentifiable {
     /// Top-level geohash for Firestore queries (e.g. fetchCourses near location)
     let locationGeohash: String?
     private(set) var tees: [Tee]
+    var locality: CourseLocality?
+    var sourceReferences: [CourseSourceReference]
+    var isUserEdited: Bool
     
     /// Conformance for FirebaseIdentifiable
     var id: String
@@ -75,7 +94,10 @@ struct Course: FirebaseIdentifiable {
         locationGeohash: String? = nil,
         tees: [Tee] = [],
         createdAt: Time = Time(),
-        lastUpdatedAt: Time = Time()
+        lastUpdatedAt: Time = Time(),
+        locality: CourseLocality? = nil,
+        sourceReferences: [CourseSourceReference] = [],
+        isUserEdited: Bool = false
     ) {
         self.id = id
         self.golfCourseApiID = golfCourseApiID
@@ -88,6 +110,11 @@ struct Course: FirebaseIdentifiable {
         self.tees = tees
         self.createdAt = createdAt
         self.lastUpdatedAt = lastUpdatedAt
+        self.locality = locality ?? location.map { CourseLocality(city: $0.city, state: $0.state, country: $0.country) }
+        self.sourceReferences = sourceReferences.isEmpty
+            ? golfCourseApiID.map { [CourseSourceReference(provider: "golfCourseAPI", identifier: $0.description)] } ?? []
+            : sourceReferences
+        self.isUserEdited = isUserEdited
     }
     
     init(
@@ -117,7 +144,8 @@ struct Course: FirebaseIdentifiable {
             locationGeohash: loc?.geohash,
             tees: female + male,
             createdAt: Time(),
-            lastUpdatedAt: Time()
+            lastUpdatedAt: Time(),
+            locality: CourseLocality(city: model.location.city, state: model.location.state, country: model.location.country)
         )
     }
     
@@ -151,6 +179,10 @@ struct Course: FirebaseIdentifiable {
         case lastUpdatedAt = "last_updated_at"
         case searchKey = "search_key"
         case searchKeyReverse = "search_key_reverse"
+        case searchTokens = "search_tokens"
+        case sourceReferences = "source_references"
+        case isUserEdited = "is_user_edited"
+        case locality
     }
 }
 
@@ -162,22 +194,85 @@ extension Course {
         clubName != courseName ? clubName.normalizedForSearch : searchKey
     }
 
-    /// Matches the normalized prefix/token search used by the Firebase course cache.
-    /// The first token must start either the course or club name; remaining tokens can appear in
-    /// either name. This keeps cached search focused while accepting common queries such as
-    /// "Pinehurst 2" for "Pinehurst No. 2".
+    var searchTokens: [String] {
+        Array(Set((searchKey + " " + searchKeyReverse).split(separator: " ").map(String.init))).sorted()
+    }
+
     func matchesCachedSearch(query: String) -> Bool {
-        let tokens = query.normalizedForSearch
-            .split(separator: " ")
-            .map(String.init)
-        guard let first = tokens.first else { return false }
+        let words = query.normalizedForSearch.split(separator: " ").map(String.init)
+        return !words.isEmpty && words.allSatisfy { word in searchTokens.contains { $0.hasPrefix(word) } }
+    }
 
-        let keys = [searchKey, searchKeyReverse]
-        guard keys.contains(where: { $0.hasPrefix(first) }) else { return false }
-
-        return tokens.dropFirst().allSatisfy { token in
-            keys.contains(where: { $0.contains(token) })
+    var hasPlayableScorecard: Bool {
+        tees.contains { tee in
+            tee.totalHoles > 0 && tee.holes.count == tee.totalHoles
+                && Set(tee.holes.map(\.number)).count == tee.totalHoles
+                && tee.holes.allSatisfy { $0.number > 0 && (1...6).contains($0.par) && $0.yardage >= 0 }
         }
+    }
+
+    var displayLocality: String {
+        locality?.text ?? location.map { [$0.city, $0.state, $0.country].compactMap { $0 }.joined(separator: ", ") } ?? ""
+    }
+
+    /// Merge provider data without changing the Hackers identity or losing reviewed data.
+    func mergingProviderCourse(_ incoming: Course) -> Course {
+        guard !isUserEdited, origin == CourseOrigin.golfCourseAPI.rawValue else { return self }
+        var result = Course(
+            id: id, golfCourseApiID: golfCourseApiID, origin: .golfCourseAPI,
+            clubName: incoming.clubName.isEmpty ? clubName : incoming.clubName,
+            courseName: incoming.courseName.isEmpty ? courseName : incoming.courseName,
+            location: incoming.location ?? location,
+            venueDetails: CourseVenueDetails(
+                websiteURL: incoming.venueDetails?.websiteURL ?? venueDetails?.websiteURL,
+                phoneNumber: incoming.venueDetails?.phoneNumber ?? venueDetails?.phoneNumber),
+            tees: incoming.hasPlayableScorecard ? incoming.tees : tees,
+            createdAt: createdAt, lastUpdatedAt: lastUpdatedAt,
+            locality: incoming.locality ?? locality,
+            sourceReferences: Array(Set(sourceReferences + incoming.sourceReferences))
+                .sorted { ($0.provider, $0.identifier) < ($1.provider, $1.identifier) }
+        )
+        if !hasSameDirectoryContent(as: result) { result.lastUpdatedAt = incoming.lastUpdatedAt }
+        return result
+    }
+
+    func hasSameDirectoryContent(as other: Course) -> Bool {
+        var lhs = self
+        var rhs = other
+        lhs.lastUpdatedAt = rhs.lastUpdatedAt
+        lhs.createdAt = rhs.createdAt
+        lhs.sourceReferences.sort { ($0.provider, $0.identifier) < ($1.provider, $1.identifier) }
+        rhs.sourceReferences.sort { ($0.provider, $0.identifier) < ($1.provider, $1.identifier) }
+        return lhs == rhs
+    }
+
+    /// Collapse only shared source identities or exact routing names in a known locality.
+    static func deduplicated(_ courses: [Course]) -> [Course] {
+        var result: [Course] = []
+        for course in courses {
+            if let index = result.firstIndex(where: { $0.refersToSameCourse(as: course) }) {
+                let old = result[index]
+                if (course.hasPlayableScorecard && !old.hasPlayableScorecard)
+                    || (course.hasPlayableScorecard == old.hasPlayableScorecard && course.isUserEdited && !old.isUserEdited)
+                    || (course.hasPlayableScorecard == old.hasPlayableScorecard && course.isUserEdited == old.isUserEdited
+                        && course.lastUpdatedAt.unix > old.lastUpdatedAt.unix) {
+                    result[index] = course
+                }
+            } else { result.append(course) }
+        }
+        return result
+    }
+
+    func refersToSameCourse(as other: Course) -> Bool {
+        if id == other.id || !Set(sourceReferences).isDisjoint(with: other.sourceReferences) { return true }
+        let city = (locality?.city ?? location?.city ?? "").normalizedForSearch
+        let state = (locality?.state ?? location?.state ?? "").normalizedForSearch
+        let otherCity = (other.locality?.city ?? other.location?.city ?? "").normalizedForSearch
+        let otherState = (other.locality?.state ?? other.location?.state ?? "").normalizedForSearch
+        guard !city.isEmpty, !state.isEmpty, city == otherCity, state == otherState else { return false }
+        let name = CourseNameNormalizer.normalize(courseName)
+        return !name.isEmpty && name == CourseNameNormalizer.normalize(other.courseName)
+            && CourseNameNormalizer.normalize(clubName) == CourseNameNormalizer.normalize(other.clubName)
     }
 
     init(from decoder: Decoder) throws {
@@ -194,6 +289,11 @@ extension Course {
         createdAt = try c.decode(Time.self, forKey: .createdAt)
         lastUpdatedAt = try c.decode(Time.self, forKey: .lastUpdatedAt)
         schema = try c.decodeIfPresent(Int.self, forKey: .schema) ?? 1
+        locality = try c.decodeIfPresent(CourseLocality.self, forKey: .locality)
+            ?? location.map { CourseLocality(city: $0.city, state: $0.state, country: $0.country) }
+        sourceReferences = try c.decodeIfPresent([CourseSourceReference].self, forKey: .sourceReferences)
+            ?? golfCourseApiID.map { [CourseSourceReference(provider: "golfCourseAPI", identifier: $0.description)] } ?? []
+        isUserEdited = try c.decodeIfPresent(Bool.self, forKey: .isUserEdited) ?? (origin != CourseOrigin.golfCourseAPI.rawValue)
         _ = try c.decodeIfPresent(String.self, forKey: .searchKey)
         _ = try c.decodeIfPresent(String.self, forKey: .searchKeyReverse)
     }
@@ -214,6 +314,10 @@ extension Course {
         try c.encode(schema, forKey: .schema)
         try c.encode(searchKey, forKey: .searchKey)
         try c.encode(searchKeyReverse, forKey: .searchKeyReverse)
+        try c.encode(searchTokens, forKey: .searchTokens)
+        try c.encodeIfPresent(locality, forKey: .locality)
+        try c.encode(sourceReferences, forKey: .sourceReferences)
+        try c.encode(isUserEdited, forKey: .isUserEdited)
     }
 }
 

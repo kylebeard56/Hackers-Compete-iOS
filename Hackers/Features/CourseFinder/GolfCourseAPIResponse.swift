@@ -117,7 +117,7 @@ struct GolfCourseAPIModel: Codable, Identifiable {
     let websiteURL: String?
     let phoneNumber: String?
     var tees: GolfCourseAPITees
-    let isSummary: Bool
+    private(set) var isSummary: Bool
     private var summaryTeeCounts: [String: Int]?
 
     enum CodingKeys: String, CodingKey {
@@ -315,8 +315,7 @@ extension GolfCourseAPIModel {
     /// cached `Course`. Some provider-only aggregate tee fields are not retained by `Course`, so
     /// they are derived from the saved holes and are not used for scoring.
     init?(cachedCourse course: Course) {
-        guard course.hasCanonicalGolfCourseAPIIdentity,
-              let apiID = course.golfCourseApiID else {
+        guard let apiID = course.golfCourseApiID else {
             return nil
         }
 
@@ -326,9 +325,9 @@ extension GolfCourseAPIModel {
             courseName: course.courseName,
             location: GolfCourseAPILocation(
                 address: course.location?.address,
-                city: course.location?.city,
-                state: course.location?.state,
-                country: course.location?.country,
+                city: course.locality?.city ?? course.location?.city,
+                state: course.locality?.state ?? course.location?.state,
+                country: course.locality?.country ?? course.location?.country,
                 latitude: course.location?.latitude ?? 0,
                 longitude: course.location?.longitude ?? 0
             ),
@@ -339,6 +338,7 @@ extension GolfCourseAPIModel {
                 male: course.tees.male.map(GolfCourseAPITee.init(cachedTee:))
             )
         )
+        self.isSummary = !course.hasPlayableScorecard
     }
 }
 

@@ -52,7 +52,6 @@ struct CourseSelectionView: View, Loggable {
     @AppStorage("course_ask_ai_location_assist_enabled") private var askAILocationAssistEnabled: Bool = true
     @AppStorage("course_ask_ai_text_model") private var askAITextModelRaw: String = AskAITextModel.defaultSelection.rawValue
 
-    private let kGreenville = CLLocation(latitude: 34.851, longitude: -82.394)
 
     private var courseSelectionPalette: DesignPalette {
         DesignPalette(theme: .primary, scheme: colorScheme)
@@ -320,7 +319,7 @@ struct CourseSelectionView: View, Loggable {
             // TODO: What is this dead code doing here?
 //            guard !didSearchNearby else { return }
 //            Task {
-//                await viewModel.loadNearby(using: kGreenville)
+//                await viewModel.loadNearby(using: locationService.location)
 //            }
         })
         .onReceive(HackersNotification.locationAuthorizationChanged.publisher(), perform: { data in
@@ -435,7 +434,7 @@ struct CourseSelectionView: View, Loggable {
                     print("onDebounce \(text)")
                     searchText = text
                     viewModel.recoveryCourseName = nil
-                    await viewModel.searchCourses(for: text, using: kGreenville)
+                    await viewModel.searchCourses(for: text, using: locationService.location)
                 }
             )
             
@@ -486,9 +485,10 @@ struct CourseSelectionView: View, Loggable {
                         viewModel.recoveryCourseName = nil
                     }
                 }
-                if viewModel.isSearching {
+                if viewModel.isSearching && viewModel.searchedCourses.isEmpty {
                     skeletonView
                 } else if let error = viewModel.searchError {
+                    if !viewModel.searchedCourses.isEmpty { list(for: viewModel.searchedCourses) }
                     Text(error)
                         .fontStyle(kFontName, size: 15, weight: .medium)
                         .foregroundStyle(Color.foregroundPrimary)
@@ -562,6 +562,25 @@ struct CourseSelectionView: View, Loggable {
                         }
                     }
                 }
+                VStack(alignment: .leading, spacing: 10) {
+                    Text("Don’t see your course?").font(.subheadline).foregroundStyle(.secondary)
+                    Button("Search more courses") {
+                        Task { await viewModel.searchCourses(for: viewModel.recoveryCourseName ?? searchText,
+                            using: locationService.location, searchMore: true) }
+                    }
+                    .disabled(viewModel.isSearching)
+                    if viewModel.isSearching { ProgressView("Searching more courses…") }
+                    if !viewModel.searchedCourses.isEmpty || viewModel.searchError != nil {
+                        Button("Ask AI") { openAskAI() }
+                        Menu("Scan scorecard") {
+                            Button("Take photo") { showCamera = true }
+                            Button("Choose photo") { showPhotoPicker = true }
+                        }
+                        Button("Enter manually") { viewModel.select(course: Course(origin: .manual), source: .manual) }
+                    }
+                }
+                .frame(maxWidth: .infinity, alignment: .leading)
+                .padding(.vertical, 12)
             } else {
                 suggestiveStateView
             }
@@ -647,6 +666,10 @@ struct CourseSelectionView: View, Loggable {
     private var recentCourses: some View {
         if viewModel.isLoadingRecents {
             skeletonView
+        } else if let error = viewModel.recentCoursesError {
+            Text(error).font(.subheadline).foregroundStyle(.secondary)
+            Button("Retry recent courses") { Task { await viewModel.loadRecents() } }
+            list(for: viewModel.recentCourseEntries)
         } else if viewModel.recentCourseEntries.isPopulated {
             list(for: viewModel.recentCourseEntries)
         } else {
@@ -802,11 +825,8 @@ struct CourseSelectionView: View, Loggable {
             parts.append(course.prettyClubName)
         }
         
+        if !course.displayLocality.isEmpty { parts.append(course.displayLocality) }
         if let location = course.location {
-            if let city = location.city, let state = location.state {
-                parts.append("\(city), \(state)")
-            }
-            
             if let distance = location.formattedDistance(to: locationService.location) {
                 parts.append(distance)
             }
@@ -971,7 +991,7 @@ struct CourseSelectionView: View, Loggable {
 
     private var askAIExamplePrompts: [String] {
         [
-            "Verdae", "Oxmoor Valley", "Twin Lakes"
+            "Pebble Beach in California", "PGA Frisco in Frisco, Texas", "East Lake in Atlanta, Georgia"
         ]
     }
 
@@ -1222,8 +1242,8 @@ struct AskAICourseSheet: View {
                 ScrollView {
                     LazyVStack(alignment: .leading, spacing: 16) {
                         if messages.isEmpty {
-                            messageBubble(.init(role: .assistant, text: "What course are you playing? Send its name. I’ll use your location when available, or ask for the city if I need more detail."))
-                            Text("Try a course name")
+                            messageBubble(.init(role: .assistant, text: "What course are you playing? Enter its name and, if you know it, the city or state."))
+                            Text("Try a course name and location")
                                 .font(.caption).foregroundStyle(.secondary)
                             ForEach(examplePrompts, id: \.self) { example in
                                 Button(example) { send(example) }
@@ -1314,11 +1334,11 @@ struct AskAICourseSheet: View {
                                 in: RoundedRectangle(cornerRadius: 18))
                 if !message.isUser { Spacer(minLength: 24) }
             }
-            ForEach(Array(message.candidates.prefix(5).enumerated()), id: \.offset) { _, candidate in
+            ForEach(Array(message.candidates.prefix(3).enumerated()), id: \.offset) { _, candidate in
                 AskAICourseCandidateCard(candidate: candidate, onUse: { onUseCandidate?(candidate) })
                     .disabled(isSending)
             }
-            if message.candidates.count > 5 {
+            if message.candidates.count > 3 {
                 Text("More matches are available. Send the city or state to narrow the list.")
                     .font(.subheadline).foregroundStyle(.secondary)
             }
@@ -1335,7 +1355,7 @@ struct AskAICourseSheet: View {
             }
             .tint(.secondary)
             HStack(alignment: .bottom, spacing: 8) {
-                TextField("Course name or a reply…", text: $prompt, axis: .vertical)
+                TextField("Course name and city, or a reply…", text: $prompt, axis: .vertical)
                     .font(.body)
                     .focused($isPromptFocused)
                     .lineLimit(1...5)
@@ -1409,6 +1429,8 @@ private struct AskAICourseCandidateCard: View {
             if !candidate.needsScorecard, let tee = preferredSummaryTee {
                 Text("\(tee.totalHoles) holes · \(course.tees.count) tees")
                     .font(.subheadline).foregroundStyle(.secondary)
+                Text("Par \(tee.par(for: course.defaultSegment)) · \(tee.yardage(for: course.defaultSegment)) yards · \(tee.name) tees")
+                    .font(.subheadline).foregroundStyle(.secondary)
             }
 
             if let website = course.venueDetails?.websiteURL, website.isPopulated {
@@ -1420,7 +1442,7 @@ private struct AskAICourseCandidateCard: View {
 
             PrimaryButton(
                 appearance: .fill,
-                title: candidate.requiresReview ? "Review scorecard" : "Use this course",
+                title: candidate.requiresReview ? "Review scorecard" : (candidate.needsScorecard ? "Choose course" : "Continue"),
                 labelColor: .white,
                 buttonColor: .accentGreen,
                 fillWidth: true,

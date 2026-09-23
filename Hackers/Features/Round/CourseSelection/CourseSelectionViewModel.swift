@@ -89,6 +89,9 @@ struct SimpleRoundSetup: Equatable {
 final class CourseSelectionViewModel: ObservableObject, Loggable {
     private let courseRepository: GolfCourseRepository
     private var searchRequestID = UUID()
+    private var searchRequest: Task<[Course], Error>?
+    private var resolvedRecents: [String: Course] = [:]
+    @Published var recentCoursesError: String?
     @Published var recoveryCourseName: String?
     @Published var searchError: String?
     @Published var courseFetchErrorMessage = "Please try again or search for the course."
@@ -209,7 +212,7 @@ extension CourseSelectionViewModel {
     func loadRecents() async {
         addBreadcrumb()
         
-        recentCourseEntries = []
+        recentCoursesError = nil
         isLoadingRecents = true
         defer { isLoadingRecents = false }
         
@@ -226,14 +229,62 @@ extension CourseSelectionViewModel {
                     }
                 }
             }
-            recentCourseEntries = merged.values.sorted { $0.lastPlayedAt.unix > $1.lastPlayedAt.unix }
+            let entries = merged.values.sorted { $0.lastPlayedAt.unix > $1.lastPlayedAt.unix }
+            var saved: [String: Course] = [:]
+            var missing: [CourseHistoryEntry] = []
+            for entry in entries.prefix(30) {
+                do {
+                    if let course = try await courseRepository.cachedCourse(for: entry), course.hasPlayableScorecard {
+                        saved[entry.compositeKey] = course
+                    } else { missing.append(entry) }
+                } catch {
+                    recentCoursesError = "Some saved courses couldn’t be checked. Try again when you’re connected."
+                    missing.append(entry)
+                }
+            }
+            if !missing.isEmpty {
+                let ids = players.flatMap { Array($0.processedRoundIds.suffix(30)) }
+                do {
+                    let snapshots = try await FirebaseService.shared.recentCourseSnapshots(roundIDs: Array(Set(ids)).sorted())
+                    for entry in missing {
+                        if let course = snapshots.first(where: { course in
+                            course.hasPlayableScorecard && (entry.courseIDType == .courseAPI
+                                ? course.golfCourseApiID?.description == entry.courseID
+                                : course.id == entry.courseID)
+                        }) {
+                            saved[entry.compositeKey] = course
+                            Task { await FirebaseService.shared.rememberPlayedCourse(course) }
+                        }
+                    }
+                } catch {
+                    recentCoursesError = "Some saved courses couldn’t be recovered. Try again when you’re connected."
+                }
+            }
+            applyResolvedRecents(entries: entries, courses: saved)
         case .failure:
-            recentCourseEntries = []
+            recentCoursesError = "Couldn’t load recent courses. Please try again."
         }
     }
     
+    func applyResolvedRecents(entries: [CourseHistoryEntry], courses: [String: Course]) {
+        var displayed: [Course] = []
+        var visible: [CourseHistoryEntry] = []
+        for entry in entries {
+            guard let course = courses[entry.compositeKey], course.hasPlayableScorecard,
+                  !displayed.contains(where: { $0.refersToSameCourse(as: course) }) else { continue }
+            displayed.append(course)
+            visible.append(entry)
+        }
+        resolvedRecents = courses
+        recentCourseEntries = visible
+    }
+
     func selectFromRecent(entry: CourseHistoryEntry) async {
         addBreadcrumb(message: "\(#function) [\(entry.compositeKey)]")
+        if let course = resolvedRecents[entry.compositeKey] {
+            select(course: course, source: .recent)
+            return
+        }
         guard !isLoadingSelectedCourse else { return }
         isLoadingSelectedCourse = true
         showCourseFetchError = false
@@ -315,11 +366,12 @@ extension CourseSelectionViewModel {
 
 // MARK: - Search
 extension CourseSelectionViewModel {
-    func searchCourses(for query: String, using location: CLLocation? = nil) async {
+    func searchCourses(for query: String, using location: CLLocation? = nil, searchMore: Bool = false) async {
         addBreadcrumb(message: "\(#function) [\(query)]")
         let requestID = UUID()
         searchRequestID = requestID
-        searchedCourses = []
+        searchRequest?.cancel()
+        if !searchMore { searchedCourses = [] }
         searchError = nil
         guard !query.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else {
             isSearching = false
@@ -341,9 +393,13 @@ extension CourseSelectionViewModel {
         defer { if searchRequestID == requestID { isSearching = false } }
 
         do {
-            let courses = try await courseRepository.searchCourseModels(with: query, includeScorecards: false)
+            let request = Task { try await courseRepository.searchCourses(with: query, searchMore: searchMore) }
+            searchRequest = request
+            let courses = try await withTaskCancellationHandler {
+                try await request.value
+            } onCancel: { request.cancel() }
             guard searchRequestID == requestID, !Task.isCancelled else { return }
-            searchedCourses = courses.map(Course.init(canonicalGolfCourseAPI:))
+            searchedCourses = courses
             
             if let location {
                 searchedCourses.sort { course1, course2 in
@@ -356,7 +412,7 @@ extension CourseSelectionViewModel {
                         longitude: course2.location?.longitude ?? 0
                     )
                     
-                    return loc1.distance(from: location) < loc2.distance(from: location)
+                    return (course1.location == nil ? Double.greatestFiniteMagnitude : loc1.distance(from: location)) < (course2.location == nil ? Double.greatestFiniteMagnitude : loc2.distance(from: location))
                 }
             }
             
@@ -384,7 +440,12 @@ extension CourseSelectionViewModel {
 
     func selectSearchCourse(_ course: Course) async {
         guard !isLoadingSelectedCourse else { return }
-        guard let id = course.golfCourseApiID, course.tees.isEmpty else {
+        guard let id = course.golfCourseApiID, !course.hasPlayableScorecard else {
+            guard course.hasPlayableScorecard else {
+                courseFetchErrorMessage = GolfCourseAPIError.scorecardUnavailable.localizedDescription
+                showCourseFetchError = true
+                return
+            }
             select(course: course, source: .search)
             return
         }
@@ -913,6 +974,8 @@ extension CourseSelectionViewModel {
             blueTeam = try await blueTeam.post().get()
             round = try await round.post().get()
             roundCreationID = round.id
+            let playedCourse = selectedCourse
+            Task { await FirebaseService.shared.rememberPlayedCourse(playedCourse) }
 
             if shouldTrackRoundSetup {
                 addEvent(
