@@ -2075,14 +2075,24 @@ final class LiveRoundViewModel: ObservableObject, Loggable {
     }
 
     func grossScoreOutcomeCounts(for participant: RoundParticipant) -> [GrossScoreOutcomeCount] {
+        scoreOutcomeCounts(for: participant, basis: .gross)
+    }
+
+    func scoreOutcomeCounts(
+        for participant: RoundParticipant,
+        basis: ScoreBasis
+    ) -> [GrossScoreOutcomeCount] {
         var counts = Dictionary(
             uniqueKeysWithValues: GrossScoreOutcomeBucket.allCases.map { ($0, 0) }
         )
         for holeNumber in courseOrderHoleNumbers {
-            guard let relative = grossRelativeToPar(
-                for: participant.id,
-                holeNumber: holeNumber
-            ) else { continue }
+            let relative = switch basis {
+            case .gross:
+                grossRelativeToPar(for: participant.id, holeNumber: holeNumber)
+            case .net:
+                netRelativeToParOnHole(participant: participant, holeNumber: holeNumber)
+            }
+            guard let relative else { continue }
             counts[GrossScoreOutcomeBucket.resolve(relativeToPar: relative), default: 0] += 1
         }
         return GrossScoreOutcomeBucket.allCases.map {
@@ -5331,6 +5341,23 @@ final class LiveRoundViewModel: ObservableObject, Loggable {
         guard canRevealInsights(for: participant),
               playerProjectionUnavailableReason(for: participant) == nil else { return nil }
         return await playerSimulation(for: participant, scoreBasis: scoreBasis)?.projection
+    }
+
+    /// Prepare both bases before publishing so switching never removes the
+    /// projection band and briefly rescales the chart to the played holes alone.
+    func playerInsightProjections(
+        for participant: RoundParticipant
+    ) async -> [ScoreBasis: PlayerFinishProjection] {
+        let revision = playerProjectionScenarioRevision(for: participant)
+        var projections: [ScoreBasis: PlayerFinishProjection] = [:]
+        for basis in [ScoreBasis.gross, .net] {
+            guard !Task.isCancelled else { return [:] }
+            projections[basis] = await playerProjection(for: participant, scoreBasis: basis)
+        }
+        guard !Task.isCancelled,
+              let currentParticipant = snapshot.participants.first(where: { $0.id == participant.id }),
+              revision == playerProjectionScenarioRevision(for: currentParticipant) else { return [:] }
+        return projections
     }
 
     func refreshMatchupProbabilities() async {
