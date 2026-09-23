@@ -2063,6 +2063,16 @@ private struct CumulativeScoreBandPoint: Identifiable {
     var id: Int { holesCompleted }
 }
 
+enum PlayerInsightsHeaderContext {
+    static func handicapSummary(for participant: RoundParticipant) -> String {
+        let index = participant.handicapSnapshot?.handicapIndex
+            ?? participant.handicapIndex
+            ?? Double(participant.originalHandicap)
+        let formattedIndex = SeriesMemberHandicap.formatHandicapIndexForDisplay(index)
+        return "Index \(formattedIndex) · Course HCP \(participant.lockedHandicapAllowance)"
+    }
+}
+
 struct PlayerInsightsView: View {
     @Environment(\.dismiss) private var dismiss
     @Environment(\.colorScheme) private var colorScheme
@@ -2115,47 +2125,40 @@ struct PlayerInsightsView: View {
 
     var body: some View {
         NavigationStack {
-            ScrollView(.vertical, showsIndicators: false) {
-                LazyVStack(spacing: 16) {
-                    identityCard
+            VStack(spacing: 0) {
+                compactPersistentHeader
 
-                    if canRevealInsights {
-                        if viewModel.handicapsEnabled {
-                            Picker("Score basis", selection: $selectedBasis) {
-                                Text("Gross").tag(ScoreBasis.gross)
-                                Text("Net").tag(ScoreBasis.net)
-                            }
-                            .pickerStyle(.segmented)
-                            .accessibilityHint("Changes the player summary, projection, and scoring mix")
-                        }
+                ScrollView(.vertical, showsIndicators: false) {
+                    LazyVStack(spacing: 16) {
+                        if canRevealInsights {
+                            currentRoundCard
 
-                        currentRoundCard
-
-                        IndividualScorecardView(
-                            viewModel: viewModel,
-                            participant: participant,
-                            presentation: .embedded,
-                            showsPlayerHeader: false
-                        )
-
-                        trendCard
-
-                        if holesCompleted > 0 {
-                            scoringMixCard
-                        }
-                    } else {
-                        ContentUnavailableView(
-                            "Scores hidden",
-                            systemImage: "eye.slash",
-                            description: Text(
-                                "This player’s score details will appear when secret scoring is revealed."
+                            IndividualScorecardView(
+                                viewModel: viewModel,
+                                participant: participant,
+                                presentation: .embedded,
+                                showsPlayerHeader: false
                             )
-                        )
-                        .padding(24)
+
+                            trendCard
+
+                            if holesCompleted > 0 {
+                                scoringMixCard
+                            }
+                        } else {
+                            ContentUnavailableView(
+                                "Scores hidden",
+                                systemImage: "eye.slash",
+                                description: Text(
+                                    "This player’s score details will appear when secret scoring is revealed."
+                                )
+                            )
+                            .padding(24)
+                        }
                     }
+                    .padding(16)
+                    .padding(.bottom, 16)
                 }
-                .padding(16)
-                .padding(.bottom, 16)
             }
             .background(palette.backgroundColor.opacity(0.98))
             .navigationTitle("Player insights")
@@ -2186,57 +2189,66 @@ struct PlayerInsightsView: View {
         }
     }
 
-    private var identityCard: some View {
+    private var compactPersistentHeader: some View {
         let accent = viewModel.teamColor(for: participant) ?? viewModel.theme.color
         let isFavorite = viewModel.pinnedParticipantIDs.contains(participant.id)
 
-        return HStack(spacing: 14) {
-            RoundedRectangle(cornerRadius: 999, style: .continuous)
-                .fill(accent)
-                .frame(width: 5, height: 48)
+        return VStack(alignment: .leading, spacing: 10) {
+            HStack(spacing: 10) {
+                PlayerAvatarView(
+                    initials: participant.name.initials,
+                    size: 36,
+                    fillColor: accent.opacity(0.24),
+                    glassTint: accent.opacity(0.18)
+                )
 
-            PlayerAvatarView(
-                initials: participant.name.initials,
-                size: 54,
-                fillColor: accent.opacity(0.24),
-                glassTint: accent.opacity(0.18)
-            )
+                VStack(alignment: .leading, spacing: 2) {
+                    Text(participant.name.fullName)
+                        .fontStyle(kFontName, size: 16, weight: .semibold)
+                        .foregroundStyle(palette.foregroundColor)
+                        .lineLimit(2)
+                        .minimumScaleFactor(0.85)
 
-            VStack(alignment: .leading, spacing: 4) {
-                Text(participant.name.fullName)
-                    .fontStyle(kFontName, size: 20, weight: .semibold)
-                    .foregroundStyle(palette.foregroundColor)
+                    Text(PlayerInsightsHeaderContext.handicapSummary(for: participant))
+                        .fontStyle(kFontName, size: 12, weight: .medium)
+                        .foregroundStyle(Color.neutral)
+                        .lineLimit(1)
+                        .minimumScaleFactor(0.8)
+                }
 
-                Text(participant.lockedHandicapProvenance)
-                    .fontStyle(kFontName, size: 13, weight: .medium)
-                    .foregroundStyle(Color.neutral)
+                Spacer(minLength: 4)
+
+                Button {
+                    Haptics.fire(.light)
+                    viewModel.togglePinned(participant)
+                } label: {
+                    Image(systemName: isFavorite ? "star.fill" : "star")
+                        .font(.system(size: 17, weight: .semibold))
+                        .foregroundStyle(isFavorite ? accent : Color.neutral2)
+                        .frame(width: 36, height: 36)
+                        .contentShape(Rectangle())
+                }
+                .buttonStyle(.plain)
+                .accessibilityLabel(isFavorite ? "Stop following \(participant.name.fullName)" : "Follow \(participant.name.fullName)")
+                .accessibilityHint("Followed players are pinned in this round’s leaderboard")
             }
-            Spacer(minLength: 0)
 
-            Button {
-                Haptics.fire(.light)
-                viewModel.togglePinned(participant)
-            } label: {
-                Image(systemName: isFavorite ? "star.fill" : "star")
-                    .font(.system(size: 20, weight: .semibold))
-                    .foregroundStyle(isFavorite ? accent : Color.neutral2)
-                    .frame(width: 44, height: 44)
-                    .contentShape(Rectangle())
+            if canRevealInsights, viewModel.handicapsEnabled {
+                Picker("Score basis", selection: $selectedBasis) {
+                    Text("Gross").tag(ScoreBasis.gross)
+                    Text("Net").tag(ScoreBasis.net)
+                }
+                .pickerStyle(.segmented)
+                .accessibilityHint("Changes the player summary, projection, and scoring mix")
             }
-            .buttonStyle(.plain)
-            .accessibilityLabel(isFavorite ? "Stop following \(participant.name.fullName)" : "Follow \(participant.name.fullName)")
-            .accessibilityHint("Followed players are pinned in this round’s leaderboard")
         }
-        .padding(16)
+        .padding(.horizontal, 16)
+        .padding(.vertical, 10)
         .frame(maxWidth: .infinity, alignment: .leading)
-        .glassCardEffect(
-            cornerRadius: 26,
-            interactive: false,
-            forceMaterial: true,
-            tint: accent.opacity(colorScheme.isLight ? 0.09 : 0.16),
-            strokeOpacity: 0.65
-        )
-        .accessibilityElement(children: .contain)
+        .background(palette.backgroundColor.opacity(0.98))
+        .overlay(alignment: .bottom) {
+            Divider()
+        }
     }
 
     private var currentRoundCard: some View {
