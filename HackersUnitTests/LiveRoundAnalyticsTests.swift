@@ -595,6 +595,43 @@ final class LiveRoundProjectionIntegrationTests: XCTestCase {
     }
 
     @MainActor
+    func testInsightProjectionsKeepBothBasesReadyForRepeatedSwitches() async throws {
+        var snapshot = MockLiveRoundBest2of4Matchup.snapshot
+        snapshot.round.configuration.handicapsEnabled = true
+        let participant = try XCTUnwrap(snapshot.participants.first)
+        let viewModel = LiveRoundViewModel()
+        viewModel.set(snapshot: snapshot)
+
+        let projections = await viewModel.playerInsightProjections(for: participant)
+        let gross = try XCTUnwrap(projections[.gross])
+        let net = try XCTUnwrap(projections[.net])
+        XCTAssertFalse(gross.projectedTrend.isEmpty)
+        XCTAssertFalse(net.projectedTrend.isEmpty)
+        XCTAssertNotEqual(gross.medianFinish, net.medianFinish)
+        for basis in [ScoreBasis.net, .gross, .net, .gross] {
+            // Selection is synchronous: no missing band or actual-only scale.
+            let selected = try XCTUnwrap(projections[basis])
+            XCTAssertEqual(selected.scoreBasis, basis)
+            let expected = await viewModel.playerProjection(for: participant, scoreBasis: basis)
+            XCTAssertEqual(selected, expected)
+        }
+    }
+
+    @MainActor
+    func testCancelledInsightLoadDoesNotPublishProjections() async throws {
+        let snapshot = MockLiveRoundBest2of4Matchup.snapshot
+        let participant = try XCTUnwrap(snapshot.participants.first)
+        let viewModel = LiveRoundViewModel()
+        viewModel.set(snapshot: snapshot)
+        let task = Task { @MainActor in
+            await viewModel.playerInsightProjections(for: participant)
+        }
+        task.cancel()
+        let projections = await task.value
+        XCTAssertTrue(projections.isEmpty)
+    }
+
+    @MainActor
     func testUnresolvedPickupExplainsWhyPlayerFinishIsUnavailable() throws {
         var snapshot = MockLiveRoundBest2of4Matchup.snapshot
         let participant = try XCTUnwrap(snapshot.participants.first)

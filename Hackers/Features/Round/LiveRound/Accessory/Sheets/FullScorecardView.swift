@@ -2081,7 +2081,8 @@ struct PlayerInsightsView: View {
     let participant: RoundParticipant
 
     @State private var selectedBasis: ScoreBasis
-    @State private var loadedProjection: PlayerFinishProjection?
+    @State private var loadedProjections: [ScoreBasis: PlayerFinishProjection] = [:]
+    @State private var loadedProjectionRevision: String?
     @State private var isLoadingProjection = false
 
     init(viewModel: LiveRoundViewModel, participant: RoundParticipant) {
@@ -2094,11 +2095,8 @@ struct PlayerInsightsView: View {
     private var basis: ScoreBasis { selectedBasis }
     private var basisDisplayName: String { basis == .net ? "Net" : "Gross" }
     private var projection: PlayerFinishProjection? {
-        guard loadedProjection?.scoreBasis == basis else { return nil }
-        return loadedProjection
-    }
-    private var projectionChartIdentity: String {
-        "\(projectionTaskID)-\(projection == nil ? "actual" : "projected")"
+        guard loadedProjectionRevision == projectionTaskID else { return nil }
+        return loadedProjections[basis]
     }
     private var canRevealInsights: Bool { viewModel.canRevealInsights(for: participant) }
     private var projectionUnavailableReason: String? {
@@ -2123,7 +2121,9 @@ struct PlayerInsightsView: View {
         viewModel.scoreOutcomeCounts(for: participant, basis: basis)
     }
     private var projectionTaskID: String {
-        viewModel.playerProjectionRevision(for: participant, scoreBasis: basis)
+        // Both bases belong to the same scoring revision. A picker change only
+        // selects prepared data; it must not clear/reload the chart's domain.
+        viewModel.playerProjectionRevision(for: participant, scoreBasis: .gross)
     }
 
     var body: some View {
@@ -2144,15 +2144,9 @@ struct PlayerInsightsView: View {
                             )
 
                             trendCard
-                                .transaction { transaction in
-                                    transaction.animation = nil
-                                }
 
                             if holesCompleted > 0 {
                                 scoringMixCard
-                                    .transaction { transaction in
-                                        transaction.animation = nil
-                                    }
                             }
                         } else {
                             ContentUnavailableView(
@@ -2180,20 +2174,19 @@ struct PlayerInsightsView: View {
             }
         }
         .task(id: projectionTaskID) {
-            let requestedBasis = basis
+            let requestedRevision = projectionTaskID
             let shouldLoadProjection = canRevealInsights
                 && holesCompleted >= 3
                 && !isPlayerRoundComplete
                 && projectionUnavailableReason == nil
-            loadedProjection = nil
+            loadedProjections = [:]
+            loadedProjectionRevision = nil
             isLoadingProjection = shouldLoadProjection
             guard shouldLoadProjection else { return }
-            let result = await viewModel.playerProjection(
-                for: participant,
-                scoreBasis: requestedBasis
-            )
-            guard !Task.isCancelled, selectedBasis == requestedBasis else { return }
-            loadedProjection = result
+            let result = await viewModel.playerInsightProjections(for: participant)
+            guard !Task.isCancelled, projectionTaskID == requestedRevision else { return }
+            loadedProjections = result
+            loadedProjectionRevision = requestedRevision
             isLoadingProjection = false
         }
     }
@@ -2331,6 +2324,8 @@ struct PlayerInsightsView: View {
                     Text("\(basisDisplayName) score projection")
                         .fontStyle(kFontName, size: 17, weight: .semibold)
                         .foregroundStyle(palette.foregroundColor)
+                        .lineLimit(1)
+                        .minimumScaleFactor(0.8)
                     Text("Solid: played · Shaded: projected 80% range")
                         .fontStyle(kFontName, size: 12, weight: .regular)
                         .foregroundStyle(Color.neutral)
@@ -2347,7 +2342,6 @@ struct PlayerInsightsView: View {
                 emptyTrendState
             } else {
                 scoreTrendChart
-                    .id(projectionChartIdentity)
                     .frame(height: 220)
 
                 projectionSummary
@@ -2495,6 +2489,7 @@ struct PlayerInsightsView: View {
                 Text("Likely range \(scoreLabel(projection.lowerFinish)) to \(scoreLabel(projection.upperFinish)) · 80% · based on \(projection.sampleCount) similar rounds")
                     .fontStyle(kFontName, size: 12, weight: .semibold)
                     .foregroundStyle(Color.neutral)
+                    .lineLimit(2, reservesSpace: true)
             }
         } else {
             Text(projectionUnavailableReason ?? "A projection isn’t available for this scoring format yet.")
@@ -2519,7 +2514,6 @@ struct PlayerInsightsView: View {
                 foregroundColor: palette.foregroundColor,
                 accessibilityLabel: scoringMixAccessibilityLabel
             )
-            .id(basis.rawValue)
         }
         .padding(16)
         .frame(maxWidth: .infinity, alignment: .leading)

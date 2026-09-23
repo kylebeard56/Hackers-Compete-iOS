@@ -5343,6 +5343,23 @@ final class LiveRoundViewModel: ObservableObject, Loggable {
         return await playerSimulation(for: participant, scoreBasis: scoreBasis)?.projection
     }
 
+    /// Prepare both bases before publishing so switching never removes the
+    /// projection band and briefly rescales the chart to the played holes alone.
+    func playerInsightProjections(
+        for participant: RoundParticipant
+    ) async -> [ScoreBasis: PlayerFinishProjection] {
+        let revision = playerProjectionScenarioRevision(for: participant)
+        var projections: [ScoreBasis: PlayerFinishProjection] = [:]
+        for basis in [ScoreBasis.gross, .net] {
+            guard !Task.isCancelled else { return [:] }
+            projections[basis] = await playerProjection(for: participant, scoreBasis: basis)
+        }
+        guard !Task.isCancelled,
+              let currentParticipant = snapshot.participants.first(where: { $0.id == participant.id }),
+              revision == playerProjectionScenarioRevision(for: currentParticipant) else { return [:] }
+        return projections
+    }
+
     func refreshMatchupProbabilities() async {
         isMatchupProbabilityPrecomputationEnabled = true
         let task = scheduleMatchupProbabilityRefresh()
