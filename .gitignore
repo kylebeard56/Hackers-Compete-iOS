@@ -41,9 +41,6 @@ bower_components
 # node-waf configuration
 .lock-wscript
 
-# Compiled binary addons (http://nodejs.org/api/addons.html)
-build/Release
-
 # Dependency directories
 node_modules/
 
@@ -59,8 +56,10 @@ node_modules/
 # Output of 'npm pack'
 *.tgz
 
-# Fastlane / Xcode build output
+# All build directories and their contents
 build/
+
+# Fastlane / Xcode archives
 *.ipa
 *.xcarchive
 fastlane/.build-number-cache.json
