@@ -2097,6 +2097,9 @@ struct PlayerInsightsView: View {
         guard loadedProjection?.scoreBasis == basis else { return nil }
         return loadedProjection
     }
+    private var projectionChartIdentity: String {
+        "\(projectionTaskID)-\(projection == nil ? "actual" : "projected")"
+    }
     private var canRevealInsights: Bool { viewModel.canRevealInsights(for: participant) }
     private var projectionUnavailableReason: String? {
         viewModel.playerProjectionUnavailableReason(for: participant)
@@ -2344,6 +2347,7 @@ struct PlayerInsightsView: View {
                 emptyTrendState
             } else {
                 scoreTrendChart
+                    .id(projectionChartIdentity)
                     .frame(height: 220)
 
                 projectionSummary
@@ -2515,6 +2519,7 @@ struct PlayerInsightsView: View {
                 foregroundColor: palette.foregroundColor,
                 accessibilityLabel: scoringMixAccessibilityLabel
             )
+            .id(basis.rawValue)
         }
         .padding(16)
         .frame(maxWidth: .infinity, alignment: .leading)
