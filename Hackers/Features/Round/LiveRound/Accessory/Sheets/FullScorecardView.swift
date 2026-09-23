@@ -2076,6 +2076,7 @@ enum PlayerInsightsHeaderContext {
 struct PlayerInsightsView: View {
     @Environment(\.dismiss) private var dismiss
     @Environment(\.colorScheme) private var colorScheme
+    @Environment(\.accessibilityReduceMotion) private var accessibilityReduceMotion
 
     @ObservedObject var viewModel: LiveRoundViewModel
     let participant: RoundParticipant
@@ -2093,9 +2094,15 @@ struct PlayerInsightsView: View {
     private var palette: DesignPalette { .init(theme: .primary, scheme: colorScheme) }
     private var basis: ScoreBasis { selectedBasis }
     private var basisDisplayName: String { basis == .net ? "Net" : "Gross" }
+    private var basisSwapAnimation: Animation? {
+        accessibilityReduceMotion ? nil : .easeInOut(duration: 0.18)
+    }
     private var projection: PlayerFinishProjection? {
         guard loadedProjection?.scoreBasis == basis else { return nil }
         return loadedProjection
+    }
+    private var projectionChartPhase: String {
+        "\(basis.rawValue)-\(projection == nil ? "actual" : "projected")"
     }
     private var canRevealInsights: Bool { viewModel.canRevealInsights(for: participant) }
     private var projectionUnavailableReason: String? {
@@ -2140,10 +2147,14 @@ struct PlayerInsightsView: View {
                                 showsPlayerHeader: false
                             )
 
-                            trendCard
+                            basisCrossfade {
+                                trendCard
+                            }
 
                             if holesCompleted > 0 {
-                                scoringMixCard
+                                basisCrossfade {
+                                    scoringMixCard
+                                }
                             }
                         } else {
                             ContentUnavailableView(
@@ -2172,21 +2183,34 @@ struct PlayerInsightsView: View {
         }
         .task(id: projectionTaskID) {
             let requestedBasis = basis
+            let shouldLoadProjection = canRevealInsights
+                && holesCompleted >= 3
+                && !isPlayerRoundComplete
+                && projectionUnavailableReason == nil
             loadedProjection = nil
-            isLoadingProjection = false
-            guard canRevealInsights,
-                  holesCompleted >= 3,
-                  !isPlayerRoundComplete,
-                  projectionUnavailableReason == nil else { return }
-            isLoadingProjection = true
+            isLoadingProjection = shouldLoadProjection
+            guard shouldLoadProjection else { return }
             let result = await viewModel.playerProjection(
                 for: participant,
                 scoreBasis: requestedBasis
             )
             guard !Task.isCancelled, selectedBasis == requestedBasis else { return }
-            loadedProjection = result
-            isLoadingProjection = false
+            withAnimation(basisSwapAnimation) {
+                loadedProjection = result
+                isLoadingProjection = false
+            }
         }
+    }
+
+    private func basisCrossfade<Content: View>(
+        @ViewBuilder content: () -> Content
+    ) -> some View {
+        ZStack {
+            content()
+                .id(basis.rawValue)
+                .transition(.opacity)
+        }
+        .animation(basisSwapAnimation, value: basis.rawValue)
     }
 
     private var compactPersistentHeader: some View {
@@ -2337,8 +2361,13 @@ struct PlayerInsightsView: View {
             if actualTrend.isEmpty {
                 emptyTrendState
             } else {
-                scoreTrendChart
-                    .frame(height: 220)
+                ZStack {
+                    scoreTrendChart
+                        .id(projectionChartPhase)
+                        .transition(.opacity)
+                }
+                .frame(height: 220)
+                .animation(basisSwapAnimation, value: projectionChartPhase)
 
                 projectionSummary
             }
