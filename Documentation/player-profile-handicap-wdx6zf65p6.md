@@ -1,63 +1,72 @@
 # Player Profile Handicap Management — wdx6zf65p6
 
-Ticket: <https://app.clickup.com/t/wdx6zf65p6>
+Ticket: <https://app.clickup.com/t/wdx6zf65p6> · Existing draft PR: <https://github.com/kylebeard56/Hackers-Compete-iOS/pull/15>
 
-This is an independently reviewable implementation slice. **The personal calculation engine is pending explicit policy approval.** Nothing in this branch infers approval from elapsed time, creates qualifying personal scores, applies a provisional calculation, or reuses the league formula as a personal algorithm.
+## Current status
 
-## Dependency and scope
+The user has selected current USGA/WHS methodology, with 54 qualifying holes and current expected-score treatment. **Policy approval is no longer the blocker. Exact end-to-end calculation remains blocked by missing verified posting/USGA calculation inputs.** The app does not silently replace those inputs with estimates. PR #15 remains draft and must not be described as complete or ready to issue a calculated Index.
 
-PR #14 was open at inspection: `codex/wdx6zf368k-course-handicap`, commit `864af32c641f154b9be68a8fd100a73e4ce4f4cf`. This branch is stacked on that commit and targets the PR #14 branch. PR #14 is not modified or merged. The original working checkout and its unrelated changes are preserved.
+Work continues on the original `codex/wdx6zf65p6-player-profile-handicap` branch, based on PR #14 at `864af32c641f154b9be68a8fd100a73e4ce4f4cf`. Neither dependency PR nor unrelated working changes are modified. No deployment is part of this update.
 
-The full ClickUp description, requirements, and comments were inspected (no comments, checklists, or subtasks). Existing Player Codable/persistence, profile and reusable offline-player UI, league history/projection, V1/V2 league routing, regular round creation, and PR #14 calculation and override paths were reviewed.
+## Preserved profile work
 
-## Implemented independently of calculation policy
+- Manual personal Index: decimal, 18-hole basis, source/date, independent registered and persistent offline identities. Missing is nil; legacy integer allowances remain strokes. Transactional manual edits preserve other profile fields and the manual record survives calculated-source transition.
+- Separate effective/manual/calculated displays, reusable personal trend/history UI, read-only league handicaps/navigation, and ordinary-round prefill using PR #14's canonical Course Handicap resolver. Frozen participants, scoring, league overrides/accrual and the league calculation formula are untouched.
 
-- Additive `Player.personal_handicap` record: manual decimal Index, explicit 18-hole basis, self-reported or manually entered external source, update date. Absence remains nil. Explicit 0.0 is valid. Legacy integer `Player.handicaps` stay strokes and are never converted into an Index.
-- Registered owners can edit their Index. Existing reusable offline-player management permits a signed-in player to edit a persistent offline identity without a guest login. Unsaved offline drafts and other registered profiles are read-only. The existing Firestore rules are unchanged; this is an application access check, not a new server authorization policy.
-- A transactional manual save re-reads the player and patches only manual/effective fields and the update date. Calculation, name, history, and unrelated fields are retained. The cached primary player is refreshed after saving, and regular creation reads a fresh primary profile.
-- A policy-independent calculation-output contract persists eligibility state, version, basis, as-of date, qualifying/pool/counting references, and effective Index/source projection. The effective value is derived from a valid qualified 18-hole output, falling back to the saved manual value. Persisted effective projection fields are not read as a second authority. No calculation producer is enabled.
-- Profile cards show effective, manual, and calculated values separately. The personal chart, selection/details, counters, progress state, and Counts / Pool / Unofficial history consume personal records only. Cards, fonts, palette, chart marks, date axes, and interaction styling follow the league screen. Older eligible scores outside the current pool are labeled “Earlier score.” Missing calculations show an unavailable state and unknown counts rather than a fabricated zero or threshold.
-- Read-only League Handicaps uses existing routed V1/V2 discovery and `SeriesHandicapProjectionService`, including each league's overrides and explicit 9-/18-hole basis. Rows navigate to league details. No league projection or score is used as a personal Index.
-- Future ordinary rounds use 18-hole personal Index entry and PR #14's canonical tee/segment calculator. Both the creating player and subsequently added registered/offline players are prefilled. Source Index/provenance and calculation resolution are captured with the participant. An unavailable Index stays nil; missing course data stays unresolved. Existing estimate consent, round-only Index/stroke edits, cap handling, lobby tee recalculation, historical provenance, and league paths remain in place.
-- Round editors preserve signed Indexes (negative numeric input means a golf “plus” handicap). The scoring calculator's existing nonnegative-stroke policy is unchanged.
+## Added in this continuation
 
-## Personal history storage contract
+- Canonical individual-round review across ordinary and league source rounds. Root template IDs and segment IDs are inspected before any registry fallback. Captain’s Choice/Scramble aliases are normalized (including apostrophe/space/hyphen variants and stored scramble IDs). Shared score source, shared ownership and legacy combined-handicap modes are also excluded. Shamble and unknown formats are not silently treated as stroke play.
+- Individually attributable stroke-play, match-play, Stableford and best-ball/four-ball cards can pass the structural review regardless of team or league membership. The evaluator requires a unique identity, valid individual gross entries, exact rated tee/segment metadata and a complete card. PR #14's metadata provenance prevents accepting estimated nine-hole ratings.
+- Practice and unofficial posting purposes are excluded. Completed status alone does not certify acceptability under Rules 2.1–2.2. Existing records lack verification of practice status, season, company/Rules of Golf and valid reasons for unplayed holes, so they remain explicitly pending.
+- Captain’s Choice remains in the profile's reviewed score history with an exclusion reason; it never enters qualifying totals, pool or trend. Review never writes, removes or changes source rounds or statistics. Existing general round-history/scoring code is unchanged.
+- Published calculation components: 54 actual holes, standard 18-hole scale, differential formula with explicit PCC, nine-hole half-PCC and supplied expected differential, correct negative tie rounding, initial par+5/NDB maximum helper, the complete fewer-than-20 table, lowest 8 of latest 20, 54.0 maximum, cumulative exceptional reductions over the last 20 differentials and their dilution, Low Index/soft/hard-cap calculation.
+- A deterministic replay boundary accepts **verified, unrounded 18-hole differentials** tied to a player/round/review revision and external posting identity. It rebuilds counts, current selection, score statuses and chronological personal trend after corrections/exclusions. Duplicate round revisions and duplicate external postings cannot inflate qualification. Missing or stale inputs block the current calculation instead of selecting an incomplete pool.
+- Automatic source transition is tested using real replay outputs, retaining the manual value. No legacy integer or league Index is used as a personal Index. Replay never modifies participant snapshots.
+- Profile history now reviews canonical source scorecards when loaded, replacing the previous empty producer-less subcollection reads. It propagates read failures, labels excluded rows “Unofficial” and unresolved rows “Pending,” and shows a 54-hole progress/blocked state. The app supplies **no fabricated verified differential or eligibility attestation**, so live calculated values remain unavailable pending the integration below.
 
-Future approved calculation publication will use the existing player document for the summary, plus:
+## Verified USGA rules and implementation boundaries
 
-- `players/{playerID}/personal-handicap-history/{roundID}` — player and round identity, title, played date, and full calculation output with effective-as-of date, method version, basis, and selection references.
-- `players/{playerID}/personal-handicap-scores/{roundID}` — one individual score per stable round identity, played date, title, hole count, gross score, and exclusion reason.
+| Rule | Requirement and handling |
+| --- | --- |
+| [2.1a — authorized formats](https://www.usga.org/content/usga/home-page/handicapping/roh/Content/rules/2%201a%20Played%20in%20an%20Authorized%20Format%20of%20Play.htm) | Individual stroke play, match play and four-ball may qualify. Team membership alone is not exclusion. Full acceptability still needs verification. |
+| [3.1 — initial maximum](https://www.usga.org/content/dam/usga/pdf/2024-revision/2024-Rules-of-Handicapping-USGA.pdf), [3.1b — NDB](https://www.usga.org/handicapping/roh/Content/rules/3%201b%20After%20a%20Handicap%20Index%20Has%20Been%20Established.htm) | Par+5 before an Index; later full unrestricted Course Handicap, including plus-player strokes given back. The helper is tested; the live adapter does not claim to have a certified adjusted gross score. |
+| [5.1 / 5.6 — differentials/PCC](https://www.usga.org/handicapping/roh/Content/rules/5%206%20Playing%20Conditions%20Calculation.htm) | PCC is an official course/day statistical input. Missing PCC is an error. Having fewer than eight scores **inside Hackers** does not prove a course/day PCC of zero. |
+| [5.1b — nine-hole score](https://www.usga.org/handicapping/roh/Content/rules/5%201b%20Calculation%20of%20a%20Score%20Differential9Hole.htm), [expected-score FAQ](https://www.usga.org/content/usga/home-page/handicapping/world-handicap-system/world-handicap-system-usga-golf-faqs/faqs---expected-score-explained.html) | A nine-hole differential is combined with the required expected differential; it is not doubled or paired. The helper requires that supplied value and keeps the played nine unrounded until combination. No numeric expected-score function is invented. |
+| [Initial nine-hole scores](https://www.usga.org/content/usga/home-page/handicapping/roh/Content/rules/Committee%20Content/USGA/LG_R5a.htm) | Initial nine-hole expected processing occurs after 54 holes have been posted. Tests with supplied normalized differentials exercise six nines and mixed records; the app does not bootstrap expected values itself. |
+| [Unplayed-hole FAQ](https://www.usga.org/content/usga/home-page/handicapping/world-handicap-system/world-handicap-system-usga-golf-faqs.html) | Established players' qualifying 10–17-hole rounds require verified reasons, hole data and official expected-score processing. Before an initial Index, only rated nine/18 posting options apply. Partial/picked-up records remain pending rather than receiving invented net-par/most-likely scores. |
+| [5.2a — selection table](https://www.usga.org/content/usga/home-page/handicapping/roh/Content/rules/5%202a%20For%20Fewer%20Than%2020%20Scores.htm), [5.1c — minus rounding](https://www.usga.org/content/usga/home-page/handicapping/roh/Content/rules/5%201c%20Calculation%20of%20a%20Score%20DifferentialRoundingMinus.htm) | Published selection/adjustment table; best 8/20; nearest tenth, with exact negative ties toward zero. No league multiplier. |
+| [5.7 — Low Index](https://www.usga.org/handicapping/roh/Content/rules/5%207%20Low%20Handicap%20Index.htm), [5.8 — caps](https://www.usga.org/content/usga/home-page/handicapping/roh/Content/rules/5%208%20Limit%20on%20Upward%20Movement%20of%20a%20Handicap.htm) | Low Index begins at 20 acceptable scores. Existing Low is used before updating its window, including after long gaps. Soft limit halves movement above +3; hard limit +5. Final production processing must use verified play dates/revision timing and full history. |
+| [5.9 — exceptional scores](https://www.usga.org/content/usga/home-page/handicapping/roh/Content/rules/5%209%20Submission%20of%20an%20Exceptional%20Score.htm) | Compare unrounded differential to the Index in effect when played. Reductions accumulate over the then-latest 20; subsequent scores do not inherit old adjustments. |
 
-Use the actual `Collections.players` name if it changes. History is not embedded as an unbounded array in the player document. Readers isolate player IDs, order deterministically by played date/round ID, and select the newest calculation revision before removing ineligible points. These collections are read by this slice; they are not populated by it.
+All generated outputs are **unofficial Hackers calculations**, never an issued GHIN Index.
 
-## Proposed policy awaiting approval
+## Remaining blocker and work required to finish
 
-The user was presented with these choices: approve the proposal below; approve the same algorithm with an earlier provisional Index after one 18-hole equivalent; or defer the engine and review the independent work.
+The repository has no GHIN/USGA-authorized provider or verified import pipeline for:
 
-Proposed initial policy:
+1. Official course/day PCC values, including later adjustments.
+2. Official expected-score normalization for nine-hole and valid partially played rounds, including initial qualification from nines.
+3. Confirmed posting acceptability, actual play date, the personal Index in effect, and Rule 3 adjusted gross/most-likely scores where necessary. `Round.status == complete`, league allowances, or the current profile Index do not establish these historical facts.
 
-- Minimum 54 actual completed eligible holes and three 18-hole differential equivalents. No calculated/provisional Index before qualification; use manual starting Index if supplied.
-- Include complete individually attributable gross cards from ordinary or league rounds, including individual match-play/best-ball cards with every required hole scored. Require exact tee ratings, slope, par, and valid hole data. Exclude practice, unofficial, incomplete, invalid, team-only, and duplicate results. Never fill in unplayed holes.
-- Differential: `(113 / slope) × (adjusted gross − course rating)`.
-- Nine-hole treatment: pair chronological actual nine-hole differentials and add them; an unpaired nine waits. This is a proposed **unofficial Hackers pairing policy**, not current WHS expected-score treatment, and never doubles a nine-hole result. No unpublished expected-score formula is invented.
-- Per-hole adjustment: par + 5 without a frozen input Index; otherwise net double bogey based on that round's frozen Index and uncapped Course Handicap. This affects personal calculation input only, never historical scoring.
-- Latest 20 differential equivalents. Select lowest differentials per the WHS-style table: 3 → 1 minus 2.0; 4 → 1 minus 1.0; 5 → 1; 6 → 2 minus 1.0; 7–8 → 2; 9–11 → 3; 12–14 → 4; 15–16 → 5; 17–18 → 6; 19 → 7; 20 → 8. Average when more than one counts; round to one decimal; maximum 54.0. No league 0.96 multiplier.
-- PCC, exceptional-score reductions, and low-index soft/hard caps are outside this proposed first-release algorithm. All generated values remain explicitly unofficial.
-- Deterministically rebuild chronological results on completions, corrections, exclusions, or imports. Publish summaries/history without rewriting round participants or their frozen allowances.
+The published pages reviewed explain expected-score treatment but do not supply the numeric expected-score function/data needed by this repository. An integration or supplied authoritative inputs is required; the code does not infer zero PCC or reverse-engineer an expected score.
 
-Sources consulted: [USGA Rule 5.1b](https://www.usga.org/content/usga/home-page/handicapping/roh/Content/rules/5%201b%20Calculation%20of%20a%20Score%20Differential9Hole.htm), [USGA Rules of Handicapping](https://www.usga.org/handicapping/roh/rules-of-handicapping.html). The proposal deliberately differs from full current WHS; it must not be advertised as an official WHS/GHIN Index.
+After that provider is available, bind its results to canonical score revisions; handle partial-round normalization and initial-nine bootstrap; verify home-association daily revision/date conventions and Low Index edge cases; publish summaries/history atomically; wire authoritative completion/correction/exclusion reconciliation and fresh regular-round prefill. **Current review runs when the profile loads; no background/event-driven calculation publication or persisted calculated Index is enabled.** The automatic transition and chart replay are covered with verified-input test fixtures, not live provider data. This is a deliberate failure to calculate when required facts are unavailable, not a claim of finished end-to-end behavior.
 
-## Remaining work gated by that decision
-
-The actual qualification threshold/algorithm tests; individual score extraction and eligibility evaluation across ordinary/league rounds; nine-hole normalization; correction/exclusion/import reconciliation; duplicate-safe publication; automatic score-event recalculation; and population of calculated summaries/history. The effective-source transition and chart reader can consume approved outputs but are not proof of a working score calculation engine.
+The ClickUp MCP re-read was rate limited during this continuation. The full ticket had been reviewed previously; the user's latest requirements govern this update.
 
 ## Validation
 
-The Sandbox simulator build passed. The available iPhone 17 Pro simulator (iOS 26.3.1) passed **322 tests, 0 failed, 0 skipped**, confirmed with `xcresulttool get test-results summary`. This includes **27 new personal-profile tests**, 289 XCTest cases overall, and 33 Swift Testing cases.
+**347 passed, 0 failed, 0 skipped**, confirmed with `xcresulttool get test-results summary`, on iPhone 17 Pro / iOS 26.3.1. This includes **25 new calculation/eligibility tests** plus the previous profile and dependency regressions. **Sandbox simulator build passed** (`xcodebuild ... build CODE_SIGNING_ALLOWED=NO`).
 
-The new tests cover manual encoding/reload and edits, explicit zero versus absence, registered/offline identity and edit access, retention of manual and calculated records, effective-source transition from qualified output, loss of eligibility, legacy integer compatibility, plus-handicap entry, explicit 18-hole basis, ordinary round prefill, canonical nine-/18-hole Course HCP conversion, unavailable tee data, tee recalculation with preserved input, round-only override isolation, historical participant snapshots, league/strokes-mode isolation, chronological chart ordering, correction invalidation, duplicate chart records, and score-history statuses. Transition/history tests exercise the output contract; they do **not** claim that the pending calculation engine exists or that its policy has been approved.
+Suites: `PersonalHandicapCalculationTests`, `PersonalHandicapProfileTests`, `CourseHandicapCalculationRegressionTests`, `ScoringEngineTests`, `SeriesRoundCreationMappingTests`, `RoundParticipantHandicapOverrideTests`, `HandicapComputationTests`, `SeriesRoundSyncServiceTests`, `SeriesHandicapHistoryTests`, `SeriesRoundHandicapAccrualTests`, `SeriesRoundCodableTests`, and `RoundActivationMatchupValidationTests`.
 
-Existing selected suites: `CourseHandicapCalculationRegressionTests`, `ScoringEngineTests`, `SeriesRoundCreationMappingTests`, `RoundParticipantHandicapOverrideTests`, `HandicapComputationTests`, `SeriesRoundSyncServiceTests`, `SeriesHandicapHistoryTests`, `SeriesRoundHandicapAccrualTests`, `SeriesRoundCodableTests`, and `RoundActivationMatchupValidationTests`.
+Local evidence:
+
+- `/private/tmp/HackersPersonalHandicapEngine-final.xcresult`
+- `/private/tmp/HackersPersonalHandicapEngine-final.log`
+- `/private/tmp/HackersPersonalHandicapEngine-build.log`
+
+Run each selected suite with `-only-testing:HackersUnitTests/<suite>`:
 
 ```sh
 xcodebuild -project Hackers.xcodeproj -scheme Sandbox -configuration Sandbox \
@@ -65,20 +74,8 @@ xcodebuild -project Hackers.xcodeproj -scheme Sandbox -configuration Sandbox \
   -derivedDataPath /private/tmp/HackersPersonalHandicapDerived \
   -clonedSourcePackagesDirPath /private/tmp/HackersCombinedDerived/SourcePackages \
   -disableAutomaticPackageResolution \
-  -only-testing:HackersUnitTests/PersonalHandicapProfileTests \
-  -only-testing:HackersUnitTests/CourseHandicapCalculationRegressionTests \
-  -only-testing:HackersUnitTests/ScoringEngineTests \
-  -only-testing:HackersUnitTests/SeriesRoundCreationMappingTests \
-  -only-testing:HackersUnitTests/RoundParticipantHandicapOverrideTests \
-  -only-testing:HackersUnitTests/HandicapComputationTests \
-  -only-testing:HackersUnitTests/SeriesRoundSyncServiceTests \
-  -only-testing:HackersUnitTests/SeriesHandicapHistoryTests \
-  -only-testing:HackersUnitTests/SeriesRoundHandicapAccrualTests \
-  -only-testing:HackersUnitTests/SeriesRoundCodableTests \
-  -only-testing:HackersUnitTests/RoundActivationMatchupValidationTests \
   -enableAddressSanitizer NO -enableCodeCoverage NO -parallel-testing-enabled NO \
-  -resultBundlePath /private/tmp/HackersPersonalHandicap-tests.xcresult \
   test CODE_SIGNING_ALLOWED=NO
 ```
 
-`git diff --check` passes. Live authenticated Firebase transaction/save/reload, deployed rule enforcement, manual simulator UI acceptance, and physical-device testing have not been exercised. App-host startup emitted existing Firebase permission/installation and unpaired-watch errors; they did not fail the selected tests. League discovery inherits the existing routed discovery helpers' error handling; no server authorization changes are included. Actual score eligibility, differential generation, nine-hole pairing/expected scores, automatic completion/correction/exclusion recalculation, and history publication await approved policy and remain untested because this slice does not implement them.
+Live authenticated Firebase/provider, manual UI and physical-device acceptance are not tested. Existing app-host startup Firebase permission/keychain and unpaired-watch messages still occur; selected tests pass. `git diff --check` passes. No server rules, data migrations, GitHub merges, or deployments were performed.

@@ -101,10 +101,9 @@ struct ManualPersonalHandicap: Hashable, Codable {
     }
 }
 
-/// Calculation output contract, independent of the policy that produces it.
-/// No producer is enabled until the personal calculation policy is approved.
+/// Unofficial personal calculation output; never an issued GHIN Index.
 struct PersonalHandicapCalculation: Hashable, Codable {
-    enum Status: String, Codable { case collecting, qualified }
+    enum Status: String, Codable { case collecting, qualified, blocked }
     var index: Double?
     var status: Status
     var asOf: Time
@@ -116,13 +115,19 @@ struct PersonalHandicapCalculation: Hashable, Codable {
     var countingScoreIDs: [String]
     var basis: SeriesHandicapStrokeBasis = .eighteenHole
 
+    var blockers: [String]? = nil
+    var lowHandicapIndex: Double? = nil
+
     var qualifiedIndex: Double? {
-        guard status == .qualified, basis == .eighteenHole, let index, index.isFinite, !methodVersion.isEmpty else { return nil }
+        guard status == .qualified, basis == .eighteenHole, qualifyingHoles >= 54,
+              Set(qualifyingScoreIDs).count >= 3, let index, index.isFinite, index <= 54,
+              !methodVersion.isEmpty else { return nil }
         return index
     }
 
     enum CodingKeys: String, CodingKey {
-        case index, status, basis
+        case index, status, basis, blockers
+        case lowHandicapIndex = "low_handicap_index"
         case asOf = "as_of", methodVersion = "method_version"
         case qualifyingScoreIDs = "qualifying_score_ids", qualifyingHoles = "qualifying_holes"
         case requiredHoles = "required_holes", poolScoreIDs = "pool_score_ids", countingScoreIDs = "counting_score_ids"
@@ -232,10 +237,12 @@ struct PersonalHandicapScoreRecord: Hashable, Codable, Identifiable {
     let holeCount: Int
     let grossScore: Int?
     let exclusionReason: String?
+    var pendingReason: String? = nil
 
     enum CodingKeys: String, CodingKey {
         case playerID = "player_id", roundID = "round_id", roundTitle = "round_title", playedAt = "played_at"
         case holeCount = "hole_count", grossScore = "gross_score", exclusionReason = "exclusion_reason"
+        case pendingReason = "pending_reason"
     }
 }
 
@@ -252,7 +259,9 @@ enum PersonalHandicapPresentation {
     }
 
     static func scoreStatus(_ score: PersonalHandicapScoreRecord, calculation: PersonalHandicapCalculation?) -> String {
-        guard score.exclusionReason == nil, let calculation,
+        if score.exclusionReason != nil { return "Unofficial" }
+        if score.pendingReason != nil { return "Pending" }
+        guard let calculation,
               calculation.qualifyingScoreIDs.contains(score.id) else { return "Unofficial" }
         if calculation.countingScoreIDs.contains(score.id) { return "Counts" }
         return calculation.poolScoreIDs.contains(score.id) ? "Pool" : "Earlier score"

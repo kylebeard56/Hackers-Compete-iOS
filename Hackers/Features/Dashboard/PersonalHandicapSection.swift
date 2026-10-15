@@ -17,8 +17,12 @@ struct PersonalHandicapSection: View {
     @State private var selectedDate: Date?
     @State private var selectedPoint: PersonalHandicapHistoryPoint?
 
-    private var profile: PersonalHandicapProfile { player.personalHandicap ?? .init() }
-    private var calculation: PersonalHandicapCalculation? { profile.calculation }
+    private var profile: PersonalHandicapProfile {
+        var profile = player.personalHandicap ?? .init()
+        if let reviewed = history.calculation { profile.calculation = reviewed }
+        return profile
+    }
+    private var calculation: PersonalHandicapCalculation? { history.calculation ?? profile.calculation }
     private var trendPoint: PersonalHandicapHistoryPoint? {
         guard let selectedDate else { return history.points.last }
         return history.points.min { abs($0.playedAt.unix - selectedDate.timeIntervalSince1970) < abs($1.playedAt.unix - selectedDate.timeIntervalSince1970) }
@@ -97,7 +101,10 @@ struct PersonalHandicapSection: View {
                 Text(ManualPersonalHandicap.display(calculation?.qualifiedIndex)).monospacedDigit()
             }
             if let calculation {
-                detail("Latest calculation: \(calculation.asOf.formattedDate)")
+                detail("Latest review: \(calculation.asOf.formattedDate)")
+            }
+            if calculation?.status == .blocked {
+                detail(PersonalHandicapEngine.unavailableMessage)
             }
             detail("Hackers calculations are unofficial. Your manual starting Index is kept separately.")
         }
@@ -126,7 +133,7 @@ struct PersonalHandicapSection: View {
             } else if history.points.isEmpty {
                 VStack(spacing: 8) {
                     Image(systemName: "chart.xyaxis.line").font(.system(size: 24, weight: .medium)).foregroundStyle(Color.neutral3)
-                    detail("Your calculated Index trend will appear once enough qualifying scores are available.")
+                    detail(calculation?.status == .blocked ? "A calculated Index needs verified score data." : "Your calculated Index trend will appear after 54 qualifying holes and valid differentials are available.")
                     if let calculation, let required = calculation.requiredHoles, required > 0 {
                         ProgressView(value: Double(min(calculation.qualifyingHoles, required)), total: Double(required))
                             .tint(Color.accentGreen)
@@ -189,6 +196,7 @@ struct PersonalHandicapSection: View {
                 legend("Counts", style: 0)
                 legend("Pool", style: 1)
                 legend("Unofficial", style: 2)
+                legend("Pending", style: 2)
             }
             if history.scores.isEmpty {
                 detail(isLoading ? "Loading personal score history…" : historyError != nil ? "Personal score history could not be loaded." : "No personal handicap scores recorded yet.")
@@ -200,7 +208,7 @@ struct PersonalHandicapSection: View {
                     VStack(alignment: .leading, spacing: 4) {
                         Text(score.roundTitle).fontStyle(kFontName, size: 14, weight: .semibold)
                         detail("\(score.playedAt.formattedDate) · \(score.holeCount) holes")
-                        if let reason = score.exclusionReason { detail(reason) }
+                        if let reason = score.exclusionReason ?? score.pendingReason { detail(reason) }
                     }
                     Spacer(minLength: 8)
                     VStack(alignment: .trailing, spacing: 4) {

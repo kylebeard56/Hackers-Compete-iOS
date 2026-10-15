@@ -410,6 +410,8 @@
 		A16565010000000000000002 /* PersonalHandicap.swift in Sources */ = {isa = PBXBuildFile; fileRef = A16565010000000000000001 /* PersonalHandicap.swift */; };
 		A16565010000000000000004 /* PersonalHandicapSection.swift in Sources */ = {isa = PBXBuildFile; fileRef = A16565010000000000000003 /* PersonalHandicapSection.swift */; };
 		A16565010000000000000006 /* Firebase+PersonalHandicap.swift in Sources */ = {isa = PBXBuildFile; fileRef = A16565010000000000000005 /* Firebase+PersonalHandicap.swift */; };
+		A16565020000000000000002 /* PersonalHandicapEligibility.swift in Sources */ = {isa = PBXBuildFile; fileRef = A16565020000000000000001 /* PersonalHandicapEligibility.swift */; };
+		A16565020000000000000004 /* PersonalHandicapRules.swift in Sources */ = {isa = PBXBuildFile; fileRef = A16565020000000000000003 /* PersonalHandicapRules.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -848,6 +850,8 @@
 		A16565010000000000000001 /* PersonalHandicap.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "PersonalHandicap.swift"; sourceTree = "<group>"; };
 		A16565010000000000000003 /* PersonalHandicapSection.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "PersonalHandicapSection.swift"; sourceTree = "<group>"; };
 		A16565010000000000000005 /* Firebase+PersonalHandicap.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "Firebase+PersonalHandicap.swift"; sourceTree = "<group>"; };
+		A16565020000000000000001 /* PersonalHandicapEligibility.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "PersonalHandicapEligibility.swift"; sourceTree = "<group>"; };
+		A16565020000000000000003 /* PersonalHandicapRules.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "PersonalHandicapRules.swift"; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFileSystemSynchronizedBuildFileExceptionSet section */
@@ -1144,6 +1148,8 @@
 			isa = PBXGroup;
 			children = (
 				B453F6F72E54830100CD8A74 /* Player.swift */,
+				A16565020000000000000001 /* PersonalHandicapEligibility.swift */,
+				A16565020000000000000003 /* PersonalHandicapRules.swift */,
 				A16565010000000000000001 /* PersonalHandicap.swift */,
 				B4PH1A022F5E0001007D8846 /* PlayerHistoryEntry.swift */,
 				B4PH1A042F5E0001007D8846 /* CourseHistoryEntry.swift */,
@@ -2367,6 +2373,8 @@
 				B4E8A1B42F4C000100000002 /* PlayerAvatarView.swift in Sources */,
 				B4F977212E8D35B80007868E /* HackersCard.swift in Sources */,
 				B453F6F82E54830100CD8A74 /* Player.swift in Sources */,
+				A16565020000000000000002 /* PersonalHandicapEligibility.swift in Sources */,
+				A16565020000000000000004 /* PersonalHandicapRules.swift in Sources */,
 				A16565010000000000000002 /* PersonalHandicap.swift in Sources */,
 				B4PH1A012F5E0001007D8846 /* PlayerHistoryEntry.swift in Sources */,
 				B4PH1A032F5E0001007D8846 /* CourseHistoryEntry.swift in Sources */,

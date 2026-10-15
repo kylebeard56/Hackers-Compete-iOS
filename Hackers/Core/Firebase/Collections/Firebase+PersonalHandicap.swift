@@ -12,6 +12,7 @@ struct ProfileLeagueHandicap: Identifiable {
 struct PersonalHandicapHistory {
     var points: [PersonalHandicapHistoryPoint] = []
     var scores: [PersonalHandicapScoreRecord] = []
+    var calculation: PersonalHandicapCalculation?
 }
 
 extension FirebaseService {
@@ -55,20 +56,26 @@ extension FirebaseService {
 
     func fetchPersonalHandicapHistory(playerID: String) async throws -> PersonalHandicapHistory {
         guard !playerID.isEmpty, !playerID.contains("/") else { throw HackersError.invalidDocumentID }
-        let reference = Firestore.firestore().collection(Collections.players.rawValue).document(playerID)
-        async let points = reference.collection("personal-handicap-history").getDocuments()
-        async let scores = reference.collection("personal-handicap-scores").getDocuments()
-        let (pointDocuments, scoreDocuments) = try await (points, scores)
-        let decodedPoints = try pointDocuments.documents.map { try $0.data(as: PersonalHandicapHistoryPoint.self) }
-        let decodedScores = try scoreDocuments.documents.map { try $0.data(as: PersonalHandicapScoreRecord.self) }
-        let ownScores = decodedScores.filter { $0.playerID == playerID }
-        let uniqueScores = Dictionary(grouping: ownScores, by: \.roundID).compactMap { _, values in values.first }
-        return .init(
-            points: PersonalHandicapPresentation.trend(decodedPoints, playerID: playerID),
-            scores: uniqueScores.sorted {
-                $0.playedAt.unix == $1.playedAt.unix ? $0.roundID < $1.roundID : $0.playedAt.unix > $1.playedAt.unix
-            }
-        )
+        // Use canonical source rounds for ordinary AND league play, never the
+        // league's handicap-score pool (which has different eligibility/rules).
+        // Propagate read failures: a partial history must not look like zero scores.
+        let query = Firestore.firestore().collection(Collections.rounds.name)
+            .whereField("players", arrayContains: playerID)
+        let rounds: [Round] = try await fetchDocuments(query: query).get()
+        var reviews: [PersonalHandicapRoundReview] = []
+        for round in rounds where round.status != .archived {
+            try Task.checkCancellation()
+            async let participants = getParticipants(for: round.id)
+            async let segments = getSegments(for: round.id)
+            async let scores = getScores(for: round.id)
+            let (p, s, g) = try await (participants.get(), segments.get(), scores.get())
+            let snapshot = RoundSnapshot(round: round, participants: p, segments: s, scoring: g)
+            // Existing rounds do not certify acceptability or provide official PCC /
+            // expected-score data. Explicitly pending; never infer an official input.
+            reviews.append(PersonalHandicapEligibility.review(snapshot, playerID: playerID))
+        }
+        let rebuilt = PersonalHandicapEngine.rebuild(playerID: playerID, reviews: reviews)
+        return .init(points: rebuilt.history, scores: rebuilt.scores.reversed(), calculation: rebuilt.calculation)
     }
 
     /// Read-only projection using each league's existing algorithm and overrides.
