@@ -81,6 +81,12 @@ extension RoundSnapshot {
     var handicapStrokeBasis: SeriesHandicapStrokeBasis {
         configuration.resolvedHandicapStrokeBasis(holeCount: holeRange?.count ?? holeSegment.holeCount)
     }
+    var handicapIndexBasis: SeriesHandicapStrokeBasis? {
+        // The old explicit setting was also used as the source Index basis.
+        // Read that stored setting for compatibility; never use the inferred scoring basis.
+        configuration.handicapIndexBasis
+            ?? (configuration.handicapEntryFormat == .courseHandicap ? configuration.handicapStrokeBasis : nil)
+    }
     var defaultTee: Tee? { courseInfo?.teeMap[courseSegment?.defaultTee ?? ""] }
     var tees: [Tee] { courseInfo?.tees ?? [] }
     

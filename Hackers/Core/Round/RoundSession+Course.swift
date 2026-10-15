@@ -15,7 +15,7 @@ extension RoundSession {
         let previousTeeID = snapshot.courseSegment?.defaultTee
         let previousTee = previousTeeID.flatMap { id in snapshot.tees.first(where: { $0.id == id }) }
 
-        guard previousTeeID != teeID else { return }
+        guard snapshot.round.status == .lobby, previousTeeID != teeID, snapshot.courseSegment != nil else { return }
 
         do {
             snapshot.round.configuration.courses[0].defaultTee = teeID
@@ -29,7 +29,7 @@ extension RoundSession {
                     format: .courseHandicap,
                     courseSegment: updatedSegment,
                     maximumHandicap: snapshot.configuration.leagueHandicapMaximum,
-                    handicapStrokeBasis: snapshot.handicapStrokeBasis
+                    handicapStrokeBasis: snapshot.handicapIndexBasis
                 )
                 for participant in recomputed where snapshot.participants.first(where: { $0.id == participant.id }) != participant {
                     try await update(participant: participant)
@@ -63,6 +63,7 @@ extension RoundSession {
     /// when the course is in our DB (PUT) or was edited from API (POST).
     func setCourseSegment(to segment: CourseSegment) async {
         addBreadcrumb()
+        guard snapshot.round.status == .lobby else { return }
         let previousSegment = snapshot.courseSegment
         let previousCourse = previousSegment.map { Course(info: $0.courseInfo) }
         let previousTee = previousSegment.flatMap { segment in
@@ -85,16 +86,16 @@ extension RoundSession {
 
         do {
             let previousHandicapEntryFormat = snapshot.configuration.handicapEntryFormat
-            let resolvedHandicapEntryFormat: HandicapEntryFormat = previousHandicapEntryFormat == .courseHandicap
-                && !HandicapCalculator.hasCourseHandicapData(courseSegment: segmentToSave)
-                ? .strokes
-                : previousHandicapEntryFormat
+            let resolvedHandicapEntryFormat = previousHandicapEntryFormat
             if snapshot.round.configuration.courses.isEmpty {
                 snapshot.round.configuration.courses = [segmentToSave]
             } else {
                 snapshot.round.configuration.courses[0] = segmentToSave
             }
-            snapshot.round.configuration.handicapEntryFormat = resolvedHandicapEntryFormat
+            if snapshot.configuration.handicapIndexBasis != nil, !snapshot.participants.contains(where: { $0.seriesMemberID != nil }),
+               resolvedHandicapEntryFormat == .courseHandicap {
+                snapshot.round.configuration.handicapStrokeBasis = .defaultBasis(holeCount: segmentToSave.holeSegment.holeCount)
+            }
             _ = try await snapshot.round.put().get()
 
             let didSyncSegment = try await syncPrimarySegmentHoleRange(to: segmentToSave.holeRange)
@@ -109,9 +110,7 @@ extension RoundSession {
                     format: resolvedHandicapEntryFormat,
                     courseSegment: segmentToSave,
                     maximumHandicap: snapshot.configuration.leagueHandicapMaximum,
-                    handicapStrokeBasis: snapshot.configuration.resolvedHandicapStrokeBasis(
-                        holeCount: segmentToSave.holeSegment.holeCount
-                    )
+                    handicapStrokeBasis: snapshot.handicapIndexBasis
                 )
                 for participant in recomputed where snapshot.participants.first(where: { $0.id == participant.id }) != participant {
                     try await update(participant: participant)
@@ -172,11 +171,19 @@ extension RoundSession {
 
     func unsetCourseSegment() async {
         addBreadcrumb()
-        guard snapshot.courseSegment != nil else { return }
+        guard snapshot.round.status == .lobby, snapshot.courseSegment != nil else { return }
 
         do {
             snapshot.round.configuration.courses = []
             _ = try await snapshot.round.put().get()
+            let recomputed = HandicapCalculator.recomputedParticipants(
+                snapshot.participants, format: snapshot.configuration.handicapEntryFormat,
+                courseSegment: nil, maximumHandicap: snapshot.configuration.leagueHandicapMaximum,
+                handicapStrokeBasis: snapshot.handicapIndexBasis
+            )
+            for participant in recomputed where snapshot.participants.first(where: { $0.id == participant.id }) != participant {
+                try await update(participant: participant)
+            }
 
             emitRoundSetupEvent(
                 "round_setup.course_removed",

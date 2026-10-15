@@ -81,7 +81,6 @@ struct GameLobby: View, Loggable {
     @State private var previousRoundStatus: RoundStatus?
     @State private var didTrackLobbyView = false
     @State private var isSyncingTeams = false
-    @State private var isCorrectingMissingCourseHandicapData = false
     @State private var isShowingRoundNameAlert = false
     @State private var roundNameDraft = ""
 
@@ -250,20 +249,8 @@ struct GameLobby: View, Loggable {
             secretScoringEnabled = s.isSecretScoring
             handicapEntryFormat = s.configuration.handicapEntryFormat
             handicapNormalizationMode = s.configuration.handicapNormalizationMode
-            handicapStrokeBasis = s.configuration.handicapStrokeBasis
-            if s.configuration.handicapEntryFormat == .courseHandicap,
-               !HandicapCalculator.hasCourseHandicapData(courseSegment: s.courseSegment) {
-                handicapEntryFormat = .strokes
-                if !isCorrectingMissingCourseHandicapData {
-                    isCorrectingMissingCourseHandicapData = true
-                    Task {
-                        await roundSession.setHandicapEntryFormat(.strokes, maximumHandicap: effectiveSeriesLeagueHandicapMaximum)
-                        await MainActor.run { isCorrectingMissingCourseHandicapData = false }
-                    }
-                }
-            } else {
-                isCorrectingMissingCourseHandicapData = false
-            }
+            handicapStrokeBasis = s.configuration.handicapEntryFormat == .courseHandicap ? s.handicapIndexBasis : s.configuration.handicapStrokeBasis
+
             sharedScoreAllowanceText = Self.allowanceText(
                 from: s.configuration.sharedScoreHandicapConfig ?? s.resolvedActiveTemplate.requirements.defaultHandicapConfig
             )

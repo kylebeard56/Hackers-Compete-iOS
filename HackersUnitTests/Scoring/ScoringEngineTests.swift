@@ -2818,7 +2818,7 @@ final class ScoringEngineTests: XCTestCase {
                 tees: [white, purple],
                 maximumHandicap: nil
             ),
-            "Course HCP: 7"
+            "Course HCP: 7 · Strokes Received: 7"
         )
         XCTAssertEqual(
             CourseHandicapRosterDisplay.label(
@@ -2830,7 +2830,7 @@ final class ScoringEngineTests: XCTestCase {
                 tees: [white, purple],
                 maximumHandicap: nil
             ),
-            "Course HCP: 7 (Purple tees)"
+            "Course HCP: 7 · Strokes Received: 7 (Purple tees)"
         )
         XCTAssertEqual(
             CourseHandicapRosterDisplay.label(
@@ -2842,9 +2842,9 @@ final class ScoringEngineTests: XCTestCase {
                 tees: [white, purple],
                 maximumHandicap: 18
             ),
-            "Course HCP: 18*"
+            "Course HCP: 28 · Strokes Received: 18"
         )
-        XCTAssertNil(
+        XCTAssertEqual(
             CourseHandicapRosterDisplay.label(
                 index: 7.2,
                 participant: whiteParticipant,
@@ -2853,11 +2853,12 @@ final class ScoringEngineTests: XCTestCase {
                 defaultTee: white,
                 tees: [white, purple],
                 maximumHandicap: nil
-            )
+            ),
+            "Course HCP: Unavailable"
         )
 
         let legacyParticipant = RoundParticipant(id: "legacy", teeBoxID: "white", originalHandicap: 8)
-        XCTAssertEqual(
+        XCTAssertNil(
             CourseHandicapRosterDisplay.label(
                 participant: legacyParticipant,
                 courseSegment: segment,
@@ -2865,8 +2866,7 @@ final class ScoringEngineTests: XCTestCase {
                 defaultTee: white,
                 tees: [white, purple],
                 maximumHandicap: nil
-            ),
-            "Course HCP: 8"
+            )
         )
     }
 
@@ -2910,7 +2910,7 @@ final class ScoringEngineTests: XCTestCase {
         )
     }
 
-    func testCourseHandicapMissingTeeDataFallsBackToEnteredStrokes() {
+    func testCourseHandicapMissingTeeDataDoesNotConvertIndexToStrokes() {
         let participant = RoundParticipant(id: "p1", teeBoxID: "blue")
         let tee = Tee(
             id: "blue",
@@ -2932,14 +2932,13 @@ final class ScoringEngineTests: XCTestCase {
         )
 
         XCTAssertNil(HandicapCalculator.courseHandicap(index: 8.1, participant: participant, courseSegment: segment))
-        XCTAssertEqual(
+        XCTAssertNil(
             HandicapCalculator.strokes(
                 for: 8.1,
                 format: .courseHandicap,
                 participant: participant,
                 courseSegment: segment
-            ),
-            8
+            )
         )
     }
 

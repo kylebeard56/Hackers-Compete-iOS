@@ -1423,7 +1423,7 @@ struct SeriesRoundScoreCorrectionSheet: View {
                     ?? context.holes.reduce(0) { $0 + $1.par },
                 handicapStrokeBasis: context.snapshot.handicapStrokeBasis,
                 maximumHandicap: context.snapshot.configuration.leagueHandicapMaximum,
-                entryFormat: .courseHandicap,
+                entryFormat: .strokes,
                 calculatorFingerprint: "commissioner-course-hcp-override-v1|\(courseHandicap)|\(draft.teeBoxID)",
                 selectedHandicapScoreIDs: old?.selectedHandicapScoreIDs ?? [],
                 calculatedAt: .init(),
@@ -1486,7 +1486,7 @@ struct SeriesRoundScoreCorrectionSheet: View {
             courseName: course.courseInfo.name,
             holeSegment: course.holeSegment,
             entryFormat: .courseHandicap,
-            handicapStrokeBasis: context.snapshot.handicapStrokeBasis,
+            handicapStrokeBasis: context.snapshot.handicapIndexBasis ?? participant.handicapSnapshot?.handicapStrokeBasis,
             maximumHandicap: context.snapshot.configuration.leagueHandicapMaximum
         )
     }
@@ -1886,7 +1886,7 @@ struct SeriesRoundPlayerRepairSheet: View {
             courseName: course.courseInfo.name,
             holeSegment: course.holeSegment,
             entryFormat: .courseHandicap,
-            handicapStrokeBasis: context.snapshot.handicapStrokeBasis,
+            handicapStrokeBasis: context.snapshot.handicapIndexBasis ?? participant.handicapSnapshot?.handicapStrokeBasis,
             maximumHandicap: context.snapshot.configuration.leagueHandicapMaximum
         )
     }

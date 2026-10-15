@@ -1253,12 +1253,9 @@ enum SeriesRoundOutcomeNarrativeBuilder {
     ) -> String {
         if snapshot.configuration.handicapEntryFormat == .courseHandicap {
             let nextCourseHandicap = nextHandicap.flatMap {
-                HandicapCalculator.courseHandicap(
-                    index: $0,
-                    participant: participant,
-                    courseSegment: snapshot.courseSegment,
-                    handicapStrokeBasis: snapshot.handicapStrokeBasis
-                )
+                HandicapCalculator.calculation(index: $0, participant: participant, courseSegment: snapshot.courseSegment,
+                    indexBasis: snapshot.handicapIndexBasis ?? participant.handicapSnapshot?.handicapStrokeBasis)
+                    .allowedStrokes(maximum: snapshot.configuration.leagueHandicapMaximum)
             }
             return "Course HCP: \(currentCourseHandicap) -> \(courseHandicapLabel(nextCourseHandicap)) next week"
         }

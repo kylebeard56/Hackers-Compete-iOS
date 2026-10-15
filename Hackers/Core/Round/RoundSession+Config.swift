@@ -200,23 +200,27 @@ extension RoundSession {
     func setHandicapEntryFormat(_ format: HandicapEntryFormat, maximumHandicap: Int? = nil) async {
         addBreadcrumb()
         let previous = snapshot.configuration.handicapEntryFormat
-        let resolvedFormat: HandicapEntryFormat = format == .courseHandicap
-            && !HandicapCalculator.hasCourseHandicapData(courseSegment: snapshot.courseSegment)
-            ? .strokes
-            : format
+        guard snapshot.round.status == .lobby, !snapshot.participants.contains(where: { $0.seriesMemberID != nil }) else { return }
+        let resolvedFormat = format
 
         do {
-            if snapshot.round.configuration.handicapEntryFormat != resolvedFormat {
-                snapshot.round.configuration.handicapEntryFormat = resolvedFormat
-                _ = try await snapshot.round.put().get()
+            if format == .courseHandicap, snapshot.configuration.handicapIndexBasis == nil {
+                // Newly selected personal/WHS Index entry has an 18-hole source.
+                snapshot.round.configuration.handicapIndexBasis = snapshot.handicapIndexBasis ?? .eighteenHole
             }
+            if format == .courseHandicap {
+                snapshot.round.configuration.handicapStrokeBasis = .defaultBasis(holeCount: snapshot.holeSegment.holeCount)
+            }
+            snapshot.round.configuration.handicapEntryFormat = resolvedFormat
+            _ = try await snapshot.round.put().get()
 
             let recomputed = HandicapCalculator.recomputedParticipants(
                 snapshot.participants,
                 format: resolvedFormat,
                 courseSegment: snapshot.courseSegment,
                 maximumHandicap: maximumHandicap,
-                handicapStrokeBasis: snapshot.handicapStrokeBasis
+                handicapStrokeBasis: snapshot.handicapIndexBasis,
+                changingEntryFormat: previous != format
             )
             for participant in recomputed where snapshot.participants.first(where: { $0.id == participant.id }) != participant {
                 try await update(participant: participant)
@@ -237,24 +241,21 @@ extension RoundSession {
 
     func setHandicapStrokeBasis(_ basis: SeriesHandicapStrokeBasis?, maximumHandicap: Int? = nil) async {
         addBreadcrumb()
-        let previous = snapshot.configuration.handicapStrokeBasis
+        guard snapshot.round.status == .lobby, !snapshot.participants.contains(where: { $0.seriesMemberID != nil }) else { return }
+        let isIndex = snapshot.configuration.handicapEntryFormat == .courseHandicap
+        let previous = isIndex ? snapshot.handicapIndexBasis : snapshot.configuration.handicapStrokeBasis
 
         do {
-            if snapshot.round.configuration.handicapStrokeBasis != basis {
+            if isIndex {
+                snapshot.round.configuration.handicapIndexBasis = basis ?? .eighteenHole
+            } else {
                 snapshot.round.configuration.handicapStrokeBasis = basis
-                _ = try await snapshot.round.put().get()
             }
-
-            if snapshot.configuration.handicapEntryFormat == .courseHandicap {
-                let resolvedBasis = basis ?? SeriesHandicapStrokeBasis.defaultBasis(
-                    holeCount: snapshot.holeRange?.count ?? snapshot.holeSegment.holeCount
-                )
+            _ = try await snapshot.round.put().get()
+            if isIndex {
                 let recomputed = HandicapCalculator.recomputedParticipants(
-                    snapshot.participants,
-                    format: .courseHandicap,
-                    courseSegment: snapshot.courseSegment,
-                    maximumHandicap: maximumHandicap,
-                    handicapStrokeBasis: resolvedBasis
+                    snapshot.participants, format: .courseHandicap, courseSegment: snapshot.courseSegment,
+                    maximumHandicap: maximumHandicap, handicapStrokeBasis: snapshot.handicapIndexBasis
                 )
                 for participant in recomputed where snapshot.participants.first(where: { $0.id == participant.id }) != participant {
                     try await update(participant: participant)

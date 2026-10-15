@@ -376,6 +376,8 @@ struct RoundConfiguration: Hashable, Codable {
     var scoresRevealed: Bool?              // Host flips this to true to unveil all scores
     /// Basis for interpreting participant handicap values in net scoring. Missing legacy docs infer from hole count.
     var handicapStrokeBasis: SeriesHandicapStrokeBasis?
+    /// Source Index basis. Nil on legacy rounds means unknown, not the round length.
+    var handicapIndexBasis: SeriesHandicapStrokeBasis?
     /// Explicit gross/net switch for modern round docs. Missing legacy docs infer from the primary format.
     var handicapsEnabled: Bool?
     /// Optional format-specific allowance for shared-score scoring units, applied by handicap rank.
@@ -422,6 +424,7 @@ struct RoundConfiguration: Hashable, Codable {
         secretScoring: Bool? = nil,
         scoresRevealed: Bool? = nil,
         handicapStrokeBasis: SeriesHandicapStrokeBasis? = nil,
+        handicapIndexBasis: SeriesHandicapStrokeBasis? = nil,
         handicapsEnabled: Bool? = nil,
         sharedScoreHandicapConfig: HandicapConfiguration? = nil,
         handicapEntryFormat: HandicapEntryFormat = .strokes,
@@ -453,6 +456,7 @@ struct RoundConfiguration: Hashable, Codable {
         self.secretScoring = secretScoring
         self.scoresRevealed = scoresRevealed
         self.handicapStrokeBasis = handicapStrokeBasis
+        self.handicapIndexBasis = handicapIndexBasis
         self.handicapsEnabled = handicapsEnabled
         self.sharedScoreHandicapConfig = sharedScoreHandicapConfig
         self.handicapEntryFormat = handicapEntryFormat
@@ -497,6 +501,7 @@ struct RoundConfiguration: Hashable, Codable {
         case secretScoring = "secret_scoring"
         case scoresRevealed = "scores_revealed"
         case handicapStrokeBasis = "handicap_stroke_basis"
+        case handicapIndexBasis = "handicap_index_basis"
         case handicapsEnabled = "use_handicaps"
         case sharedScoreHandicapConfig = "shared_score_handicap_config"
         case handicapEntryFormat = "handicap_entry_format"
@@ -610,6 +615,7 @@ struct RoundConfiguration: Hashable, Codable {
         sequentialTeeStartsEnabled = try c.decodeIfPresent(Bool.self, forKey: .sequentialTeeStartsEnabled) ?? false
         secretScoring = try c.decodeIfPresent(Bool.self, forKey: .secretScoring)
         scoresRevealed = try c.decodeIfPresent(Bool.self, forKey: .scoresRevealed)
+        handicapIndexBasis = try c.decodeIfPresent(SeriesHandicapStrokeBasis.self, forKey: .handicapIndexBasis)
         handicapStrokeBasis = try c.decodeIfPresent(SeriesHandicapStrokeBasis.self, forKey: .handicapStrokeBasis)
         handicapsEnabled = try c.decodeIfPresent(Bool.self, forKey: .handicapsEnabled)
         sharedScoreHandicapConfig = try c.decodeIfPresent(HandicapConfiguration.self, forKey: .sharedScoreHandicapConfig)
@@ -662,6 +668,7 @@ struct RoundConfiguration: Hashable, Codable {
         try c.encodeIfPresent(secretScoring, forKey: .secretScoring)
         try c.encodeIfPresent(scoresRevealed, forKey: .scoresRevealed)
         try c.encodeIfPresent(handicapStrokeBasis, forKey: .handicapStrokeBasis)
+        try c.encodeIfPresent(handicapIndexBasis, forKey: .handicapIndexBasis)
         try c.encodeIfPresent(handicapsEnabled, forKey: .handicapsEnabled)
         try c.encodeIfPresent(sharedScoreHandicapConfig, forKey: .sharedScoreHandicapConfig)
         try c.encode(handicapEntryFormat, forKey: .handicapEntryFormat)
