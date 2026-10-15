@@ -2065,9 +2065,10 @@ private struct CumulativeScoreBandPoint: Identifiable {
 
 enum PlayerInsightsHeaderContext {
     static func handicapSummary(for participant: RoundParticipant) -> String {
-        let index = participant.handicapSnapshot?.handicapIndex
-            ?? participant.handicapIndex
-            ?? Double(participant.originalHandicap)
+        guard let index = participant.handicapSnapshot?.handicapIndex
+            ?? participant.handicapIndex else {
+            return "Course HCP \(participant.lockedHandicapAllowance)"
+        }
         let formattedIndex = SeriesMemberHandicap.formatHandicapIndexForDisplay(index)
         return "Index \(formattedIndex) · Course HCP \(participant.lockedHandicapAllowance)"
     }

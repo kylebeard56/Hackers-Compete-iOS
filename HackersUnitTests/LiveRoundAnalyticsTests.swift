@@ -1036,6 +1036,20 @@ final class PlayerInsightsRoundAnalyticsTests: XCTestCase {
         )
     }
 
+    func testPlayerInsightsHeaderDoesNotInventMissingHandicapIndex() {
+        let participant = RoundParticipant(
+            id: "legacy_player",
+            originalHandicap: 12,
+            adjustedHandicap: 13,
+            handicapIndex: nil
+        )
+
+        XCTAssertEqual(
+            PlayerInsightsHeaderContext.handicapSummary(for: participant),
+            "Course HCP 13"
+        )
+    }
+
     func testCompletedRoundAveragePaceConnectsEvenToFinalScore() throws {
         let snapshot = MockLobbyFoursome.snapshot
         let holeCount = try XCTUnwrap(snapshot.holeRange?.holeNumbers.count)
