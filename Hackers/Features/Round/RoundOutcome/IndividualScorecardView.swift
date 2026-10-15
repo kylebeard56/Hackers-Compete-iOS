@@ -39,7 +39,6 @@ struct IndividualScorecardView: View {
     }
     private var holeNumbers: [Int] { viewModel.courseOrderHoleNumbers }
     private var handicapsEnabled: Bool { viewModel.handicapsEnabled }
-    private var scoreBasis: ScoreBasis { viewModel.scoreBasis }
     private var participantStartingHole: Int? {
         guard let groupID = participant.groupID else { return nil }
         return viewModel.snapshot.teeGroups.first { $0.id == groupID }?.startingHole
@@ -395,7 +394,14 @@ struct IndividualScorecardView: View {
         let total = holes.compactMap {
             viewModel.grossStrokes(for: participant.id, holeNumber: $0)
         }.reduce(0, +)
-        return scorecardValueRow(label: "Score", values: values, total: total, holes: holes, highlightScores: true)
+        return scorecardValueRow(
+            label: "Score",
+            values: values,
+            total: total,
+            holes: holes,
+            highlightScores: true,
+            showsHandicapDots: true
+        )
     }
 
     private func scorecardNetRow(holes: [Int]) -> some View {
@@ -417,7 +423,8 @@ struct IndividualScorecardView: View {
         total: Int?,
         holes: [Int]? = nil,
         fontSize: CGFloat = 13,
-        highlightScores: Bool = false
+        highlightScores: Bool = false,
+        showsHandicapDots: Bool = false
     ) -> some View {
         HStack(spacing: 4) {
             Text(label)
@@ -430,15 +437,21 @@ struct IndividualScorecardView: View {
                 let par = holeNum.flatMap { viewModel.hole(for: $0)?.par } ?? 4
                 let strokes = Int(value)
 
-                ZStack {
-                    if highlightScores, let strokes {
-                        scoreDecoration(par: par, strokes: strokes, color: effectiveAccent)
+                VStack(spacing: 2) {
+                    ZStack {
+                        if highlightScores, let strokes {
+                            scoreDecoration(par: par, strokes: strokes, color: effectiveAccent)
+                        }
+                        Text(value)
+                            .fontStyle(kFontName, size: fontSize, weight: .semibold)
+                            .foregroundStyle(palette.foregroundColor)
+                            .lineLimit(1)
+                            .minimumScaleFactor(0.8)
                     }
-                    Text(value)
-                        .fontStyle(kFontName, size: fontSize, weight: .semibold)
-                        .foregroundStyle(palette.foregroundColor)
-                        .lineLimit(1)
-                        .minimumScaleFactor(0.8)
+
+                    if showsHandicapDots, let holeNum {
+                        handicapStrokeDots(holeNumber: holeNum)
+                    }
                 }
                 .frame(maxWidth: .infinity)
                 .padding(.vertical, 4)
@@ -457,6 +470,32 @@ struct IndividualScorecardView: View {
                 }
             }
             .frame(width: 36)
+        }
+    }
+
+    @ViewBuilder
+    private func handicapStrokeDots(holeNumber: Int) -> some View {
+        let visibleDotCount = ScorecardStrokeDotPolicy.visibleCount(
+            strokesReceived: viewModel.strokesReceivedOnHole(
+                participant: participant,
+                holeNumber: holeNumber
+            ),
+            basis: .gross
+        )
+        if visibleDotCount > 0 {
+            HStack(spacing: 2) {
+                ForEach(0..<visibleDotCount, id: \.self) { _ in
+                    Circle()
+                        .fill(palette.foregroundColor.opacity(0.7))
+                        .frame(width: 3, height: 3)
+                }
+            }
+            .accessibilityHidden(true)
+        } else {
+            Circle()
+                .fill(Color.clear)
+                .frame(width: 3, height: 3)
+                .accessibilityHidden(true)
         }
     }
 
