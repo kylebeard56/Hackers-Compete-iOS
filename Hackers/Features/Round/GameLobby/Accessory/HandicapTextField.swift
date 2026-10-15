@@ -74,7 +74,8 @@ struct HandicapTextField: View {
     }
 
     private var displayText: String {
-        guard entryFormat == .courseHandicap, let entryValue else { return "\(initialValue)" }
+        guard entryFormat == .courseHandicap else { return "\(initialValue)" }
+        guard let entryValue else { return "—" }
         return entryValue.formatted(.number.precision(.fractionLength(1)))
     }
 
@@ -114,7 +115,7 @@ struct HandicapTextField: View {
                 hasTyped = false
                 text = ""
             } else {
-                if hasTyped {
+                if hasTyped && (entryFormat != .courseHandicap || Double(text) != nil) {
                     onDebouncedEdit?(debouncer.value)
                 }
                 Task {
@@ -241,6 +242,7 @@ struct HandicapTextField: View {
                 }
                 text = filtered
 
+                if entryFormat == .courseHandicap, Double(filtered) == nil { return }
                 let value = Double(filtered) ?? entryValue ?? Double(initialValue)
                 if entryFormat == .courseHandicap {
                     debouncer.value = max(value, 0)

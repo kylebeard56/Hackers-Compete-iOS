@@ -129,7 +129,7 @@ extension GameLobby {
             handicapStrokeBasis: $handicapStrokeBasis,
             courseHandicapAvailable: courseHandicapAvailable,
             competitionScope: snapshot.configuration.resolvedCompetitionScope,
-            resolvedAutoBasis: snapshot.handicapStrokeBasis,
+            resolvedAutoBasis: handicapEntryFormat == .courseHandicap ? (snapshot.handicapIndexBasis ?? .eighteenHole) : snapshot.handicapStrokeBasis,
             palette: palette,
             courseHandicapSubtitle: courseHandicapMenuSubtitle,
             onEntryFormatChanged: { next in

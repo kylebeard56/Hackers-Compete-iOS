@@ -547,15 +547,15 @@ extension GameLobby {
 
                     if snapshot.configuration.useHandicaps {
                         let seriesLock = seriesHandicapLobbyLockActive
-                        let rosterEntryFormat = snapshot.configuration.handicapEntryFormat
+                        let rosterEntryFormat = participant.handicapResolution?.entryFormat ?? snapshot.configuration.handicapEntryFormat
                         HandicapTextField(
                             id: participant.id,
                             initialValue: participant.adjustedHandicap,
                             entryValue: seriesLock
                                 ? nil
                                 : (rosterEntryFormat == .courseHandicap
-                                    ? participant.handicapIndex ?? Double(participant.originalHandicap)
-                                    : participant.handicapIndex),
+                                    ? participant.handicapIndex
+                                    : nil),
                             entryFormat: seriesLock ? .strokes : rosterEntryFormat,
                             focusedField: $focus,
                             palette: palette,
@@ -579,10 +579,9 @@ extension GameLobby {
                                     format: rosterEntryFormat,
                                     courseSegment: snapshot.courseSegment,
                                     maximumHandicap: seriesLock ? effectiveSeriesLeagueHandicapMaximum : nil,
-                                    handicapStrokeBasis: snapshot.handicapStrokeBasis
+                                    handicapStrokeBasis: snapshot.handicapIndexBasis ?? participant.handicapResolution?.calculation?.indexBasis
                                 )
-                                if participant.adjustedHandicap == updated.adjustedHandicap,
-                                   participant.handicapIndex == updated.handicapIndex {
+                                if participant == updated {
                                     return
                                 }
                                 updated.leagueHandicapStrokesAtCreation = nil
@@ -1305,7 +1304,7 @@ extension GameLobby {
         return CourseHandicapRosterDisplay.label(
             participant: participant,
             courseSegment: snapshot.courseSegment,
-            handicapStrokeBasis: snapshot.handicapStrokeBasis,
+            handicapStrokeBasis: snapshot.handicapIndexBasis ?? participant.handicapResolution?.calculation?.indexBasis,
             defaultTee: snapshot.defaultTee,
             tees: snapshot.tees,
             maximumHandicap: effectiveSeriesLeagueHandicapMaximum

@@ -33,6 +33,7 @@ struct RoundActivationErrorView: View {
     }
     
     private var titleText: String {
+        if roundSession.roundActivationErrors.contains(.handicapUnresolved) { return "Handicap Setup Needed" }
         if showScoringGroupInvalidRefs && !showTeam && !showTeeGroup {
             return "Score Groups Incomplete or Incompatible"
         }
@@ -64,6 +65,9 @@ struct RoundActivationErrorView: View {
     }
 
     private var subtitleText: String {
+        if roundSession.roundActivationErrors.contains(.handicapUnresolved) {
+            return "Review each player's Handicap Index basis and Course HCP. Confirm any estimate, fix missing course data, or explicitly enter strokes for this round before starting."
+        }
         if showScoringGroupInvalidRefs {
             return "One or more \(scoreOwnerLabel) reference players who are no longer grouped together correctly, or no longer match this format. Update the round setup before starting live play."
         }

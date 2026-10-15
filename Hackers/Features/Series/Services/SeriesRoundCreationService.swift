@@ -71,10 +71,7 @@ struct SeriesRoundCreationService: Loggable {
         )
 
         if seriesRound.roundConfig.handicapEntryFormat == .courseHandicap {
-            let resolvedHandicapStrokeBasis = seriesRound.roundConfig.handicapStrokeBasis
-                ?? SeriesHandicapStrokeBasis.defaultBasis(
-                    holeCount: courseSegment.holeSegment.holeCount
-                )
+            let resolvedHandicapStrokeBasis = series.handicapConfig.strokeBasis
             let issues = SeriesCourseHandicapResolver.validationIssues(
                 members: effectiveMembers,
                 handicaps: handicaps,
@@ -185,7 +182,7 @@ struct SeriesRoundCreationService: Loggable {
                 maximumHandicap: series.handicapConfig.isEnabled ? series.handicapConfig.config.maximumHandicap : nil,
                 courseSegment: courseSegment,
                 handicapEntryFormat: seriesRound.roundConfig.handicapEntryFormat,
-                handicapStrokeBasis: seriesRound.roundConfig.handicapStrokeBasis,
+                handicapStrokeBasis: series.handicapConfig.strokeBasis,
                 selectedHandicapScoreIDsByMemberID: selectedHandicapScoreIDsByMemberID,
                 hostPlayerID: player.id,
                 presenceStatusByMemberID: presenceStatusByMemberID,

@@ -92,20 +92,18 @@ struct HandicapOptionsMenu: View {
     var body: some View {
         Menu {
             Button {
-                guard courseHandicapAvailable else { return }
                 Haptics.fire(.light)
                 let next: HandicapEntryFormat = handicapEntryFormat == .courseHandicap ? .strokes : .courseHandicap
                 handicapEntryFormat = next
                 onEntryFormatChanged(next)
             } label: {
                 Label(
-                    "Course Handicap",
+                    "Handicap Index",
                     systemImage: handicapEntryFormat == .courseHandicap ? "checkmark.circle.fill" : "circle"
                 )
                 Text(courseHandicapMenuSubtitle)
             }
             .menuActionDismissBehavior(.disabled)
-            .disabled(!courseHandicapAvailable)
 
             Button {
                 Haptics.fire(.light)
@@ -191,7 +189,7 @@ struct HandicapOptionsMenu: View {
             return "Auto currently uses \(resolvedAutoBasis.displayName)"
         }
         if handicapStrokeBasis == nil {
-            return "Auto - infer 9-hole or 18-hole from the round"
+            return handicapEntryFormat == .courseHandicap ? "Personal/WHS Index uses 18 holes" : "Auto - infer 9-hole or 18-hole from the round"
         }
         return "\(handicapStrokeBasisDisplay) values"
     }

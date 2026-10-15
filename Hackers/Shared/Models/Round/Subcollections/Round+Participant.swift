@@ -7,6 +7,77 @@
 
 import Foundation
 
+/// The uncapped calculation for one Index, tee and segment. None of these values
+/// are playing allowances; normalization and game allowances happen downstream.
+struct CourseHandicapCalculation: Hashable, Codable {
+    enum Status: String, Codable {
+        case exact = "EXACT"
+        case estimated = "ESTIMATED"
+        case unavailable = "UNAVAILABLE"
+    }
+
+    enum Provenance: String, Codable {
+        case segment
+        case fullCourse = "full_course"
+        case estimatedFromFullCourse = "estimated_from_full_course"
+    }
+
+    var status: Status = .unavailable
+    var handicapIndex: Double?
+    var indexBasis: SeriesHandicapStrokeBasis?
+    var calculationIndex: Double?
+    var teeID: String?
+    var segment: HoleSegment?
+    var rating: Double?
+    var slope: Int?
+    var par: Int?
+    var ratingProvenance: Provenance?
+    var slopeProvenance: Provenance?
+    var parProvenance: Provenance?
+    var rawValue: Double?
+    var courseHandicap: Int?
+    var missingFields: [String] = []
+
+    enum CodingKeys: String, CodingKey {
+        case status, segment, rating, slope, par
+        case handicapIndex = "handicap_index"
+        case indexBasis = "index_basis"
+        case calculationIndex = "calculation_index"
+        case teeID = "tee_id"
+        case ratingProvenance = "rating_provenance"
+        case slopeProvenance = "slope_provenance"
+        case parProvenance = "par_provenance"
+        case rawValue = "raw_value"
+        case courseHandicap = "course_handicap"
+        case missingFields = "missing_fields"
+    }
+
+    func allowedStrokes(maximum: Int?, estimateApproved: Bool = false) -> Int? {
+        guard status == .exact || (status == .estimated && estimateApproved),
+              let courseHandicap else { return nil }
+        let nonNegative = max(0, courseHandicap)
+        return maximum.map { min(nonNegative, max(0, $0)) } ?? nonNegative
+    }
+}
+
+/// Round-local resolution, including unresolved drafts. Optional on old records:
+/// absence never asserts that a historical allowance was an exact calculation.
+struct RoundHandicapResolution: Hashable, Codable {
+    var entryFormat: HandicapEntryFormat
+    var calculation: CourseHandicapCalculation?
+    var effectiveStrokes: Int?
+    var estimateApprovedAt: Time?
+    var approvedBy: String?
+
+    enum CodingKeys: String, CodingKey {
+        case calculation
+        case entryFormat = "entry_format"
+        case effectiveStrokes = "effective_strokes"
+        case estimateApprovedAt = "estimate_approved_at"
+        case approvedBy = "approved_by"
+    }
+}
+
 enum RoundParticipantPresenceStatus: String, Codable, CaseIterable {
     case active
     case unconfirmed
@@ -40,9 +111,10 @@ struct RoundParticipantHandicapSnapshot: Hashable, Codable {
     var selectedHandicapScoreIDs: [String]
     var calculatedAt: Time
     var source: RoundParticipantHandicapSnapshotSource
+    var calculation: CourseHandicapCalculation? = nil
 
     enum CodingKeys: String, CodingKey {
-        case par, source
+        case par, source, calculation
         case authoritativeCourseHandicap = "authoritative_course_handicap"
         case handicapIndex = "handicap_index"
         case effectiveStrokes = "effective_strokes"
@@ -77,6 +149,7 @@ struct RoundParticipant: FirebaseSubcollectable, Playable {
     /// Frozen scoring allowance for this historical round. Commissioner repair
     /// may replace it together with an auditable handicap snapshot.
     var leagueHandicapStrokesAtCreation: Int?
+    var handicapResolution: RoundHandicapResolution?
     var handicapSnapshot: RoundParticipantHandicapSnapshot?
 
     var seriesMemberID: String?
@@ -108,6 +181,7 @@ struct RoundParticipant: FirebaseSubcollectable, Playable {
         handicapIndex: Double? = nil,
         leagueHandicapStrokesAtCreation: Int? = nil,
         handicapSnapshot: RoundParticipantHandicapSnapshot? = nil,
+        handicapResolution: RoundHandicapResolution? = nil,
         seriesMemberID: String? = nil,
         teamID: String? = nil,
         groupID: String? = nil,
@@ -131,6 +205,7 @@ struct RoundParticipant: FirebaseSubcollectable, Playable {
         self.handicapIndex = handicapIndex
         self.leagueHandicapStrokesAtCreation = leagueHandicapStrokesAtCreation
         self.handicapSnapshot = handicapSnapshot
+        self.handicapResolution = handicapResolution
         self.seriesMemberID = seriesMemberID
         self.teamID = teamID
         self.groupID = groupID
@@ -173,6 +248,7 @@ struct RoundParticipant: FirebaseSubcollectable, Playable {
         self.handicapIndex = nil
         self.leagueHandicapStrokesAtCreation = nil
         self.handicapSnapshot = nil
+        self.handicapResolution = nil
         self.seriesMemberID = nil
         self.teamID = teamID
         self.groupID = groupID
@@ -199,6 +275,7 @@ struct RoundParticipant: FirebaseSubcollectable, Playable {
         case handicapIndex = "handicap_index"
         case leagueHandicapStrokesAtCreation = "league_handicap_strokes_at_creation"
         case handicapSnapshot = "handicap_snapshot"
+        case handicapResolution = "handicap_resolution"
 
         case seriesMemberID = "series_member_id"
         case teamID = "team_id"
@@ -229,6 +306,7 @@ struct RoundParticipant: FirebaseSubcollectable, Playable {
         adjustedHandicap = try c.decodeIfPresent(Int.self, forKey: .adjustedHandicap) ?? 0
         handicapIndex = try c.decodeIfPresent(Double.self, forKey: .handicapIndex)
         leagueHandicapStrokesAtCreation = try c.decodeIfPresent(Int.self, forKey: .leagueHandicapStrokesAtCreation)
+        handicapResolution = try c.decodeIfPresent(RoundHandicapResolution.self, forKey: .handicapResolution)
         handicapSnapshot = try c.decodeIfPresent(RoundParticipantHandicapSnapshot.self, forKey: .handicapSnapshot)
 
         seriesMemberID = try c.decodeIfPresent(String.self, forKey: .seriesMemberID)
@@ -294,12 +372,19 @@ extension RoundParticipant {
     var lockedHandicapProvenance: String {
         let strokes = lockedHandicapAllowance
         if let baseline = leagueHandicapComputedBaseline, strokes != baseline {
-            return "Commissioner override: Course HCP \(strokes) (computed \(baseline))"
+            return "Commissioner override: Strokes Received \(strokes) (computed \(baseline))"
         }
-        if let index = handicapSnapshot?.handicapIndex ?? handicapIndex {
-            return "Index \(String(format: "%.1f", index)) → Course HCP \(strokes)"
+        if handicapResolution?.entryFormat == .strokes || handicapSnapshot?.entryFormat == .strokes {
+            return "Strokes Received \(strokes) (manual)"
         }
-        return "Course HCP \(strokes)"
+        let index = handicapSnapshot?.handicapIndex ?? handicapIndex
+        let prefix = index.map { "Index \(String(format: "%.1f", $0)) · " } ?? ""
+        if let calculation = handicapSnapshot?.calculation ?? handicapResolution?.calculation,
+           let courseHandicap = calculation.courseHandicap {
+            let title = calculation.status == .estimated ? "Estimated Course HCP" : "Course HCP"
+            return "\(prefix)\(title) \(courseHandicap) · Strokes Received \(strokes)"
+        }
+        return "\(prefix)Strokes Received \(strokes)"
     }
 }
 

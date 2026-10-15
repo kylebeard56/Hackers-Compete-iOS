@@ -562,6 +562,7 @@ enum SeriesRoundSyncPlanning {
                 next.handicapIndex = existing.handicapIndex ?? next.handicapIndex
                 next.leagueHandicapStrokesAtCreation = existing.leagueHandicapStrokesAtCreation
                 next.handicapSnapshot = existing.handicapSnapshot
+                next.handicapResolution = existing.handicapResolution
             }
 
             next.lastUpdatedAt = .init()
@@ -709,7 +710,7 @@ enum SeriesRoundSyncPlanning {
             maximumHandicap: series.handicapConfig.isEnabled ? series.handicapConfig.config.maximumHandicap : nil,
             courseSegment: courseSegment,
             handicapEntryFormat: seriesRound.roundConfig.handicapEntryFormat,
-            handicapStrokeBasis: seriesRound.roundConfig.handicapStrokeBasis,
+            handicapStrokeBasis: series.handicapConfig.strokeBasis,
             hostPlayerID: hostPlayerID,
             presenceStatusByMemberID: presenceStatusByMemberID,
             plannedSeatsByMemberID: plannedSeatsByMemberID
@@ -794,7 +795,8 @@ enum SeriesRoundSyncPlanning {
         } else {
             round.configuration.handicapsEnabled = resolvedPlan.roundConfiguration.useHandicaps
             round.configuration.sequentialTeeStartsEnabled = false
-            round.configuration.handicapStrokeBasis = seriesRound.roundConfig.handicapStrokeBasis
+            round.configuration.handicapStrokeBasis = resolvedPlan.roundConfiguration.handicapStrokeBasis
+            round.configuration.handicapIndexBasis = series.handicapConfig.strokeBasis
             round.configuration.leagueHandicapMaximum = series.handicapConfig.isEnabled
                 ? series.handicapConfig.config.maximumHandicap
                 : nil

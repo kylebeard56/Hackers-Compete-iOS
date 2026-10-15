@@ -130,15 +130,20 @@ extension RoundSession {
                     isHost: $0.isHost(in: snapshot),
                     parentID: roundID ?? snapshot.round.id
                 )
-                let input = Double(participant.originalHandicap)
-                return HandicapCalculator.participant(
-                    participant,
-                    applying: input,
-                    format: snapshot.configuration.handicapEntryFormat,
+                // Legacy integer profile handicaps are strokes, not a decimal Index.
+                if snapshot.configuration.handicapEntryFormat == .strokes {
+                    return HandicapCalculator.participant(
+                        participant, applying: Double(participant.originalHandicap), format: .strokes,
+                        courseSegment: snapshot.courseSegment,
+                        maximumHandicap: snapshot.configuration.leagueHandicapMaximum
+                    )
+                }
+                return HandicapCalculator.recomputedParticipants(
+                    [participant], format: snapshot.configuration.handicapEntryFormat,
                     courseSegment: snapshot.courseSegment,
                     maximumHandicap: snapshot.configuration.leagueHandicapMaximum,
-                    handicapStrokeBasis: snapshot.handicapStrokeBasis
-                )
+                    handicapStrokeBasis: snapshot.handicapIndexBasis
+                )[0]
             }
 
             // 3. Optional auto-assignment

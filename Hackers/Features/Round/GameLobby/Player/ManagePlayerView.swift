@@ -46,6 +46,10 @@ struct ManagePlayerView: View, Loggable {
     @State private var handicapValue: Double = 0
     @State private var hasConfirmedHandicapOverride = false
     @State private var showHandicapOverrideAlert = false
+    @State private var manualStrokes = false
+    @State private var indexBasis: SeriesHandicapStrokeBasis?
+    @State private var estimateApproved = false
+    @State private var showCourseData = false
     @State private var groupID: String? = nil
     @State private var teamID: String? = nil
     
@@ -60,7 +64,7 @@ struct ManagePlayerView: View, Loggable {
     
     private var palette: DesignPalette { .init(theme: .primary, scheme: colorScheme) }
     private var canSave: Bool {
-        name.isPopulated && tee.exists
+        name.isPopulated && tee.exists && (strokesHandicapReadOnly || Double(handicapString) != nil)
     }
 
     private var strokesHandicapReadOnly: Bool {
@@ -77,7 +81,7 @@ struct ManagePlayerView: View, Loggable {
     }
 
     private var effectiveHandicapEntryFormat: HandicapEntryFormat {
-        seriesHandicapLockActive ? .strokes : snapshot.configuration.handicapEntryFormat
+        seriesHandicapLockActive || manualStrokes ? .strokes : snapshot.configuration.handicapEntryFormat
     }
 
     private var commissionerStrokesValueColor: Color {
@@ -115,6 +119,21 @@ struct ManagePlayerView: View, Loggable {
             )
             .presentationDragIndicator(.visible)
         }
+        .sheet(isPresented: $showCourseData) {
+            CourseSelectionView(
+                viewModel: .init(course: snapshot.course, tee: tee, holeSegment: snapshot.holeSegment),
+                presentationType: .sheet,
+                onModification: { segment in
+                    Task {
+                        await roundSession.setCourseSegment(to: segment)
+                        tee = segment.defaultTee.flatMap { segment.tee(from: $0) }
+                        showCourseData = false
+                    }
+                },
+                onRemoveModification: { }
+            )
+        }
+        .onChange(of: courseHandicapCalculation) { estimateApproved = false }
         .sheet(isPresented: $showHostChangeSheet) {
             ChangeHostView(snapshot: snapshot) { newHost in
                 Task {
@@ -131,10 +150,15 @@ struct ManagePlayerView: View, Loggable {
         .task {
             name = participant?.name.fullName ?? ""
             tee = snapshot.tees.first(where: { $0.id == participant?.teeBoxID }) ?? snapshot.defaultTee
-            handicapValue = seriesHandicapLockActive
-                ? Double(participant?.adjustedHandicap ?? 0)
-                : participant?.handicapIndex ?? Double(participant?.originalHandicap ?? participant?.adjustedHandicap ?? 0)
-            handicapString = formattedHandicapInput(handicapValue)
+            manualStrokes = participant?.handicapResolution?.entryFormat == .strokes
+            indexBasis = snapshot.handicapIndexBasis ?? participant?.handicapResolution?.calculation?.indexBasis
+            if effectiveHandicapEntryFormat == .courseHandicap {
+                handicapValue = participant?.handicapIndex ?? 0
+                handicapString = participant?.handicapIndex.map { String(format: "%.1f", $0) } ?? ""
+            } else {
+                handicapValue = Double(participant?.adjustedHandicap ?? 0)
+                handicapString = formattedHandicapInput(handicapValue)
+            }
             groupID = participant?.groupID
             teamID = participant?.teamID
             
@@ -259,7 +283,7 @@ extension ManagePlayerView {
     private var strokesSection: some View {
         VStack(spacing: 8) {
             HStack(spacing: 12) {
-                Text("Strokes")
+                Text(effectiveHandicapEntryFormat == .courseHandicap ? "Handicap Index" : "Strokes")
                     .fontStyle(kFontName, size: 15, weight: .semibold)
                     .foregroundStyle(palette.foregroundColor)
 
@@ -342,7 +366,7 @@ extension ManagePlayerView {
                             .accessibilityHint("Restores the league-computed handicap for this round")
                     }
 
-                    Text("Max: \(maximumHandicapValue)")
+                    Text(effectiveHandicapEntryFormat == .courseHandicap ? "\(indexBasis?.holeCount ?? 18)-hole Index" : "Max: \(maximumHandicapValue)")
                         .fontStyle(kFontName, size: 15, weight: .regular)
                         .foregroundStyle(Color.neutral3)
                 }
@@ -362,11 +386,30 @@ extension ManagePlayerView {
                 }
             }
 
-            if effectiveHandicapEntryFormat == .courseHandicap, let computedCourseHandicapValue {
-                Text("Course HCP: \(Int(computedCourseHandicapValue.rounded(.toNearestOrAwayFromZero)))")
-                    .fontStyle(kFontName, size: 13, weight: .semibold)
-                    .foregroundStyle(Color.neutral)
-                    .alignLeading()
+            if effectiveHandicapEntryFormat == .courseHandicap {
+                if indexBasis == nil {
+                    Picker("Index basis", selection: $indexBasis) {
+                        Text("Choose Index basis").tag(nil as SeriesHandicapStrokeBasis?)
+                        Text("9 holes").tag(SeriesHandicapStrokeBasis.nineHole as SeriesHandicapStrokeBasis?)
+                        Text("18 holes (WHS)").tag(SeriesHandicapStrokeBasis.eighteenHole as SeriesHandicapStrokeBasis?)
+                    }
+                }
+                CourseHandicapStatusView(
+                    calculation: courseHandicapCalculation,
+                    strokes: courseHandicapCalculation.allowedStrokes(maximum: maximumHandicapValue, estimateApproved: estimateIsApproved),
+                    estimateApproved: estimateIsApproved,
+                    onUseEstimate: { estimateApproved = true },
+                    onFixCourseData: { showCourseData = true },
+                    onEnterStrokes: {
+                        if let value = Double(handicapString), let current = participant {
+                            participant = HandicapCalculator.participant(current, applying: value, format: .courseHandicap,
+                                courseSegment: participantCourseSegment, handicapStrokeBasis: indexBasis)
+                        }
+                        manualStrokes = true
+                        handicapString = ""
+                        focus = .handicap
+                    }
+                )
             }
 
             if !snapshot.configuration.useHandicaps {
@@ -581,17 +624,16 @@ extension ManagePlayerView {
             format: effectiveHandicapEntryFormat,
             courseSegment: courseSegment,
             maximumHandicap: maximumHandicapValue,
-            handicapStrokeBasis: snapshot.handicapStrokeBasis
+            handicapStrokeBasis: indexBasis,
+            approveEstimate: estimateIsApproved
         )
         if seriesHandicapLockActive && isSeriesCommissioner {
             p = p.applyingLeagueHandicapOverride(
-                computed.adjustedHandicap,
+                Int(handicapValue.rounded()),
                 maximum: maximumHandicapValue
             )
-        } else {
-            p.originalHandicap = computed.originalHandicap
-            p.adjustedHandicap = computed.adjustedHandicap
-            p.handicapIndex = computed.handicapIndex
+        } else if !seriesHandicapLockActive {
+            p = computed
         }
         p.groupID = groupID
         p.teamID = teamID
@@ -613,17 +655,20 @@ extension ManagePlayerView {
             participant: handicapComputationParticipant,
             courseSegment: participantCourseSegment,
             maximumHandicap: maximumHandicapValue,
-            handicapStrokeBasis: snapshot.handicapStrokeBasis
+            handicapStrokeBasis: snapshot.handicapIndexBasis
+        ) ?? participant?.adjustedHandicap ?? 0
+    }
+
+    private var courseHandicapCalculation: CourseHandicapCalculation {
+        HandicapCalculator.calculation(
+            index: Double(handicapString), participant: handicapComputationParticipant,
+            courseSegment: participantCourseSegment, indexBasis: indexBasis
         )
     }
 
-    private var computedCourseHandicapValue: Double? {
-        HandicapCalculator.rawCourseHandicap(
-            index: handicapValue,
-            participant: handicapComputationParticipant,
-            courseSegment: participantCourseSegment,
-            handicapStrokeBasis: snapshot.handicapStrokeBasis
-        )
+    private var estimateIsApproved: Bool {
+        estimateApproved || (participant?.handicapResolution?.calculation == courseHandicapCalculation
+            && participant?.handicapResolution?.estimateApprovedAt != nil)
     }
 
     private var handicapComputationParticipant: RoundParticipant {
