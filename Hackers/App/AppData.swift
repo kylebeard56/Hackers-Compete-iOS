@@ -71,6 +71,11 @@ extension AppData {
         self.user = nil
         self.primaryPlayer = nil
     }
+
+    func updateCachedPrimaryPlayer(_ player: Player) {
+        guard player.isPrimary, user?.players.contains(player.id) == true else { return }
+        primaryPlayer = player
+    }
 }
 
 // MARK: - Legal

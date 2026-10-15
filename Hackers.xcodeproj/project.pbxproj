@@ -407,6 +407,9 @@
 		D51000232F00000100000023 /* DesignStudioRootView.swift in Sources */ = {isa = PBXBuildFile; fileRef = D51000132F00000100000013 /* DesignStudioRootView.swift */; };
 		D51000242F00000100000024 /* DesignStudioRoundViews.swift in Sources */ = {isa = PBXBuildFile; fileRef = D51000142F00000100000014 /* DesignStudioRoundViews.swift */; };
 		D51000252F00000100000025 /* DesignStudioSeriesRoundView.swift in Sources */ = {isa = PBXBuildFile; fileRef = D51000152F00000100000015 /* DesignStudioSeriesRoundView.swift */; };
+		A16565010000000000000002 /* PersonalHandicap.swift in Sources */ = {isa = PBXBuildFile; fileRef = A16565010000000000000001 /* PersonalHandicap.swift */; };
+		A16565010000000000000004 /* PersonalHandicapSection.swift in Sources */ = {isa = PBXBuildFile; fileRef = A16565010000000000000003 /* PersonalHandicapSection.swift */; };
+		A16565010000000000000006 /* Firebase+PersonalHandicap.swift in Sources */ = {isa = PBXBuildFile; fileRef = A16565010000000000000005 /* Firebase+PersonalHandicap.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -842,6 +845,9 @@
 		D51000142F00000100000014 /* DesignStudioRoundViews.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DesignStudioRoundViews.swift; sourceTree = "<group>"; };
 		D51000152F00000100000015 /* DesignStudioSeriesRoundView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DesignStudioSeriesRoundView.swift; sourceTree = "<group>"; };
 		DC4C9DEFB860A4D1BB558ECB /* InvisibleInkModifier.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = InvisibleInkModifier.swift; sourceTree = "<group>"; };
+		A16565010000000000000001 /* PersonalHandicap.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "PersonalHandicap.swift"; sourceTree = "<group>"; };
+		A16565010000000000000003 /* PersonalHandicapSection.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "PersonalHandicapSection.swift"; sourceTree = "<group>"; };
+		A16565010000000000000005 /* Firebase+PersonalHandicap.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "Firebase+PersonalHandicap.swift"; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFileSystemSynchronizedBuildFileExceptionSet section */
@@ -1138,6 +1144,7 @@
 			isa = PBXGroup;
 			children = (
 				B453F6F72E54830100CD8A74 /* Player.swift */,
+				A16565010000000000000001 /* PersonalHandicap.swift */,
 				B4PH1A022F5E0001007D8846 /* PlayerHistoryEntry.swift */,
 				B4PH1A042F5E0001007D8846 /* CourseHistoryEntry.swift */,
 			);
@@ -1464,6 +1471,7 @@
 				B4EE1E632E2D6514007D8846 /* RecentCoursesView.swift */,
 				B4EE1E552E2D6514007D8845 /* DashboardRoundHistoryView.swift */,
 				B4EE1E572E2D6514007D8845 /* DashboardProfileView.swift */,
+				A16565010000000000000003 /* PersonalHandicapSection.swift */,
 				B4EE1E4E2E2D6513007D8845 /* SetHomeCourseView.swift */,
 			);
 			path = Dashboard;
@@ -1690,6 +1698,7 @@
 				B4CA89BC2E2027300048003A /* Firebase+Auth.swift */,
 				B4BA1DBE2E5006A10070011F /* Firebase+Course.swift */,
 				B463D74B2EBC277B00F361A3 /* Firebase+Player.swift */,
+				A16565010000000000000005 /* Firebase+PersonalHandicap.swift */,
 				B42600272E5889150006C6C2 /* Firebase+Round.swift */,
 				B458435D2F68244D00B96E60 /* Firebase+Series.swift */,
 				B4V200032FBA000100ABCDEF /* Firebase+SeriesRoundV2.swift */,
@@ -2358,6 +2367,7 @@
 				B4E8A1B42F4C000100000002 /* PlayerAvatarView.swift in Sources */,
 				B4F977212E8D35B80007868E /* HackersCard.swift in Sources */,
 				B453F6F82E54830100CD8A74 /* Player.swift in Sources */,
+				A16565010000000000000002 /* PersonalHandicap.swift in Sources */,
 				B4PH1A012F5E0001007D8846 /* PlayerHistoryEntry.swift in Sources */,
 				B4PH1A032F5E0001007D8846 /* CourseHistoryEntry.swift in Sources */,
 				B426002A2E588BF40006C6C2 /* Firebase+Share.swift in Sources */,
@@ -2378,6 +2388,7 @@
 				B4C50C092F6B0005007D8846 /* UIImage+Base64.swift in Sources */,
 				B4C50C112F6B0008007D8846 /* Color+Adjustments.swift in Sources */,
 				B463D74C2EBC278000F361A3 /* Firebase+Player.swift in Sources */,
+				A16565010000000000000006 /* Firebase+PersonalHandicap.swift in Sources */,
 				B4A4A11E2E4F43D600CE5619 /* Course.swift in Sources */,
 				B49C9C2B2E70332900A5DE6A /* RoundSession+Snapshot.swift in Sources */,
 				B4CA89E22E2044B10048003A /* Debounce.swift in Sources */,
@@ -2534,6 +2545,7 @@
 				B4EE1E622E2D6514007D8846 /* RecentCoursesView.swift in Sources */,
 				B4EE1E542E2D6514007D8845 /* DashboardRoundHistoryView.swift in Sources */,
 				B4EE1E562E2D6514007D8845 /* DashboardProfileView.swift in Sources */,
+				A16565010000000000000004 /* PersonalHandicapSection.swift in Sources */,
 				B4EE1E4F2E2D6513007D8845 /* SetHomeCourseView.swift in Sources */,
 				B4D0F5852E6755AD0082B941 /* Aggregation.swift in Sources */,
 				B413C0232E420EB7001DB993 /* LocationService.swift in Sources */,

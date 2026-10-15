@@ -513,7 +513,7 @@ extension GameLobby {
                 Spacer(minLength: 0)
                 
                 if snapshot.configuration.useHandicaps {
-                    Text("Strokes")
+                    Text(seriesHandicapLobbyLockActive ? "Strokes" : "Handicap")
                         .fontStyle(kFontName, size: 13, weight: .medium)
                         .foregroundStyle(Color.neutral)
                         .frame(width: seriesHandicapLobbyLockActive && isSeriesCommissioner ? 112 : 64)

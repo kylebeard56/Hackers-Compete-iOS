@@ -880,7 +880,7 @@ extension CourseSelectionViewModel {
             return
         }
         
-        guard let player = await AppData.shared.getPrimaryPlayer() else {
+        guard let player = await AppData.shared.getPrimaryPlayer(forceRefresh: true) else {
             throwRoundCreationError(msg: "primary player not found")
             return
         }
@@ -890,7 +890,10 @@ extension CourseSelectionViewModel {
             primaryFormat: .strokePlay,
             formatSummary: RoundFormatSummary(from: template),
             courses: [ buildCourseSegment() ],
-            scoreInputMode: selectedCourse.isSimpleRoundCourse ? .friendlyRelativeToPar : .strokes
+            scoreInputMode: selectedCourse.isSimpleRoundCourse ? .friendlyRelativeToPar : .strokes,
+            handicapStrokeBasis: .defaultBasis(holeCount: holeSegment.holeCount),
+            handicapIndexBasis: .eighteenHole,
+            handicapEntryFormat: .courseHandicap
         )
         
         let shareCode = await FirebaseService.shared.getUniqueShareCode()
@@ -966,6 +969,10 @@ extension CourseSelectionViewModel {
             parentID: round.id
         )
         
+        participant = PersonalHandicapRoundPrefill.participant(
+            participant, player: player, configuration: configuration, isLeagueRound: false
+        )
+
         do {
             participant = try await participant.post().get()
             segment = try await segment.post().get()

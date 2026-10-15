@@ -342,7 +342,7 @@ extension ManagePlayerView {
                     TextField("0", text: $handicapString)
                         .fontStyle(kFontName, size: 17, weight: .regular)
                         .foregroundStyle(commissionerStrokesValueColor)
-                        .keyboardType(effectiveHandicapEntryFormat == .courseHandicap ? .decimalPad : .numberPad)
+                        .keyboardType(effectiveHandicapEntryFormat == .courseHandicap ? .numbersAndPunctuation : .numberPad)
                         .focused($focus, equals: .handicap)
 
                     if seriesHandicapLockActive {
@@ -377,7 +377,7 @@ extension ManagePlayerView {
                         if filtered != handicapString {
                             handicapString = filtered
                         }
-                        handicapValue = max(Double(filtered) ?? 0, 0)
+                        handicapValue = Double(filtered) ?? 0
                     } else if let value = Int(handicapString.filter(\.isNumber)) {
                         let clamped = min(max(value, 0), maximumHandicapValue)
                         handicapValue = Double(clamped)
@@ -387,6 +387,11 @@ extension ManagePlayerView {
             }
 
             if effectiveHandicapEntryFormat == .courseHandicap {
+                if let input = participant?.personalHandicapInput {
+                    Text("Profile Index: \(ManualPersonalHandicap.display(input.index)) · \(input.source == .calculated ? "Hackers calculated" : "Manual starting"). Changes here apply only to this round.")
+                        .fontStyle(kFontName, size: 13, weight: .regular)
+                        .foregroundStyle(Color.neutral)
+                }
                 if indexBasis == nil {
                     Picker("Index basis", selection: $indexBasis) {
                         Text("Choose Index basis").tag(nil as SeriesHandicapStrokeBasis?)
@@ -711,22 +716,7 @@ extension ManagePlayerView {
     }
 
     private func decimalHandicapText(_ text: String) -> String {
-        var hasDecimal = false
-        var decimalPlaces = 0
-        var output = ""
-        for character in text {
-            if character.isNumber {
-                if hasDecimal {
-                    guard decimalPlaces < 1 else { continue }
-                    decimalPlaces += 1
-                }
-                output.append(character)
-            } else if character == ".", !hasDecimal {
-                hasDecimal = true
-                output.append(character)
-            }
-        }
-        return output
+        HandicapIndexEntry.filtered(text)
     }
 }
 

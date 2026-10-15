@@ -34,6 +34,8 @@ struct Player: Hashable, Codable, Playable, FirebaseIdentifiable {
     var name: Name
     var rounds: [String]
     var handicaps: [Handicap]
+    /// Separate decimal 18-hole Index; legacy `handicaps` remain stroke allowances.
+    var personalHandicap: PersonalHandicapProfile? = nil
     var isPrimary: Bool
     var status: String
     
@@ -121,6 +123,7 @@ struct Player: Hashable, Codable, Playable, FirebaseIdentifiable {
         case playerHistory = "player_history"
         case courseHistory = "course_history"
         case processedRoundIds = "processed_round_ids"
+        case personalHandicap = "personal_handicap"
         case createdAt = "created_at"
         case lastUpdatedAt = "last_updated_at"
     }
@@ -133,6 +136,7 @@ struct Player: Hashable, Codable, Playable, FirebaseIdentifiable {
         name = try c.decode(Name.self, forKey: .name)
         rounds = try c.decode([String].self, forKey: .rounds)
         handicaps = try c.decode([Handicap].self, forKey: .handicaps)
+        personalHandicap = try c.decodeIfPresent(PersonalHandicapProfile.self, forKey: .personalHandicap)
         isPrimary = try c.decode(Bool.self, forKey: .isPrimary)
         status = try c.decode(String.self, forKey: .status)
         playerHistory = try c.decodeIfPresent([String: PlayerHistoryEntry].self, forKey: .playerHistory) ?? [:]
@@ -150,6 +154,7 @@ struct Player: Hashable, Codable, Playable, FirebaseIdentifiable {
         try c.encode(name, forKey: .name)
         try c.encode(rounds, forKey: .rounds)
         try c.encode(handicaps, forKey: .handicaps)
+        try c.encodeIfPresent(personalHandicap, forKey: .personalHandicap)
         try c.encode(isPrimary, forKey: .isPrimary)
         try c.encode(status, forKey: .status)
         try c.encode(playerHistory, forKey: .playerHistory)

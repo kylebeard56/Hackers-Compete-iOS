@@ -121,7 +121,7 @@ extension RoundSession {
 
             // 2. Create participants locally (no DB writes yet)
             var participants = players.map {
-                let participant = RoundParticipant(
+                var participant = RoundParticipant(
                     player: $0,
                     teeBoxID: snapshot.defaultTee?.id ?? "",
                     teamID: nil,
@@ -129,6 +129,12 @@ extension RoundSession {
                     teeOrder: nil,
                     isHost: $0.isHost(in: snapshot),
                     parentID: roundID ?? snapshot.round.id
+                )
+                participant = PersonalHandicapRoundPrefill.participant(
+                    participant, player: $0, configuration: snapshot.configuration,
+                    isLeagueRound: snapshot.participants.contains { $0.seriesMemberID != nil || $0.handicapSnapshot != nil }
+                        || snapshot.configuration.leagueHandicapMaximum != nil,
+                    status: snapshot.round.status
                 )
                 // Legacy integer profile handicaps are strokes, not a decimal Index.
                 if snapshot.configuration.handicapEntryFormat == .strokes {

@@ -32,6 +32,13 @@ struct DashboardProfileView: View, Loggable {
                 profileCard
                     .padding(.horizontal, 16)
 
+                if let player = loadedPlayer {
+                    PersonalHandicapSection(player: player, palette: palette, onSaved: { loadedPlayer = $0 }) { leagueID in
+                        appSession.routeTo(.series(id: leagueID))
+                    }
+                    .padding(.horizontal, 16)
+                }
+
                 if let saveErrorMessage {
                     Text(saveErrorMessage)
                         .fontStyle(kFontName, size: 14, weight: .regular)
@@ -144,7 +151,7 @@ struct DashboardProfileView: View, Loggable {
     private func loadProfile() async {
         saveErrorMessage = nil
         let user = await AppData.shared.user
-        let player = await AppData.shared.getPrimaryPlayer()
+        let player = await AppData.shared.getPrimaryPlayer(forceRefresh: true)
         loadedUser = user
         loadedPlayer = player
     }

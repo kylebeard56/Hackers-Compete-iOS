@@ -81,7 +81,14 @@ struct HandicapTextField: View {
 
     var body: some View {
         HStack(spacing: 4) {
-            fieldContent
+            VStack(spacing: 2) {
+                if !isSeriesHandicapLocked {
+                    Text(entryFormat == .courseHandicap ? "Index" : "Strokes")
+                        .fontStyle(kFontName, size: 10, weight: .medium)
+                        .foregroundStyle(Color.neutral)
+                }
+                fieldContent
+            }
 
             if isSeriesHandicapLocked && canOverrideSeriesHandicap {
                 if commissionerModifiedOrange {
@@ -141,7 +148,7 @@ struct HandicapTextField: View {
         if isEditing {
             HStack(spacing: 4) {
                 TextField(displayText, text: binding)
-                    .keyboardType(entryFormat == .courseHandicap ? .decimalPad : .numberPad)
+                    .keyboardType(entryFormat == .courseHandicap ? .numbersAndPunctuation : .numberPad)
                     .multilineTextAlignment(.center)
                     .focused($focusedField, equals: id)
                     .fontStyle(kFontName, size: 17, weight: .semibold)
@@ -228,15 +235,7 @@ struct HandicapTextField: View {
 
                 let filtered: String
                 if entryFormat == .courseHandicap {
-                    var hasDecimal = false
-                    filtered = newText.reduce(into: "") { result, character in
-                        if character.isNumber {
-                            result.append(character)
-                        } else if character == ".", !hasDecimal {
-                            hasDecimal = true
-                            result.append(character)
-                        }
-                    }
+                    filtered = HandicapIndexEntry.filtered(newText)
                 } else {
                     filtered = newText.filter { $0.isNumber }
                 }
@@ -245,7 +244,7 @@ struct HandicapTextField: View {
                 if entryFormat == .courseHandicap, Double(filtered) == nil { return }
                 let value = Double(filtered) ?? entryValue ?? Double(initialValue)
                 if entryFormat == .courseHandicap {
-                    debouncer.value = max(value, 0)
+                    debouncer.value = value
                 } else {
                     debouncer.value = Double(min(max(Int(value), 0), maximumValue))
                 }
