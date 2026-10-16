@@ -276,7 +276,7 @@ enum HandicapCalculator {
 
     private static func normalized(_ participant: RoundParticipant, subtracting baseline: Int) -> RoundParticipant {
         var updated = participant
-        updated.adjustedHandicap = max(0, participant.adjustedHandicap - max(0, baseline))
+        updated.adjustedHandicap = max(0, participant.adjustedHandicap - baseline)
         return updated
     }
 

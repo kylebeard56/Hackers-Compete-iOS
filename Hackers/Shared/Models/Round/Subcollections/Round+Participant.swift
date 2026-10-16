@@ -55,8 +55,8 @@ struct CourseHandicapCalculation: Hashable, Codable {
     func allowedStrokes(maximum: Int?, estimateApproved: Bool = false) -> Int? {
         guard status == .exact || (status == .estimated && estimateApproved),
               let courseHandicap else { return nil }
-        let nonNegative = max(0, courseHandicap)
-        return maximum.map { min(nonNegative, max(0, $0)) } ?? nonNegative
+        // A plus handicap gives strokes back; an upper cap never makes it scratch.
+        return maximum.map { min(courseHandicap, max(0, $0)) } ?? courseHandicap
     }
 }
 

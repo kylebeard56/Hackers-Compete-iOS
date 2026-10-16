@@ -186,7 +186,8 @@ final class GolfCourseRepository: Loggable {
     func course(by id: GolfCourseID) async throws -> Course {
         let start = Date()
         if let loaded = loadedCourses[id], loaded.hasPlayableScorecard { return loaded }
-        let cached = try await cache.course(byGolfCourseAPIID: id)
+        let cached = try await cache.course(byGolfCourseAPIID: id)?
+            .canonicalizedGolfCourseAPICacheEntry(expectedAPIID: id)
         if let cached, cached.golfCourseApiID == id, cached.hasPlayableScorecard {
             loadedCourses[id] = cached
             addEvent("course_library.detail", eventProps: ["source": "firestore", "duration_ms": Date().timeIntervalSince(start) * 1000])
@@ -244,7 +245,8 @@ final class GolfCourseRepository: Loggable {
         let courses = try await searchCourses(with: query)
         var result: [GolfCourseAPIModel] = []
         for var candidate in courses {
-            guard let id = candidate.golfCourseApiID else { continue }
+            guard candidate.origin == CourseOrigin.golfCourseAPI.rawValue,
+                  let id = candidate.golfCourseApiID else { continue }
             if includeScorecards, !candidate.hasPlayableScorecard { candidate = try await course(by: id) }
             if let model = GolfCourseAPIModel(cachedCourse: candidate) { result.append(model) }
         }

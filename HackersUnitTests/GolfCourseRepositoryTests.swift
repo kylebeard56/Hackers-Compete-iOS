@@ -17,7 +17,8 @@ struct GolfCourseRepositoryTests {
             golfCourseApiID: 42,
             origin: .golfCourseAPI,
             clubName: "Cached Club",
-            courseName: "Cached Course"
+            courseName: "Cached Course",
+            tees: [scorecardTee()]
         )
         let remote = MockGolfCourseRemote(courseModel: makeAPIModel(id: 42))
         let cache = MockGolfCourseCache(coursesByID: [42: cached])
@@ -45,23 +46,25 @@ struct GolfCourseRepositoryTests {
         #expect(canonical.hasCanonicalGolfCourseAPIIdentity)
         #expect(!unrelated.hasCanonicalGolfCourseAPIIdentity)
         #expect(canonical.matchesCachedSearch(query: "Test Club"))
-        #expect(!canonical.matchesCachedSearch(query: "Club"))
+        #expect(canonical.matchesCachedSearch(query: "Club")) // Token-prefix search is intentional.
+        #expect(!canonical.matchesCachedSearch(query: "unrelated"))
     }
 
     @Test("Cache miss fetches API course and writes it through")
     func cacheMissFetchesAndCachesRemoteCourse() async throws {
-        let remote = MockGolfCourseRemote(courseModel: makeAPIModel(id: 42))
+        let remote = MockGolfCourseRemote(courseModel: makeAPIModel(id: "xnmmcgzp"))
         let cache = MockGolfCourseCache()
         let repository = GolfCourseRepository(remote: remote, cache: cache)
 
-        let resolved = try await repository.course(by: 42)
+        let resolved = try await repository.course(by: "xnmmcgzp")
 
-        #expect(remote.detailRequestIDs == [42])
-        #expect(resolved.id == "42")
-        #expect(resolved.golfCourseApiID == 42)
+        #expect(remote.detailRequestIDs == ["xnmmcgzp"])
+        #expect(resolved.id == "xnmmcgzp")
+        #expect(resolved.golfCourseApiID == "xnmmcgzp")
         #expect(resolved.origin == CourseOrigin.golfCourseAPI.rawValue)
+        await repository.finishPendingSaves()
         #expect(cache.cachedBatches.count == 1)
-        #expect(cache.cachedBatches.first?.map(\.id) == ["42"])
+        #expect(cache.cachedBatches.first?.map(\.id) == ["xnmmcgzp"])
     }
 
     @Test("Cached search avoids GolfCourseAPI")
@@ -91,6 +94,7 @@ struct GolfCourseRepositoryTests {
 
         #expect(models.map(\.id) == [10, 11])
         #expect(remote.searchQueries == ["Greenville"])
+        await repository.finishPendingSaves()
         #expect(cache.cachedBatches.count == 1)
         #expect(cache.cachedBatches.first?.map(\.id) == ["10", "11"])
     }
@@ -191,7 +195,7 @@ struct GolfCourseRepositoryTests {
         #expect(String(data: try JSONEncoder().encode(id), encoding: .utf8) == json)
     }
 
-    @Test("Summary searches do not fetch every detail or cache incomplete scorecards")
+    @Test("Summary searches remain lazy while directory metadata is cached")
     func summarySearchIsLazy() async throws {
         let summary = try #require(JSONDecoder().decode(GolfCourseAPIResponse.self, from: Data(Self.summaryJSON.utf8)).courses.first)
         let remote = MockGolfCourseRemote(courseModel: makeAPIModel(id: "xnmmcgzp"), searchModels: [summary])
@@ -200,7 +204,10 @@ struct GolfCourseRepositoryTests {
         let models = try await repository.searchCourseModels(with: "Verdae", includeScorecards: false)
         #expect(models.count == 1)
         #expect(remote.detailRequestIDs.isEmpty)
-        #expect(cache.cachedBatches.isEmpty)
+        await repository.finishPendingSaves()
+        #expect(cache.cachedBatches.count == 1)
+        #expect(cache.cachedBatches[0].allSatisfy { !$0.hasPlayableScorecard })
+        #expect(models[0].isSummary)
     }
 
     @Test("Consumers needing scorecards resolve summary details before caching")
@@ -212,12 +219,13 @@ struct GolfCourseRepositoryTests {
         let models = try await repository.searchCourseModels(with: "Verdae")
         #expect(models.first?.isSummary == false)
         #expect(remote.detailRequestIDs == ["xnmmcgzp"])
-        #expect(cache.cachedBatches.first?.first?.id == "xnmmcgzp")
+        await repository.finishPendingSaves()
+        #expect(cache.cachedBatches.flatMap { $0 }.contains { $0.id == "xnmmcgzp" && $0.hasPlayableScorecard })
     }
 
     @Test("Legacy UUID cache records load without calling the retired numeric endpoint")
     func legacyCacheRecovery() async throws {
-        let legacy = Course(id: "legacy-uuid", golfCourseApiID: 24833, origin: .golfCourseAPI, courseName: "Verdae")
+        let legacy = Course(id: "legacy-uuid", golfCourseApiID: 24833, origin: .golfCourseAPI, courseName: "Verdae", tees: [scorecardTee()])
         let remote = MockGolfCourseRemote(courseModel: makeAPIModel(id: "xnmmcgzp"), detailError: .legacyCourseUnavailable)
         let repository = GolfCourseRepository(remote: remote, cache: MockGolfCourseCache(coursesByID: [24833: legacy]))
         let resolved = try await repository.course(by: 24833)
@@ -271,19 +279,17 @@ struct GolfCourseRepositoryTests {
         #expect(remote.detailRequestIDs.isEmpty)
     }
 
-    @Test("Cached search rejects unrelated origins even when a provider ID is present")
+    @Test("Provider compatibility search does not reinterpret saved manual courses")
     func searchRejectsNonProviderCacheRecords() async throws {
         let unrelated = Course(golfCourseApiID: 24833, origin: .manual, courseName: "Verdae")
-        let remote = MockGolfCourseRemote(
-            courseModel: makeAPIModel(id: "xnmmcgzp"),
-            searchModels: [makeAPIModel(id: "xnmmcgzp")]
-        )
+        let remote = MockGolfCourseRemote(courseModel: makeAPIModel(id: "xnmmcgzp"))
         let repository = GolfCourseRepository(remote: remote, cache: MockGolfCourseCache(searchResults: [unrelated]))
-
+        let local = try await repository.searchCourses(with: "Verdae")
+        #expect(local == [unrelated]) // The provider-independent library still includes manual courses.
         let models = try await repository.searchCourseModels(with: "Verdae")
-
-        #expect(models.map(\.id) == ["xnmmcgzp"])
-        #expect(remote.searchQueries == ["Verdae"])
+        #expect(models.isEmpty)
+        #expect(remote.searchQueries.isEmpty) // External discovery requires an explicit search-more action.
+        #expect(remote.detailRequestIDs.isEmpty)
     }
 
     @Test("Missing legacy recents show matches and wait for an explicit selection")
@@ -363,10 +369,10 @@ struct GolfCourseRepositoryTests {
 
     @Test("An empty provider scorecard cannot advance the chat into a round")
     func emptyChatScorecardDoesNotConfirm() async {
-        let remote = MockGolfCourseRemote(courseModel: makeAPIModel(id: "xnmmcgzp"))
+        let remote = MockGolfCourseRemote(courseModel: makeAPIModel(id: "xnmmcgzp", playable: false))
         let vm = CourseSelectionViewModel(courseRepository: GolfCourseRepository(remote: remote, cache: MockGolfCourseCache()))
         vm.isSetHomeCourseMode = true
-        let success = await vm.loadAskAICandidate(.init(course: Course(canonicalGolfCourseAPI: makeAPIModel(id: "xnmmcgzp")),
+        let success = await vm.loadAskAICandidate(.init(course: Course(canonicalGolfCourseAPI: makeAPIModel(id: "xnmmcgzp", playable: false)),
             requiresReview: false, isCanonicalMatch: true, sources: [.golfCourseAPI], needsScorecard: true))
         #expect(!success)
         #expect(vm.askAIError != nil)
@@ -375,7 +381,13 @@ struct GolfCourseRepositoryTests {
 
     private static let summaryJSON = #"{"courses":[{"id":"xnmmcgzp","club_name":"Preserve At Verdae, The","course_name":"Preserve At Verdae, The","location":{"address":"650 Verdae Blvd, Greenville, SC 29607, USA","city":"Greenville","state":"SC","country":"United States"},"tees":{"female":3,"male":9}}]}"#
 
-    private func makeAPIModel(id: GolfCourseID) -> GolfCourseAPIModel {
+    private func scorecardTee() -> Tee {
+        Tee(id: "blue_male", name: "Blue", gender: Gender.male.rawValue, totalHoles: 18,
+            holes: (1...18).map { Hole(number: $0, par: 4, yardage: 400, handicap: $0) },
+            ratingFull: 72.4, slopeFull: 131, ratingFront: 36.1, slopeFront: 129, ratingBack: 36.3, slopeBack: 133)
+    }
+
+    private func makeAPIModel(id: GolfCourseID, playable: Bool = true) -> GolfCourseAPIModel {
         GolfCourseAPIModel(
             id: id,
             clubName: "Test Club \(id)",
@@ -388,7 +400,7 @@ struct GolfCourseRepositoryTests {
                 latitude: 34.85,
                 longitude: -82.40
             ),
-            tees: GolfCourseAPITees(female: nil, male: nil)
+            tees: GolfCourseAPITees(female: nil, male: playable ? [GolfCourseAPITee(cachedTee: scorecardTee())] : nil)
         )
     }
 
