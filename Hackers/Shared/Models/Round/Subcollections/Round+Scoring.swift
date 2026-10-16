@@ -122,7 +122,7 @@ extension ScoreEntry {
     }
 
     var hasRecordedScore: Bool {
-        strokes != nil || relativeToPar != nil || pickedUp
+        (strokes ?? 0) > 0 || relativeToPar != nil || pickedUp
     }
 }
 

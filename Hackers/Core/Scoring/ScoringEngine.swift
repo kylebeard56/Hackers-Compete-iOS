@@ -1926,13 +1926,13 @@ struct ScoringEngine {
         if let relativeToPar = entry.relativeToPar {
             return relativeToPar
         }
-        guard let strokes = entry.strokes else { return nil }
+        guard let strokes = entry.strokes, strokes > 0 else { return nil }
         return strokes - par
     }
 
     static func resolvedGrossStrokes(entry: ScoreEntry, par: Int) -> Int? {
         if let strokes = entry.strokes {
-            return strokes
+            return strokes > 0 ? strokes : nil
         }
         guard let relativeToPar = entry.relativeToPar else { return nil }
         return max(1, par + relativeToPar)
