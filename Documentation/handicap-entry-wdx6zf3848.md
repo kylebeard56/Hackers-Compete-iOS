@@ -2,7 +2,7 @@
 
 Ticket: [Allow Strokes or Handicap Index entry during round creation](https://app.clickup.com/t/wdx6zf3848).
 
-**October 16 release follow-up:** PR #16 now includes PR #15 through `0fc3aa13`, including the completed nine-hole calculation policy in `51f98a4a` and both history-refresh reliability fixes. Earlier dependency notes below describe the original implementation baseline; the nine-hole limitation has since been superseded. The scoring/history release blockers and course repository failures are fixed in `9f3b2517`; all 983 full-suite tests pass, with five existing opt-in skips. Signed internal TestFlight release status is tracked in the report below. See [current release report](InternalTestFlight-2026-10-16/README.md) before using any earlier passing test count as release approval.
+**October 16 release follow-up:** PR #16 now includes PR #15 through `0fc3aa13`, including the completed nine-hole calculation policy in `51f98a4a` and both history-refresh reliability fixes. Earlier dependency notes below describe the original implementation baseline; the nine-hole limitation has since been superseded. The scoring/history release blockers and course repository failures are fixed in `9f3b2517`; all 1,001 final full-suite tests pass, with five existing opt-in skips. PR #17 Settings is also included in the combined candidate; the invalid stored-gross-score audit was reproduced and fixed in `9459c717`. Both app variants are available internally as 1.0.0 (2026.10.16.1); full signing, processing and smoke-test limits are tracked in the report below. See [current release report](InternalTestFlight-2026-10-16/README.md) before using any earlier passing test count as release approval.
 
 ## Dependency review and scope
 
