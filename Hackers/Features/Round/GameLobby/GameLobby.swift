@@ -578,44 +578,7 @@ extension GameLobby {
             }
             .padding(.horizontal, 16)
         } else {
-//            let canGoUp = currentIndex > 0
-//            let canGoDown = currentIndex < roster.count - 1
-
-            HStack(spacing: 16) {
-//                NavButton(
-//                    style: .glass,
-//                    icon: "chevron.up",
-//                    color: canGoUp ? palette.foregroundColor : Color.neutral3,
-//                    onTap: {
-//                        if canGoUp {
-//                            focus = roster[currentIndex - 1].id
-//                        }
-//                    }
-//                )
-//                .disabled(!canGoUp)
-//
-//                NavButton(
-//                    style: .glass,
-//                    icon: "chevron.down",
-//                    color: canGoDown ? palette.foregroundColor : Color.neutral3,
-//                    onTap: {
-//                        if canGoDown {
-//                            focus = roster[currentIndex + 1].id
-//                        }
-//                    }
-//                )
-//                .disabled(!canGoDown)
-
-                Spacer(minLength: 0)
-
-                NavButton(
-                    style: .glass,
-                    icon: "keyboard.chevron.compact.down",
-                    color: palette.foregroundColor,
-                    onTap: { focus = nil }
-                )
-            }
-            .padding(16)
+            HandicapKeyboardDismissBar(theme: .glass) { focus = nil }
         }
     }
 }

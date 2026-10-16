@@ -14,6 +14,36 @@ struct HandicapEntryModePicker: View {
     }
 }
 
+/// Visible above the keyboard in sheets as well as navigation-hosted lobby content.
+/// This action only releases focus; saving and navigation remain separate controls.
+struct HandicapKeyboardDismissBar: View {
+    @Environment(\.colorScheme) private var colorScheme
+    var theme: PaletteTheme = .primary
+    var onDismiss: Callback
+    private var palette: DesignPalette { .init(theme: theme, scheme: colorScheme) }
+
+    var body: some View {
+        HStack {
+            Spacer()
+            Button(action: onDismiss) {
+                Label("Done", systemImage: "keyboard.chevron.compact.down")
+                    .fontStyle(kFontName, size: 15, weight: .semibold)
+                    .padding(.horizontal, 16)
+                    .frame(minHeight: 44)
+            }
+            .buttonStyle(.plain)
+            .foregroundStyle(palette.foregroundColor)
+            .glassCardEffect(cornerRadius: 12, tint: palette.whiteGlassButtonColor, shadowOpacity: 0)
+            .accessibilityLabel("Done")
+            .accessibilityHint("Dismiss keyboard and keep the entered value")
+            .accessibilityIdentifier("dismissHandicapKeyboard")
+        }
+        .padding(.horizontal, 16)
+        .padding(.vertical, 4)
+        .background(palette.backgroundColor)
+    }
+}
+
 struct HandicapEntryView: View {
     @Environment(\.colorScheme) var colorScheme
     @Environment(\.dismiss) var dismiss
@@ -65,6 +95,7 @@ struct HandicapEntryView: View {
                     .focused($focus)
                     .multilineTextAlignment(.center)
                     .accessibilityLabel(draft.format.displayName)
+                    .accessibilityIdentifier("handicapEntryInput")
                     .disabled(locked)
 
                 if draft.format == .courseHandicap {
@@ -87,11 +118,8 @@ struct HandicapEntryView: View {
             .padding(16)
         }
         .background(palette.backgroundColor)
-        .toolbar {
-            ToolbarItemGroup(placement: .keyboard) {
-                Spacer()
-                Button("Done") { focus = false }
-            }
+        .safeAreaInset(edge: .bottom, spacing: 0) {
+            if focus { HandicapKeyboardDismissBar { focus = false } }
         }
         .onAppear { draft = RoundHandicapEntryDraft(participant: participant, defaultFormat: entryFormat) }
         .onChange(of: calculation) { approveEstimate = false }

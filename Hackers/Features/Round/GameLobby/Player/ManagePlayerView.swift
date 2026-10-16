@@ -111,11 +111,8 @@ struct ManagePlayerView: View, Loggable {
             onScroll: { _ in }
         )
         .resignKeyboardOnTapGesture()
-        .toolbar {
-            ToolbarItemGroup(placement: .keyboard) {
-                Spacer()
-                Button("Done") { focus = nil }
-            }
+        .safeAreaInset(edge: .bottom, spacing: 0) {
+            if focus != nil { HandicapKeyboardDismissBar { focus = nil } }
         }
         .sheet(isPresented: $showTeeSelection) {
             TeeSelectionSheet(
@@ -381,6 +378,7 @@ extension ManagePlayerView {
                 HStack(spacing: 12) {
                     TextField(effectiveHandicapEntryFormat == .courseHandicap ? "Index" : "Strokes", text: Binding(get: { handicapString }, set: { handicapString = $0 }))
                         .accessibilityLabel(effectiveHandicapEntryFormat.displayName)
+                        .accessibilityIdentifier("managePlayerHandicapInput")
                         .fontStyle(kFontName, size: 17, weight: .regular)
                         .foregroundStyle(commissionerStrokesValueColor)
                         .keyboardType(effectiveHandicapEntryFormat == .courseHandicap ? .numbersAndPunctuation : .numberPad)
