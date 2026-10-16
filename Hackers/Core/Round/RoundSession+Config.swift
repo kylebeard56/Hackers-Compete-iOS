@@ -222,8 +222,19 @@ extension RoundSession {
                 if !ids.isEmpty {
                     switch await FirebaseService.shared.getPlayersByIDs(ids) {
                     case .success(let players):
-                        participants = participants.map { participant in
-                            guard let player = players.first(where: { $0.id == participant.playerID }) else { return participant }
+                        var refreshedPlayers = players
+                        for index in refreshedPlayers.indices {
+                            do {
+                                if let refreshed = try await FirebaseService.shared.fetchPersonalHandicapHistory(playerID: refreshedPlayers[index].id).player {
+                                    refreshedPlayers[index] = refreshed
+                                }
+                            } catch {
+                                addBreadcrumb(level: .error, message: "Could not refresh personal Index; retaining the saved source", error: error)
+                            }
+                        }
+                        guard snapshot.round.status == .lobby, snapshot.configuration.handicapEntryFormat == format else { return }
+                        participants = snapshot.participants.map { participant in
+                            guard let player = refreshedPlayers.first(where: { $0.id == participant.playerID }) else { return participant }
                             return PersonalHandicapRoundPrefill.participant(participant, player: player,
                                 configuration: snapshot.configuration, isLeagueRound: false, selectingEntryFormat: true)
                         }
