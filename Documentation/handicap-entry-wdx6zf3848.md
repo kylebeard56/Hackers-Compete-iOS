@@ -2,6 +2,8 @@
 
 Ticket: [Allow Strokes or Handicap Index entry during round creation](https://app.clickup.com/t/wdx6zf3848).
 
+**October 16 release follow-up:** PR #16 now includes PR #15 through `0fc3aa13`, including the completed nine-hole calculation policy in `51f98a4a` and both history-refresh reliability fixes. Earlier dependency notes below describe the original implementation baseline; the nine-hole limitation has since been superseded. The combined internal TestFlight release is **blocked** by confirmed scoring/history regressions and course repository test failures. See [current release report](InternalTestFlight-2026-10-16/README.md) before using any earlier passing test count as release approval.
+
 ## Dependency review and scope
 
 Reviewed the complete ticket including its October 14 additions, its empty comment thread, and [source-resolution ticket wdx6zf65p7](https://app.clickup.com/t/wdx6zf65p7). At implementation start, PR #14 was open at `864af32c`; PR #15 was draft/open at `3270ae59`, stacked on #14. During validation, PR #15 advanced to `d5077c21`; this ticket was rebased onto that update and its new personal refresh path was reused for mode-switch prefill. This ticket uses its own branch/worktree and targets PR #15's branch, `codex/wdx6zf65p6-player-profile-handicap`. Neither dependency branch is changed.
@@ -107,6 +109,9 @@ Use a fresh result bundle path, such as `/private/tmp/wdx6zf0n03-acceptance.xcre
 - `Hackers/Shared/Models/Round/Subcollections/Round+Participant.swift`
 - `HackersUnitTests/RoundHandicapEntryTests.swift`
 - `HackersUnitTests/HandicapKeyboardDismissalTests.swift`
+- `HackersUnitTests/InternalRoundResumeReleaseTests.swift`
+- `Documentation/InternalTestFlight-2026-10-16/README.md`
+- `Documentation/InternalTestFlight-2026-10-16/InternalReleaseBlockerAuditTests.swift` (isolated failing release-gate reproducers)
 - `Documentation/handicap-entry-wdx6zf3848.md` (this report)
 
 No merge, data migration, or deployment.
