@@ -48,7 +48,7 @@ struct PersonalHandicapSection: View {
             .presentationDragIndicator(.visible)
         }
         .sheet(item: $postingReview) { score in
-            PersonalHandicapPostingEditor(score: score, palette: palette) { purpose, reason in
+            PersonalHandicapPostingEditor(score: score, relatedScores: history.scores, canEdit: player.canEditPersonalHandicap(as: viewerUserID), palette: palette) { purpose, reason in
                 let loaded = try await FirebaseService.shared.setPersonalHandicapPurpose(playerID: player.id, roundID: score.roundID, sourceCollection: score.sourceCollection ?? Collections.rounds.name, purpose: purpose, partialReason: reason)
                 history = loaded
                 if let refreshed = loaded.player { onSaved(refreshed) }
@@ -63,8 +63,8 @@ struct PersonalHandicapSection: View {
                     LabeledContent("Hackers Index", value: ManualPersonalHandicap.display(point.calculation.qualifiedIndex))
                     LabeledContent("Calculated", value: point.calculation.asOf.formattedDate)
                     LabeledContent("Qualifying scores", value: "\(Set(point.calculation.qualifyingScoreIDs).count)")
-                    LabeledContent("Score pool", value: "\(Set(point.calculation.poolScoreIDs).count)")
-                    LabeledContent("Counting scores", value: "\(Set(point.calculation.countingScoreIDs).count)")
+                    LabeledContent("Score pool", value: "\(point.calculation.poolCount)")
+                    LabeledContent("Counting scores", value: "\(point.calculation.countingCount)")
                     Text("Unofficial Hackers personal calculation on an 18-hole basis.")
                         .foregroundStyle(.secondary)
                 }
@@ -118,7 +118,15 @@ struct PersonalHandicapSection: View {
             if calculation?.status == .blocked {
                 detail(calculation?.blockers?.first ?? PersonalHandicapEngine.unavailableMessage)
             }
-            detail("WHS-inspired and unofficial. Missing official PCC is explicitly assumed to be zero. Your starting Index is kept separately.")
+            detail("Unofficial · your starting Index is kept separately.")
+            DisclosureGroup("How this Index is calculated") {
+                VStack(alignment: .leading, spacing: 8) {
+                    detail("Requires 54 actual qualifying holes and three 18-hole differential equivalents. Initial nines pair in date order; each pair is one pool entry.")
+                    detail("After qualification, each nine combines the played differential with a Hackers expected-nine estimate based on your pre-round calculated Index. Estimates are identified in score history and use a versioned formula; they are not official USGA calculations.")
+                    detail("Uses the published score-selection table and best eight of the latest 20 differential equivalents. Missing official PCC is recorded as assumed zero. Incomplete or unsupported cards may need review.")
+                }.padding(.top, 8)
+            }
+            .fontStyle(kFontName, size: 12, weight: .medium)
             Button("Refresh personal handicap") { Task { await loadHistory() } }
                 .fontStyle(kFontName, size: 12, weight: .semibold)
                 .foregroundStyle(Color.accentGreen)
@@ -138,8 +146,8 @@ struct PersonalHandicapSection: View {
                 }
             }
             ViewThatFits(in: .horizontal) {
-                HStack { countPill("Qualifying", calculation.map { Set($0.qualifyingScoreIDs).count }); countPill("Pool", calculation.map { Set($0.poolScoreIDs).count }); countPill("Counting", calculation.map { Set($0.countingScoreIDs).count }) }
-                VStack(alignment: .leading) { countPill("Qualifying", calculation.map { Set($0.qualifyingScoreIDs).count }); countPill("Pool", calculation.map { Set($0.poolScoreIDs).count }); countPill("Counting", calculation.map { Set($0.countingScoreIDs).count }) }
+                HStack { countPill("Qualifying", calculation.map { Set($0.qualifyingScoreIDs).count }); countPill("Pool", calculation.map { $0.poolCount }); countPill("Counting", calculation.map { $0.countingCount }) }
+                VStack(alignment: .leading) { countPill("Qualifying", calculation.map { Set($0.qualifyingScoreIDs).count }); countPill("Pool", calculation.map { $0.poolCount }); countPill("Counting", calculation.map { $0.countingCount }) }
             }
             if isLoading {
                 ProgressView().frame(maxWidth: .infinity, minHeight: 120)
@@ -149,7 +157,7 @@ struct PersonalHandicapSection: View {
             } else if history.points.isEmpty {
                 VStack(spacing: 8) {
                     Image(systemName: "chart.xyaxis.line").font(.system(size: 24, weight: .medium)).foregroundStyle(Color.neutral3)
-                    detail(calculation?.status == .blocked ? "Nine-hole / partial conversion is pending expected-score input." : "Your calculated Index trend will appear after 54 qualifying holes and valid differentials are available.")
+                    detail(calculation?.status == .blocked ? "Some scores need review before they can update your Index." : "Your trend starts after 54 qualifying holes and three 18-hole differential equivalents. Initial nines are paired automatically.")
                     if let calculation, let required = calculation.requiredHoles, required > 0 {
                         ProgressView(value: Double(min(calculation.qualifyingHoles, required)), total: Double(required))
                             .tint(Color.accentGreen)
@@ -210,7 +218,7 @@ struct PersonalHandicapSection: View {
             HStack {
                 title("Score History")
                 Spacer()
-                if player.canEditPersonalHandicap(as: viewerUserID) { detail("Tap a score to review") }
+                detail("Tap a score for details")
             }
             HStack(spacing: 12) {
                 legend("Counts", style: 0)
@@ -229,12 +237,11 @@ struct PersonalHandicapSection: View {
                         Text(score.roundTitle).fontStyle(kFontName, size: 14, weight: .semibold)
                         detail("\(score.playedAt.formattedDate) · \(score.holeCount) holes")
                         if let reason = score.exclusionReason ?? score.pendingReason { detail(reason) }
-                        if let pcc = score.pcc { detail(pcc.title) }
-                        if let adjusted = score.adjustedGrossScore { detail("Adjusted gross (\(score.qualifyingHoles ?? score.holeCount) qualifying holes): \(adjusted)") }
                         if let differential = score.differential {
-                            detail("18-hole differential: \(String(format: "%.1f", differential))")
+                            detail("\(score.differentialMethod?.title ?? "18-hole differential"): \(String(format: "%.1f", differential))")
+                            if score.differentialMethod == .pairedNineEstimate { detail("Paired nine · shared differential") }
                         } else if let played = score.playedDifferential {
-                            detail("Played nine differential: \(String(format: "%.1f", played)) · conversion pending")
+                            detail("Played nine: \(String(format: "%.1f", played))")
                         }
                     }
                     Spacer(minLength: 8)
@@ -245,10 +252,8 @@ struct PersonalHandicapSection: View {
                 }
                 .padding(.vertical, 8)
                 .contentShape(Rectangle())
-                .onTapGesture {
-                    if player.canEditPersonalHandicap(as: viewerUserID) { postingReview = score }
-                }
-                .accessibilityAddTraits(player.canEditPersonalHandicap(as: viewerUserID) ? .isButton : [])
+                .onTapGesture { postingReview = score }
+                .accessibilityAddTraits(.isButton)
             }
         }
     }
@@ -407,6 +412,8 @@ private struct StartingIndexEditor: View {
 
 private struct PersonalHandicapPostingEditor: View {
     let score: PersonalHandicapScoreRecord
+    let relatedScores: [PersonalHandicapScoreRecord]
+    let canEdit: Bool
     let palette: DesignPalette
     let save: (PersonalHandicapRoundPurpose, String?) async throws -> Void
     @Environment(\.dismiss) private var dismiss
@@ -418,32 +425,76 @@ private struct PersonalHandicapPostingEditor: View {
     var body: some View {
         NavigationStack {
             Form {
-                Section(score.roundTitle) {
-                    Picker("Personal handicap posting", selection: $purpose) {
-                        Text("Include eligible individual score").tag(PersonalHandicapRoundPurpose.acceptable)
-                        Text("Practice").tag(PersonalHandicapRoundPurpose.practice)
-                        Text("Unofficial / exclude").tag(PersonalHandicapRoundPurpose.unofficial)
-                        Text("Needs review").tag(PersonalHandicapRoundPurpose.unverified)
+                Section("Scorecard") {
+                    LabeledContent("Round", value: score.roundTitle)
+                    LabeledContent("Course", value: score.courseName ?? "Unavailable")
+                    LabeledContent("Tees", value: score.teeName ?? "Unavailable")
+                    LabeledContent("Played", value: score.playedAt.formattedDate)
+                    LabeledContent("Holes played", value: "\(score.holeCount)")
+                    LabeledContent("Qualifying holes", value: "\(score.qualifyingHoles ?? 0)")
+                    LabeledContent("Gross", value: score.grossScore.map(String.init) ?? "—")
+                    LabeledContent("Adjusted gross", value: score.adjustedGrossScore.map(String.init) ?? "—")
+                }
+                Section("Differential") {
+                    if let differential = score.differential {
+                        LabeledContent(score.differentialMethod?.title ?? "18-hole differential", value: String(format: "%.1f", differential))
                     }
-                    if score.holeCount < 18 {
-                        Picker("If an 18-hole round ended early", selection: $reason) {
-                            Text("No partial-round reason").tag("")
-                            ForEach(PersonalHandicapPartialReason.allCases, id: \.rawValue) { reason in
-                                Text(reason.title).tag(reason.rawValue)
-                            }
+                    if let reason = score.exclusionReason ?? score.pendingReason { Text(reason).foregroundStyle(.secondary) }
+                    if score.differentialMethod == .pairedNineEstimate, score.differentialRoundIDs?.count == 2 {
+                        Text("These two cards share one estimated 18-hole differential. Both contribute actual holes; the pair counts once in the pool.").font(.footnote).foregroundStyle(.secondary)
+                        ForEach(relatedScores.filter { score.differentialRoundIDs?.contains($0.id) == true }) { card in
+                            LabeledContent(card.roundTitle, value: card.playedAt.formattedDate)
                         }
                     }
-                    Text("Completed individual cards are included for the unofficial personal calculation unless excluded. Only choose a partial-round reason when it prevented completing an intended 18-hole round. Shared, Scramble and invalid scorecards stay excluded. This does not change scores, league handicaps or round strokes.")
-                        .font(.footnote).foregroundStyle(.secondary)
+                    DisclosureGroup("Calculation details") {
+                        if let played = score.playedDifferential { LabeledContent("Played differential", value: String(format: "%.4f", played)) }
+                        if let expected = score.expectedNineDifferential {
+                            LabeledContent("Expected nine estimate", value: String(format: "%.4f", expected))
+                            LabeledContent("Pre-round calculated Index", value: ManualPersonalHandicap.display(score.expectedScoreIndex))
+                            if let modelIndex = score.expectedScoreModelIndex, modelIndex != score.expectedScoreIndex {
+                                LabeledContent("Bounded model Index", value: ManualPersonalHandicap.display(modelIndex))
+                            }
+                            Text("Hackers estimate: 0.52 × pre-round calculated Index + 1.2, using +6 as the model boundary for stronger plus handicaps. Add to the unrounded played-nine differential, then round the total once. This is not the official USGA expected-score model.").font(.footnote).foregroundStyle(.secondary)
+                        }
+                        if let rating = score.courseRating { LabeledContent("Course Rating", value: String(format: "%.1f", rating)) }
+                        if let slope = score.slopeRating { LabeledContent("Slope Rating", value: "\(slope)") }
+                        if let pcc = score.pcc {
+                            LabeledContent("PCC", value: pcc.title)
+                            Text(pcc.source).font(.footnote).foregroundStyle(.secondary)
+                        }
+                        if let version = score.differentialMethodVersion { Text("Method: \(version)").font(.footnote).foregroundStyle(.secondary) }
+                    }
+                }
+                if canEdit {
+                    Section("Posting settings") {
+                        Picker("Personal handicap posting", selection: $purpose) {
+                            Text("Include eligible individual score").tag(PersonalHandicapRoundPurpose.acceptable)
+                            Text("Practice").tag(PersonalHandicapRoundPurpose.practice)
+                            Text("Unofficial / exclude").tag(PersonalHandicapRoundPurpose.unofficial)
+                            Text("Needs review").tag(PersonalHandicapRoundPurpose.unverified)
+                        }
+                        if score.holeCount < 18 {
+                            Picker("If an 18-hole round ended early", selection: $reason) {
+                                Text("No partial-round reason").tag("")
+                                ForEach(PersonalHandicapPartialReason.allCases, id: \.rawValue) { reason in
+                                    Text(reason.title).tag(reason.rawValue)
+                                }
+                            }
+                        }
+                        Text("Completed individual cards are included for the unofficial personal calculation unless excluded. Only choose a partial-round reason when it prevented completing an intended 18-hole round. Shared, Scramble and invalid scorecards stay excluded. This does not change scores, league handicaps or round strokes.")
+                            .font(.footnote).foregroundStyle(.secondary)
+                    }
                 }
                 if let error { Text(error).foregroundStyle(Color.systemError) }
             }
             .scrollContentBackground(.hidden).background(palette.backgroundColor)
             .navigationTitle("Personal Handicap Score").navigationBarTitleDisplayMode(.inline)
             .toolbar {
-                ToolbarItem(placement: .cancellationAction) { Button("Cancel") { dismiss() }.disabled(isSaving) }
-                ToolbarItem(placement: .confirmationAction) {
-                    Button("Save") { Task { await submit() } }.disabled(isSaving)
+                ToolbarItem(placement: .cancellationAction) { Button(canEdit ? "Cancel" : "Done") { dismiss() }.disabled(isSaving) }
+                if canEdit {
+                    ToolbarItem(placement: .confirmationAction) {
+                        Button("Save") { Task { await submit() } }.disabled(isSaving)
+                    }
                 }
             }
             .overlay { if isSaving { ProgressView() } }

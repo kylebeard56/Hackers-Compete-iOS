@@ -120,6 +120,13 @@ enum PersonalHandicapEligibility {
             record.partialReason = partialReason
             record.qualifyingHoles = holes
             record.sourceFingerprint = fingerprint
+            record.courseID = course?.courseInfo.id
+            record.courseName = course?.courseInfo.name
+            record.teeID = participant?.teeBoxID
+            record.teeName = tee?.name
+            record.courseRating = metadata.rating
+            record.slopeRating = metadata.slope
+            record.coursePar = metadata.par
             return .init(score: record, qualifyingHoles: holes, revision: revision, card: card, fingerprint: fingerprint)
         }
         let templateIDs = [round.configuration.formatSummary?.templateID].compactMap { $0 }
