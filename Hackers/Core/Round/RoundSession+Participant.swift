@@ -119,17 +119,7 @@ extension RoundSession {
                 players.upsert(created)
             }
 
-            let isPersonalLobby = snapshot.round.status == .lobby
-                && snapshot.configuration.handicapEntryFormat == .courseHandicap
-                && snapshot.configuration.leagueHandicapMaximum == nil
-                && !snapshot.participants.contains { $0.seriesMemberID != nil || $0.handicapSnapshot != nil }
-            if isPersonalLobby {
-                for i in players.indices {
-                    if let refreshed = try await FirebaseService.shared.fetchPersonalHandicapHistory(playerID: players[i].id).player {
-                        players[i] = refreshed
-                    }
-                }
-            }
+            players = await refreshingPersonalHandicapsForSetup(players)
             // 2. Create participants locally (no DB writes yet)
             var participants = players.map {
                 var participant = RoundParticipant(
@@ -225,6 +215,34 @@ extension RoundSession {
             addBreadcrumb(level: .error, message: "Failed to add participants", error: error)
             throw error
         }
+    }
+
+    /// A personal-history refresh improves prefill, but is never a prerequisite
+    /// for adding a player. On failure keep the saved profile and its provenance.
+    func refreshingPersonalHandicapsForSetup(
+        _ players: [Player],
+        refresh: (String) async throws -> Player? = {
+            try await FirebaseService.shared.fetchPersonalHandicapHistory(playerID: $0).player
+        }
+    ) async -> [Player] {
+        guard snapshot.round.status == .lobby,
+              snapshot.configuration.handicapEntryFormat == .courseHandicap,
+              snapshot.configuration.leagueHandicapMaximum == nil,
+              !snapshot.participants.contains(where: { $0.seriesMemberID != nil || $0.handicapSnapshot != nil })
+        else { return players }
+
+        var result = players
+        for i in players.indices {
+            do {
+                guard let refreshed = try await refresh(players[i].id), refreshed.id == players[i].id else { continue }
+                // Refresh only the Index profile, never identity, legacy strokes,
+                // or any participant values already frozen in this round.
+                result[i].personalHandicap = refreshed.personalHandicap
+            } catch {
+                addBreadcrumb(level: .warning, message: "Personal handicap refresh unavailable; using saved profile for player \(players[i].id)", error: error)
+            }
+        }
+        return result
     }
 
     private func computeTeeAssignments(
