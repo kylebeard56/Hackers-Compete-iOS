@@ -35,6 +35,28 @@ final class PlayerSetupHandicapRefreshTests: XCTestCase {
             player: player, configuration: session.snapshot.configuration, isLeagueRound: false)
     }
 
+    func testNewGrossLobbyHistoryFailureKeepsSavedPersonalIndex() async throws {
+        let saved = try player()
+        let model = CourseSelectionViewModel()
+        let result = await model.refreshingPersonalHandicapForLobby(saved) { _ in throw URLError(.notConnectedToInternet) }
+        XCTAssertEqual(result.personalHandicap, saved.personalHandicap)
+        XCTAssertEqual(result.id, saved.id)
+        XCTAssertEqual(result.personalHandicap?.effectiveSource, .external)
+    }
+
+    func testNewLobbySuccessfulRefreshUsesPersonalProfileWithoutLegacyPromotion() async throws {
+        var saved = try player()
+        saved.personalHandicap = nil
+        var refreshed = saved
+        refreshed.personalHandicap = .init(calculation: calculated(11.2))
+        let model = CourseSelectionViewModel()
+        let result = await model.refreshingPersonalHandicapForLobby(saved) { _ in refreshed }
+        XCTAssertEqual(result.personalHandicap?.effectiveIndex, 11.2)
+        XCTAssertEqual(result.handicaps, saved.handicaps)
+        let missing = await model.refreshingPersonalHandicapForLobby(saved) { _ in throw URLError(.timedOut) }
+        XCTAssertNil(missing.personalHandicap?.effectiveIndex)
+    }
+
     func testUnavailableNetworkKeepsLastCalculatedIndexForNineAndEighteenHoleSetup() async throws {
         var saved = try player()
         saved.personalHandicap?.calculation = calculated(12.4)
