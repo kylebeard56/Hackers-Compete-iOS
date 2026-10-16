@@ -39,3 +39,7 @@ No deployment is part of this change.
 - `git diff --check` passed. Xcode-only project-file sorting was removed. Existing workspace changes were preserved.
 
 [Light Settings screenshot](user-settings/settings-light.png) · [Dark Settings with accessibility text size](user-settings/settings-dark-large-text.png)
+
+## PR branch validation
+
+The isolated `codex/wdx6zf0n2f-user-settings` branch was created from current `main` (`731f5619`). Its simulator build and all **135 selected tests passed, 0 failed, 0 skipped**, including nine Settings cases, companion contracts, scoring, and the existing GitHub workflow regression suites. Result bundle: `/tmp/HackersSettingsPRTests.xcresult`. The Settings and companion suites now run in the PR workflow. The unrelated local tests and workspace changes were not added to this branch.
