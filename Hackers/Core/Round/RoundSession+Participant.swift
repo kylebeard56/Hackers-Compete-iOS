@@ -119,6 +119,17 @@ extension RoundSession {
                 players.upsert(created)
             }
 
+            let isPersonalLobby = snapshot.round.status == .lobby
+                && snapshot.configuration.handicapEntryFormat == .courseHandicap
+                && snapshot.configuration.leagueHandicapMaximum == nil
+                && !snapshot.participants.contains { $0.seriesMemberID != nil || $0.handicapSnapshot != nil }
+            if isPersonalLobby {
+                for i in players.indices {
+                    if let refreshed = try await FirebaseService.shared.fetchPersonalHandicapHistory(playerID: players[i].id).player {
+                        players[i] = refreshed
+                    }
+                }
+            }
             // 2. Create participants locally (no DB writes yet)
             var participants = players.map {
                 var participant = RoundParticipant(

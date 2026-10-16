@@ -33,7 +33,7 @@ enum PersonalHandicapSource: String, Codable {
         switch self {
         case .manual: return "Manual starting"
         case .external: return "GHIN / USGA · entered manually"
-        case .calculated: return "Hackers calculated"
+        case .calculated: return "Hackers Calculated Index"
         }
     }
 }
@@ -117,6 +117,9 @@ struct PersonalHandicapCalculation: Hashable, Codable {
 
     var blockers: [String]? = nil
     var lowHandicapIndex: Double? = nil
+    var inputFingerprint: String? = nil
+    var retainedIndex: Double? = nil
+    var retainedAsOf: Time? = nil
 
     var qualifiedIndex: Double? {
         guard status == .qualified, basis == .eighteenHole, qualifyingHoles >= 54,
@@ -125,9 +128,23 @@ struct PersonalHandicapCalculation: Hashable, Codable {
         return index
     }
 
+    /// A newly pending conversion does not invent an update or erase a valid
+    /// previously established Index. Rebuild removes this fallback on correction
+    /// if no valid historical prefix remains.
+    var effectiveCalculatedIndex: Double? {
+        if let qualifiedIndex { return qualifiedIndex }
+        guard status == .blocked, basis == .eighteenHole, !methodVersion.isEmpty, qualifyingHoles >= 54, Set(qualifyingScoreIDs).count >= 3,
+              let retainedIndex, retainedIndex.isFinite, retainedIndex <= 54, retainedAsOf != nil else { return nil }
+        return retainedIndex
+    }
+    var effectiveCalculatedAt: Time { qualifiedIndex != nil ? asOf : retainedAsOf ?? asOf }
+
     enum CodingKeys: String, CodingKey {
         case index, status, basis, blockers
+        case calculationPending = "calculation_pending"
         case lowHandicapIndex = "low_handicap_index"
+        case inputFingerprint = "input_fingerprint"
+        case retainedIndex = "retained_index", retainedAsOf = "retained_as_of"
         case asOf = "as_of", methodVersion = "method_version"
         case qualifyingScoreIDs = "qualifying_score_ids", qualifyingHoles = "qualifying_holes"
         case requiredHoles = "required_holes", poolScoreIDs = "pool_score_ids", countingScoreIDs = "counting_score_ids"
@@ -143,9 +160,9 @@ struct PersonalHandicapProfile: Hashable, Codable {
         self.calculation = calculation
     }
 
-    var effectiveIndex: Double? { calculation?.qualifiedIndex ?? manual?.value }
+    var effectiveIndex: Double? { calculation?.effectiveCalculatedIndex ?? manual?.value }
     var effectiveSource: PersonalHandicapSource? {
-        calculation?.qualifiedIndex != nil ? .calculated : manual?.source
+        calculation?.effectiveCalculatedIndex != nil ? .calculated : manual?.source
     }
 
     enum CodingKeys: String, CodingKey {
@@ -202,7 +219,7 @@ enum PersonalHandicapRoundPrefill {
             updated.handicapIndex = index
             updated.personalHandicapInput = .init(
                 index: index, source: source,
-                sourceUpdatedAt: source == .calculated ? profile!.calculation!.asOf : profile!.manual!.updatedAt,
+                sourceUpdatedAt: source == .calculated ? profile!.calculation!.effectiveCalculatedAt : profile!.manual!.updatedAt,
                 capturedAt: capturedAt, basis: .eighteenHole
             )
         }
@@ -238,11 +255,29 @@ struct PersonalHandicapScoreRecord: Hashable, Codable, Identifiable {
     let grossScore: Int?
     let exclusionReason: String?
     var pendingReason: String? = nil
+    var qualifyingHoles: Int? = nil
+    var adjustedGrossScore: Int? = nil
+    var pcc: PersonalHandicapPCC? = nil
+    var playedDifferential: Double? = nil
+    var differential: Double? = nil
+    var personalIndexAtPlay: Double? = nil
+    var personalIndexProvenance: String? = nil
+    var sourceFingerprint: String? = nil
+    var postingPurpose: PersonalHandicapRoundPurpose? = nil
+    var partialReason: String? = nil
+    var sourceCollection: String? = nil
+    var playedAtSource: String? = nil
 
     enum CodingKeys: String, CodingKey {
         case playerID = "player_id", roundID = "round_id", roundTitle = "round_title", playedAt = "played_at"
         case holeCount = "hole_count", grossScore = "gross_score", exclusionReason = "exclusion_reason"
         case pendingReason = "pending_reason"
+        case qualifyingHoles = "qualifying_holes", adjustedGrossScore = "adjusted_gross_score", pcc
+        case playedDifferential = "played_differential", differential
+        case personalIndexProvenance = "personal_index_provenance"
+        case personalIndexAtPlay = "personal_index_at_play", sourceFingerprint = "source_fingerprint"
+        case postingPurpose = "posting_purpose", partialReason = "partial_reason", sourceCollection = "source_collection"
+        case playedAtSource = "played_at_source"
     }
 }
 
@@ -282,5 +317,50 @@ extension Player {
         updated.personalHandicap = profile
         updated.lastUpdatedAt = time
         return updated
+    }
+}
+
+extension PersonalHandicapCalculation {
+    /// The first Sandbox PR #15 build only knows collecting/qualified. Keep the
+    /// wire status readable by that client while preserving pending state here.
+    init(from decoder: Decoder) throws {
+        let c = try decoder.container(keyedBy: CodingKeys.self)
+        index = try c.decodeIfPresent(Double.self, forKey: .index)
+        let raw = try c.decode(String.self, forKey: .status)
+        let pending = try c.decodeIfPresent(Bool.self, forKey: .calculationPending) ?? false
+        status = pending ? .blocked : Status(rawValue: raw) ?? .collecting
+        asOf = try c.decode(Time.self, forKey: .asOf)
+        methodVersion = try c.decode(String.self, forKey: .methodVersion)
+        qualifyingScoreIDs = try c.decode([String].self, forKey: .qualifyingScoreIDs)
+        qualifyingHoles = try c.decode(Int.self, forKey: .qualifyingHoles)
+        requiredHoles = try c.decodeIfPresent(Int.self, forKey: .requiredHoles)
+        poolScoreIDs = try c.decode([String].self, forKey: .poolScoreIDs)
+        countingScoreIDs = try c.decode([String].self, forKey: .countingScoreIDs)
+        basis = try c.decode(SeriesHandicapStrokeBasis.self, forKey: .basis)
+        blockers = try c.decodeIfPresent([String].self, forKey: .blockers)
+        lowHandicapIndex = try c.decodeIfPresent(Double.self, forKey: .lowHandicapIndex)
+        inputFingerprint = try c.decodeIfPresent(String.self, forKey: .inputFingerprint)
+        retainedIndex = try c.decodeIfPresent(Double.self, forKey: .retainedIndex)
+        retainedAsOf = try c.decodeIfPresent(Time.self, forKey: .retainedAsOf)
+    }
+
+    func encode(to encoder: Encoder) throws {
+        var c = encoder.container(keyedBy: CodingKeys.self)
+        try c.encodeIfPresent(index, forKey: .index)
+        try c.encode(status == .blocked ? Status.collecting : status, forKey: .status)
+        if status == .blocked { try c.encode(true, forKey: .calculationPending) }
+        try c.encode(asOf, forKey: .asOf)
+        try c.encode(methodVersion, forKey: .methodVersion)
+        try c.encode(qualifyingScoreIDs, forKey: .qualifyingScoreIDs)
+        try c.encode(qualifyingHoles, forKey: .qualifyingHoles)
+        try c.encodeIfPresent(requiredHoles, forKey: .requiredHoles)
+        try c.encode(poolScoreIDs, forKey: .poolScoreIDs)
+        try c.encode(countingScoreIDs, forKey: .countingScoreIDs)
+        try c.encode(basis, forKey: .basis)
+        try c.encodeIfPresent(blockers, forKey: .blockers)
+        try c.encodeIfPresent(lowHandicapIndex, forKey: .lowHandicapIndex)
+        try c.encodeIfPresent(inputFingerprint, forKey: .inputFingerprint)
+        try c.encodeIfPresent(retainedIndex, forKey: .retainedIndex)
+        try c.encodeIfPresent(retainedAsOf, forKey: .retainedAsOf)
     }
 }

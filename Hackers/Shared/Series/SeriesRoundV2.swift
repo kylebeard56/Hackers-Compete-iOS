@@ -350,6 +350,7 @@ struct RoundV2: FirebaseIdentifiable {
     var createdAt: Time
     var lastUpdatedAt: Time
     var schema: Int = 2
+    var personalHandicapPCC: PersonalHandicapPCC? = nil
 
     var collection: String { V2Collection.rounds }
     var isCanceled: Bool { canceledAt != nil }
@@ -395,6 +396,7 @@ struct RoundV2: FirebaseIdentifiable {
 
     enum CodingKeys: String, CodingKey {
         case id, name, status, schedule, configuration, provisioning, revision, schema
+        case personalHandicapPCC = "personal_handicap_pcc"
         case shareCode = "share_code"
         case createdByUserID = "created_by_user_id"
         case seriesContext = "series_context"
@@ -855,12 +857,16 @@ struct RoundParticipantV2: FirebaseSubcollectable {
     var lastUpdatedAt: Time
     var parentID: String
     var schema: Int = 2
+    var personalHandicapPurpose: PersonalHandicapRoundPurpose? = nil
+    var personalHandicapPartialReason: String? = nil
 
     static var parentCollection: String { V2Collection.rounds }
     static var subcollectionName: String { RoundV2Subcollection.participants.rawValue }
 
     enum CodingKeys: String, CodingKey {
         case id, name, schema
+        case personalHandicapPurpose = "personal_handicap_purpose"
+        case personalHandicapPartialReason = "personal_handicap_partial_reason"
         case userID = "user_id"
         case playerID = "player_id"
         case seriesMemberID = "series_member_id"

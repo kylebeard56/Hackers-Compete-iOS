@@ -880,11 +880,17 @@ extension CourseSelectionViewModel {
             return
         }
         
-        guard let player = await AppData.shared.getPrimaryPlayer(forceRefresh: true) else {
+        guard var player = await AppData.shared.getPrimaryPlayer(forceRefresh: true) else {
             throwRoundCreationError(msg: "primary player not found")
             return
         }
         
+        do {
+            if let refreshed = try await FirebaseService.shared.fetchPersonalHandicapHistory(playerID: player.id).player { player = refreshed }
+        } catch {
+            throwRoundCreationError(msg: "Personal handicap could not be refreshed. Check your connection and try again.")
+            return
+        }
         let template = FormatTemplateRegistry.strokePlayGross
         let configuration = RoundConfiguration(
             primaryFormat: .strokePlay,

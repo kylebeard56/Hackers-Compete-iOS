@@ -2,13 +2,29 @@ import Foundation
 
 /// Acceptability requires facts that a completed scorecard alone cannot establish
 /// (Rules 2.1–2.2: purpose, Rules of Golf, company, season, rated tees, etc.).
-/// No existing round is silently certified by this review.
-enum PersonalHandicapRoundPurpose { case unverified, acceptable, practice, unofficial }
+/// Hackers treats completed individual cards as personal postings unless marked
+/// otherwise. This is an unofficial app policy, not certification by the USGA.
+enum PersonalHandicapRoundPurpose: String, Codable { case unverified, acceptable, practice, unofficial }
+
+enum PersonalHandicapPartialReason: String, CaseIterable {
+    case weather, darkness, injury, matchFinished = "match_finished", committeeClosure = "committee_closure"
+    var title: String {
+        switch self {
+        case .weather: return "Weather prevented play"
+        case .darkness: return "Fading light prevented play"
+        case .injury: return "Injury or illness"
+        case .matchFinished: return "Match finished before the final hole"
+        case .committeeClosure: return "Committee closed or shortened the course"
+        }
+    }
+}
 
 struct PersonalHandicapRoundReview {
     var score: PersonalHandicapScoreRecord
     var qualifyingHoles: Int
     var revision: Double
+    var card: PersonalHandicapCard? = nil
+    var fingerprint: String = ""
 }
 
 enum PersonalHandicapEligibility {
@@ -36,7 +52,7 @@ enum PersonalHandicapEligibility {
 
     static func review(
         _ snapshot: RoundSnapshot, playerID: String,
-        purpose: PersonalHandicapRoundPurpose = .unverified
+        purpose: PersonalHandicapRoundPurpose? = nil
     ) -> PersonalHandicapRoundReview {
         let round = snapshot.round
         let course = snapshot.courseSegment
@@ -44,11 +60,20 @@ enum PersonalHandicapEligibility {
         let participant = matches.count == 1 ? matches.first : nil
         let tee = participant.flatMap { course?.tee(from: $0.teeBoxID) }
         let range = course?.holeRange
+        let purpose = purpose ?? participant?.personalHandicapPurpose ?? .acceptable
+        let partialReason = participant?.personalHandicapPartialReason?.trimmingCharacters(in: .whitespacesAndNewlines)
+        let fingerprint = PersonalHandicapFingerprint.snapshot(snapshot)
         // Reuse PR #14's provenance-aware metadata resolver; Tee.rating(for:)
         // alone can silently estimate a nine-hole rating from full-course data.
-        let metadata = HandicapCalculator.calculation(index: 0, tee: tee, segment: range.flatMap {
+        var metadata = HandicapCalculator.calculation(index: 0, tee: tee, segment: range.flatMap {
             (1...18).contains($0.startHole) && ($0.startHole...18).contains($0.endHole) ? $0.segment : nil
         }, indexBasis: .eighteenHole)
+        // A deliberately shortened round can still use the exact full-course
+        // metadata, with expected-score processing pending for unplayed holes.
+        if let range, (1...18).contains(range.startHole), (range.startHole...18).contains(range.endHole),
+           (10...17).contains(range.count), PersonalHandicapPartialReason(rawValue: partialReason ?? "") != nil {
+            metadata = HandicapCalculator.calculation(index: 0, tee: tee, segment: .full18, indexBasis: .eighteenHole)
+        }
         let entries = snapshot.scoring.filter { entry in
             guard let participant else { return false }
             return entry.participantIDs == [participant.id] && range?.contains(entry.holeNumber) == true
@@ -69,18 +94,33 @@ enum PersonalHandicapEligibility {
                   entry.strokes == nil || entry.relativeToPar == nil || entry.strokes == hole.par + entry.relativeToPar! else { continue }
             grossByHole[number] = gross
         }
-        let gross = grossByHole.isEmpty ? nil : grossByHole.values.reduce(0, +)
-        let playedAt = round.firstScoredAt ?? round.createdAt // corrections must not move the play date
+        // Preserve recorded gross strokes in history even when tee/par metadata
+        // is insufficient to qualify them. Never infer team scores or missing pars.
+        var historyGross = grossByHole
+        for (number, rows) in grouped where rows.count == 1 && historyGross[number] == nil {
+            if let row = rows.first, !row.pickedUp, let strokes = row.strokes, strokes > 0 { historyGross[number] = strokes }
+        }
+        let gross = historyGross.isEmpty ? nil : historyGross.values.reduce(0, +)
+        // Older cards predate first_scored_at. ScoreEntry.createdAt is a required
+        // persisted field, so its earliest recorded time is an available fallback,
+        // rather than the last edit time or a fabricated date.
+        let firstRecordedScore = entries.map(\.createdAt).min { $0.unix < $1.unix }
+        let playedAt = round.firstScoredAt ?? firstRecordedScore ?? round.createdAt
         var record = PersonalHandicapScoreRecord(
             playerID: playerID, roundID: round.id,
             roundTitle: round.displayTitle(courseName: course?.courseInfo.name), playedAt: playedAt,
-            holeCount: grossByHole.count, grossScore: gross, exclusionReason: nil
+            holeCount: historyGross.count, grossScore: gross, exclusionReason: nil
         )
-        func result(excluded: String? = nil, pending: String? = nil, holes: Int = 0) -> PersonalHandicapRoundReview {
+        func result(excluded: String? = nil, pending: String? = nil, holes: Int = 0, card: PersonalHandicapCard? = nil) -> PersonalHandicapRoundReview {
             record = .init(playerID: record.playerID, roundID: record.roundID, roundTitle: record.roundTitle,
                            playedAt: record.playedAt, holeCount: record.holeCount, grossScore: record.grossScore,
                            exclusionReason: excluded, pendingReason: pending)
-            return .init(score: record, qualifyingHoles: holes, revision: revision)
+            record.playedAtSource = round.firstScoredAt != nil ? "first_scored_at" : firstRecordedScore != nil ? "earliest_recorded_score" : "round_created_at_unqualified"
+            record.postingPurpose = purpose
+            record.partialReason = partialReason
+            record.qualifyingHoles = holes
+            record.sourceFingerprint = fingerprint
+            return .init(score: record, qualifyingHoles: holes, revision: revision, card: card, fingerprint: fingerprint)
         }
         let templateIDs = [round.configuration.formatSummary?.templateID].compactMap { $0 }
             + snapshot.segments.compactMap(\.templateID)
@@ -102,23 +142,71 @@ enum PersonalHandicapEligibility {
             return result(excluded: "Team-only or shared score")
         }
         guard templateIDs.allSatisfy(isIndividualFormat) else { return result(excluded: "Format is not verified for individual handicap posting") }
-        guard let range, (1...18).contains(range.startHole), (range.startHole...18).contains(range.endHole), [9, 18].contains(range.count),
+        guard let range, (1...18).contains(range.startHole), (range.startHole...18).contains(range.endHole),
+              (9...18).contains(range.count), let tee,
               metadata.status == .exact, let rating = metadata.rating, rating.isFinite, rating > 0,
-              let slope = metadata.slope, (55...155).contains(slope) else {
-            return result(pending: "Exact rated tee and nine- or eighteen-hole course data required")
+              let slope = metadata.slope, (55...155).contains(slope), let par = metadata.par else {
+            return result(pending: "Exact rated tee and course data required")
         }
         guard grouped.values.allSatisfy({ $0.count == 1 }) else { return result(excluded: "Duplicate or ambiguous individual hole scores") }
-        guard grossByHole.count == range.count else {
-            if grossByHole.count >= 9 {
-                return result(pending: "Partial round requires verified reason, rated holes and official expected-score processing")
-            }
-            return result(excluded: "Incomplete individual gross scorecard")
-        }
-        guard round.firstScoredAt != nil else { return result(pending: "Actual play date is not recorded") }
+        guard round.firstScoredAt != nil || firstRecordedScore != nil else { return result(pending: "Recorded score date is unavailable") }
         guard purpose == .acceptable else {
-            return result(pending: "Handicap acceptability not verified (including practice status, season and Rules of Golf)")
+            return result(pending: "Personal handicap posting is marked as needing review")
         }
-        return result(holes: range.count)
+        let played = grossByHole.keys.sorted().compactMap { number -> PersonalHandicapHole? in
+            guard let hole = tee.holes.first(where: { $0.number == number }), let gross = grossByHole[number] else { return nil }
+            return .init(number: number, par: hole.par, strokeIndex: hole.handicap ?? 0, gross: gross)
+        }
+        let intendedHoles = metadata.segment == .full18 ? 18 : 9
+        guard !entries.contains(where: \.pickedUp) else {
+            return result(pending: "Picked-up holes need a valid individual gross or most-likely score")
+        }
+        let isPartial = played.count != intendedHoles
+        var initialNine: PersonalHandicapCardNine?
+        if isPartial {
+            guard played.count >= 9 else { return result(excluded: "Incomplete individual gross scorecard") }
+            guard PersonalHandicapPartialReason(rawValue: partialReason ?? "") != nil else {
+                return result(pending: "Partial round needs a valid reason for unplayed holes")
+            }
+            for segment in [HoleSegment.front9, .back9] {
+                let numbers = Set(segment.holeRange.holeNumbers)
+                let nine = played.filter { numbers.contains($0.number) }
+                let exact = HandicapCalculator.calculation(index: 0, tee: tee, segment: segment, indexBasis: .eighteenHole)
+                if nine.count == 9, exact.status == .exact, let r = exact.rating, let s = exact.slope {
+                    initialNine = .init(holes: nine, rating: r, slope: s)
+                    break
+                }
+            }
+            guard initialNine != nil else { return result(pending: "Partial round needs a complete, exactly rated nine") }
+        }
+        let pcc = round.personalHandicapPCC ?? .assumedZero
+        guard pcc.isValid else { return result(pending: "PCC provenance or value is invalid") }
+        let frozen = participant.personalHandicapInput.flatMap { input -> Double? in
+            input.basis == .eighteenHole && input.index.isFinite && input.capturedAt.unix <= playedAt.unix ? input.index : nil
+        }
+        let card = PersonalHandicapCard(holes: played, intendedHoles: intendedHoles, rating: rating, slope: slope, par: par,
+                                       pcc: pcc, frozenPersonalIndex: frozen, partialReason: partialReason, initialNine: initialNine)
+        // Before establishment, partial 18-hole cards contribute only a rated nine.
+        let holes = isPartial ? (frozen == nil ? 9 : played.count) : intendedHoles
+        return result(holes: holes, card: card)
+    }
+
+    /// Reuse the established V2 scoring projection, adding only the personal
+    /// posting metadata it intentionally omits. No league projection is changed.
+    static func reviewV2(_ source: RoundSnapshotV2, playerID: String) -> PersonalHandicapRoundReview {
+        var snapshot = source.scoringSnapshot()
+        snapshot.round.firstScoredAt = source.scores.filter { $0.strokes != nil || $0.relativeToPar != nil }
+            .map(\.createdAt).min { $0.unix < $1.unix }
+        snapshot.round.personalHandicapPCC = source.round.personalHandicapPCC
+        snapshot.round.configuration.formatSummary?.templateID = source.round.configuration.templateID
+        for i in snapshot.participants.indices {
+            let personal = source.participants.first { $0.id == snapshot.participants[i].id }
+            snapshot.participants[i].personalHandicapPurpose = personal?.personalHandicapPurpose
+            snapshot.participants[i].personalHandicapPartialReason = personal?.personalHandicapPartialReason
+        }
+        var review = review(snapshot, playerID: playerID)
+        review.score.sourceCollection = V2Collection.rounds
+        return review
     }
 
     /// Latest revision wins before filtering: a correction can remove eligibility.

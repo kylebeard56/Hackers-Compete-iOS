@@ -11,11 +11,13 @@ struct PersonalHandicapSection: View {
     @State private var history = PersonalHandicapHistory()
     @State private var leagues: [ProfileLeagueHandicap] = []
     @State private var isLoading = true
+    @State private var isRefreshingHistory = false
     @State private var historyError: String?
     @State private var leagueError: String?
     @State private var editor: StartingIndexEditorInput?
     @State private var selectedDate: Date?
     @State private var selectedPoint: PersonalHandicapHistoryPoint?
+    @State private var postingReview: PersonalHandicapScoreRecord?
 
     private var profile: PersonalHandicapProfile {
         var profile = player.personalHandicap ?? .init()
@@ -40,9 +42,18 @@ struct PersonalHandicapSection: View {
             StartingIndexEditor(input: input, palette: palette) { manual in
                 let saved = try await FirebaseService.shared.saveManualPersonalHandicap(playerID: player.id, manual: manual)
                 onSaved(saved)
+                await loadHistory()
             }
             .presentationDetents([.medium, .large])
             .presentationDragIndicator(.visible)
+        }
+        .sheet(item: $postingReview) { score in
+            PersonalHandicapPostingEditor(score: score, palette: palette) { purpose, reason in
+                let loaded = try await FirebaseService.shared.setPersonalHandicapPurpose(playerID: player.id, roundID: score.roundID, sourceCollection: score.sourceCollection ?? Collections.rounds.name, purpose: purpose, partialReason: reason)
+                history = loaded
+                if let refreshed = loaded.player { onSaved(refreshed) }
+            }
+            .presentationDetents([.medium, .large])
         }
         .sheet(item: $selectedPoint) { point in
             NavigationStack {
@@ -74,7 +85,7 @@ struct PersonalHandicapSection: View {
                         .fontStyle(kFontName, size: 36, weight: .bold)
                         .foregroundStyle(Color.accentGreen)
                         .accessibilityLabel("Effective personal Handicap Index \(ManualPersonalHandicap.display(profile.effectiveIndex))")
-                    detail(profile.effectiveSource == .calculated ? "Hackers calculated · 18-hole Index" : profile.manual != nil ? "Manual starting · 18-hole Index" : "Personal Index unavailable")
+                    detail(profile.effectiveSource == .calculated ? "Hackers Calculated Index · 18 holes" : profile.manual != nil ? "Manual starting · 18-hole Index" : "Personal Index unavailable")
                 }
                 Spacer(minLength: 8)
                 if player.canEditPersonalHandicap(as: viewerUserID) {
@@ -98,15 +109,20 @@ struct PersonalHandicapSection: View {
             HStack {
                 detail("Calculated Hackers Index")
                 Spacer()
-                Text(ManualPersonalHandicap.display(calculation?.qualifiedIndex)).monospacedDigit()
+                Text(ManualPersonalHandicap.display(calculation?.effectiveCalculatedIndex)).monospacedDigit()
             }
+            if let date = calculation?.retainedAsOf { detail("Last valid Index: \(date.formattedDate) · newer conversion pending") }
             if let calculation {
                 detail("Latest review: \(calculation.asOf.formattedDate)")
             }
             if calculation?.status == .blocked {
-                detail(PersonalHandicapEngine.unavailableMessage)
+                detail(calculation?.blockers?.first ?? PersonalHandicapEngine.unavailableMessage)
             }
-            detail("Hackers calculations are unofficial. Your manual starting Index is kept separately.")
+            detail("WHS-inspired and unofficial. Missing official PCC is explicitly assumed to be zero. Your starting Index is kept separately.")
+            Button("Refresh personal handicap") { Task { await loadHistory() } }
+                .fontStyle(kFontName, size: 12, weight: .semibold)
+                .foregroundStyle(Color.accentGreen)
+                .disabled(isLoading || isRefreshingHistory)
         }
     }
 
@@ -133,7 +149,7 @@ struct PersonalHandicapSection: View {
             } else if history.points.isEmpty {
                 VStack(spacing: 8) {
                     Image(systemName: "chart.xyaxis.line").font(.system(size: 24, weight: .medium)).foregroundStyle(Color.neutral3)
-                    detail(calculation?.status == .blocked ? "A calculated Index needs verified score data." : "Your calculated Index trend will appear after 54 qualifying holes and valid differentials are available.")
+                    detail(calculation?.status == .blocked ? "Nine-hole / partial conversion is pending expected-score input." : "Your calculated Index trend will appear after 54 qualifying holes and valid differentials are available.")
                     if let calculation, let required = calculation.requiredHoles, required > 0 {
                         ProgressView(value: Double(min(calculation.qualifyingHoles, required)), total: Double(required))
                             .tint(Color.accentGreen)
@@ -191,7 +207,11 @@ struct PersonalHandicapSection: View {
 
     private var scoreHistoryCard: some View {
         SeriesSheetCard(palette: palette) {
-            title("Score History")
+            HStack {
+                title("Score History")
+                Spacer()
+                if player.canEditPersonalHandicap(as: viewerUserID) { detail("Tap a score to review") }
+            }
             HStack(spacing: 12) {
                 legend("Counts", style: 0)
                 legend("Pool", style: 1)
@@ -209,14 +229,26 @@ struct PersonalHandicapSection: View {
                         Text(score.roundTitle).fontStyle(kFontName, size: 14, weight: .semibold)
                         detail("\(score.playedAt.formattedDate) · \(score.holeCount) holes")
                         if let reason = score.exclusionReason ?? score.pendingReason { detail(reason) }
+                        if let pcc = score.pcc { detail(pcc.title) }
+                        if let adjusted = score.adjustedGrossScore { detail("Adjusted gross (\(score.qualifyingHoles ?? score.holeCount) qualifying holes): \(adjusted)") }
+                        if let differential = score.differential {
+                            detail("18-hole differential: \(String(format: "%.1f", differential))")
+                        } else if let played = score.playedDifferential {
+                            detail("Played nine differential: \(String(format: "%.1f", played)) · conversion pending")
+                        }
                     }
                     Spacer(minLength: 8)
                     VStack(alignment: .trailing, spacing: 4) {
-                        Text(score.grossScore.map(String.init) ?? "—").monospacedDigit()
+                        Text(score.grossScore.map { "Gross \($0)" } ?? "—").monospacedDigit()
                         legend(status, style: status == "Counts" ? 0 : status == "Pool" ? 1 : 2)
                     }
                 }
                 .padding(.vertical, 8)
+                .contentShape(Rectangle())
+                .onTapGesture {
+                    if player.canEditPersonalHandicap(as: viewerUserID) { postingReview = score }
+                }
+                .accessibilityAddTraits(player.canEditPersonalHandicap(as: viewerUserID) ? .isButton : [])
             }
         }
     }
@@ -288,7 +320,15 @@ struct PersonalHandicapSection: View {
     }
 
     @MainActor private func loadHistory() async {
-        do { history = try await FirebaseService.shared.fetchPersonalHandicapHistory(playerID: player.id) }
+        guard !isRefreshingHistory else { return }
+        isRefreshingHistory = true
+        defer { isRefreshingHistory = false }
+        do {
+            let loaded = try await FirebaseService.shared.fetchPersonalHandicapHistory(playerID: player.id)
+            history = loaded
+            historyError = nil
+            if let refreshed = loaded.player { onSaved(refreshed) }
+        }
         catch { historyError = "Couldn't load personal handicap history. Try again." }
     }
 
@@ -361,5 +401,61 @@ private struct StartingIndexEditor: View {
             try await save(manual)
             dismiss()
         } catch { self.error = error.localizedDescription }
+    }
+}
+
+
+private struct PersonalHandicapPostingEditor: View {
+    let score: PersonalHandicapScoreRecord
+    let palette: DesignPalette
+    let save: (PersonalHandicapRoundPurpose, String?) async throws -> Void
+    @Environment(\.dismiss) private var dismiss
+    @State private var purpose: PersonalHandicapRoundPurpose = .acceptable
+    @State private var reason = ""
+    @State private var isSaving = false
+    @State private var error: String?
+
+    var body: some View {
+        NavigationStack {
+            Form {
+                Section(score.roundTitle) {
+                    Picker("Personal handicap posting", selection: $purpose) {
+                        Text("Include eligible individual score").tag(PersonalHandicapRoundPurpose.acceptable)
+                        Text("Practice").tag(PersonalHandicapRoundPurpose.practice)
+                        Text("Unofficial / exclude").tag(PersonalHandicapRoundPurpose.unofficial)
+                        Text("Needs review").tag(PersonalHandicapRoundPurpose.unverified)
+                    }
+                    if score.holeCount < 18 {
+                        Picker("If an 18-hole round ended early", selection: $reason) {
+                            Text("No partial-round reason").tag("")
+                            ForEach(PersonalHandicapPartialReason.allCases, id: \.rawValue) { reason in
+                                Text(reason.title).tag(reason.rawValue)
+                            }
+                        }
+                    }
+                    Text("Completed individual cards are included for the unofficial personal calculation unless excluded. Only choose a partial-round reason when it prevented completing an intended 18-hole round. Shared, Scramble and invalid scorecards stay excluded. This does not change scores, league handicaps or round strokes.")
+                        .font(.footnote).foregroundStyle(.secondary)
+                }
+                if let error { Text(error).foregroundStyle(Color.systemError) }
+            }
+            .scrollContentBackground(.hidden).background(palette.backgroundColor)
+            .navigationTitle("Personal Handicap Score").navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .cancellationAction) { Button("Cancel") { dismiss() }.disabled(isSaving) }
+                ToolbarItem(placement: .confirmationAction) {
+                    Button("Save") { Task { await submit() } }.disabled(isSaving)
+                }
+            }
+            .overlay { if isSaving { ProgressView() } }
+        }
+        .interactiveDismissDisabled(isSaving)
+        .onAppear { purpose = score.postingPurpose ?? .acceptable; reason = score.partialReason ?? "" }
+    }
+
+    @MainActor private func submit() async {
+        isSaving = true
+        defer { isSaving = false }
+        do { try await save(purpose, reason.isEmpty ? nil : reason); dismiss() }
+        catch { self.error = "Could not save and refresh this posting. Try again." }
     }
 }

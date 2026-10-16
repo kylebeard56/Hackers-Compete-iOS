@@ -2,7 +2,8 @@ import Foundation
 
 /// Published USGA Rules 3.1, 5.1–5.3, 5.7–5.9. Pure personal calculations:
 /// no dependency on league projections, scoring allowances, or league multipliers.
-/// Missing external inputs are errors, never assumed zero/estimated.
+/// Official PCC may be absent; the caller records the explicitly assumed zero.
+/// Expected-score inputs are never estimated.
 enum PersonalHandicapRules {
     enum InputError: Error, Equatable {
         case missingPCC, missingExpectedScore, partialRoundRequiresProvider, invalidInput
@@ -15,15 +16,19 @@ enum PersonalHandicapRules {
         adjustedGross: Int, rating: Double, slope: Int, holes: Int,
         pcc: Double?, expectedNineHoleDifferential: Double? = nil
     ) throws -> Double {
-        guard holes == 9 || holes == 18 else { throw InputError.partialRoundRequiresProvider }
-        guard adjustedGross > 0, rating.isFinite, rating > 0, (55...155).contains(slope) else { throw InputError.invalidInput }
-        guard let pcc else { throw InputError.missingPCC }
-        guard [-1.0, 0, 1, 2, 3].contains(pcc) else { throw InputError.invalidInput }
-        let played = 113 / Double(slope) * (Double(adjustedGross) - rating - (holes == 9 ? 0.5 : 1) * pcc)
-        if holes == 18 { return played } // retain unrounded for exceptional-score comparison
+        let played = try playedDifferential(adjustedGross: adjustedGross, rating: rating, slope: slope, holes: holes, pcc: pcc ?? 0)
+        if holes == 18 { return played }
         guard let expected = expectedNineHoleDifferential else { throw InputError.missingExpectedScore }
         guard expected.isFinite else { throw InputError.invalidInput }
-        return played + expected // do not round the played nine before combining
+        return played + expected
+    }
+
+    /// Actual played portion only. A nine-hole value is not an 18-hole Index input.
+    static func playedDifferential(adjustedGross: Int, rating: Double, slope: Int, holes: Int, pcc: Double) throws -> Double {
+        guard holes == 9 || holes == 18 else { throw InputError.partialRoundRequiresProvider }
+        guard adjustedGross > 0, rating.isFinite, rating > 0, (55...155).contains(slope),
+              [-1.0, 0, 1, 2, 3].contains(pcc) else { throw InputError.invalidInput }
+        return 113 / Double(slope) * (Double(adjustedGross) - rating - (holes == 9 ? 0.5 : 1) * pcc)
     }
 
     /// `strokes` must come from the full unrestricted Course Handicap, including
@@ -66,7 +71,7 @@ enum PersonalHandicapRules {
 /// user-editable Firestore field. The provider must bind its response to the exact
 /// player, round and reviewed revision, and supply an unrounded, 18-hole-scale
 /// differential AFTER official PCC, expected score and Rule 3 adjustments.
-struct PersonalHandicapVerifiedDifferential {
+struct PersonalHandicapVerifiedDifferential: Codable {
     let playerID: String
     let roundID: String
     let revision: Double
@@ -83,23 +88,33 @@ struct PersonalHandicapRebuild {
 }
 
 enum PersonalHandicapEngine {
-    static let methodVersion = "usga-published-rules-2024-v1"
-    static let unavailableMessage = "Calculation needs verified handicap postings, official PCC and expected-score data. A manual starting Index can be used until these are available."
+    static let methodVersion = "hackers-whs-inspired-assumed-pcc-v2"
+    static let unavailableMessage = "Eligible nine-hole and partial scores stay in your history and progress. Their 18-hole conversion needs an expected-score input; your manual starting Index remains available."
 
-    /// Rebuild from canonical score revisions, never mutate round participants.
-    /// All initial nine-hole scores require provider normalization after 54 holes;
-    /// neither chronological pairing nor doubling is a supported fallback.
+    private struct ReplayInput: Encodable {
+        let sources: [String]
+        let manual: ManualPersonalHandicap?
+        let verified: [PersonalHandicapVerifiedDifferential]
+    }
+
+    /// Uses canonical individual gross cards, independently of league allowances.
+    /// Nines remain pending until supplied expected-score processing is possible.
     static func rebuild(
         playerID: String, reviews: [PersonalHandicapRoundReview],
-        verified: [PersonalHandicapVerifiedDifferential] = [], asOf: Time = .init()
+        verified: [PersonalHandicapVerifiedDifferential] = [], manual: ManualPersonalHandicap? = nil, asOf: Time = .init()
     ) -> PersonalHandicapRebuild {
         let reviews = PersonalHandicapEligibility.unique(reviews, playerID: playerID)
-        let supplied = Dictionary(grouping: verified.filter { $0.playerID == playerID }, by: \.roundID)
+        let verified = verified.filter { $0.playerID == playerID }
+        let supplied = Dictionary(grouping: verified, by: \.roundID)
+        let fingerprint = PersonalHandicapFingerprint.hash(ReplayInput(
+            sources: reviews.map { $0.fingerprint.isEmpty ? PersonalHandicapFingerprint.hash($0.score) + String($0.revision) : $0.fingerprint },
+            manual: manual, verified: verified.sorted { $0.roundID == $1.roundID ? $0.postingID < $1.postingID : $0.roundID < $1.roundID }))
         var scores: [PersonalHandicapScoreRecord] = []
         var history: [PersonalHandicapHistoryPoint] = []
-        var accepted: [(review: PersonalHandicapRoundReview, value: Double, reduction: Double)] = []
+        var values: [String: Double] = [:]
+        var reductions: [String: Double] = [:]
         var postingIDs = Set<String>()
-        var blockers = Set<String>()
+        var unresolved: [String: String] = [:]
         var totalHoles = 0
         var qualifyingIDs: [String] = []
         var lowIndex: Double?
@@ -110,75 +125,94 @@ enum PersonalHandicapEngine {
         )
         for review in reviews {
             var score = review.score
-            if score.exclusionReason != nil { scores.append(score); continue }
-            guard review.qualifyingHoles == 9 || review.qualifyingHoles == 18,
-                  score.pendingReason == nil else {
-                blockers.insert(score.pendingReason ?? "Score eligibility requires verification")
-                scores.append(score); continue
-            }
+            var holes = review.qualifyingHoles
+            if score.exclusionReason != nil || holes == 0 { scores.append(score); continue }
             let matches = (supplied[score.roundID] ?? []).filter { $0.revision == review.revision }
-            guard matches.count == 1, let input = matches.first,
-                  input.unroundedValue.isFinite, input.indexInEffect?.isFinite != false,
-                  !input.postingID.isEmpty else {
-                score.pendingReason = "Official differential inputs unavailable or do not match this score revision"
-                totalHoles += review.qualifyingHoles
-                qualifyingIDs.append(score.roundID)
-                blockers.insert(unavailableMessage)
-                scores.append(score); continue
+            var value: Double?
+            var indexInEffect: Double?
+            var postingID = score.roundID
+            if let card = review.card {
+                indexInEffect = card.frozenPersonalIndex ?? calculation.effectiveCalculatedIndex
+                    ?? manual.flatMap { $0.updatedAt.unix <= score.playedAt.unix ? $0.value : nil }
+                score.personalIndexAtPlay = indexInEffect
+                score.personalIndexProvenance = card.frozenPersonalIndex != nil ? "frozen_personal_input"
+                    : calculation.effectiveCalculatedIndex != nil ? "replayed_personal_history"
+                    : indexInEffect != nil ? "manual_as_of_recorded_play" : "initial_par_plus_five"
+                score.pcc = card.pcc
+                do {
+                    let assessed = try card.assessed(index: indexInEffect)
+                    score.adjustedGrossScore = assessed.gross
+                    score.playedDifferential = assessed.played
+                    score.pendingReason = assessed.pending
+                    holes = assessed.qualifyingHoles
+                    value = assessed.differential
+                } catch {
+                    score.pendingReason = "Personal hole limits need valid unrestricted Course Handicap and stroke-index data"
+                }
             }
-            guard postingIDs.insert(input.postingID).inserted else {
+            // Future verified normalization can resolve nines without changing
+            // gross scores, assumed/verified PCC provenance or round allowances.
+            if matches.count == 1, let input = matches.first,
+               input.unroundedValue.isFinite, input.indexInEffect?.isFinite != false, !input.postingID.isEmpty {
+                value = input.unroundedValue
+                indexInEffect = input.indexInEffect
+                postingID = input.postingID
+                score.pendingReason = nil
+            } else if review.card == nil {
+                score.pendingReason = "Differential inputs unavailable or do not match this score revision"
+            }
+            guard postingIDs.insert(postingID).inserted else {
                 score = .init(playerID: score.playerID, roundID: score.roundID, roundTitle: score.roundTitle,
                               playedAt: score.playedAt, holeCount: score.holeCount, grossScore: score.grossScore,
                               exclusionReason: "Duplicate handicap posting")
                 scores.append(score); continue
             }
-            totalHoles += review.qualifyingHoles
+            score.qualifyingHoles = holes
+            totalHoles += holes
             qualifyingIDs.append(score.roundID)
-            let reduction = PersonalHandicapRules.exceptionalReduction(unroundedDifferential: input.unroundedValue, indexInEffect: input.indexInEffect)
-            accepted.append((review, PersonalHandicapRules.tenth(input.unroundedValue), 0))
-            // ESR applies cumulatively to the most recent 20 differentials at posting,
-            // including the new score; later scores do not inherit the adjustment.
-            if reduction != 0 {
-                for i in max(0, accepted.count - 20)..<accepted.count { accepted[i].reduction += reduction }
-            }
-            let pool = Array(accepted.suffix(20))
-            let selection = PersonalHandicapRules.selection(count: pool.count)
-            var counting: [String] = []
+            score.differential = value.map(PersonalHandicapRules.tenth)
+            if let value {
+                values[score.roundID] = PersonalHandicapRules.tenth(value)
+                let reduction = PersonalHandicapRules.exceptionalReduction(unroundedDifferential: value, indexInEffect: indexInEffect)
+                if reduction != 0 {
+                    for id in qualifyingIDs.suffix(20) { reductions[id, default: 0] += reduction }
+                }
+            } else { unresolved[score.roundID] = score.pendingReason ?? unavailableMessage }
+            let scope = Array(qualifyingIDs.suffix(20))
+            let poolIDs = scope.filter { values[$0] != nil }
+            let activeBlockers = scope.compactMap { unresolved[$0] }
             var index: Double?
-            if totalHoles >= 54, blockers.isEmpty, let selection {
-                let lowest = pool.sorted {
-                    let l = $0.value + $0.reduction, r = $1.value + $1.reduction
-                    return l == r ? $0.review.score.roundID < $1.review.score.roundID : l < r
-                }.prefix(selection.count)
-                counting = lowest.map { $0.review.score.roundID }
-                let mean = lowest.reduce(0) { $0 + $1.value + $1.reduction } / Double(selection.count) + selection.adjustment
-                // Existing Low Index is used first, even after a break >365 days.
+            var counting: [String] = []
+            if totalHoles >= 54, activeBlockers.isEmpty, let selection = PersonalHandicapRules.selection(count: poolIDs.count) {
+                counting = Array(poolIDs.sorted {
+                    let l = values[$0]! + reductions[$0, default: 0], r = values[$1]! + reductions[$1, default: 0]
+                    return l == r ? $0 < $1 : l < r
+                }.prefix(selection.count))
+                let mean = counting.reduce(0) { $0 + values[$1]! + reductions[$1, default: 0] } / Double(selection.count) + selection.adjustment
                 index = PersonalHandicapRules.tenth(PersonalHandicapRules.capped(PersonalHandicapRules.tenth(mean), lowIndex: lowIndex))
-                if accepted.count >= 20, let index {
+                if poolIDs.count == 20, let index {
                     qualifiedHistory.append((score.playedAt.unix, index))
                     let cutoff = score.playedAt.unix - 365 * 86400
                     lowIndex = qualifiedHistory.filter { $0.date >= cutoff }.map(\.index).min()
                 }
             }
-            calculation = .init(index: index, status: blockers.isEmpty ? (index == nil ? .collecting : .qualified) : .blocked,
-                asOf: asOf, methodVersion: methodVersion, qualifyingScoreIDs: accepted.map { $0.review.score.roundID },
-                qualifyingHoles: totalHoles, requiredHoles: 54, poolScoreIDs: pool.map { $0.review.score.roundID }, countingScoreIDs: counting)
+            calculation = .init(index: index, status: activeBlockers.isEmpty ? (index == nil ? .collecting : .qualified) : .blocked,
+                asOf: asOf, methodVersion: methodVersion, qualifyingScoreIDs: qualifyingIDs, qualifyingHoles: totalHoles,
+                requiredHoles: 54, poolScoreIDs: poolIDs, countingScoreIDs: counting)
+            calculation.blockers = activeBlockers.isEmpty ? nil : Array(Set(activeBlockers)).sorted()
             calculation.lowHandicapIndex = lowIndex
+            calculation.inputFingerprint = fingerprint
+            if index == nil, !activeBlockers.isEmpty, let previous = history.last {
+                calculation.retainedIndex = previous.calculation.qualifiedIndex
+                calculation.retainedAsOf = previous.calculation.asOf
+            }
             if index != nil {
                 history.append(.init(playerID: playerID, roundID: score.roundID, roundTitle: score.roundTitle,
                                      playedAt: score.playedAt, calculation: calculation))
             }
             scores.append(score)
         }
-        if !blockers.isEmpty {
-            calculation.index = nil
-            calculation.status = .blocked
-            calculation.countingScoreIDs = []
-            calculation.poolScoreIDs = [] // an incomplete pool must not appear authoritative
-            calculation.blockers = blockers.sorted()
-        }
-        calculation.qualifyingScoreIDs = qualifyingIDs
-        calculation.qualifyingHoles = totalHoles
+        calculation.inputFingerprint = fingerprint
         return .init(calculation: calculation, history: history, scores: scores)
     }
 }

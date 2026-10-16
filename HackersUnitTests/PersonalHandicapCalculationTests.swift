@@ -33,6 +33,7 @@ final class PersonalHandicapCalculationTests: XCTestCase {
             r.score = .init(playerID: "p1", roundID: "r\(n)", roundTitle: "Round \(n)",
                 playedAt: .init(for: Date(timeIntervalSince1970: 1_700_000_000 + Double(n) * 86400)),
                 holeCount: holes, grossScore: 90, exclusionReason: nil)
+            r.card = nil // These fixtures specifically exercise the verified-input boundary.
             reviews.append(r)
             inputs.append(.init(playerID: "p1", roundID: "r\(n)", revision: r.revision, unroundedValue: value,
                                 indexInEffect: nil, postingID: "posting\(n)"))
@@ -113,7 +114,7 @@ final class PersonalHandicapCalculationTests: XCTestCase {
         for purpose in [PersonalHandicapRoundPurpose.practice, .unofficial, .unverified] {
             XCTAssertEqual(review(s, purpose: purpose).qualifyingHoles, 0)
         }
-        XCTAssertNotNil(PersonalHandicapEligibility.review(s, playerID: "p1").score.pendingReason)
+        XCTAssertEqual(PersonalHandicapEligibility.review(s, playerID: "p1").qualifyingHoles, 18)
     }
 
     func testIncompleteLiveDuplicateAndPickedUpCardsAreNotSilentlyFilled() {
@@ -128,10 +129,11 @@ final class PersonalHandicapCalculationTests: XCTestCase {
         XCTAssertEqual(review(s).qualifyingHoles, 0)
     }
 
-    func testLegacyMissingCourseOrPlayDateRemainsPending() {
+    func testLegacyRecordedScoreDateIsUsedWhileInvalidCourseRemainsPending() {
         var s = snapshot(); s.round.firstScoredAt = nil
-        XCTAssertEqual(review(s).qualifyingHoles, 0)
-        XCTAssertEqual(review(s).score.pendingReason, "Actual play date is not recorded")
+        XCTAssertEqual(review(s).qualifyingHoles, 18)
+        XCTAssertEqual(review(s).score.playedAtSource, "earliest_recorded_score")
+        XCTAssertEqual(review(s).score.playedAt, s.scoring.map(\.createdAt).min { $0.unix < $1.unix })
         s = snapshot(); s.round.configuration.courses[0].holeRange = .init()
         XCTAssertEqual(review(s).qualifyingHoles, 0)
         XCTAssertNotNil(review(s).score.pendingReason)
@@ -218,12 +220,12 @@ final class PersonalHandicapCalculationTests: XCTestCase {
         XCTAssertNil(league.personalHandicapInput)
     }
 
-    func testMissingOfficialInputsNeverBecomeZeroOrSelectiveScoreOmission() {
+    func testMissingNormalizedDifferentialsCannotBeSilentlyOmittedFromThePool() {
         let (r, d) = pool([12, 15, 17])
         let result = PersonalHandicapEngine.rebuild(playerID: "p1", reviews: r, verified: Array(d.dropLast()))
         XCTAssertEqual(result.calculation.status, .blocked)
         XCTAssertNil(result.calculation.qualifiedIndex)
-        XCTAssertTrue(result.calculation.poolScoreIDs.isEmpty)
+        XCTAssertEqual(result.calculation.poolScoreIDs.count, 2)
         XCTAssertNotNil(result.scores.last?.pendingReason)
     }
 
@@ -267,7 +269,7 @@ final class PersonalHandicapCalculationTests: XCTestCase {
 
     func testDifferentialPCCAndOfficialNineExpectedScoreTreatment() throws {
         XCTAssertEqual(try PersonalHandicapRules.differential(adjustedGross: 90, rating: 72, slope: 113, holes: 18, pcc: 2), 16)
-        XCTAssertThrowsError(try PersonalHandicapRules.differential(adjustedGross: 90, rating: 72, slope: 113, holes: 18, pcc: nil))
+        XCTAssertEqual(try PersonalHandicapRules.differential(adjustedGross: 90, rating: 72, slope: 113, holes: 18, pcc: nil), 18)
         XCTAssertThrowsError(try PersonalHandicapRules.differential(adjustedGross: 45, rating: 36, slope: 113, holes: 9, pcc: 0))
         XCTAssertEqual(try PersonalHandicapRules.differential(adjustedGross: 45, rating: 36, slope: 113, holes: 9, pcc: 2, expectedNineHoleDifferential: 8.3), 16.3, accuracy: 0.0001)
         XCTAssertThrowsError(try PersonalHandicapRules.differential(adjustedGross: 80, rating: 72, slope: 113, holes: 17, pcc: 0))
@@ -317,4 +319,255 @@ final class PersonalHandicapCalculationTests: XCTestCase {
         let legacy = try JSONEncoder().encode(result.scores[0])
         XCTAssertNil(try JSONDecoder().decode(PersonalHandicapScoreRecord.self, from: legacy).pendingReason)
     }
+    private func actualReviews(_ count: Int, holes: Int = 18) -> [PersonalHandicapRoundReview] {
+        (0..<count).map { n in
+            var source = snapshot(id: "actual\(n)", holes: holes)
+            source.round.firstScoredAt = .init(for: Date(timeIntervalSince1970: 1_700_000_000 + Double(n) * 86400))
+            return PersonalHandicapEligibility.review(source, playerID: "p1")
+        }
+    }
+
+    func testAvailableHackersCardsProduceAnIndexWithoutAnyProvider() {
+        let result = PersonalHandicapEngine.rebuild(playerID: "p1", reviews: actualReviews(3))
+        XCTAssertEqual(result.calculation.qualifiedIndex, 16)
+        XCTAssertEqual(result.calculation.qualifyingHoles, 54)
+        XCTAssertEqual(result.history.count, 1)
+        XCTAssertTrue(result.scores.allSatisfy { $0.differential == 18 && $0.adjustedGrossScore == 90 })
+    }
+
+    func testMissingPCCIsStoredAsExplicitAssumedZeroAndRoundTrips() throws {
+        let result = PersonalHandicapEngine.rebuild(playerID: "p1", reviews: actualReviews(1))
+        let score = try XCTUnwrap(result.scores.first)
+        XCTAssertEqual(score.pcc?.value, 0)
+        XCTAssertEqual(score.pcc?.verification, .assumed)
+        XCTAssertTrue(score.pcc?.source.contains("official PCC unavailable") == true)
+        XCTAssertEqual(try JSONDecoder().decode(PersonalHandicapScoreRecord.self, from: JSONEncoder().encode(score)), score)
+    }
+
+    func testVerifiedPCCOverridesTheAssumptionWithoutChangingGross() {
+        var source = snapshot()
+        source.round.personalHandicapPCC = .init(value: 2, verification: .verified, source: "External course/day record")
+        let original = source.scoring
+        let result = PersonalHandicapEngine.rebuild(playerID: "p1", reviews: [review(source)])
+        XCTAssertEqual(result.scores.first?.pcc?.verification, .verified)
+        XCTAssertEqual(result.scores.first?.differential, 16)
+        XCTAssertEqual(result.scores.first?.grossScore, 90)
+        XCTAssertEqual(source.scoring, original)
+    }
+
+    func testInvalidPCCProvenanceDoesNotMasqueradeAsVerifiedOrAssumedZero() {
+        for pcc in [PersonalHandicapPCC(value: 1, verification: .assumed, source: "invented"),
+                    .init(value: 0, verification: .verified, source: ""),
+                    .init(value: 4, verification: .verified, source: "invalid")] {
+            var source = snapshot(); source.round.personalHandicapPCC = pcc
+            XCTAssertEqual(review(source).qualifyingHoles, 0)
+            XCTAssertNotNil(review(source).score.pendingReason)
+        }
+    }
+
+    func testStandardDifferentialUsesExactRatingAndSlope() throws {
+        let card = PersonalHandicapCard(holes: (1...18).map { .init(number: $0, par: 4, strokeIndex: $0, gross: 5) },
+            intendedHoles: 18, rating: 73.9, slope: 143, par: 72, pcc: .assumedZero, frozenPersonalIndex: nil, partialReason: nil, initialNine: nil)
+        let result = try card.assessed(index: nil)
+        XCTAssertEqual(result.differential!, 113.0 / 143 * (90 - 73.9), accuracy: 0.00001)
+    }
+
+    func testInitialParPlusFiveAndFrozenPersonalNetDoubleBogeyLeaveRawCardUnchanged() {
+        var source = snapshot(); source.scoring[0].strokes = 20
+        let initial = PersonalHandicapEngine.rebuild(playerID: "p1", reviews: [review(source)])
+        XCTAssertEqual(initial.scores.first?.grossScore, 105)
+        XCTAssertEqual(initial.scores.first?.adjustedGrossScore, 94)
+        let played = source.round.firstScoredAt!
+        source.participants[0].personalHandicapInput = .init(index: 0, source: .external,
+            sourceUpdatedAt: played, capturedAt: played, basis: .eighteenHole)
+        let established = PersonalHandicapEngine.rebuild(playerID: "p1", reviews: [review(source)])
+        XCTAssertEqual(established.scores.first?.adjustedGrossScore, 91)
+        XCTAssertEqual(established.scores.first?.personalIndexAtPlay, 0)
+        XCTAssertEqual(source.scoring[0].strokes, 20)
+    }
+
+    func testPlusPersonalIndexGivesBackStrokesOnHighestStrokeIndexHoles() throws {
+        let card = PersonalHandicapCard(holes: (1...18).map { .init(number: $0, par: 4, strokeIndex: $0, gross: 6) },
+            intendedHoles: 18, rating: 72, slope: 113, par: 72, pcc: .assumedZero, frozenPersonalIndex: -2, partialReason: nil, initialNine: nil)
+        XCTAssertEqual(try card.assessed(index: -2).gross, 106)
+    }
+
+    func testLeagueAllowancesAndIntegerIndexesNeverSetPersonalHoleLimits() {
+        var source = snapshot(); source.scoring[0].strokes = 20
+        source.participants[0].seriesMemberID = "member"
+        source.participants[0].handicapIndex = 0
+        source.participants[0].adjustedHandicap = 2
+        source.participants[0].leagueHandicapStrokesAtCreation = 2
+        let original = source.participants[0]
+        let result = PersonalHandicapEngine.rebuild(playerID: "p1", reviews: [review(source)])
+        XCTAssertEqual(result.scores.first?.adjustedGrossScore, 94)
+        XCTAssertNil(result.scores.first?.personalIndexAtPlay)
+        XCTAssertEqual(source.participants[0], original)
+    }
+
+    func testSixActualNinesPreserveProgressAndPlayedDifferentialsWithoutInventingIndex() {
+        let result = PersonalHandicapEngine.rebuild(playerID: "p1", reviews: actualReviews(6, holes: 9))
+        XCTAssertEqual(result.calculation.qualifyingHoles, 54)
+        XCTAssertEqual(result.calculation.qualifyingScoreIDs.count, 6)
+        XCTAssertNil(result.calculation.qualifiedIndex)
+        XCTAssertTrue(result.history.isEmpty)
+        XCTAssertTrue(result.scores.allSatisfy { $0.playedDifferential == 9 && $0.differential == nil && $0.pendingReason != nil })
+        let profile = PersonalHandicapProfile(manual: try! .init(value: 23, source: .manual), calculation: result.calculation)
+        XCTAssertEqual(profile.effectiveIndex, 23)
+    }
+
+    func testNineHoleHalfPCCIsRecordedAsPlayedPortionOnly() {
+        var source = snapshot(holes: 9)
+        source.round.personalHandicapPCC = .init(value: 1, verification: .verified, source: "Course/day")
+        source.participants[0].seriesMemberID = "league member"
+        let result = PersonalHandicapEngine.rebuild(playerID: "p1", reviews: [review(source)])
+        XCTAssertEqual(result.scores.first?.playedDifferential, 8.5)
+        XCTAssertNil(result.scores.first?.differential)
+        XCTAssertEqual(result.scores.first?.qualifyingHoles, 9)
+        XCTAssertEqual(result.scores.first?.pcc?.verification, .verified)
+    }
+
+    func testPartialInitialRoundContributesOnlyCompletedRatedNine() {
+        var source = snapshot(); source.scoring.removeLast()
+        source.participants[0].personalHandicapPartialReason = PersonalHandicapPartialReason.weather.rawValue
+        let result = PersonalHandicapEngine.rebuild(playerID: "p1", reviews: [review(source)])
+        XCTAssertEqual(result.scores.first?.holeCount, 17)
+        XCTAssertEqual(result.scores.first?.grossScore, 85)
+        XCTAssertEqual(result.calculation.qualifyingHoles, 9)
+        XCTAssertEqual(result.scores.first?.playedDifferential, 9)
+        XCTAssertNil(result.scores.first?.differential)
+        XCTAssertTrue(result.history.isEmpty)
+    }
+
+    func testEstablishedPartialRoundRetainsPlayedHolesAndRequiresExpectedScore() {
+        var source = snapshot(); source.scoring.removeLast()
+        let date = source.round.firstScoredAt!
+        source.participants[0].personalHandicapPartialReason = PersonalHandicapPartialReason.darkness.rawValue
+        source.participants[0].personalHandicapInput = .init(index: 10, source: .manual, sourceUpdatedAt: date, capturedAt: date, basis: .eighteenHole)
+        let result = PersonalHandicapEngine.rebuild(playerID: "p1", reviews: [review(source)])
+        XCTAssertEqual(result.calculation.qualifyingHoles, 17)
+        XCTAssertEqual(result.scores.first?.adjustedGrossScore, 85)
+        XCTAssertNil(result.scores.first?.playedDifferential)
+        XCTAssertNil(result.scores.first?.differential)
+        XCTAssertNotNil(result.scores.first?.pendingReason)
+    }
+
+    func testInvalidPartialReasonAndPracticeMetadataCannotQualify() {
+        var source = snapshot(); source.scoring.removeLast()
+        source.participants[0].personalHandicapPartialReason = "avoid a bad hole"
+        XCTAssertEqual(review(source).qualifyingHoles, 0)
+        source = snapshot(); source.participants[0].personalHandicapPurpose = .practice
+        XCTAssertEqual(PersonalHandicapEligibility.review(source, playerID: "p1").qualifyingHoles, 0)
+        source.participants[0].personalHandicapPurpose = .unofficial
+        XCTAssertEqual(PersonalHandicapEligibility.review(source, playerID: "p1").qualifyingHoles, 0)
+    }
+
+    func testLiveManualTransitionAndPersistenceProjectionRetainManualAndOtherFields() throws {
+        var player = Player(id: "p1", userID: nil, name: .init("Offline", "Player"), handicaps: [.init(value: 8)])
+        let manual = try ManualPersonalHandicap(value: 23, source: .external)
+        player.personalHandicap = .init(manual: manual)
+        let early = PersonalHandicapPersistence.applying(PersonalHandicapEngine.rebuild(playerID: "p1", reviews: actualReviews(2), manual: manual).calculation, to: player)
+        XCTAssertEqual(early.personalHandicap?.effectiveIndex, 23)
+        let rebuilt = PersonalHandicapEngine.rebuild(playerID: "p1", reviews: actualReviews(3), manual: manual)
+        let qualified = PersonalHandicapPersistence.applying(rebuilt.calculation, to: early)
+        XCTAssertEqual(qualified.personalHandicap?.effectiveIndex, 16)
+        XCTAssertEqual(qualified.personalHandicap?.effectiveSource, .calculated)
+        XCTAssertEqual(qualified.personalHandicap?.manual, manual)
+        XCTAssertEqual(qualified.handicaps, player.handicaps)
+        XCTAssertEqual(qualified.name, player.name)
+        XCTAssertTrue(qualified.isOffline)
+        let decoded = try JSONDecoder().decode(Player.self, from: JSONEncoder().encode(qualified))
+        XCTAssertEqual(decoded.personalHandicap, qualified.personalHandicap)
+    }
+
+    func testPendingNewNineKeepsLastValidIndexWithoutPlottingANewValue() {
+        let full = actualReviews(3)
+        var nine = review(snapshot(id: "later-nine", holes: 9))
+        nine.score = .init(playerID: "p1", roundID: "later-nine", roundTitle: "Later nine",
+            playedAt: .init(for: Date(timeIntervalSince1970: 1_800_000_000)), holeCount: 9, grossScore: 45, exclusionReason: nil)
+        let result = PersonalHandicapEngine.rebuild(playerID: "p1", reviews: full + [nine])
+        XCTAssertEqual(result.calculation.status, .blocked)
+        XCTAssertNil(result.calculation.qualifiedIndex)
+        XCTAssertEqual(result.calculation.effectiveCalculatedIndex, 16)
+        XCTAssertEqual(result.history.count, 1)
+        XCTAssertEqual(result.history.last?.roundID, "actual2")
+    }
+
+    func testCorrectionsAndExclusionsRebuildLiveCardsAndInvalidateOldTrend() throws {
+        let original = PersonalHandicapEngine.rebuild(playerID: "p1", reviews: actualReviews(3))
+        var source = snapshot(id: "actual0")
+        for i in source.scoring.indices { source.scoring[i].strokes = 4 }
+        let corrected = PersonalHandicapEngine.rebuild(playerID: "p1", reviews: [review(source)] + Array(actualReviews(3).dropFirst()))
+        XCTAssertEqual(corrected.calculation.qualifiedIndex, -2)
+        XCTAssertNotEqual(corrected.calculation.inputFingerprint, original.calculation.inputFingerprint)
+        source.participants[0].personalHandicapPurpose = .practice
+        let excluded = PersonalHandicapEngine.rebuild(playerID: "p1", reviews: [PersonalHandicapEligibility.review(source, playerID: "p1")] + Array(actualReviews(3).dropFirst()))
+        XCTAssertEqual(excluded.calculation.qualifyingHoles, 36)
+        XCTAssertNil(excluded.calculation.effectiveCalculatedIndex)
+        XCTAssertTrue(excluded.history.isEmpty)
+        XCTAssertNotNil(excluded.scores.first?.exclusionReason)
+    }
+
+    func testUnchangedHistoryKeepsOriginalCalculationDateDuringPersistence() {
+        let original = PersonalHandicapEngine.rebuild(playerID: "p1", reviews: actualReviews(3), asOf: .init(iso: "", unix: 100))
+        let repeated = PersonalHandicapEngine.rebuild(playerID: "p1", reviews: actualReviews(3), asOf: .init(iso: "", unix: 200))
+        XCTAssertTrue(PersonalHandicapPersistence.sameHistory(original.history[0], repeated.history[0]))
+    }
+
+    func testPostingMetadataAndPCCRoundTripWithoutChangingFrozenHandicaps() throws {
+        var source = snapshot()
+        source.participants[0].originalHandicap = 10
+        source.participants[0].adjustedHandicap = 7
+        source.participants[0].personalHandicapPurpose = .unofficial
+        source.participants[0].personalHandicapPartialReason = "weather"
+        source.round.personalHandicapPCC = .init(value: 0, verification: .verified, source: "External report")
+        let participant = try JSONDecoder().decode(RoundParticipant.self, from: JSONEncoder().encode(source.participants[0]))
+        let round = try JSONDecoder().decode(Round.self, from: JSONEncoder().encode(source.round))
+        XCTAssertEqual(participant.originalHandicap, 10)
+        XCTAssertEqual(participant.adjustedHandicap, 7)
+        XCTAssertEqual(participant.personalHandicapPurpose, .unofficial)
+        XCTAssertEqual(round.personalHandicapPCC?.verification, .verified)
+    }
+
+    func testV2LeagueIndividualNinesAreIncludedThroughExistingScoringAdapter() throws {
+        let source = snapshot(holes: 9)
+        var participantData = try source.participants[0].toDictionary()
+        participantData["participation_status"] = "confirmed"
+        let participant = try JSONDecoder().decode(RoundParticipantV2.self, from: JSONSerialization.data(withJSONObject: participantData))
+        let scores = try source.scoring.map { score -> ScoreEntryV2 in
+            var data = try score.toDictionary(); data["tee_group_id"] = ""
+            return try JSONDecoder().decode(ScoreEntryV2.self, from: JSONSerialization.data(withJSONObject: data))
+        }
+        var segmentData = try source.segments[0].toDictionary()
+        segmentData["matchups"] = []; segmentData["competition_scope"] = "field"
+        let segment = try JSONDecoder().decode(RoundSegmentV2.self, from: JSONSerialization.data(withJSONObject: segmentData))
+        let round = RoundV2(id: source.round.id, status: .completed, configuration: .init(legacy: source.configuration), participantPlayerIDs: ["p1"])
+        let v2 = RoundSnapshotV2(round: round, participants: [participant], teams: [], teeGroups: [], scoringGroups: [], segments: [segment], scores: scores)
+        let r = PersonalHandicapEligibility.reviewV2(v2, playerID: "p1")
+        XCTAssertEqual(r.qualifyingHoles, 9)
+        XCTAssertEqual(r.score.sourceCollection, V2Collection.rounds)
+        let result = PersonalHandicapEngine.rebuild(playerID: "p1", reviews: [r])
+        XCTAssertEqual(result.calculation.qualifyingHoles, 9)
+        XCTAssertEqual(result.scores.first?.playedDifferential, 9)
+    }
+
+    func testPendingWireStatusRemainsReadableByOriginalSandboxBuild() throws {
+        let pending = PersonalHandicapEngine.rebuild(playerID: "p1", reviews: actualReviews(6, holes: 9)).calculation
+        let data = try JSONEncoder().encode(pending)
+        let dictionary = try XCTUnwrap(JSONSerialization.jsonObject(with: data) as? [String: Any])
+        XCTAssertEqual(dictionary["status"] as? String, "collecting")
+        XCTAssertEqual(dictionary["calculation_pending"] as? Bool, true)
+        XCTAssertEqual(try JSONDecoder().decode(PersonalHandicapCalculation.self, from: data), pending)
+    }
+
+    func testMissingTeeMetadataPreservesRecordedNineHoleGrossHistory() {
+        var source = snapshot(holes: 9)
+        source.participants[0].teeBoxID = "unknown tee"
+        let review = PersonalHandicapEligibility.review(source, playerID: "p1")
+        XCTAssertEqual(review.qualifyingHoles, 0)
+        XCTAssertEqual(review.score.holeCount, 9)
+        XCTAssertEqual(review.score.grossScore, 45)
+        XCTAssertNotNil(review.score.pendingReason)
+    }
+
 }
