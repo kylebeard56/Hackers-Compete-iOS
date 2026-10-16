@@ -43,6 +43,7 @@ final class AppSession: ObservableObject, Sendable, Loggable {
     @Published var seriesV2RoundsBySeriesID: [String: [RoundV2]] = [:]
     @Published var isLoadingSeries = false
     
+    @Published private(set) var settingsUserID: String?
     @Published var isUserAuthenticated = false
     @Published var currentTermsVersion = ""
     @Published var currentPolicyVersion = ""
@@ -84,13 +85,16 @@ final class AppSession: ObservableObject, Sendable, Loggable {
 
 extension AppSession {
     func syncUserState() async {
-        isUserAuthenticated = await AppData.shared.user.exists
+        let user = await AppData.shared.user
+        settingsUserID = user?.id
+        isUserAuthenticated = user.exists
     }
     
     func reset(routeToAuth: Bool = true) {
         addBreadcrumb()
         TelemetryService.shared.resetUser()
 
+        settingsUserID = nil
         activeRoundID = nil
         activeSeriesID = nil
         rounds = []
