@@ -146,6 +146,10 @@ struct RoundParticipant: FirebaseSubcollectable, Playable {
     var originalHandicap: Int   // Starting, inputted handicap from user
     var adjustedHandicap: Int   // Handicap adjustment based on course and slope adjustment
     var handicapIndex: Double?  // Optional decimal index used to compute adjustedHandicap
+    var personalHandicapInput: RoundPersonalHandicapInput? = nil
+    /// Handicap review metadata only; changes never modify this round's strokes.
+    var personalHandicapPurpose: PersonalHandicapRoundPurpose? = nil
+    var personalHandicapPartialReason: String? = nil
     /// Frozen scoring allowance for this historical round. Commissioner repair
     /// may replace it together with an auditable handicap snapshot.
     var leagueHandicapStrokesAtCreation: Int?
@@ -273,6 +277,9 @@ struct RoundParticipant: FirebaseSubcollectable, Playable {
         case originalHandicap = "original_handicap"
         case adjustedHandicap = "adjusted_handicap"
         case handicapIndex = "handicap_index"
+        case personalHandicapInput = "personal_handicap_input"
+        case personalHandicapPurpose = "personal_handicap_purpose"
+        case personalHandicapPartialReason = "personal_handicap_partial_reason"
         case leagueHandicapStrokesAtCreation = "league_handicap_strokes_at_creation"
         case handicapSnapshot = "handicap_snapshot"
         case handicapResolution = "handicap_resolution"
@@ -305,6 +312,9 @@ struct RoundParticipant: FirebaseSubcollectable, Playable {
         originalHandicap = try c.decodeIfPresent(Int.self, forKey: .originalHandicap) ?? 0
         adjustedHandicap = try c.decodeIfPresent(Int.self, forKey: .adjustedHandicap) ?? 0
         handicapIndex = try c.decodeIfPresent(Double.self, forKey: .handicapIndex)
+        personalHandicapInput = try c.decodeIfPresent(RoundPersonalHandicapInput.self, forKey: .personalHandicapInput)
+        personalHandicapPurpose = try c.decodeIfPresent(PersonalHandicapRoundPurpose.self, forKey: .personalHandicapPurpose)
+        personalHandicapPartialReason = try c.decodeIfPresent(String.self, forKey: .personalHandicapPartialReason)
         leagueHandicapStrokesAtCreation = try c.decodeIfPresent(Int.self, forKey: .leagueHandicapStrokesAtCreation)
         handicapResolution = try c.decodeIfPresent(RoundHandicapResolution.self, forKey: .handicapResolution)
         handicapSnapshot = try c.decodeIfPresent(RoundParticipantHandicapSnapshot.self, forKey: .handicapSnapshot)

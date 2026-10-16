@@ -869,6 +869,27 @@ extension CourseSelectionViewModel {
 // MARK: - Game Lobby
 
 extension CourseSelectionViewModel {
+    /// A history failure must not prevent creating a gross-play lobby.
+    func refreshingPersonalHandicapForLobby(
+        _ player: Player,
+        refresh: (String) async throws -> Player? = {
+            try await FirebaseService.shared.fetchPersonalHandicapHistory(playerID: $0).player
+        }
+    ) async -> Player {
+        var result = player
+        do {
+            if let refreshed = try await refresh(player.id),
+               refreshed.id == player.id {
+                result.personalHandicap = refreshed.personalHandicap
+            }
+        } catch {
+            // History is optional for creating a playable lobby. Retain the
+            // saved personal profile; missing input stays unresolved for net play.
+            addBreadcrumb(level: .warning, message: "Personal handicap refresh unavailable; creating lobby with saved profile", error: error)
+        }
+        return result
+    }
+
     func createRoundLobby() async {
         addBreadcrumb(message: "\(#function), course \(selectedCourse.id)")
         
@@ -880,17 +901,21 @@ extension CourseSelectionViewModel {
             return
         }
         
-        guard let player = await AppData.shared.getPrimaryPlayer() else {
+        guard var player = await AppData.shared.getPrimaryPlayer(forceRefresh: true) else {
             throwRoundCreationError(msg: "primary player not found")
             return
         }
         
+        player = await refreshingPersonalHandicapForLobby(player)
         let template = FormatTemplateRegistry.strokePlayGross
         let configuration = RoundConfiguration(
             primaryFormat: .strokePlay,
             formatSummary: RoundFormatSummary(from: template),
             courses: [ buildCourseSegment() ],
-            scoreInputMode: selectedCourse.isSimpleRoundCourse ? .friendlyRelativeToPar : .strokes
+            scoreInputMode: selectedCourse.isSimpleRoundCourse ? .friendlyRelativeToPar : .strokes,
+            handicapStrokeBasis: .defaultBasis(holeCount: holeSegment.holeCount),
+            handicapIndexBasis: .eighteenHole,
+            handicapEntryFormat: .courseHandicap
         )
         
         let shareCode = await FirebaseService.shared.getUniqueShareCode()
@@ -966,6 +991,10 @@ extension CourseSelectionViewModel {
             parentID: round.id
         )
         
+        participant = PersonalHandicapRoundPrefill.participant(
+            participant, player: player, configuration: configuration, isLeagueRound: false
+        )
+
         do {
             participant = try await participant.post().get()
             segment = try await segment.post().get()

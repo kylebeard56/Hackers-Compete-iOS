@@ -78,6 +78,7 @@ struct Round: FirebaseIdentifiable {
     var configuration: RoundConfiguration
     var players: [String]
     var completedPlayers: [CompletedPlayer]
+    var personalHandicapPCC: PersonalHandicapPCC? = nil
     var firstScoredAt: Time?
     var teeGroupDisplayNamesByPlayerID: [String: [String]]
     var createdAt: Time
@@ -119,6 +120,7 @@ struct Round: FirebaseIdentifiable {
         case shareCode = "share_code"
         case createdBy = "created_by"
         case completedPlayers = "completed_players"
+        case personalHandicapPCC = "personal_handicap_pcc"
         case firstScoredAt = "first_scored_at"
         case teeGroupDisplayNamesByPlayerID = "tee_group_display_names_by_player_id"
         case createdAt = "created_at"
@@ -135,6 +137,7 @@ struct Round: FirebaseIdentifiable {
         configuration = try c.decode(RoundConfiguration.self, forKey: .configuration)
         players = try c.decode([String].self, forKey: .players)
         completedPlayers = try c.decodeIfPresent([CompletedPlayer].self, forKey: .completedPlayers) ?? []
+        personalHandicapPCC = try c.decodeIfPresent(PersonalHandicapPCC.self, forKey: .personalHandicapPCC)
         firstScoredAt = try c.decodeIfPresent(Time.self, forKey: .firstScoredAt)
         teeGroupDisplayNamesByPlayerID = try c.decodeIfPresent([String: [String]].self, forKey: .teeGroupDisplayNamesByPlayerID) ?? [:]
         createdAt = try c.decode(Time.self, forKey: .createdAt)
@@ -151,6 +154,7 @@ struct Round: FirebaseIdentifiable {
         try c.encode(configuration, forKey: .configuration)
         try c.encode(players, forKey: .players)
         try c.encode(completedPlayers, forKey: .completedPlayers)
+        try c.encodeIfPresent(personalHandicapPCC, forKey: .personalHandicapPCC)
         try c.encodeIfPresent(firstScoredAt, forKey: .firstScoredAt)
         try c.encode(teeGroupDisplayNamesByPlayerID, forKey: .teeGroupDisplayNamesByPlayerID)
         try c.encode(createdAt, forKey: .createdAt)

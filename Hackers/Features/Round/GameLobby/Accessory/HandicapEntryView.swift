@@ -40,7 +40,7 @@ struct HandicapEntryView: View {
                 
                 NavButton(icon: "f00d", theme: palette.theme, onTap: { dismiss() })
                 
-                if handicapString.isPopulated {
+                if Double(handicapString)?.isFinite == true {
                     NavButton(
                         icon: "f00c",
                         color: palette.backgroundColor,
@@ -71,7 +71,7 @@ struct HandicapEntryView: View {
             TextField("00", text: $handicapString)
                 .fontStyle(kFontName, size: 64, weight: .regular)
                 .foregroundStyle(palette.foregroundColor)
-                .keyboardType(effectiveFormat == .courseHandicap ? .decimalPad : .numberPad)
+                .keyboardType(effectiveFormat == .courseHandicap ? .numbersAndPunctuation : .numberPad)
                 .focused($focus)
                 .alignCenter()
 
@@ -116,7 +116,7 @@ struct HandicapEntryView: View {
                 if filtered != handicapString {
                     handicapString = filtered
                 }
-                handicapValue = max(Double(filtered) ?? 0, 0)
+                handicapValue = Double(filtered) ?? 0
             } else if let value = Int(handicapString.filter(\.isNumber)) {
                 let clamped = min(max(value, 0), maximumValue)
                 handicapValue = Double(clamped)
@@ -131,22 +131,7 @@ struct HandicapEntryView: View {
     }
 
     private func decimalHandicapText(_ text: String) -> String {
-        var hasDecimal = false
-        var decimalPlaces = 0
-        var output = ""
-        for character in text {
-            if character.isNumber {
-                if hasDecimal {
-                    guard decimalPlaces < 1 else { continue }
-                    decimalPlaces += 1
-                }
-                output.append(character)
-            } else if character == ".", !hasDecimal {
-                hasDecimal = true
-                output.append(character)
-            }
-        }
-        return output
+        HandicapIndexEntry.filtered(text)
     }
 }
 
@@ -183,7 +168,9 @@ struct CourseHandicapStatusView: View {
                 }
             case .unavailable:
                 Text("Course HCP: Unavailable")
-                Text(calculation.indexBasis == nil
+                Text(calculation.handicapIndex == nil
+                    ? "Handicap Index unavailable. Enter an Index or strokes for this round."
+                    : calculation.indexBasis == nil
                     ? "Index basis is missing. Choose the source Index's 9-hole or 18-hole basis."
                     : "Rating or slope missing. Handicap Index saved; Course HCP cannot be calculated.")
                 if let onFixCourseData { Button("Fix Course Data", action: onFixCourseData) }
