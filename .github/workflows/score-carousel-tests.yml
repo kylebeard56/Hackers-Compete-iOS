@@ -41,4 +41,9 @@ jobs:
           -only-testing:HackersUnitTests/AppSessionResumeTests
           -only-testing:HackersUnitTests/FirebaseIDValidationTests
           -only-testing:HackersUnitTests/RoundSessionReadinessTests
+          -only-testing:HackersUnitTests/UserCompanionPreferencesTests
+          -only-testing:HackersUnitTests/LiveRoundCompanionContractTests
+          -only-testing:HackersUnitTests/InternalReleaseBlockerAuditTests
+          -only-testing:HackersUnitTests/ScoringRobustnessTests
+          -only-testing:HackersUnitTests/GolfCourseRepositoryTests
           CODE_SIGNING_ALLOWED=NO

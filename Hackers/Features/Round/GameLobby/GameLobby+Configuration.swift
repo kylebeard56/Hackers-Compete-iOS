@@ -45,6 +45,10 @@ extension GameLobby {
                 }
             }
             
+            if handicapsEnabled {
+                handicapEntryModeSelection
+            }
+
             Toggle(isOn: $teamsEnabled, label: {
                 VStack(spacing: 4) {
                     Text("Teams")
@@ -118,6 +122,35 @@ extension GameLobby {
         .glassCardEffect(forceMaterial: true, tint: palette.cardColor)
     }
 
+    private var handicapEntryModeLocked: Bool {
+        snapshot.round.status != .lobby || appSession.activeSeriesID != nil
+            || snapshot.configuration.leagueHandicapMaximum != nil
+            || snapshot.participants.contains { $0.seriesMemberID != nil || $0.handicapSnapshot != nil }
+    }
+
+    private var handicapEntryModeSelection: some View {
+        VStack(alignment: .leading, spacing: 8) {
+            Text("Handicap entry")
+                .fontStyle(kFontName, size: 13, weight: .semibold)
+            HandicapEntryModePicker(selection: Binding(
+                get: { handicapEntryFormat },
+                set: { next in
+                    focus = nil
+                    handicapEntryFormat = next
+                    Task { await roundSession.setHandicapEntryFormat(next, maximumHandicap: effectiveSeriesLeagueHandicapMaximum) }
+                }
+            ))
+            .disabled(handicapEntryModeLocked)
+            Text(handicapEntryModeLocked
+                 ? "Entry follows the league configuration. Commissioner stroke overrides apply only to this round."
+                 : handicapEntryFormat == .courseHandicap
+                 ? "Use each player's Index to calculate Course HCP for their tee. Personal Indexes prefill when available."
+                 : "Enter whole-number strokes for this round. Course and tee changes keep manual strokes.")
+                .fontStyle(kFontName, size: 12, weight: .regular)
+                .foregroundStyle(Color.neutral)
+        }
+    }
+
     private var courseHandicapAvailable: Bool {
         HandicapCalculator.hasCourseHandicapData(courseSegment: snapshot.courseSegment)
     }
@@ -132,6 +165,8 @@ extension GameLobby {
             resolvedAutoBasis: handicapEntryFormat == .courseHandicap ? (snapshot.handicapIndexBasis ?? .eighteenHole) : snapshot.handicapStrokeBasis,
             palette: palette,
             courseHandicapSubtitle: courseHandicapMenuSubtitle,
+            showsEntryFormat: false,
+            allowsBasisChanges: !handicapEntryModeLocked,
             onEntryFormatChanged: { next in
                 Task { await roundSession.setHandicapEntryFormat(next, maximumHandicap: effectiveSeriesLeagueHandicapMaximum) }
             },

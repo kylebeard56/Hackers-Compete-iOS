@@ -157,13 +157,46 @@ struct PersonalHandicapCalculation: Hashable, Codable {
     }
 }
 
+/// Append-only profile inputs used when replaying historical personal scores.
+/// A nil manual records a clear, rather than extending an old value indefinitely.
+struct PersonalHandicapManualRevision: Hashable, Codable {
+    let effectiveAt: Time
+    let manual: ManualPersonalHandicap?
+
+    enum CodingKeys: String, CodingKey {
+        case effectiveAt = "effective_at"
+        case manual
+    }
+}
+
 struct PersonalHandicapProfile: Hashable, Codable {
     var manual: ManualPersonalHandicap?
     var calculation: PersonalHandicapCalculation?
+    var manualHistory: [PersonalHandicapManualRevision]
 
-    init(manual: ManualPersonalHandicap? = nil, calculation: PersonalHandicapCalculation? = nil) {
+    init(manual: ManualPersonalHandicap? = nil, calculation: PersonalHandicapCalculation? = nil,
+         manualHistory: [PersonalHandicapManualRevision] = []) {
         self.manual = manual
         self.calculation = calculation
+        self.manualHistory = manualHistory
+    }
+
+    private var manualTimeline: [PersonalHandicapManualRevision] {
+        var revisions = manualHistory
+        // Older clients may update the current field without knowing this history.
+        if let manual, !revisions.contains(where: { $0.manual == manual }) {
+            revisions.append(.init(effectiveAt: manual.updatedAt, manual: manual))
+        }
+        return revisions
+    }
+
+    func manualInput(at playedAt: Time) -> ManualPersonalHandicap? {
+        return manualTimeline.enumerated()
+            .filter { $0.element.effectiveAt.unix <= playedAt.unix }
+            .max {
+                $0.element.effectiveAt.unix == $1.element.effectiveAt.unix
+                    ? $0.offset < $1.offset : $0.element.effectiveAt.unix < $1.element.effectiveAt.unix
+            }?.element.manual
     }
 
     var effectiveIndex: Double? { calculation?.effectiveCalculatedIndex ?? manual?.value }
@@ -173,6 +206,7 @@ struct PersonalHandicapProfile: Hashable, Codable {
 
     enum CodingKeys: String, CodingKey {
         case manual, calculation
+        case manualHistory = "manual_history"
         case effectiveIndex = "effective_index", effectiveSource = "effective_source"
     }
 
@@ -180,6 +214,7 @@ struct PersonalHandicapProfile: Hashable, Codable {
         let c = try decoder.container(keyedBy: CodingKeys.self)
         manual = try c.decodeIfPresent(ManualPersonalHandicap.self, forKey: .manual)
         calculation = try c.decodeIfPresent(PersonalHandicapCalculation.self, forKey: .calculation)
+        manualHistory = try c.decodeIfPresent([PersonalHandicapManualRevision].self, forKey: .manualHistory) ?? []
         // Effective fields are a persisted projection, never a competing authority.
     }
 
@@ -187,6 +222,7 @@ struct PersonalHandicapProfile: Hashable, Codable {
         var c = encoder.container(keyedBy: CodingKeys.self)
         try c.encodeIfPresent(manual, forKey: .manual)
         try c.encodeIfPresent(calculation, forKey: .calculation)
+        if !manualHistory.isEmpty { try c.encode(manualHistory, forKey: .manualHistory) }
         try c.encodeIfPresent(effectiveIndex, forKey: .effectiveIndex)
         try c.encodeIfPresent(effectiveSource, forKey: .effectiveSource)
     }
@@ -210,11 +246,11 @@ struct RoundPersonalHandicapInput: Hashable, Codable {
 enum PersonalHandicapRoundPrefill {
     static func participant(
         _ participant: RoundParticipant, player: Player, configuration: RoundConfiguration,
-        isLeagueRound: Bool, status: RoundStatus = .lobby, capturedAt: Time = .init()
+        isLeagueRound: Bool, status: RoundStatus = .lobby, capturedAt: Time = .init(), selectingEntryFormat: Bool = false
     ) -> RoundParticipant {
         guard !isLeagueRound, status == .lobby, participant.seriesMemberID == nil,
               participant.leagueHandicapStrokesAtCreation == nil, participant.handicapSnapshot == nil,
-              participant.handicapIndex == nil, participant.handicapResolution == nil,
+              participant.handicapIndex == nil, (participant.handicapResolution == nil || selectingEntryFormat),
               participant.personalHandicapInput == nil,
               participant.playerID == player.id,
               configuration.handicapEntryFormat == .courseHandicap,
@@ -232,7 +268,8 @@ enum PersonalHandicapRoundPrefill {
         // Missing Index remains nil and unresolved, including for legacy integer profiles.
         return HandicapCalculator.recomputedParticipants(
             [updated], format: .courseHandicap, courseSegment: configuration.courses.first,
-            maximumHandicap: configuration.leagueHandicapMaximum, handicapStrokeBasis: .eighteenHole
+            maximumHandicap: configuration.leagueHandicapMaximum, handicapStrokeBasis: .eighteenHole,
+            changingEntryFormat: selectingEntryFormat
         )[0]
     }
 }
@@ -358,6 +395,12 @@ extension Player {
         guard canEditPersonalHandicap(as: userID) else { throw PersonalHandicapError.notAuthorized }
         var updated = self
         var profile = personalHandicap ?? .init()
+        // Re-saving the same value/source must preserve its original effective date.
+        guard profile.manual?.value != manual?.value || profile.manual?.source != manual?.source else { return self }
+        if let previous = profile.manual, !profile.manualHistory.contains(where: { $0.manual == previous }) {
+            profile.manualHistory.append(.init(effectiveAt: previous.updatedAt, manual: previous))
+        }
+        profile.manualHistory.append(.init(effectiveAt: manual?.updatedAt ?? time, manual: manual))
         profile.manual = manual
         updated.personalHandicap = profile
         updated.lastUpdatedAt = time

@@ -16,6 +16,7 @@ struct HandicapTextField: View {
     let maximumValue: Int
     let onDebouncedEdit: CallbackValue<Double>?
     let onRevertOverride: Callback?
+    let isUnresolved: Bool
 
     /// League-sourced values retain their lock provenance even when a commissioner overrides the round strokes.
     var isSeriesHandicapLocked: Bool = false
@@ -27,7 +28,9 @@ struct HandicapTextField: View {
 
     @State private var isEditing = false
     @State private var text = ""
-    @State private var hasTyped = false
+    @State private var pendingEdit: Double?
+    @State private var pendingEditFormat: HandicapEntryFormat?
+    @State private var hasPendingSubmission = false
     @State private var hasConfirmedOverrideEdit = false
     @State private var showOverrideAlert = false
 
@@ -38,6 +41,7 @@ struct HandicapTextField: View {
         initialValue: Int,
         entryValue: Double? = nil,
         entryFormat: HandicapEntryFormat = .strokes,
+        isUnresolved: Bool = false,
         focusedField: FocusState<String?>.Binding,
         palette: DesignPalette,
         maximumValue: Int? = nil,
@@ -52,6 +56,7 @@ struct HandicapTextField: View {
         self.initialValue = initialValue
         self.entryValue = entryValue
         self.entryFormat = entryFormat
+        self.isUnresolved = isUnresolved
         self.palette = palette
         self.maximumValue = maximumValue ?? 36
         self.onDebouncedEdit = onDebouncedEdit
@@ -74,7 +79,11 @@ struct HandicapTextField: View {
     }
 
     private var displayText: String {
-        guard entryFormat == .courseHandicap else { return "\(initialValue)" }
+        if let pendingEdit, pendingEditFormat == entryFormat {
+            return entryFormat == .courseHandicap
+                ? pendingEdit.formatted(.number.precision(.fractionLength(1))) : String(Int(pendingEdit))
+        }
+        guard entryFormat == .courseHandicap else { return isUnresolved ? "—" : "\(initialValue)" }
         guard let entryValue else { return "—" }
         return entryValue.formatted(.number.precision(.fractionLength(1)))
     }
@@ -119,12 +128,8 @@ struct HandicapTextField: View {
                     return
                 }
                 isEditing = true
-                hasTyped = false
                 text = ""
             } else {
-                if hasTyped && (entryFormat != .courseHandicap || Double(text) != nil) {
-                    onDebouncedEdit?(debouncer.value)
-                }
                 Task {
                     try? await Task.sleep(for: .milliseconds(200))
                     withAnimation {
@@ -133,9 +138,23 @@ struct HandicapTextField: View {
                 }
             }
         }
-        .onChange(of: initialValue) {
+        .onReceive(debouncer.$debouncedValue) { value in
+            // Preserve the roster's autosave behavior as an edit event. Releasing
+            // focus (Done, outside tap, or another field) never submits an edit.
+            guard hasPendingSubmission, let pendingEdit, pendingEditFormat == entryFormat,
+                  pendingEdit == value else { return }
+            hasPendingSubmission = false
+            onDebouncedEdit?(pendingEdit)
+        }
+        .onChange(of: entryFormat) {
+            hasPendingSubmission = false
+            pendingEdit = nil
+            pendingEditFormat = nil
+            text = ""
             debouncer.value = entryValue ?? Double(initialValue)
         }
+        .onChange(of: entryValue) { reconcileDisplayedValue() }
+        .onChange(of: initialValue) { reconcileDisplayedValue() }
         .padding(.vertical, isSeriesHandicapLocked ? 0 : 6)
         .padding(.horizontal, isSeriesHandicapLocked ? 0 : 8)
         .border(isEditing && (!isSeriesHandicapLocked || canOverrideSeriesHandicap) ? palette.foregroundColor : Color.clear, width: 4, cornerRadius: 12)
@@ -149,6 +168,8 @@ struct HandicapTextField: View {
             HStack(spacing: 4) {
                 TextField(displayText, text: binding)
                     .keyboardType(entryFormat == .courseHandicap ? .numbersAndPunctuation : .numberPad)
+                    .accessibilityLabel(entryFormat.displayName)
+                    .accessibilityIdentifier("\(id)-handicapInput")
                     .multilineTextAlignment(.center)
                     .focused($focusedField, equals: id)
                     .fontStyle(kFontName, size: 17, weight: .semibold)
@@ -214,15 +235,21 @@ struct HandicapTextField: View {
 
     private func beginEditing() {
         isEditing = true
-        hasTyped = false
         text = ""
         focusedField = id
     }
 
+    private func reconcileDisplayedValue() {
+        let value = entryValue ?? Double(initialValue)
+        if pendingEdit == value { pendingEdit = nil }
+        if !isEditing, pendingEdit == nil { debouncer.value = value }
+    }
+
     private func revertOverride() {
+        hasPendingSubmission = false
+        pendingEdit = nil
         focusedField = nil
         isEditing = false
-        hasTyped = false
         hasConfirmedOverrideEdit = false
         onRevertOverride?()
     }
@@ -231,23 +258,28 @@ struct HandicapTextField: View {
         Binding(
             get: { text },
             set: { newText in
-                hasTyped = true
-
                 let filtered: String
                 if entryFormat == .courseHandicap {
                     filtered = HandicapIndexEntry.filtered(newText)
                 } else {
-                    filtered = newText.filter { $0.isNumber }
+                    guard newText.allSatisfy({ $0.isASCII && $0.isNumber }) else { return }
+                    filtered = String(newText.prefix(6))
                 }
+                // UIKit may repeat the current binding value when editing ends.
+                guard filtered != text else { return }
                 text = filtered
 
-                if entryFormat == .courseHandicap, Double(filtered) == nil { return }
-                let value = Double(filtered) ?? entryValue ?? Double(initialValue)
-                if entryFormat == .courseHandicap {
-                    debouncer.value = value
-                } else {
-                    debouncer.value = Double(min(max(Int(value), 0), maximumValue))
+                guard let value = Double(filtered), value.isFinite else {
+                    hasPendingSubmission = false
+                    pendingEdit = nil
+                    return
                 }
+                let accepted = entryFormat == .courseHandicap
+                    ? value : Double(min(max(Int(value), 0), maximumValue))
+                pendingEditFormat = entryFormat
+                pendingEdit = accepted
+                hasPendingSubmission = true
+                debouncer.value = accepted
             }
         )
     }

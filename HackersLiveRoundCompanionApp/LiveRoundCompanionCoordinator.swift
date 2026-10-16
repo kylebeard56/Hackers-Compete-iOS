@@ -1,3 +1,4 @@
+import ActivityKit
 import Combine
 import Foundation
 import SwiftUI
@@ -11,6 +12,9 @@ final class LiveRoundCompanionCoordinator: ObservableObject, Loggable {
     @Published private(set) var watchAppIsInstalled = false
     @Published private(set) var lastProjection: WatchRoundSnapshot?
 
+    let preferences: UserCompanionPreferences
+    @Published private(set) var liveActivitiesAvailable = ActivityAuthorizationInfo().areActivitiesEnabled
+
     private let selectionStore: SelectedLiveRoundStore
     private let watchConnectivity: PhoneWatchConnectivityService
     private let processedMutations: ProcessedWatchMutationStore
@@ -18,7 +22,7 @@ final class LiveRoundCompanionCoordinator: ObservableObject, Loggable {
     private let liveRoundViewModel: LiveRoundViewModel
     private let activityRoundSession: RoundSession
     private let activityViewModel: LiveRoundViewModel
-    private let activityManager: RoundLiveActivityManager
+    private let activityManager: any RoundLiveActivityManaging
     private let scoreService = RoundScoreCommandService()
     private let subjectBuilder = RoundScoringSubjectBuilder()
     private let watchCompetitionBuilder = WatchCompetitionProjectionBuilder()
@@ -43,8 +47,11 @@ final class LiveRoundCompanionCoordinator: ObservableObject, Loggable {
         liveRoundViewModel: LiveRoundViewModel? = nil,
         activityRoundSession: RoundSession? = nil,
         activityViewModel: LiveRoundViewModel? = nil,
-        activityManager: RoundLiveActivityManager? = nil
+        activityManager: (any RoundLiveActivityManaging)? = nil,
+        preferences: UserCompanionPreferences? = nil
     ) {
+        let resolvedPreferences = preferences ?? UserCompanionPreferences()
+        self.preferences = resolvedPreferences
         let resolvedSelectionStore = selectionStore ?? SelectedLiveRoundStore()
         let resolvedWatchConnectivity = watchConnectivity ?? PhoneWatchConnectivityService()
         self.selectionStore = resolvedSelectionStore
@@ -55,8 +62,15 @@ final class LiveRoundCompanionCoordinator: ObservableObject, Loggable {
         self.activityRoundSession = activityRoundSession ?? RoundSession()
         self.activityViewModel = activityViewModel ?? LiveRoundViewModel()
         self.activityManager = activityManager ?? RoundLiveActivityManager()
+        self.activityManager.isEnabled = resolvedPreferences.state.liveActivities
         selectedRoundID = resolvedSelectionStore.roundID
         liveActivityRoundID = resolvedSelectionStore.liveActivityRoundID
+
+        resolvedPreferences.$state
+            .dropFirst()
+            .removeDuplicates()
+            .sink { [weak self] state in self?.preferencesDidChange(to: state) }
+            .store(in: &cancellables)
 
         resolvedSelectionStore.$roundID
             .removeDuplicates()
@@ -130,8 +144,11 @@ final class LiveRoundCompanionCoordinator: ObservableObject, Loggable {
 
     func start(appSession: AppSession) async {
         guard !didStart else { return }
-        didStart = true
         self.appSession = appSession
+        appSession.$settingsUserID
+            .removeDuplicates()
+            .sink { [weak self] in self?.preferences.selectUser($0) }
+            .store(in: &cancellables)
         liveRoundViewModel.bind(
             appSession: appSession,
             roundSession: companionRoundSession
@@ -141,6 +158,7 @@ final class LiveRoundCompanionCoordinator: ObservableObject, Loggable {
             appSession: appSession,
             roundSession: activityRoundSession
         )
+        didStart = true
         await activateWatch(roundID: selectionStore.roundID)
         await activateLiveActivity(roundID: selectionStore.liveActivityRoundID)
     }
@@ -171,16 +189,47 @@ final class LiveRoundCompanionCoordinator: ObservableObject, Loggable {
     }
 
     func resetSelections() {
+        preferences.selectUser(nil)
         selectionStore.select(nil)
+    }
+
+    private func preferencesDidChange(to state: UserCompanionPreferences.State) {
+        let previous = preferences.state
+        let identityChanged = previous.userID != state.userID
+        if identityChanged || previous.appleWatch != state.appleWatch {
+            watchActivationTask?.cancel()
+            watchProjectionTask?.cancel()
+            watchPublishGeneration += 1
+            companionRoundSession.stop()
+            lastProjection = nil
+            watchConnectivity.send(snapshot: nil)
+            scheduleWatchActivation(for: selectedRoundID)
+        }
+        if identityChanged || previous.liveActivities != state.liveActivities {
+            activityManager.isEnabled = state.liveActivities
+            activityProjectionTask?.cancel()
+            activityPublishGeneration += 1
+            activityRoundSession.stop()
+            scheduleActivityActivation(
+                for: liveActivityRoundID,
+                endExistingActivity: identityChanged || !state.liveActivities
+            )
+        }
+        if identityChanged {
+            // Never reuse another account's selected round on this device.
+            selectionStore.select(nil)
+        }
     }
 
     func handleScenePhase(_ phase: ScenePhase) {
         isAppActive = phase == .active
         switch phase {
         case .active:
+            liveActivitiesAvailable = ActivityAuthorizationInfo().areActivitiesEnabled
             watchProjectionTask?.cancel()
             watchProjectionTask = Task { [weak self] in
                 guard let self,
+                      preferences.state.appleWatch,
                       let selectedRoundID else { return }
                 await companionRoundSession.refreshOneShotSnapshot(for: selectedRoundID)
                 await publishWatchProjection()
@@ -188,6 +237,7 @@ final class LiveRoundCompanionCoordinator: ObservableObject, Loggable {
             activityProjectionTask?.cancel()
             activityProjectionTask = Task { [weak self] in
                 guard let self,
+                      preferences.state.liveActivities,
                       let liveActivityRoundID else { return }
                 await activityRoundSession.refreshOneShotSnapshot(for: liveActivityRoundID)
                 await publishLiveActivity()
@@ -205,12 +255,13 @@ final class LiveRoundCompanionCoordinator: ObservableObject, Loggable {
         guard didStart else { return }
         watchActivationTask?.cancel()
         watchActivationTask = Task { [weak self] in
+            guard !Task.isCancelled else { return }
             await self?.activateWatch(roundID: roundID)
         }
     }
 
     private func activateWatch(roundID: String?) async {
-        guard let roundID, roundID.isPopulated else {
+        guard preferences.state.appleWatch, let roundID, roundID.isPopulated else {
             companionRoundSession.stop()
             lastProjection = nil
             watchConnectivity.send(snapshot: nil)
@@ -222,16 +273,28 @@ final class LiveRoundCompanionCoordinator: ObservableObject, Loggable {
         await publishWatchProjection()
     }
 
-    private func scheduleActivityActivation(for roundID: String?) {
+    private func scheduleActivityActivation(for roundID: String?, endExistingActivity: Bool = false) {
         guard didStart else { return }
-        activityActivationTask?.cancel()
+        let previousTask = activityActivationTask
+        let previousProjection = activityProjectionTask
+        previousTask?.cancel()
+        previousProjection?.cancel()
         activityActivationTask = Task { [weak self] in
+            // Complete native work in order. An OFF transition must end the activity even
+            // if another preference change cancels this task before it starts.
+            await previousTask?.value
+            await previousProjection?.value
+            if endExistingActivity {
+                await self?.activityManager.end()
+                if self?.preferences.state.liveActivities != true { return }
+            }
+            guard !Task.isCancelled else { return }
             await self?.activateLiveActivity(roundID: roundID)
         }
     }
 
     private func activateLiveActivity(roundID: String?) async {
-        guard let roundID, roundID.isPopulated else {
+        guard preferences.state.liveActivities, let roundID, roundID.isPopulated else {
             activityRoundSession.stop()
             await activityManager.end()
             return
@@ -261,12 +324,12 @@ final class LiveRoundCompanionCoordinator: ObservableObject, Loggable {
     private func publishWatchProjection() async {
         watchPublishGeneration += 1
         let generation = watchPublishGeneration
-        guard let selectedRoundID,
+        guard preferences.state.appleWatch, let selectedRoundID,
               companionRoundSession.snapshot.round.id == selectedRoundID else {
             return
         }
         await liveRoundViewModel.ensureParticipantResolved()
-        guard !Task.isCancelled, generation == watchPublishGeneration else { return }
+        guard !Task.isCancelled, generation == watchPublishGeneration, preferences.state.appleWatch else { return }
         guard let participantID = liveRoundViewModel.currentParticipantID else {
             lastProjection = nil
             watchConnectivity.send(snapshot: nil)
@@ -292,7 +355,7 @@ final class LiveRoundCompanionCoordinator: ObservableObject, Loggable {
                 nameDisplayFormat: nameDisplayFormat,
                 acknowledgedMutationIDs: processedMutations.acceptedMutationIDs(for: selectedRoundID)
             )
-            guard !Task.isCancelled, generation == watchPublishGeneration else { return }
+            guard !Task.isCancelled, generation == watchPublishGeneration, preferences.state.appleWatch else { return }
             lastProjection = projection
             watchConnectivity.send(snapshot: projection)
         } catch {
@@ -309,12 +372,12 @@ final class LiveRoundCompanionCoordinator: ObservableObject, Loggable {
     private func publishLiveActivity() async {
         activityPublishGeneration += 1
         let generation = activityPublishGeneration
-        guard let liveActivityRoundID,
+        guard preferences.state.liveActivities, let liveActivityRoundID,
               activityRoundSession.snapshot.round.id == liveActivityRoundID else {
             return
         }
         await activityViewModel.ensureParticipantResolved()
-        guard !Task.isCancelled, generation == activityPublishGeneration else { return }
+        guard !Task.isCancelled, generation == activityPublishGeneration, preferences.state.liveActivities else { return }
         guard let participantID = activityViewModel.currentParticipantID else {
             await activityManager.end()
             return
@@ -349,7 +412,7 @@ final class LiveRoundCompanionCoordinator: ObservableObject, Loggable {
                 await activityManager.end()
                 return
             }
-            guard !Task.isCancelled, generation == activityPublishGeneration else { return }
+            guard !Task.isCancelled, generation == activityPublishGeneration, preferences.state.liveActivities else { return }
             await activityManager.synchronize(
                 attributes: .init(
                     roundID: liveActivityRoundID,
@@ -368,6 +431,10 @@ final class LiveRoundCompanionCoordinator: ObservableObject, Loggable {
     }
 
     private func handle(_ mutation: WatchScoreMutation) async -> WatchScoreAcknowledgement {
+        let userID = preferences.state.userID
+        guard preferences.state.appleWatch, userID != nil else {
+            return Self.disabledAcknowledgement(for: mutation)
+        }
         if let existing = processedMutations.acknowledgement(for: mutation.id) {
             return existing
         }
@@ -417,6 +484,10 @@ final class LiveRoundCompanionCoordinator: ObservableObject, Loggable {
             return acknowledgement
         }
 
+        guard preferences.state.appleWatch, preferences.state.userID == userID else {
+            if shouldStopCommandSession { commandSession.stop() }
+            return Self.disabledAcknowledgement(for: mutation)
+        }
         let acknowledgement = await scoreService.execute(
             mutation,
             in: commandSession,
@@ -445,6 +516,21 @@ final class LiveRoundCompanionCoordinator: ObservableObject, Loggable {
             return participant.id
         }
         return nil
+    }
+
+    private nonisolated static func disabledAcknowledgement(
+        for mutation: WatchScoreMutation
+    ) -> WatchScoreAcknowledgement {
+        WatchScoreAcknowledgement(
+            id: mutation.id,
+            roundID: mutation.roundID,
+            status: .rejected,
+            canonicalValue: nil,
+            canonicalRevision: nil,
+            errorCategory: .unauthorized,
+            message: "Apple Watch is off. Enable it in Settings on iPhone to enter scores.",
+            acknowledgedAt: Date()
+        )
     }
 
     private nonisolated static func unavailableAcknowledgement(

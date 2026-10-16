@@ -2,9 +2,24 @@ import ActivityKit
 import Foundation
 
 @MainActor
-final class RoundLiveActivityManager: Loggable {
+protocol RoundLiveActivityManaging: AnyObject {
+    var isEnabled: Bool { get set }
+    func synchronize(
+        attributes: RoundLiveActivityAttributes,
+        state: RoundLiveActivityAttributes.ContentState,
+        mayStartNewActivity: Bool
+    ) async
+    func end() async
+}
+
+@MainActor
+final class RoundLiveActivityManager: RoundLiveActivityManaging, Loggable {
     static let staleInterval: TimeInterval = 20 * 60
 
+    var isEnabled = false {
+        didSet { if isEnabled != oldValue { preferenceRevision += 1 } }
+    }
+    private var preferenceRevision = 0
     private(set) var latestState: RoundLiveActivityAttributes.ContentState?
 
     func synchronize(
@@ -12,12 +27,15 @@ final class RoundLiveActivityManager: Loggable {
         state: RoundLiveActivityAttributes.ContentState,
         mayStartNewActivity: Bool
     ) async {
+        guard isEnabled, !Task.isCancelled else { return }
+        let revision = preferenceRevision
         latestState = state
         let activities = Activity<RoundLiveActivityAttributes>.activities
         for activity in activities where activity.attributes.roundID != attributes.roundID {
             await activity.end(nil, dismissalPolicy: .immediate)
         }
 
+        guard isEnabled, revision == preferenceRevision, !Task.isCancelled else { return }
         let content = ActivityContent(
             state: state,
             staleDate: Date().addingTimeInterval(Self.staleInterval),
@@ -38,23 +56,16 @@ final class RoundLiveActivityManager: Loggable {
                 content: content,
                 pushType: nil
             )
-            // A single alerting update is the supported way to bring a newly started Live
-            // Activity forward in Apple Watch's Smart Stack. Routine score updates stay silent.
-            await activity.update(
-                content,
-                alertConfiguration: AlertConfiguration(
-                    title: "Round is live",
-                    body: "Your scorecard is ready on Apple Watch.",
-                    sound: .default
-                )
-            )
+            // Let iOS choose Lock Screen, Dynamic Island, and mirrored presentations.
+            // Dedicated Watch scoring is controlled separately through WatchConnectivity.
+            await activity.update(content)
         } catch {
             addBreadcrumb(level: .error, message: "Failed to start live round activity", error: error)
         }
     }
 
     func markStale() async {
-        guard let latestState else { return }
+        guard isEnabled, let latestState else { return }
         let staleState = RoundLiveActivityAttributes.ContentState(
             phase: .stale,
             roundTitle: latestState.roundTitle,
@@ -83,10 +94,10 @@ final class RoundLiveActivityManager: Loggable {
         }
     }
 
-    func end(dismissalPolicy: ActivityUIDismissalPolicy = .immediate) async {
+    func end() async {
         latestState = nil
         for activity in Activity<RoundLiveActivityAttributes>.activities {
-            await activity.end(nil, dismissalPolicy: dismissalPolicy)
+            await activity.end(nil, dismissalPolicy: .immediate)
         }
     }
 }

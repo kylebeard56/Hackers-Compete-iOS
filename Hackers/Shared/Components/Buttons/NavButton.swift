@@ -85,25 +85,29 @@ struct HandicapOptionsMenu: View {
     let resolvedAutoBasis: SeriesHandicapStrokeBasis?
     let palette: DesignPalette
     var courseHandicapSubtitle: String?
+    var showsEntryFormat = true
+    var allowsBasisChanges = true
     var onEntryFormatChanged: (HandicapEntryFormat) -> Void = { _ in }
     var onNormalizationModeChanged: (HandicapNormalizationMode) -> Void = { _ in }
     var onStrokeBasisChanged: (SeriesHandicapStrokeBasis?) -> Void = { _ in }
 
     var body: some View {
         Menu {
-            Button {
-                Haptics.fire(.light)
-                let next: HandicapEntryFormat = handicapEntryFormat == .courseHandicap ? .strokes : .courseHandicap
-                handicapEntryFormat = next
-                onEntryFormatChanged(next)
-            } label: {
-                Label(
-                    "Handicap Index",
-                    systemImage: handicapEntryFormat == .courseHandicap ? "checkmark.circle.fill" : "circle"
-                )
-                Text(courseHandicapMenuSubtitle)
+            if showsEntryFormat {
+                Button {
+                    Haptics.fire(.light)
+                    let next: HandicapEntryFormat = handicapEntryFormat == .courseHandicap ? .strokes : .courseHandicap
+                    handicapEntryFormat = next
+                    onEntryFormatChanged(next)
+                } label: {
+                    Label(
+                        "Handicap Index",
+                        systemImage: handicapEntryFormat == .courseHandicap ? "checkmark.circle.fill" : "circle"
+                    )
+                    Text(courseHandicapMenuSubtitle)
+                }
+                .menuActionDismissBehavior(.disabled)
             }
-            .menuActionDismissBehavior(.disabled)
 
             Button {
                 Haptics.fire(.light)
@@ -121,39 +125,41 @@ struct HandicapOptionsMenu: View {
             }
             .menuActionDismissBehavior(.disabled)
 
-            Menu {
-                Button {
-                    Haptics.fire(.light)
-                    handicapStrokeBasis = nil
-                    onStrokeBasisChanged(nil)
-                } label: {
-                    HStack {
-                        Text("Auto")
-                        if handicapStrokeBasis == nil {
-                            Image(systemName: "checkmark")
-                        }
-                    }
-                }
-
-                ForEach(SeriesHandicapStrokeBasis.allCases, id: \.self) { basis in
+            if allowsBasisChanges {
+                Menu {
                     Button {
                         Haptics.fire(.light)
-                        handicapStrokeBasis = basis
-                        onStrokeBasisChanged(basis)
+                        handicapStrokeBasis = nil
+                        onStrokeBasisChanged(nil)
                     } label: {
                         HStack {
-                            Text(basis.displayName)
-                            if handicapStrokeBasis == basis {
+                            Text("Auto")
+                            if handicapStrokeBasis == nil {
                                 Image(systemName: "checkmark")
                             }
                         }
                     }
+
+                    ForEach(SeriesHandicapStrokeBasis.allCases, id: \.self) { basis in
+                        Button {
+                            Haptics.fire(.light)
+                            handicapStrokeBasis = basis
+                            onStrokeBasisChanged(basis)
+                        } label: {
+                            HStack {
+                                Text(basis.displayName)
+                                if handicapStrokeBasis == basis {
+                                    Image(systemName: "checkmark")
+                                }
+                            }
+                        }
+                    }
+                } label: {
+                    Text("Hole Basis")
+                    Text(handicapStrokeBasisDescription)
                 }
-            } label: {
-                Text("Hole Basis")
-                Text(handicapStrokeBasisDescription)
+                .menuActionDismissBehavior(.disabled)
             }
-            .menuActionDismissBehavior(.disabled)
         } label: {
             Icon(name: "f141", size: 20, weight: .solid)
                 .foregroundStyle(Color.charcoal)

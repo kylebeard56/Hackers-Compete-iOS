@@ -513,7 +513,7 @@ extension GameLobby {
                 Spacer(minLength: 0)
                 
                 if snapshot.configuration.useHandicaps {
-                    Text(seriesHandicapLobbyLockActive ? "Strokes" : "Handicap")
+                    Text(seriesHandicapLobbyLockActive || handicapEntryFormat == .strokes ? "Strokes" : "Index")
                         .fontStyle(kFontName, size: 13, weight: .medium)
                         .foregroundStyle(Color.neutral)
                         .frame(width: seriesHandicapLobbyLockActive && isSeriesCommissioner ? 112 : 64)
@@ -557,6 +557,7 @@ extension GameLobby {
                                     ? participant.handicapIndex
                                     : nil),
                             entryFormat: seriesLock ? .strokes : rosterEntryFormat,
+                            isUnresolved: participant.handicapResolution != nil && participant.handicapResolution?.effectiveStrokes == nil,
                             focusedField: $focus,
                             palette: palette,
                             maximumValue: seriesLock ? effectiveSeriesLeagueHandicapMaximum : nil,
@@ -1383,6 +1384,11 @@ extension GameLobby {
 
                 if components.contains(.courseHandicap),
                    let courseHandicapLabel = courseHandicapSubtitle(for: participant) {
+                    if participant.handicapIndex != nil || participant.handicapSnapshot?.handicapIndex != nil {
+                        Text(RoundHandicapEntryPresentation.indexLabel(participant, basis: snapshot.handicapIndexBasis))
+                            .fontStyle(kFontName, size: 12, weight: .medium)
+                            .foregroundStyle(Color.neutral)
+                    }
                     Text(courseHandicapLabel)
                         .fontStyle(kFontName, size: 12, weight: .semibold)
                         .foregroundStyle(Color.accentGreen)

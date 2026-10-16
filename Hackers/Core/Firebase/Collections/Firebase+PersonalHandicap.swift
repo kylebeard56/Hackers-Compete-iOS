@@ -31,9 +31,11 @@ extension FirebaseService {
             do {
                 let player = try transaction.getDocument(reference).data(as: Player.self)
                 let updated = try player.settingManualPersonalHandicap(manual, as: userID, at: time)
+                if updated == player { return try JSONEncoder().encode(player) }
                 let profile = updated.personalHandicap ?? .init()
                 var fields: [String: Any] = [
-                    "personal_handicap.manual": try manual.map { try $0.toDictionary() as Any } ?? FieldValue.delete(),
+                    "personal_handicap.manual_history": try profile.manualHistory.map { try $0.toDictionary() },
+                    "personal_handicap.manual": try profile.manual.map { try $0.toDictionary() as Any } ?? FieldValue.delete(),
                     "personal_handicap.effective_index": profile.effectiveIndex.map { $0 as Any } ?? FieldValue.delete(),
                     "personal_handicap.effective_source": profile.effectiveSource.map { $0.rawValue as Any } ?? FieldValue.delete(),
                     "personal_handicap.refresh_token": FieldValue.delete(),
@@ -150,7 +152,7 @@ extension FirebaseService {
                 segments: try s.documents.map { try $0.data(as: RoundSegmentV2.self) }, scores: try g.documents.map { try $0.data(as: ScoreEntryV2.self) })
             reviews.append(PersonalHandicapEligibility.reviewV2(v2, playerID: playerID))
         }
-        var rebuilt = PersonalHandicapEngine.rebuild(playerID: playerID, reviews: reviews, manual: player.personalHandicap?.manual, asOf: asOf)
+        var rebuilt = PersonalHandicapEngine.rebuild(playerID: playerID, reviews: reviews, manual: player.personalHandicap?.manual, manualHistory: player.personalHandicap?.manualHistory ?? [], asOf: asOf)
         if mayPersist {
             try await persistPersonalHandicap(&rebuilt, playerRef: playerRef, token: token)
         }

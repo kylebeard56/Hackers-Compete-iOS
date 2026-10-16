@@ -171,7 +171,9 @@ enum HandicapCalculator {
         updated.handicapResolution = RoundHandicapResolution(
             entryFormat: format, calculation: calculation, effectiveStrokes: allowance,
             estimateApprovedAt: approved ? (keepApproval ? priorApproval?.estimateApprovedAt : Time()) : nil,
-            approvedBy: approved ? (keepApproval ? priorApproval?.approvedBy : approvedBy) : nil
+            approvedBy: approved ? (keepApproval ? priorApproval?.approvedBy : approvedBy) : nil,
+            manualStrokes: format == .strokes && input.isFinite && input >= 0 && input < Double(Int.max)
+                ? Int(input.rounded()) : priorApproval?.manualStrokeInput
         )
         return updated
     }
@@ -185,8 +187,11 @@ enum HandicapCalculator {
             guard participant.leagueHandicapStrokesAtCreation == nil, participant.handicapSnapshot == nil else { return participant }
             if changingEntryFormat, format == .strokes {
                 var pending = participant
+                let manual = participant.handicapResolution?.manualStrokeInput
                 pending.handicapResolution = RoundHandicapResolution(entryFormat: .strokes,
-                    calculation: participant.handicapResolution?.calculation, effectiveStrokes: nil)
+                    calculation: participant.handicapResolution?.calculation,
+                    effectiveStrokes: manual.map { capped($0, maximumHandicap: maximumHandicap) }, manualStrokes: manual)
+                if let strokes = pending.handicapResolution?.effectiveStrokes { pending.adjustedHandicap = strokes }
                 return pending
             }
             // A manual allowance is independent of changes to the selected tee.
@@ -197,7 +202,7 @@ enum HandicapCalculator {
                 unresolved.handicapResolution = RoundHandicapResolution(
                     entryFormat: .courseHandicap,
                     calculation: calculation(index: nil, participant: participant, courseSegment: courseSegment, indexBasis: handicapStrokeBasis),
-                    effectiveStrokes: nil
+                    effectiveStrokes: nil, manualStrokes: participant.handicapResolution?.manualStrokeInput
                 )
                 return unresolved
             }
@@ -271,7 +276,7 @@ enum HandicapCalculator {
 
     private static func normalized(_ participant: RoundParticipant, subtracting baseline: Int) -> RoundParticipant {
         var updated = participant
-        updated.adjustedHandicap = max(0, participant.adjustedHandicap - max(0, baseline))
+        updated.adjustedHandicap = max(0, participant.adjustedHandicap - baseline)
         return updated
     }
 
@@ -422,7 +427,9 @@ enum CourseHandicapRosterDisplay {
             return description(calculation, strokes: participant.lockedHandicapAllowance)
         }
         if let resolution = participant.handicapResolution {
-            if resolution.entryFormat == .strokes { return "Strokes Received: \(participant.adjustedHandicap) (manual)" }
+            if resolution.entryFormat == .strokes {
+                return resolution.effectiveStrokes.map { "Strokes Received: \($0) (manual)" } ?? "Enter strokes for this round"
+            }
             if let calculation = resolution.calculation { return description(calculation, strokes: resolution.effectiveStrokes) }
         }
         // Integer legacy handicaps have no verified Index meaning or basis.
