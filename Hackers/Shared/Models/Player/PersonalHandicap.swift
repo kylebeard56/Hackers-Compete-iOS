@@ -304,6 +304,8 @@ struct PersonalHandicapScoreRecord: Hashable, Codable, Identifiable {
     /// Unrounded estimate and chronological calculated Index used, never a manual Index.
     var expectedNineDifferential: Double? = nil
     var expectedScoreIndex: Double? = nil
+    /// Bounded model input; expectedScoreIndex retains the actual pre-round Index.
+    var expectedScoreModelIndex: Double? = nil
 
     enum CodingKeys: String, CodingKey {
         case playerID = "player_id", roundID = "round_id", roundTitle = "round_title", playedAt = "played_at"
@@ -320,6 +322,7 @@ struct PersonalHandicapScoreRecord: Hashable, Codable, Identifiable {
         case differentialID = "differential_id", differentialRoundIDs = "differential_round_ids"
         case differentialMethod = "differential_method", differentialMethodVersion = "differential_method_version"
         case expectedNineDifferential = "expected_nine_differential", expectedScoreIndex = "expected_score_index"
+        case expectedScoreModelIndex = "expected_score_model_index"
     }
 }
 

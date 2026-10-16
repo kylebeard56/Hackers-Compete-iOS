@@ -451,7 +451,10 @@ private struct PersonalHandicapPostingEditor: View {
                         if let expected = score.expectedNineDifferential {
                             LabeledContent("Expected nine estimate", value: String(format: "%.4f", expected))
                             LabeledContent("Pre-round calculated Index", value: ManualPersonalHandicap.display(score.expectedScoreIndex))
-                            Text("Hackers estimate: 0.52 × pre-round calculated Index + 1.2. Add to the unrounded played-nine differential, then round the total once. This is not the official USGA expected-score model.").font(.footnote).foregroundStyle(.secondary)
+                            if let modelIndex = score.expectedScoreModelIndex, modelIndex != score.expectedScoreIndex {
+                                LabeledContent("Bounded model Index", value: ManualPersonalHandicap.display(modelIndex))
+                            }
+                            Text("Hackers estimate: 0.52 × pre-round calculated Index + 1.2, using +6 as the model boundary for stronger plus handicaps. Add to the unrounded played-nine differential, then round the total once. This is not the official USGA expected-score model.").font(.footnote).foregroundStyle(.secondary)
                         }
                         if let rating = score.courseRating { LabeledContent("Course Rating", value: String(format: "%.1f", rating)) }
                         if let slope = score.slopeRating { LabeledContent("Slope Rating", value: "\(slope)") }

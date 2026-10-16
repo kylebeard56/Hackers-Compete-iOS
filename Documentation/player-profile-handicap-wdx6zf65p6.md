@@ -32,21 +32,35 @@ Complete individual 18-hole cards calculate directly from Hackers data. Initial 
 5. An unpaired initial nine remains visible with its actual holes and played differential. If full eighteens establish an Index before another initial nine arrives, that leftover card stays unpaired; later nines use the established method and never reuse it. Chronological corrections can change those outcomes on replay.
 6. A synthetic initial pair does not trigger an exceptional-score reduction: it has no single pre-round established personal Index. Existing reductions from qualifying actual/expected-score entries, selection, rounding, maximum Index, Low Index and caps remain in force.
 
-### After establishment: `hackers-expected-nine-linear-v1`
+### After establishment: `hackers-expected-nine-linear-bounded-v2`
 
 For each new complete nine, use the last valid **calculated personal Index from the chronological prefix before that round**, not the current profile, manual starting value, league Index, next result, or an unrelated frozen allowance:
 
 ```text
-expectedNine = 0.52 × preRoundCalculatedPersonalIndex + 1.2
+modelIndex = max(-6.0, preRoundCalculatedPersonalIndex)   # finite Index, maximum 54.0
+expectedNine = 0.52 × modelIndex + 1.2
 playedNine = 113 / nineSlope × (nineAdjustedGross − nineRating − PCC / 2)
 estimated18 = roundToTenth(playedNine + expectedNine)
 ```
 
-Both components remain unrounded until the final sum. Store the unrounded expected component, pre-round calculated Index, played component, final differential and method/version. Negative numbers represent plus handicaps. The estimate is deterministic, course-independent (the played component already adjusts course difficulty), and isolated in `PersonalHandicapNineHoleEstimation`. Its estimated 18-hole result joins the normal pool immediately and uses the same pre-round personal Index for existing exceptional-score checks. Actual holes remain nine.
+Both components remain unrounded until the final sum. Store the unrounded expected component, actual pre-round calculated Index, bounded model Index, played component, final differential and method/version. Negative numbers represent plus handicaps. The estimate is deterministic, course-independent (the played component already adjusts course difficulty), and isolated in `PersonalHandicapNineHoleEstimation`. Its estimated 18-hole result joins the normal pool immediately and uses the same pre-round personal Index for existing exceptional-score checks. Actual holes remain nine.
 
 **Evidence and limitations.** The USGA's 2024 treatment infographic gives Index 14.0, played-nine differential 7.2 and combined 15.7; this approximation supplies 8.48 and rounds the sum to 15.7. Its Understanding Expected Score infographic gives Index 15.0 with expected-nine 9.0 on two courses; applying the actual rating/slope calculations reproduces combined 14.6 and 20.5. Those two nearby Index examples alone would be insufficient to validate a general model. We therefore also checked 13 independent representative points across Swiss Golf's published 2025 expected-differential table, from numeric Index -6.0 through 54.0: the approximation's rounded expected component matches each tested value. Regression tests retain these primary-source comparisons. This is empirical support for a simple approximation, **not** proof of the USGA's formula, underlying population distribution or GHIN equivalence.
 
-Known differences: initial chronological pairing differs from current WHS establishment processing; a linear model may diverge at untabulated values or after official model changes; plus handicaps better than +6 use explicitly documented linear extrapolation; assumed zero PCC may differ from official course/day conditions; score acceptability relies on Hackers data and user posting metadata. Neither the model nor coefficients are fitted from Hackers users' scores. No official PCC is generated.
+**Candidate evaluation requested in the follow-up.** We also evaluated `0.5 × Index + 1.5`. It reproduces the two USGA Index-14/15 examples at their displayed precision, so those examples do not distinguish the candidates. Against the same 13 representative Swiss Golf table points, the candidate matches 2/13, has maximum rounded-component deviation 0.8 strokes (at Index 54), and mean absolute deviation about 0.277. The retained `0.52 × Index + 1.2` model matches 13/13 at the table's one-decimal precision. These are cross-checks against published rounded values, not evidence of exact official internal calculations.
+
+| Numeric Index | Published expected nine | Retained model, rounded | Candidate, rounded |
+| --- | --- | --- | --- |
+| -6.0 (+6) | -1.9 | -1.9 | -1.5 |
+| 0.0 | 1.2 | 1.2 | 1.5 |
+| 14.0 | 8.5 | 8.5 | 8.5 |
+| 15.0 | 9.0 | 9.0 | 9.0 |
+| 38.0 | 21.0 | 21.0 | 20.5 |
+| 54.0 | 29.3 | 29.3 | 28.5 |
+
+**Supported range and bounds.** The published table spans numeric Index -6.0 through 54.0. The model never extrapolates below that range: a better-than-+6 player uses model Index -6.0, yielding an unrounded expected-nine component of -1.92. Their actual historical Index remains stored separately and still controls existing exceptional-score checks; neither the Index nor completed allowances are clamped. Reject non-finite inputs and inputs above 54.0 (the calculated personal Index already has that maximum). The expected component is thus bounded to [-1.92, 29.28]. Score details expose any bounded model input. Version v2 replaces v1's unvalidated lower-tail extrapolation; whole-record method version is `hackers-whs-inspired-nine-hole-v4`.
+
+Known differences: initial chronological pairing differs from current WHS establishment processing; a linear model may diverge at untabulated values or after official model changes; plus handicaps better than +6 use the +6 boundary for their expected component, which can conservatively overstate the expected differential relative to an unknown official value; assumed zero PCC may differ from official course/day conditions; score acceptability relies on Hackers data and user posting metadata. Neither the model nor coefficients are fitted from Hackers users' scores. No official PCC is generated.
 
 ### Partial cards
 
@@ -76,9 +90,9 @@ Existing partial-round validation/progress is preserved. A valid reason and a co
 
 ## Validation
 
-The final relevant regression run passed **426 tests, zero failures/skips** on iPhone 17 Pro / iOS 26.3.1, confirmed by `xcresulttool get test-results summary`. It includes **64 personal calculation/eligibility tests (18 additional cases)** and 27 personal profile tests. The preserved `d5077c2` baseline had passed 377 tests.
+The final relevant regression run passed **430 tests, zero failures/skips** on iPhone 17 Pro / iOS 26.3.1, confirmed by `xcresulttool get test-results summary`. It includes **68 personal calculation/eligibility tests (22 beyond `d5077c2`, including four follow-up cases)** and 27 personal profile tests.
 
-The result bundle is `/private/tmp/HackersPersonalHandicapNineEstimates-final.xcresult`. Validation used project `Hackers.xcodeproj`, scheme/configuration `Sandbox`, signing disabled, Address Sanitizer/code coverage disabled, serial simulator tests, and these `-only-testing:HackersUnitTests/<suite>` selections:
+The result bundle is `/private/tmp/HackersPersonalHandicapNineBounds-final.xcresult`. Validation used project `Hackers.xcodeproj`, scheme/configuration `Sandbox`, signing disabled, Address Sanitizer/code coverage disabled, serial simulator tests, and these `-only-testing:HackersUnitTests/<suite>` selections:
 
 ```text
 PersonalHandicapCalculationTests  PersonalHandicapProfileTests
@@ -93,8 +107,8 @@ LiveRoundResumeRegressionTests  AppSessionResumeTests
 FirebaseIDValidationTests  RoundSessionReadinessTests
 ```
 
-The separate **Sandbox simulator build passed** with `CODE_SIGNING_ALLOWED=NO ONLY_ACTIVE_ARCH=YES`. A final incremental build also passed after tightening the unpaired-card detail-view condition. Logs: `/private/tmp/HackersPersonalHandicapNineEstimates-final-build.log` and `/private/tmp/HackersPersonalHandicapNineEstimates-delivery-build.log`. `git diff --check` passed. No league algorithm, completed scorecard, historical stroke allowance, PR #14, merge or deployment was changed by this work.
+The separate **Sandbox simulator build passed** with `CODE_SIGNING_ALLOWED=NO ONLY_ACTIVE_ARCH=YES`. Log: `/private/tmp/HackersPersonalHandicapNineBounds-final-build.log`. `git diff --check` passed. No league algorithm, completed scorecard, historical stroke allowance, PR #14, merge or deployment was changed by this work.
 
-Relevant suites cover personal calculation/profile, Course Handicap, scoring, commissioner overrides, league computation/history/accrual, series creation/sync, Codable, activation, V2 and round/session lifecycle behavior. New cases cover six nines, three eighteens, mixtures, cross-league pairing, unpaired initial cards, single-use pairing, pre-round expected estimates across plus/low/high Indexes, USGA/table comparisons, late/corrected/excluded scores, source-card versus differential pool counts, last-20 selection, manual retention, metadata persistence and frozen source snapshots.
+Relevant suites cover personal calculation/profile, Course Handicap, scoring, commissioner overrides, league computation/history/accrual, series creation/sync, Codable, activation, V2 and round/session lifecycle behavior. New cases cover six nines, three eighteens, mixtures, cross-league pairing, unpaired initial cards, single-use pairing, pre-round expected estimates across plus/low/high Indexes, USGA/table comparisons, late/corrected/excluded scores, source-card versus differential pool counts, last-20 selection, manual retention, metadata persistence and frozen source snapshots. Follow-up cases cover bounded extreme-plus estimates with separate historical/model provenance, deleted postings with idempotent replay, and older imports that change pairing and subsequent expected inputs.
 
 Live authenticated Firebase transactions/save-reload, concurrent multi-device publication, manual UI and physical-device acceptance were not exercised. Firebase admin inspection failed because existing credentials require reauthentication; no login, rules/database changes or deployment was attempted. Existing app-host Firebase permission/keychain and unpaired-watch messages can occur during unit tests. Source uses the existing `(default)` Firestore instance and SDK rather than provisioning or switching databases.

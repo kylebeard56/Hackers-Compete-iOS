@@ -93,18 +93,26 @@ struct PersonalHandicapRebuild {
 /// Keep both components unrounded until their 18-hole sum is rounded once.
 enum PersonalHandicapNineHoleEstimation {
     static let pairedVersion = "hackers-paired-nine-v1"
-    static let expectedVersion = "hackers-expected-nine-linear-v1"
+    static let expectedVersion = "hackers-expected-nine-linear-bounded-v2"
+    static let supportedIndexRange = -6.0...54.0
+
+    /// Better-than-+6 players use the published table's +6 boundary, rather
+    /// than extrapolating unvalidated expected scores. Preserve their actual
+    /// historical Index separately; this never changes that Index or allowance.
+    static func modelIndex(index: Double) throws -> Double {
+        guard index.isFinite, index <= supportedIndexRange.upperBound else { throw PersonalHandicapRules.InputError.invalidInput }
+        return max(supportedIndexRange.lowerBound, index)
+    }
 
     static func expectedDifferential(index: Double) throws -> Double {
-        guard index.isFinite, index <= 54 else { throw PersonalHandicapRules.InputError.invalidInput }
-        let result = 0.52 * index + 1.2
+        let result = 0.52 * (try modelIndex(index: index)) + 1.2
         guard result.isFinite else { throw PersonalHandicapRules.InputError.invalidInput }
         return result
     }
 }
 
 enum PersonalHandicapEngine {
-    static let methodVersion = "hackers-whs-inspired-nine-hole-v3"
+    static let methodVersion = "hackers-whs-inspired-nine-hole-v4"
     static let unavailableMessage = "Some scores need more individual scoring data. Your last valid calculated Index or manual starting Index remains available."
 
     private struct ReplayInput: Encodable {
@@ -192,6 +200,7 @@ enum PersonalHandicapEngine {
                             value = played + expected
                             score.expectedNineDifferential = expected
                             score.expectedScoreIndex = previousIndex
+                            score.expectedScoreModelIndex = try PersonalHandicapNineHoleEstimation.modelIndex(index: previousIndex)
                             method = .expectedNineEstimate
                             version = PersonalHandicapNineHoleEstimation.expectedVersion
                             indexInEffect = previousIndex // ESR compares against the same pre-round personal Index.
@@ -214,6 +223,7 @@ enum PersonalHandicapEngine {
                 pairInitialNine = false
                 method = .verifiedExternal; version = "verified-eighteen-hole-v1"
                 score.expectedNineDifferential = nil; score.expectedScoreIndex = nil
+                score.expectedScoreModelIndex = nil
             } else if review.card == nil {
                 score.pendingReason = "Differential inputs unavailable or do not match this score revision"
             }

@@ -668,7 +668,7 @@ final class PersonalHandicapCalculationTests: XCTestCase {
         for (index, expected) in examples {
             XCTAssertEqual(PersonalHandicapRules.tenth(try PersonalHandicapNineHoleEstimation.expectedDifferential(index: index)), expected, "Index \(index)")
         }
-        XCTAssertEqual(try PersonalHandicapNineHoleEstimation.expectedDifferential(index: -10), -4, accuracy: 0.00001) // documented extrapolation
+        XCTAssertEqual(try PersonalHandicapNineHoleEstimation.expectedDifferential(index: -10), -1.92, accuracy: 0.00001) // bounded at the published +6 boundary
         XCTAssertThrowsError(try PersonalHandicapNineHoleEstimation.expectedDifferential(index: .infinity))
         XCTAssertThrowsError(try PersonalHandicapNineHoleEstimation.expectedDifferential(index: 54.1))
     }
@@ -820,6 +820,64 @@ final class PersonalHandicapCalculationTests: XCTestCase {
         XCTAssertEqual(result.history.count, 1)
         XCTAssertNil(result.scores.last?.differential)
         XCTAssertEqual(result.scores.last?.qualifyingHoles, 17)
+    }
+
+    func testExpectedModelBoundsExtremePlusInputsWithoutExtrapolation() throws {
+        for index in [-6.0, -6.1, -10, -100, -Double.greatestFiniteMagnitude] {
+            XCTAssertEqual(try PersonalHandicapNineHoleEstimation.modelIndex(index: index), -6)
+            XCTAssertEqual(try PersonalHandicapNineHoleEstimation.expectedDifferential(index: index), -1.92, accuracy: 0.000001)
+        }
+        for index in [-5.9, 0, 15, 54] {
+            XCTAssertEqual(try PersonalHandicapNineHoleEstimation.modelIndex(index: index), index)
+        }
+        for invalid in [Double.nan, .infinity, -.infinity, 54.1] {
+            XCTAssertThrowsError(try PersonalHandicapNineHoleEstimation.expectedDifferential(index: invalid))
+        }
+    }
+
+    func testBoundedEstimateRetainsActualHistoricalIndexAndPersistsBothInputs() throws {
+        let (seed, verified) = pool([-10, -10, -10])
+        let result = PersonalHandicapEngine.rebuild(playerID: "p1", reviews: seed + [datedReview(10)], verified: verified)
+        let score = try XCTUnwrap(result.scores.last)
+        XCTAssertEqual(score.expectedScoreIndex, -12)
+        XCTAssertEqual(score.expectedScoreModelIndex, -6)
+        XCTAssertEqual(score.expectedNineDifferential!, -1.92, accuracy: 0.000001)
+        XCTAssertEqual(score.differential, 7.1)
+        XCTAssertEqual(score.differentialMethodVersion, PersonalHandicapNineHoleEstimation.expectedVersion)
+        XCTAssertEqual(try JSONDecoder().decode(PersonalHandicapScoreRecord.self, from: JSONEncoder().encode(score)), score)
+        XCTAssertEqual(result.history.first?.calculation.qualifiedIndex, -12)
+    }
+
+    func testDeletedPostingRebuildsPairsAndTrendIdempotently() {
+        let cards = (0..<8).map { datedReview($0) }
+        let time = Time(iso: "", unix: 1_800_000_000)
+        let before = PersonalHandicapEngine.rebuild(playerID: "p1", reviews: cards, asOf: time)
+        let remaining = Array(cards.dropFirst())
+        let removed = PersonalHandicapEngine.rebuild(playerID: "p1", reviews: remaining, asOf: time)
+        let repeated = PersonalHandicapEngine.rebuild(playerID: "p1", reviews: remaining.reversed(), asOf: time)
+        XCTAssertEqual(removed.calculation.qualifyingHoles, 63)
+        XCTAssertFalse(removed.scores.contains { $0.id == "dated-0" })
+        XCTAssertTrue(removed.scores.allSatisfy { $0.differentialRoundIDs?.contains("dated-0") != true })
+        XCTAssertEqual(removed.scores.first?.differentialRoundIDs, ["dated-1", "dated-2"])
+        XCTAssertNotEqual(removed.history.map(\.roundID), before.history.map(\.roundID))
+        XCTAssertEqual(removed.calculation, repeated.calculation)
+        XCTAssertEqual(removed.history, repeated.history)
+        XCTAssertEqual(removed.scores, repeated.scores)
+    }
+
+    func testImportedOlderRoundReplaysHistoricalPairingAndExpectedInputs() {
+        let cards = (0..<7).map { datedReview($0) }
+        let time = Time(iso: "", unix: 1_800_000_000)
+        let newerFirst = PersonalHandicapEngine.rebuild(playerID: "p1", reviews: Array(cards.dropFirst()), asOf: time)
+        XCTAssertEqual(newerFirst.history.first?.roundID, "dated-6")
+        let imported = PersonalHandicapEngine.rebuild(playerID: "p1", reviews: Array(cards.dropFirst()) + [cards[0]], asOf: time)
+        XCTAssertEqual(imported.history.first?.roundID, "dated-5")
+        XCTAssertEqual(imported.scores[0].differentialRoundIDs, ["dated-0", "dated-1"])
+        XCTAssertEqual(imported.scores.last?.expectedScoreIndex, 16)
+        XCTAssertEqual(imported.scores.last?.differentialMethod, .expectedNineEstimate)
+        let chronological = PersonalHandicapEngine.rebuild(playerID: "p1", reviews: cards, asOf: time)
+        XCTAssertEqual(imported.calculation, chronological.calculation)
+        XCTAssertEqual(imported.scores, chronological.scores)
     }
 
 }
