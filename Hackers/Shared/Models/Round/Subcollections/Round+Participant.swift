@@ -68,6 +68,13 @@ struct RoundHandicapResolution: Hashable, Codable {
     var effectiveStrokes: Int?
     var estimateApprovedAt: Time?
     var approvedBy: String?
+    /// Explicit manual input, retained independently when switching back to Index entry.
+    var manualStrokes: Int? = nil
+
+    /// Existing explicit strokes remain reusable without treating a calculated allowance as manual input.
+    var manualStrokeInput: Int? {
+        manualStrokes ?? (entryFormat == .strokes ? effectiveStrokes : nil)
+    }
 
     enum CodingKeys: String, CodingKey {
         case calculation
@@ -75,6 +82,7 @@ struct RoundHandicapResolution: Hashable, Codable {
         case effectiveStrokes = "effective_strokes"
         case estimateApprovedAt = "estimate_approved_at"
         case approvedBy = "approved_by"
+        case manualStrokes = "manual_strokes"
     }
 }
 
@@ -407,5 +415,74 @@ extension RoundParticipant {
     
     func toPlayer() -> Player {
         .init(playable: self)
+    }
+}
+
+/// Local editor buffers. Switching mode never uses a calculated allowance as input.
+struct RoundHandicapEntryDraft {
+    var format: HandicapEntryFormat = .strokes
+    var indexText = ""
+    var strokesText = ""
+
+    init() { }
+
+    init(participant: RoundParticipant, defaultFormat: HandicapEntryFormat) {
+        format = participant.handicapResolution?.entryFormat ?? defaultFormat
+        indexText = participant.handicapIndex.map { String(format: "%.1f", $0) } ?? ""
+        let manual = participant.handicapResolution?.manualStrokeInput
+        if let manual {
+            strokesText = String(manual)
+        } else if participant.handicapResolution == nil, defaultFormat == .strokes {
+            strokesText = String(participant.originalHandicap)
+        }
+    }
+
+    var text: String {
+        get { format == .courseHandicap ? indexText : strokesText }
+        set {
+            if format == .courseHandicap {
+                indexText = HandicapIndexEntry.filtered(newValue)
+            } else {
+                guard newValue.allSatisfy({ $0.isASCII && $0.isNumber }) else { return }
+                strokesText = String(newValue.prefix(6))
+            }
+        }
+    }
+
+    var value: Double? {
+        guard let value = Double(text), value.isFinite else { return nil }
+        return value
+    }
+
+    func applying(to participant: RoundParticipant, courseSegment: CourseSegment?,
+                  indexBasis: SeriesHandicapStrokeBasis?, maximum: Int?,
+                  approveEstimate: Bool = false, approvedBy: String? = nil) -> RoundParticipant {
+        guard let value else { return participant }
+        var updated = participant
+        // Keep an edited Index visible even when the user explicitly chooses manual strokes.
+        if format == .strokes, let index = Double(indexText), index.isFinite {
+            updated = HandicapCalculator.participant(updated, applying: index, format: .courseHandicap,
+                courseSegment: courseSegment, maximumHandicap: maximum, handicapStrokeBasis: indexBasis)
+        }
+        updated = HandicapCalculator.participant(updated, applying: value, format: format,
+            courseSegment: courseSegment, maximumHandicap: maximum, handicapStrokeBasis: indexBasis,
+            approveEstimate: approveEstimate, approvedBy: approvedBy)
+        if format == .courseHandicap, participant.handicapSnapshot == nil,
+           participant.leagueHandicapStrokesAtCreation == nil, let manual = Int(strokesText) {
+            updated.handicapResolution?.manualStrokes = manual
+        }
+        return updated
+    }
+}
+
+enum RoundHandicapEntryPresentation {
+    static func indexLabel(_ participant: RoundParticipant, basis: SeriesHandicapStrokeBasis?) -> String {
+        let holes = basis.map { " (\($0.holeCount)-hole)" } ?? ""
+        if participant.handicapSnapshot?.source == .commissionerRepair { return "Commissioner Override" + holes }
+        if participant.handicapSnapshot != nil || participant.seriesMemberID != nil { return "League Handicap Index" + holes }
+        if let input = participant.personalHandicapInput, input.index == participant.handicapIndex {
+            return "Personal Handicap Index (18-hole)"
+        }
+        return "Round Handicap Index" + holes
     }
 }

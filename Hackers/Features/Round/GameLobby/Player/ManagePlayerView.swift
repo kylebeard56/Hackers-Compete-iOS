@@ -19,6 +19,7 @@ struct ManagePlayerView: View, Loggable {
     let isSeriesCommissioner: Bool
     let canTransferHost: Bool
     let seriesHandicapMaximum: Int?
+    let approvalUserID: String?
 
     var snapshot: RoundSnapshot { roundSession.snapshot }
     @State var participant: RoundParticipant?
@@ -29,7 +30,8 @@ struct ManagePlayerView: View, Loggable {
         seriesHandicapLockActive: Bool = false,
         isSeriesCommissioner: Bool = false,
         canTransferHost: Bool = false,
-        seriesHandicapMaximum: Int? = nil
+        seriesHandicapMaximum: Int? = nil,
+        approvalUserID: String? = nil
     ) {
         _roundSession = StateObject(wrappedValue: roundSession)
         _participant = State(initialValue: participant)
@@ -37,16 +39,20 @@ struct ManagePlayerView: View, Loggable {
         self.isSeriesCommissioner = isSeriesCommissioner
         self.canTransferHost = canTransferHost
         self.seriesHandicapMaximum = seriesHandicapMaximum
+        self.approvalUserID = approvalUserID
     }
     
     @State private var name = ""
     @State private var tee: Tee? = nil
     @State private var showTeeSelection = false
-    @State private var handicapString = "0"
-    @State private var handicapValue: Double = 0
+    @State private var handicapDraft = RoundHandicapEntryDraft()
+    private var handicapString: String {
+        get { handicapDraft.text }
+        nonmutating set { handicapDraft.text = newValue }
+    }
+    private var handicapValue: Double { handicapDraft.value ?? 0 }
     @State private var hasConfirmedHandicapOverride = false
     @State private var showHandicapOverrideAlert = false
-    @State private var manualStrokes = false
     @State private var indexBasis: SeriesHandicapStrokeBasis?
     @State private var estimateApproved = false
     @State private var showCourseData = false
@@ -64,7 +70,7 @@ struct ManagePlayerView: View, Loggable {
     
     private var palette: DesignPalette { .init(theme: .primary, scheme: colorScheme) }
     private var canSave: Bool {
-        name.isPopulated && tee.exists && (strokesHandicapReadOnly || Double(handicapString) != nil)
+        name.isPopulated && tee.exists && (strokesHandicapReadOnly || handicapDraft.value != nil)
     }
 
     private var strokesHandicapReadOnly: Bool {
@@ -81,7 +87,7 @@ struct ManagePlayerView: View, Loggable {
     }
 
     private var effectiveHandicapEntryFormat: HandicapEntryFormat {
-        seriesHandicapLockActive || manualStrokes ? .strokes : snapshot.configuration.handicapEntryFormat
+        seriesHandicapLockActive ? .strokes : handicapDraft.format
     }
 
     private var commissionerStrokesValueColor: Color {
@@ -105,6 +111,12 @@ struct ManagePlayerView: View, Loggable {
             onScroll: { _ in }
         )
         .resignKeyboardOnTapGesture()
+        .toolbar {
+            ToolbarItemGroup(placement: .keyboard) {
+                Spacer()
+                Button("Done") { focus = nil }
+            }
+        }
         .sheet(isPresented: $showTeeSelection) {
             TeeSelectionSheet(
                 selectedTee: tee,
@@ -150,15 +162,13 @@ struct ManagePlayerView: View, Loggable {
         .task {
             name = participant?.name.fullName ?? ""
             tee = snapshot.tees.first(where: { $0.id == participant?.teeBoxID }) ?? snapshot.defaultTee
-            manualStrokes = participant?.handicapResolution?.entryFormat == .strokes
-            indexBasis = snapshot.handicapIndexBasis ?? participant?.handicapResolution?.calculation?.indexBasis
-            if effectiveHandicapEntryFormat == .courseHandicap {
-                handicapValue = participant?.handicapIndex ?? 0
-                handicapString = participant?.handicapIndex.map { String(format: "%.1f", $0) } ?? ""
-            } else {
-                handicapValue = Double(participant?.adjustedHandicap ?? 0)
-                handicapString = formattedHandicapInput(handicapValue)
+            handicapDraft = RoundHandicapEntryDraft(participant: participant ?? .init(),
+                defaultFormat: seriesHandicapLockActive ? .strokes : snapshot.configuration.handicapEntryFormat)
+            if seriesHandicapLockActive {
+                handicapDraft.format = .strokes
+                handicapDraft.strokesText = String(participant?.adjustedHandicap ?? 0)
             }
+            indexBasis = snapshot.handicapIndexBasis ?? participant?.handicapResolution?.calculation?.indexBasis
             groupID = participant?.groupID
             teamID = participant?.teamID
             
@@ -283,11 +293,41 @@ extension ManagePlayerView {
     private var strokesSection: some View {
         VStack(spacing: 8) {
             HStack(spacing: 12) {
-                Text(effectiveHandicapEntryFormat == .courseHandicap ? "Handicap Index" : "Strokes")
+                Text(effectiveHandicapEntryFormat == .courseHandicap
+                     ? RoundHandicapEntryPresentation.indexLabel(handicapComputationParticipant, basis: indexBasis)
+                     : "Strokes this round")
                     .fontStyle(kFontName, size: 15, weight: .semibold)
                     .foregroundStyle(palette.foregroundColor)
 
                 Spacer(minLength: 0)
+            }
+
+            if !seriesHandicapLockActive {
+                if snapshot.configuration.handicapEntryFormat == .courseHandicap {
+                    HandicapEntryModePicker(selection: Binding(
+                        get: { handicapDraft.format },
+                        set: { handicapDraft.format = $0; focus = nil }
+                    ))
+                }
+                if effectiveHandicapEntryFormat == .strokes {
+                    if let index = Double(handicapDraft.indexText) {
+                        Text("Handicap Index: \(ManualPersonalHandicap.display(index)) · preserved")
+                            .fontStyle(kFontName, size: 13, weight: .regular)
+                            .foregroundStyle(Color.neutral)
+                    }
+                    if let value = handicapDraft.value {
+                        Text("Strokes Received: \(min(Int(value), maximumHandicapValue))")
+                            .fontStyle(kFontName, size: 14, weight: .semibold)
+                    }
+                    Text("Whole-number strokes for this round only. Saved personal and league Indexes are unchanged.")
+                        .fontStyle(kFontName, size: 13, weight: .regular)
+                        .foregroundStyle(Color.neutral)
+                }
+                if handicapDraft.value == nil {
+                    Text(effectiveHandicapEntryFormat == .courseHandicap ? "Enter an Index to one decimal place." : "Enter a whole-number stroke allowance.")
+                        .fontStyle(kFontName, size: 13, weight: .regular)
+                        .foregroundStyle(Color.neutral)
+                }
             }
 
             if strokesHandicapReadOnly {
@@ -339,7 +379,8 @@ extension ManagePlayerView {
                 .accessibilityHint("Double tap to override the handicap for this round")
             } else {
                 HStack(spacing: 12) {
-                    TextField("0", text: $handicapString)
+                    TextField(effectiveHandicapEntryFormat == .courseHandicap ? "Index" : "Strokes", text: Binding(get: { handicapString }, set: { handicapString = $0 }))
+                        .accessibilityLabel(effectiveHandicapEntryFormat.displayName)
                         .fontStyle(kFontName, size: 17, weight: .regular)
                         .foregroundStyle(commissionerStrokesValueColor)
                         .keyboardType(effectiveHandicapEntryFormat == .courseHandicap ? .numbersAndPunctuation : .numberPad)
@@ -371,19 +412,7 @@ extension ManagePlayerView {
                         .foregroundStyle(Color.neutral3)
                 }
                 .borderedContentStyle(isActive: focus == .handicap, theme: palette.theme)
-                .onChange(of: handicapString) {
-                    if effectiveHandicapEntryFormat == .courseHandicap {
-                        let filtered = decimalHandicapText(handicapString)
-                        if filtered != handicapString {
-                            handicapString = filtered
-                        }
-                        handicapValue = Double(filtered) ?? 0
-                    } else if let value = Int(handicapString.filter(\.isNumber)) {
-                        let clamped = min(max(value, 0), maximumHandicapValue)
-                        handicapValue = Double(clamped)
-                        handicapString = String(clamped)
-                    }
-                }
+
             }
 
             if effectiveHandicapEntryFormat == .courseHandicap {
@@ -406,12 +435,7 @@ extension ManagePlayerView {
                     onUseEstimate: { estimateApproved = true },
                     onFixCourseData: { showCourseData = true },
                     onEnterStrokes: {
-                        if let value = Double(handicapString), let current = participant {
-                            participant = HandicapCalculator.participant(current, applying: value, format: .courseHandicap,
-                                courseSegment: participantCourseSegment, handicapStrokeBasis: indexBasis)
-                        }
-                        manualStrokes = true
-                        handicapString = ""
+                        handicapDraft.format = .strokes
                         focus = .handicap
                     }
                 )
@@ -623,15 +647,8 @@ extension ManagePlayerView {
         p.name = Name(name)
         p.teeBoxID = tee?.id ?? ""
         let courseSegment = participantCourseSegment
-        let computed = HandicapCalculator.participant(
-            p,
-            applying: handicapValue,
-            format: effectiveHandicapEntryFormat,
-            courseSegment: courseSegment,
-            maximumHandicap: maximumHandicapValue,
-            handicapStrokeBasis: indexBasis,
-            approveEstimate: estimateIsApproved
-        )
+        let computed = handicapDraft.applying(to: p, courseSegment: courseSegment,
+            indexBasis: indexBasis, maximum: maximumHandicapValue, approveEstimate: estimateIsApproved, approvedBy: approvalUserID)
         if seriesHandicapLockActive && isSeriesCommissioner {
             p = p.applyingLeagueHandicapOverride(
                 Int(handicapValue.rounded()),
@@ -666,7 +683,7 @@ extension ManagePlayerView {
 
     private var courseHandicapCalculation: CourseHandicapCalculation {
         HandicapCalculator.calculation(
-            index: Double(handicapString), participant: handicapComputationParticipant,
+            index: Double(handicapDraft.indexText), participant: handicapComputationParticipant,
             courseSegment: participantCourseSegment, indexBasis: indexBasis
         )
     }
@@ -679,13 +696,8 @@ extension ManagePlayerView {
     private var handicapComputationParticipant: RoundParticipant {
         var p = participant ?? .init()
         p.teeBoxID = tee?.id ?? p.teeBoxID
+        p.handicapIndex = Double(handicapDraft.indexText)
         return p
-    }
-
-    private func formattedHandicapInput(_ value: Double) -> String {
-        effectiveHandicapEntryFormat == .courseHandicap
-            ? value.formatted(.number.precision(.fractionLength(1)))
-            : "\(Int(value.rounded()))"
     }
 
     private func requestHandicapOverride() {
@@ -700,8 +712,7 @@ extension ManagePlayerView {
     private func revertHandicapOverride() {
         guard let updated = participant?.restoringLeagueHandicapComputedBaseline(),
               let baseline = updated.leagueHandicapComputedBaseline else { return }
-        handicapValue = Double(baseline)
-        handicapString = formattedHandicapInput(handicapValue)
+        handicapString = String(baseline)
         hasConfirmedHandicapOverride = false
         focus = nil
 
@@ -715,9 +726,6 @@ extension ManagePlayerView {
         }
     }
 
-    private func decimalHandicapText(_ text: String) -> String {
-        HandicapIndexEntry.filtered(text)
-    }
 }
 
 #Preview {

@@ -358,7 +358,8 @@ struct GameLobby: View, Loggable {
                 seriesHandicapLockActive: seriesHandicapLobbyLockActive,
                 isSeriesCommissioner: isSeriesCommissioner,
                 canTransferHost: roundManagementAccess.canTransferHost,
-                seriesHandicapMaximum: effectiveSeriesLeagueHandicapMaximum
+                seriesHandicapMaximum: effectiveSeriesLeagueHandicapMaximum,
+                approvalUserID: currentUserID
             )
             .presentationDragIndicator(.visible)
         }

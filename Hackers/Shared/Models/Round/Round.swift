@@ -337,8 +337,8 @@ enum HandicapEntryFormat: String, CaseIterable, Codable {
 
     var displayName: String {
         switch self {
-        case .strokes: return "Strokes"
-        case .courseHandicap: return "Course Handicap"
+        case .strokes: return "Strokes Received"
+        case .courseHandicap: return "Handicap Index"
         }
     }
 }

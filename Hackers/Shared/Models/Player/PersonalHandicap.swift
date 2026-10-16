@@ -204,11 +204,11 @@ struct RoundPersonalHandicapInput: Hashable, Codable {
 enum PersonalHandicapRoundPrefill {
     static func participant(
         _ participant: RoundParticipant, player: Player, configuration: RoundConfiguration,
-        isLeagueRound: Bool, status: RoundStatus = .lobby, capturedAt: Time = .init()
+        isLeagueRound: Bool, status: RoundStatus = .lobby, capturedAt: Time = .init(), selectingEntryFormat: Bool = false
     ) -> RoundParticipant {
         guard !isLeagueRound, status == .lobby, participant.seriesMemberID == nil,
               participant.leagueHandicapStrokesAtCreation == nil, participant.handicapSnapshot == nil,
-              participant.handicapIndex == nil, participant.handicapResolution == nil,
+              participant.handicapIndex == nil, (participant.handicapResolution == nil || selectingEntryFormat),
               participant.personalHandicapInput == nil,
               participant.playerID == player.id,
               configuration.handicapEntryFormat == .courseHandicap,
@@ -226,7 +226,8 @@ enum PersonalHandicapRoundPrefill {
         // Missing Index remains nil and unresolved, including for legacy integer profiles.
         return HandicapCalculator.recomputedParticipants(
             [updated], format: .courseHandicap, courseSegment: configuration.courses.first,
-            maximumHandicap: configuration.leagueHandicapMaximum, handicapStrokeBasis: .eighteenHole
+            maximumHandicap: configuration.leagueHandicapMaximum, handicapStrokeBasis: .eighteenHole,
+            changingEntryFormat: selectingEntryFormat
         )[0]
     }
 }

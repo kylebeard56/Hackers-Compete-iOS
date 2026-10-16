@@ -16,6 +16,7 @@ struct HandicapTextField: View {
     let maximumValue: Int
     let onDebouncedEdit: CallbackValue<Double>?
     let onRevertOverride: Callback?
+    let isUnresolved: Bool
 
     /// League-sourced values retain their lock provenance even when a commissioner overrides the round strokes.
     var isSeriesHandicapLocked: Bool = false
@@ -38,6 +39,7 @@ struct HandicapTextField: View {
         initialValue: Int,
         entryValue: Double? = nil,
         entryFormat: HandicapEntryFormat = .strokes,
+        isUnresolved: Bool = false,
         focusedField: FocusState<String?>.Binding,
         palette: DesignPalette,
         maximumValue: Int? = nil,
@@ -52,6 +54,7 @@ struct HandicapTextField: View {
         self.initialValue = initialValue
         self.entryValue = entryValue
         self.entryFormat = entryFormat
+        self.isUnresolved = isUnresolved
         self.palette = palette
         self.maximumValue = maximumValue ?? 36
         self.onDebouncedEdit = onDebouncedEdit
@@ -74,7 +77,7 @@ struct HandicapTextField: View {
     }
 
     private var displayText: String {
-        guard entryFormat == .courseHandicap else { return "\(initialValue)" }
+        guard entryFormat == .courseHandicap else { return isUnresolved ? "—" : "\(initialValue)" }
         guard let entryValue else { return "—" }
         return entryValue.formatted(.number.precision(.fractionLength(1)))
     }
@@ -122,8 +125,8 @@ struct HandicapTextField: View {
                 hasTyped = false
                 text = ""
             } else {
-                if hasTyped && (entryFormat != .courseHandicap || Double(text) != nil) {
-                    onDebouncedEdit?(debouncer.value)
+                if hasTyped && Double(text) != nil {
+                    onDebouncedEdit?(entryFormat == .courseHandicap ? (Double(text) ?? debouncer.value) : debouncer.value)
                 }
                 Task {
                     try? await Task.sleep(for: .milliseconds(200))
@@ -133,8 +136,11 @@ struct HandicapTextField: View {
                 }
             }
         }
+        .onChange(of: entryValue) {
+            if !isEditing { debouncer.value = entryValue ?? Double(initialValue) }
+        }
         .onChange(of: initialValue) {
-            debouncer.value = entryValue ?? Double(initialValue)
+            if !isEditing { debouncer.value = entryValue ?? Double(initialValue) }
         }
         .padding(.vertical, isSeriesHandicapLocked ? 0 : 6)
         .padding(.horizontal, isSeriesHandicapLocked ? 0 : 8)
@@ -237,12 +243,13 @@ struct HandicapTextField: View {
                 if entryFormat == .courseHandicap {
                     filtered = HandicapIndexEntry.filtered(newText)
                 } else {
-                    filtered = newText.filter { $0.isNumber }
+                    guard newText.allSatisfy({ $0.isASCII && $0.isNumber }) else { return }
+                    filtered = String(newText.prefix(6))
                 }
                 text = filtered
 
                 if entryFormat == .courseHandicap, Double(filtered) == nil { return }
-                let value = Double(filtered) ?? entryValue ?? Double(initialValue)
+                guard let value = Double(filtered), value.isFinite else { return }
                 if entryFormat == .courseHandicap {
                     debouncer.value = value
                 } else {
