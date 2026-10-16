@@ -1,75 +1,73 @@
-# Internal TestFlight readiness — 2026-10-16
+# Internal TestFlight release — October 16, 2026
 
-**Release decision: BLOCKED. No combined build was archived, uploaded, distributed externally, or published. Do not install an unvalidated combined candidate for the next round.**
+**PR #14–16 critical automated gates and clean simulator build pass. PR #17 has now been requested for this release; integration and renewed combined validation are pending. The superseded archive was stopped before upload. No installation availability is claimed yet.**
 
-## Included code and synchronization
+## Included code
 
-| PR | Included commits | Result |
-| --- | --- | --- |
-| #14 Course Handicap | `864af32c641f154b9be68a8fd100a73e4ce4f4cf` | Preserved unchanged, still open against main. |
-| #15 Personal Index and nine-hole calculations | `51f98a4a`, then reliability fixes `df7805a3` and `0fc3aa13` | Latest source head `0fc3aa13f72538912139246264e8be48460a1912`; draft. |
-| #16 Setup entry and keyboard dismissal | `b3faed3e`, merges `a88a9a07` and `8524cd40` | Includes latest #15 and #14 without rewriting either history; draft. |
+The release candidate comes from the existing PR #16 worktree and branch `codex/wdx6zf3848-handicap-entry`. It retains PR #14 at `864af32c641f154b9be68a8fd100a73e4ce4f4cf`, PR #15 through `0fc3aa13f72538912139246264e8be48460a1912` (including `51f98a4a` and the player/lobby refresh fixes), and PR #16's keyboard work including `b3faed3e`. The dependency merges remain `a88a9a07` and `8524cd40`. Main was not merged or modified. No production services were deployed.
 
-Both merges completed without conflicts. Ancestry checks confirm the required original commits are retained. Main was not merged or modified. Unrelated dirty/untracked files in the primary checkout were excluded.
+Validated code commit: **`9f3b2517681353c7e2e8e46a7aec0608d2c15c36`**. Subsequent report-only commits do not change the archived app code.
 
-## Reliability fixes
+## Release blockers fixed
 
-`RoundSession.addPlayers` now refreshes personal history on a best-effort, per-player basis. A disconnected network, timeout, permission/read failure, or absent result retains the saved personal profile and continues processing players. Successful refresh replaces only matching personal-profile data, preserving player identity and legacy integer allowances. The existing prefill chooses saved calculated/manual Indexes and their source/date. An integer stroke allowance never becomes an Index; missing personal input stays unresolved. League setup and frozen round participants are excluded.
+Signed Course Handicaps now survive the allowed-strokes cap and allocation pipeline. A Course Handicap of **-2** gives one stroke back on stroke-index **18** and **17**. Net scoring adds those strokes while gross scores remain unchanged. Nine-hole basis scaling retains the sign. Relative handicap normalization subtracts the signed lowest handicap; positive calculations and upper caps retain their existing behavior. No Wolf rules or league handicap policy changed.
 
-The primary-player path in `CourseSelectionViewModel.createRoundLobby` had the same optional-history dependency. It now continues with the saved profile on refresh failure. Net activation still requires valid resolution through the existing guard. Required round/player database writes can still fail when the entire network is unavailable; this fix removes the unnecessary history-refresh dependency, not the need to persist a new round.
+An unchanged manual Index save is a no-op that preserves its original effective date and provenance. Actual edits and clears now retain dated profile input revisions. Historical personal recalculation selects the manual/external input applicable at play time, after existing frozen-input and chronological calculated-history precedence. The Firestore transaction patches the profile revision history atomically with the current input and preserves concurrent unrelated fields. Completed scorecards and frozen participant allowances are never rewritten by this change. Legacy profiles decode without history; their current dated manual record seeds the first edit. Inputs already erased by an older app before this history existed cannot be reconstructed automatically.
 
-Ten regressions cover registered and reusable offline players, last saved calculated/manual values, source/date preservation, network/permission/timeouts, missing/legacy-only data, per-player continuation, success, empty results, league exclusion, completed snapshots, and primary-player lobby refresh. No handicap formulas, Wolf rules, league algorithms, or historical participant allowances were changed.
+Both original failing audit reproducers are now permanent tests in `HackersUnitTests/InternalReleaseBlockerAuditTests.swift`, alongside signed allocation, caps, gross/net, actual edits, clears, source changes, Codable and older-client compatibility checks. They are part of the normal full suite, not an isolated waived gate.
 
-## Confirmed release blockers
+The prior player-setup reliability fixes remain included: optional personal-history refresh failures retain valid saved personal input and permit adding players/lobby creation to proceed. Legacy integer allowances never become personal Indexes, missing data stays unresolved, and league/frozen inputs remain excluded. Required database writes still require connectivity.
 
-1. **Plus personal Index becomes scratch in actual net scoring.** On rating 72, slope 113, par 72, personal Index -2 correctly produces raw Course Handicap -2, but `allowedStrokes` clamps it to zero and the allocation functions return zero instead of the negative stroke. Reproduced against combined code: adjusted handicap expected -2, actual 0; stroke on stroke-index 18 expected -1, actual 0. See `CourseHandicapCalculation.allowedStrokes` and `ScoringEngine.strokesReceived`. This affects net results and fails the scoring release criterion. [USGA Appendix C](https://www.usga.org/content/usga/home-page/handicapping/roh/Content/rules/Appendix%20C%20Handicap%20Allowances.htm) explicitly allocates plus-two strokes back at stroke indexes 18 and 17.
-2. **Re-saving a manual Index changes unchanged historical personal calculations.** For three complete individual league cards with gross 10 on every hole, re-saving the same manual Index 10 at a later date removes its as-of-play fallback. Reproduced adjusted gross **118 → 162**, calculated personal Index **44.0 → 54.0**, and historical `personalIndexAtPlay` **10 → nil**, with no score changes. The replay reads only the current dated manual record. Fixing only an unchanged Save would not address real manual edits losing prior historical inputs. Frozen round allowances were not rewritten by this release patch, but personal history/calculated results are incorrect on refresh.
-3. **Course repository regression suite remains red.** Ten existing cases fail across cached detail/search, legacy recovery, tee identity, and summary selection. Several fixtures have incomplete scorecards while current code requires playable tee data; one search expectation conflicts with substring matching. These need reconciliation and a passing course/tee acceptance check before release. The test failures are confirmed; they are not all independently established production defects. Course logic was left unchanged.
+## Investigation of all ten course failures
 
-The two scoring/history reproducers are preserved in `InternalReleaseBlockerAuditTests.swift` beside this report. They were temporarily included in the unit-test target for the isolated gate run, then moved here so their intentionally failing assertions do not silently contaminate routine CI. **Moving them is not a fix or a release waiver.** Copy that file into `HackersUnitTests`, run `-only-testing:HackersUnitTests/InternalReleaseBlockerAuditTests`, and remove the temporary copy afterward to reproduce. Both must pass before upload.
-
-## Automated validation
-
-- PR #15 initial fix: **103 passed, 0 failed, 0 skipped**, `/private/tmp/hackers-release-pr15-refresh.xcresult`.
-- PR #15 final lobby/player fix: **115 passed, 0 failed, 0 skipped** (10 reliability, 68 personal calculation, 27 profile, 10 course-selection cases), `/private/tmp/hackers-release-pr15-lobby-refresh.xcresult`.
-- Combined focused release gate: **146 passed, 2 failed, 0 skipped**, `/private/tmp/hackers-internal-release-gate.xcresult`. The failures are the two confirmed blockers above. The passing cases include all 11 hosted keyboard regressions, 17 setup-entry cases, all 115 final #15 cases, and three new score-preservation/resume integrations.
-- Final complete suite: **964 passed, 10 failed, 5 skipped** (979 total), `/private/tmp/hackers-internal-combined-final.xcresult`. All 874 XCTest cases passed; the failures are the ten existing Swift Testing course repository cases. The corrected resume fixtures and all other tested code paths passed. The isolated two-test scoring/history audit is recorded separately above and remains a release blocker.
-- **Clean Sandbox simulator build passed** after `xcodebuild clean`; app installed/launched and the sign-in screen was visually confirmed. Build log: `/Users/Kirsten/Library/Developer/XcodeBuildMCP/workspaces/Hackers-Combined-f7828574fa53/logs/build_run_sim_2026-10-16T10-05-03-672Z_pid36428_3e3052c0.log`. Launch proof: `/var/folders/lv/l852tplx755dks4wvkz1f5mr0000gn/T/screenshot_optimized_21a78d1a-b109-4487-b743-f6c5a3f56758.jpg`.
-- `git diff --check` passes.
-
-The five skipped cases are existing OCR/chat/live-course diagnostic or preview cases; they are not claimed as passed.
-
-Tests ran on iPhone 17 Pro / iOS 26.3.1. The 68 personal calculation tests cover the latest nine-hole pairing/expected-nine model, chronological rebuilds, exclusions/corrections, and score history. The full suite covers scoring, team formats, leagues, snapshots, lifecycle/readiness, and live-round projections. PR #15’s expected-nine conversion remains the approved unofficial Hackers approximation, not an official USGA/GHIN calculation or certification of parity.
-
-## Requested flow coverage and limits
-
-| Flow | Evidence / remaining limit |
+| Previously failing test | Finding and resolution |
 | --- | --- |
-| Nine- and eighteen-hole setup | Automated course-selection/configuration, prefill and calculator fixtures; no signed-in device round-creation acceptance. |
-| Course and tees | Course-selection tests pass; ten repository/search/cache/tee tests fail. Release blocked. |
-| Registered/offline players | Injected refresh failures and successes preserve saved inputs; authenticated participant batch writes not exercised. Offline player means reusable guest identity; fully disconnected new-round writes are not promised. |
-| Index / Strokes Received and keypad | Both modes in HandicapEntryView, ManagePlayerView, and actual roster field/dismiss control; accessible 44-point Done, real UIKit text input/keyboard-hide events, preservation and no dismissal save/navigation. Roster uses a local host, not a signed-in end-to-end lobby. |
-| Course Handicap and allocation | Existing positive/basis/cap regressions pass; signed plus-handicap scoring fails as above. |
-| Gross/net display, scorecard and leaderboard | Automated model/projection/scoring cases; no full manual device acceptance. |
-| Hole-by-hole entry and existing-score preservation | Engine/projection tests plus three local integrations for nine/front/back/eighteen-hole navigation, durable resume, repeated hydration and retained score lookup. Authenticated remote write/reload/concurrency not tested. |
-| Background/lock/reopen/current hole | Durable UserDefaults/new AppSession and listener hydration tested; existing seven resume regressions pass. Real OS lock/unlock and physical-device suspension remain outstanding. |
-| Wolf/team/league | Rules unchanged; existing team/league regression suites run. No dedicated Wolf test or manual Wolf round was found/executed; no claim of a Wolf playthrough. |
+| `cacheHitAvoidsRemoteRequest` | Fixture claimed a playable cache hit but had no tees. Added a valid full/nine-rated 18-hole tee; the scorecard guard remains. |
+| `cachedSearchAvoidsRemoteRequest` | Shared provider fixture had no scorecard. Added playable tee data; cached search still avoids the remote. |
+| `cacheMissFetchesAndCachesRemoteCourse` | Incomplete detail fixture and retired numeric-ID expectation. Use a current opaque provider ID and playable data; await the existing asynchronous cache write. |
+| `deterministicGolfCourseAPIIdentity` | Obsolete expectation rejected “Club” despite intentional token-prefix search. Assert the match and retain an unrelated-query rejection. |
+| `legacyCacheRecovery` | Incomplete legacy fixture could not satisfy current playable-scorecard requirements. Supply valid cached tee data; verify no retired endpoint call. |
+| `legacySearchAndDetailAgree` | **Production defect:** cached detail skipped the canonicalization already used by search. Canonicalize cached provider course/tee identity before use, retaining holes, ratings and slopes. |
+| `scorecardSearchLoadsDetail` | Incomplete detail fixture. Resolve actual playable data; await persistence and assert a complete card without imposing background-task order. |
+| `searchRejectsNonProviderCacheRecords` | **Production defect:** provider compatibility search could reinterpret a saved manual course carrying a stray provider ID. Require provider origin. The main library still returns the saved manual course; external search remains an explicit action. |
+| `selectSearchSummaryLoadsDetail` | Incomplete shared detail fixture correctly prevented selection. A playable fixture now verifies selection; the separate empty-scorecard rejection still passes. |
+| `successfulSearchCachesAllResults` | Shared detail fixtures were incomplete and persistence assertions raced background saves. Supply playable data and await completion. |
 
-## Signing, version and TestFlight
+Additional summary-cache expectations now reflect the existing directory/scorecard distinction: directory metadata may be cached without fetching all details or pretending it is playable. No tests were disabled or newly skipped. All course repository tests now pass. No unrelated course failure remains outstanding.
 
-Existing Sandbox scheme/configuration uses automatic signing for team `28EF5GR4R6`, bundle `com.tigermindlabs.hackers.compete.sandbox`, marketing version **1.0.0**, with watch/live-activity companion targets. The checked-in build number is `2026.09.15.1`; the established workflow overrides it per upload. App Store Connect authentication using the existing deployment helper succeeded. This does not certify a new archive's signing/provisioning.
+## Validation evidence
 
-The previous **Hackers Compete Test** build **1.0.0 (2026.10.15.1)** is `VALID` / `IN_BETA_TESTING` as checked on October 16. It predates the combined code and is not the result of this work. Internal group **Beta** has access to all builds. External group **Beta Testers** exists; it was not modified.
+- Focused release run: **248 passed, 0 failed, 0 skipped**; `/private/tmp/hackers-release-focused-final.xcresult`. Includes all nine blocker regressions, all eleven hosted keyboard checks and the live course-provider diagnostic.
+- Full suite: **983 passed, 0 failed, 5 skipped** (988 total); `/private/tmp/hackers-release-full-fixed.xcresult`.
+- Earlier focused fix run: **219 passed, 0 failed, 0 skipped**; `/private/tmp/hackers-release-blockers-fixed-1.xcresult`.
+- `git diff --check` passes.
+- Clean simulator build **passed** after clean; installed and launched to sign-in. Log: `/Users/Kirsten/Library/Developer/XcodeBuildMCP/workspaces/Hackers-Combined-f7828574fa53/logs/build_run_sim_2026-10-16T10-43-31-034Z_pid36428_7187329f.log`. Screenshot: `/var/folders/lv/l852tplx755dks4wvkz1f5mr0000gn/T/screenshot_optimized_7a2ff3a3-b005-405d-8dae-acb02e09094c.jpg`.
 
-The Fastlane lane enables external distribution by default and was not used. Internal-only Xcode export options were prepared with `testFlightInternalTestingOnly=true` and automatic version management disabled. Installed Xcode documents that this flag disallows external TestFlight and App Store distribution; Apple also describes [internal-only distribution](https://developer.apple.com/tutorials/develop-in-swift/test-your-beta-app). No upload/export command was executed. No new build number was allocated, no signed release archive/IPA was created, and no new processing/tester-availability result exists. App Store Connect reads authenticated; validation stopped the release before new archive signing or upload authentication was tested.
+The standard five skipped cases are existing opt-in OCR/chat/live-course diagnostics or previews, not passed tests. The live provider diagnostic was separately enabled and passed: search returned two Verdae matches and current opaque ID `xnmmcgzp` loaded eight tees, including an 18-hole scorecard. This verifies the course service, not signed-in Firebase writes.
 
-Before retrying: resolve the two scoring/history blockers without changing Wolf/league policy or frozen round data; reconcile the ten course repository failures; rerun those isolated reproducers, the complete suite and clean simulator build; perform signed-in course/tee/round/scoring and lock/reopen smoke acceptance. Then allocate a build number newer than App Store Connect, archive the validated commit using the existing Sandbox configuration, and export/upload with `testFlightInternalTestingOnly=true`. Verify `VALID`, internal `IN_BETA_TESTING`, internal group access and no external group assignment. Do not merge to main or submit App Store/external beta review.
+Simulator: iPhone 17 Pro, iOS 26.3.1, Sandbox configuration. The full suite exercises positive and signed allocation, caps, 9/18-hole course setup, personal calculation/history, registered/reusable guest prefill, league/team scoring and snapshots. The three local resume integrations verify nine/front/back/eighteen-hole navigation, previously entered scores, durable current-hole restoration through a new AppSession, and repeated listener hydration without default-score overwrites.
 
-**Install-and-play answer: No new combined build is ready. Release remains blocked.** Physical-device and authenticated Firebase concurrency checks remain outstanding and were not claimed as passed.
+All 11 hosted keyboard regressions cover HandicapEntryView, ManagePlayerView and the actual roster input/dismiss control in both Handicap Index and Strokes Received modes. Done is visible and accessible with a 44-point target, closes actual UIKit numeric-keyboard focus, preserves the value, and does not trigger a save, navigation or clear. The roster's existing edit-driven debounce remains separate from dismissal. Ticket **wdx6zf0n03 is complete in PR #16** within this tested setup scope.
 
-## Full-suite reproduction
+Gross/net score projections, scorecard and leaderboard have automated coverage. No dedicated manual Wolf round was played; its rules were not modified. The personal expected-nine conversion remains the existing unofficial Hackers approximation, not USGA/GHIN certification.
 
-From the combined checkout, use a fresh result-bundle path:
+Existing compiler warnings remain, including recursive helper branches in `ModifierApplicator` for the unused `allPlayersMatch` predicate and the unused coordinate `distance(to:)` extension. Repository search found no shipped template or UI construction of that predicate and no callers of the coordinate extension; active course distance paths use CLLocation. They were not changed as part of this release. Custom/remote pipelines using that unsupported predicate are not covered by this internal acceptance. Existing Swift 6 migration warnings also remain; this candidate builds in the established Swift language mode.
+
+## Smoke-test limits
+
+The clean simulator app launches to sign-in. No signed-in app credentials were available, so authenticated Firebase round creation/write/reload, real concurrent-device scoring and a signed-in end-to-end course/tee/round smoke test were not performed. `xcrun devicectl list devices` returned **No devices found**; physical-device scoring, OS lock/unlock and real suspension acceptance remain outstanding. The durable resume/hydration tests are local integrations and do not claim those device checks passed. These limits are disclosed for internal testing; there are no remaining known critical scoring/history failures in the executed release checks.
+
+## Signing and internal distribution
+
+Planned candidate: **1.0.0 (2026.10.16.1)**. Previous latest Apple build is 2026.10.15.1. The PR #14–16 archive was stopped when PR #17 was added to scope. A fresh archive/upload/processing are pending after renewed validation. Internal group **Beta** has access to all builds; no external distribution is requested.
+
+The Sandbox app is **Hackers Compete Test**, bundle `com.tigermindlabs.hackers.compete.sandbox`, App Store Connect ID `6757443901`, team `28EF5GR4R6`. The established workflow overrides `CURRENT_PROJECT_VERSION` for the app and companion targets. The Fastlane lane enables external testing by default and was not used. Export/upload uses Xcode `app-store-connect`, automatic signing, `manageAppVersionAndBuildNumber=false`, and **`testFlightInternalTestingOnly=true`**. No external group assignment, beta/App Store review submission or main merge is authorized or performed.
+
+**Install-and-play: pending archive, upload and Apple processing.**
+
+## Reproduction
+
+Run the normal full unit suite from the PR #16 worktree with a fresh result path:
 
 ```sh
 xcodebuild -project Hackers.xcodeproj -scheme Sandbox -configuration Sandbox \
@@ -78,8 +76,8 @@ xcodebuild -project Hackers.xcodeproj -scheme Sandbox -configuration Sandbox \
   -clonedSourcePackagesDirPath /private/tmp/HackersCombinedDerived/SourcePackages \
   -disableAutomaticPackageResolution -enableAddressSanitizer NO \
   -enableCodeCoverage NO -parallel-testing-enabled NO \
-  -resultBundlePath /private/tmp/hackers-internal-combined-recheck.xcresult \
+  -resultBundlePath /private/tmp/hackers-release-recheck.xcresult \
   test CODE_SIGNING_ALLOWED=NO
 ```
 
-The isolated scoring/history reproducers are deliberately separate from this complete routine-suite count. Their two failures are additional evidence against release, not waived by the routine-suite result.
+For the live provider diagnostic, include `-only-testing:HackersUnitTests/GolfCourseAPILiveDiagnosticTests` and set `TEST_RUNNER_RUN_LIVE_GOLFCOURSE_API_TEST=1` in the invoking environment.
