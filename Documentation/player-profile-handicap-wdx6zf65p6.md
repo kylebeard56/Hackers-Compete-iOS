@@ -4,9 +4,9 @@ Ticket: <https://app.clickup.com/t/wdx6zf65p6> · Existing draft [PR #15](https:
 
 ## Current result and decisions
 
-The user approved a **WHS-inspired, unofficial Hackers personal calculator**, with **explicit assumed PCC = 0** when official PCC is absent. No paid GHIN integration is being added. Complete individual 18-hole cards now calculate directly from Hackers data; a provider is not required for that path.
+The user approved a **WHS-inspired, unofficial Hackers personal calculator**, explicitly including nine-hole estimates and **assumed PCC = 0** when official PCC is absent. Exact GHIN parity is not required. This continues all completed work at `d5077c2`; there is no paid GHIN integration.
 
-Eligible individual nines remain in history and qualifying-hole progress with an actual played-nine differential. Their **18-hole conversion remains pending** because the numeric USGA expected-score model is unavailable. No doubling, invented missing-hole score, or unapproved pairing approximation is implemented. Valid partial cards are retained with the specific limitations below. All labels identify a **Hackers Calculated Index**, never an officially issued GHIN Index.
+Complete individual 18-hole cards calculate directly from Hackers data. Initial eligible complete nines pair chronologically, and subsequent nines use a versioned expected-nine estimate based on the calculated personal Index before the round. All results are labeled **Hackers Calculated Index**, never an officially issued GHIN/USGA Index. Required conditions remain **54 actual qualifying holes and at least three valid 18-hole differential equivalents**.
 
 ## Personal calculation and eligibility
 
@@ -19,16 +19,38 @@ Eligible individual nines remain in history and qualifying-hole progress with an
 - Compute adjusted gross only for the personal projection: initial par+5, otherwise net double bogey with unrestricted personal Course Handicap (including plus strokes given back). Nine-hole Course Handicap uses the rounded half Index and actual rated nine. Gross scorecards, scoring caps and participant snapshots are never rewritten.
 - Record `pcc.value`, `pcc.verification` (`assumed`/`verified`) and `pcc.source` on each calculated/pending score. Missing official PCC uses `0 / assumed / Hackers assumption: official PCC unavailable`. A valid externally supplied `personal_handicap_pcc` on the canonical round takes precedence. Invalid values/provenance are rejected; a verified zero is distinct from assumed zero. No official PCC is computed from Hackers players’ results.
 - Standard 18-hole differential: `113 / slope × (adjusted gross − rating − PCC)`. Apply the published fewer-than-20 table; lowest eight of latest 20; maximum 54.0; published negative tie rounding; exceptional reductions against the unrounded differential; cumulative reductions over the then-latest 20 and dilution; Low Index and soft/hard caps. No league 0.96 factor.
-- Enforce 54 actual qualifying holes. Eligible nines count nine actual holes, not 18. Pending eligible conversions remain within the latest-20 candidate window and prevent a new calculated result while relevant; their unknown values are not dropped to manufacture a complete pool. An already established valid Index can remain effective, explicitly dated as the **last valid Index**, while a newer posting is pending. Corrections that remove every valid historical prefix remove that fallback and restore manual/unavailable state.
+- Enforce 54 actual qualifying holes and three valid differential equivalents. Eligible nines count nine actual holes, not 18. Select from the latest 20 **differential equivalents**, counting a pair once and mapping counting/pool membership back to both source cards. Unpaired initial nines advance progress without occupying an invented differential slot. Other unresolved eligible conversions (such as partial cards) retain their existing pending behavior rather than being silently omitted. A last valid Index can remain effective while such a later card is pending; corrections removing every valid historical prefix restore manual/unavailable state.
 
-## Nine-hole and partial-round boundaries
+## Approved nine-hole policy and approximation
 
-The USGA describes expected score as a standardized population-based value derived from Handicap Index, but the reviewed public pages do not supply the numeric model/data necessary to reproduce it here. Initial nines also need that processing after 54 actual holes. The repository has no provider.
+### Establishment: `hackers-paired-nine-v1`
 
-- Complete rated nine: apply published hole limits and half of the explicit PCC; store the **unrounded played-nine differential**. Do not use it as an 18-hole Index input without an authoritative normalized differential.
-- Partial 18-hole cards need a user-recorded valid reason (weather preventing continuation, darkness, injury/illness, match finished, or committee closure) and a complete exactly rated nine. Before an established personal Index, only that rated nine contributes to initial progress; other holes are not invented or counted as an 18-hole score.
-- With an established personal Index, retain actual qualifying played holes and adjusted gross, but leave the 18-hole differential pending. Do not scale Course Rating, guess expected values or fill unplayed holes. Picked-up holes without a valid individual score remain pending review.
-- Never claim that 54 holes alone guarantees a calculated result when required normalization inputs are missing. Six actual nines correctly show 54 holes, pending conversion, no plotted calculated Index, and manual/unavailable effective state.
+1. Traverse eligible individual rounds in play-date order, with stable round ID as the tie-breaker. Include regular and every league's individual cards in one personal record. Skip excluded/ineligible cards before pairing.
+2. Pair consecutive **complete rated nines** while no calculated personal Index exists. Eighteen-hole cards may occur between those nines and retain their own differential. A nine belongs to at most one pair.
+3. Sum the two **unrounded** played-nine differentials, including each card's own half-PCC adjustment; round the combined result to a tenth once. Retain both card IDs, one stable differential ID, method/version, original course/tee data and each card's gross/adjusted gross. The pair enters the chronological pool on the later nine's date.
+4. Activate only after 54 actual holes and three valid equivalents. Six nines produce three pairs; three eighteens produce three differentials; valid mixtures work. The manual Index is never a qualifying score or the source of an expected-nine estimate.
+5. An unpaired initial nine remains visible with its actual holes and played differential. If full eighteens establish an Index before another initial nine arrives, that leftover card stays unpaired; later nines use the established method and never reuse it. Chronological corrections can change those outcomes on replay.
+6. A synthetic initial pair does not trigger an exceptional-score reduction: it has no single pre-round established personal Index. Existing reductions from qualifying actual/expected-score entries, selection, rounding, maximum Index, Low Index and caps remain in force.
+
+### After establishment: `hackers-expected-nine-linear-v1`
+
+For each new complete nine, use the last valid **calculated personal Index from the chronological prefix before that round**, not the current profile, manual starting value, league Index, next result, or an unrelated frozen allowance:
+
+```text
+expectedNine = 0.52 × preRoundCalculatedPersonalIndex + 1.2
+playedNine = 113 / nineSlope × (nineAdjustedGross − nineRating − PCC / 2)
+estimated18 = roundToTenth(playedNine + expectedNine)
+```
+
+Both components remain unrounded until the final sum. Store the unrounded expected component, pre-round calculated Index, played component, final differential and method/version. Negative numbers represent plus handicaps. The estimate is deterministic, course-independent (the played component already adjusts course difficulty), and isolated in `PersonalHandicapNineHoleEstimation`. Its estimated 18-hole result joins the normal pool immediately and uses the same pre-round personal Index for existing exceptional-score checks. Actual holes remain nine.
+
+**Evidence and limitations.** The USGA's 2024 treatment infographic gives Index 14.0, played-nine differential 7.2 and combined 15.7; this approximation supplies 8.48 and rounds the sum to 15.7. Its Understanding Expected Score infographic gives Index 15.0 with expected-nine 9.0 on two courses; applying the actual rating/slope calculations reproduces combined 14.6 and 20.5. Those two nearby Index examples alone would be insufficient to validate a general model. We therefore also checked 13 independent representative points across Swiss Golf's published 2025 expected-differential table, from numeric Index -6.0 through 54.0: the approximation's rounded expected component matches each tested value. Regression tests retain these primary-source comparisons. This is empirical support for a simple approximation, **not** proof of the USGA's formula, underlying population distribution or GHIN equivalence.
+
+Known differences: initial chronological pairing differs from current WHS establishment processing; a linear model may diverge at untabulated values or after official model changes; plus handicaps better than +6 use explicitly documented linear extrapolation; assumed zero PCC may differ from official course/day conditions; score acceptability relies on Hackers data and user posting metadata. Neither the model nor coefficients are fitted from Hackers users' scores. No official PCC is generated.
+
+### Partial cards
+
+Existing partial-round validation/progress is preserved. A valid reason and a complete exactly rated nine are required. Before an established personal input, only that rated nine contributes to progress. With an established personal input, retain supported actual played holes and adjusted gross. Partial-round normalization beyond complete-nine cards remains pending: this approval covers complete-nine estimates, not invented missing-hole scores or scaled partial Course Ratings. No source scorecard is filled or modified.
 
 ## Persistence, recalculation and round creation
 
@@ -37,20 +59,13 @@ The USGA describes expected score as a standardized population-based value deriv
 - Publish only profile calculation/effective projections; manual input and unrelated player fields are preserved. Every transaction page and final summary checks a refresh-generation token claimed before reading inputs. A newer refresh or concurrent manual edit invalidates older publication. Large histories are paged under Firestore’s write limit; readers always derive from canonical sources rather than trusting a partially published cache.
 - Preserve collecting/qualified wire statuses for the earlier Sandbox PR #15 build, with an additive `calculation_pending` flag interpreted by the current client. New fields are optional for legacy player/round/V2 documents.
 - Regular creation refreshes the personal result before capturing it and uses PR #14’s Course Handicap/snapshot behavior. A refresh failure is surfaced instead of using a stale calculated cache. Round-only overrides, tee recalculation, historical participant snapshots and independent league calculations remain intact. Read-only registered profiles calculate locally without modifying another owner’s cache; persistent offline identities retain existing management permissions.
-- Profile reuses the league card/chart design: effective/manual/calculated (or last valid) values, chronological actual calculated points, qualifying scores/holes, pool/counting totals, and Counts / Pool / Pending / Unofficial rows. Each row exposes PCC provenance, gross/adjusted gross and available differential. No invented nine-hole values appear on the chart.
-
-## Proposed Hackers-specific option — approval required, not implemented
-
-A practical option is **paired-nine estimation**:
-
-1. Pair consecutive eligible complete individual nine-hole cards chronologically, across regular and league play. Sum their unrounded played-nine differentials, then round the combined value once. Never double a single nine.
-2. Require 54 actual holes and at least three combined/actual 18-hole differential equivalents. Use the existing published selection table and latest-20-equivalents window; date each pair at the later nine and retain references to both source cards.
-3. Label every such result **Hackers paired-nine estimate**, explicitly distinguish it from current WHS expected-score treatment, preserve the manual starting Index, and keep partial-round estimation pending.
-4. Continue published caps and exceptional reductions for actual 18-hole cards. Do not invent an exceptional-score comparison Index for a synthetic pair; the proposed first version would not apply an exceptional reduction triggered by a synthetic pair.
-
-This differs from current WHS/GHIN and is **only a proposal**. It is not enabled by the PCC-zero authorization.
+- Profile reuses the league card/chart design: effective/manual/calculated (or last valid) values, chronological calculated points including approved estimates, qualifying rounds/holes, differential pool/counting totals, and Counts / Pool / Pending / Unofficial rows. Exact versus estimated differential labels appear in history; pair membership shares one counting status. All viewers can open score details for course/tees, gross/adjusted gross, rating/slope, PCC provenance and method/version. The main profile keeps a short unofficial label and places methodology in an expandable explanation. Posting edits retain existing owner/offline permissions.
 
 ## Primary rule references reviewed
+
+- [USGA treatment of nine-hole scores, worked Index 14 example](https://www.usga.org/content/dam/usga/pdf/2024-revision/Detailed-Infographic-2024-9-hole-scores.pdf)
+- [USGA Understanding Expected Score, Index 15/two-course examples](https://www.usga.org/content/dam/usga/images/handicapping/infographics/Understanding%20Expected%20Score%20Infographic.pdf)
+- [Swiss Golf 2025 expected-nine differential table, -6.0 through 54.0](https://swissgolf.ch/media/9-hole_expected_score_differential_2025_2.pdf) — broad-range cross-check only; not an authorized GHIN feed.
 
 - [USGA 2.1a — authorized formats](https://www.usga.org/content/usga/home-page/handicapping/roh/Content/rules/2%201a%20Played%20in%20an%20Authorized%20Format%20of%20Play.htm)
 - [USGA 3.1b — net double bogey](https://www.usga.org/handicapping/roh/Content/rules/3%201b%20After%20a%20Handicap%20Index%20Has%20Been%20Established.htm), [6.1b — nine-hole Course Handicap](https://www.usga.org/handicapping/roh/Content/rules/6%201b%209%20holes.htm)
@@ -61,10 +76,25 @@ This differs from current WHS/GHIN and is **only a proposal**. It is not enabled
 
 ## Validation
 
-The final regression run passed **377 tests, zero failures/skips** on iPhone 17 Pro / iOS 26.3.1, confirmed with `xcresulttool get test-results summary`. This includes persisted-status compatibility and raw-nine-history safeguards. The preceding broader run passed 375 tests.
+The final relevant regression run passed **426 tests, zero failures/skips** on iPhone 17 Pro / iOS 26.3.1, confirmed by `xcresulttool get test-results summary`. It includes **64 personal calculation/eligibility tests (18 additional cases)** and 27 personal profile tests. The preserved `d5077c2` baseline had passed 377 tests.
 
-The separate **Sandbox simulator build passed**, with signing disabled and `ONLY_ACTIVE_ARCH=YES`. `git diff --check` passed. Validation used `xcodebuild` with project `Hackers.xcodeproj`, scheme/configuration `Sandbox`, the iPhone 17 Pro iOS 26.3.1 destination, and the suites below selected with `-only-testing:HackersUnitTests/<suite>`. The test result bundle is `/private/tmp/HackersPersonalHandicapAssumedPCC-ready.xcresult`; the separate build log is `/private/tmp/HackersPersonalHandicapAssumedPCC-ready-build.log`.
+The result bundle is `/private/tmp/HackersPersonalHandicapNineEstimates-final.xcresult`. Validation used project `Hackers.xcodeproj`, scheme/configuration `Sandbox`, signing disabled, Address Sanitizer/code coverage disabled, serial simulator tests, and these `-only-testing:HackersUnitTests/<suite>` selections:
 
-Suites: personal calculation/profile, Course Handicap, scoring engine, series creation/sync, commissioner overrides, league computation/history/accrual, Codable, activation, and V2 routing/model behavior. New tests exercise actual cards without provider fixtures, assumed/verified PCC, gross/adjusted gross and snapshot immutability, nines/partial progress and missing expected inputs, practice/exclusion, V2 individual league nines, corrections, manual transition, last-valid retention and cache projection.
+```text
+PersonalHandicapCalculationTests  PersonalHandicapProfileTests
+CourseHandicapCalculationRegressionTests  ScoringEngineTests
+SeriesRoundCreationMappingTests  RoundParticipantHandicapOverrideTests
+HandicapComputationTests  SeriesRoundSyncServiceTests
+SeriesHandicapHistoryTests  SeriesRoundHandicapAccrualTests
+SeriesRoundCodableTests  RoundActivationMatchupValidationTests
+SeriesRoundV2Tests  ScoreCarouselSelectionTests
+RoundSessionLifecycleTests  RoundSessionReloadTests
+LiveRoundResumeRegressionTests  AppSessionResumeTests
+FirebaseIDValidationTests  RoundSessionReadinessTests
+```
+
+The separate **Sandbox simulator build passed** with `CODE_SIGNING_ALLOWED=NO ONLY_ACTIVE_ARCH=YES`. A final incremental build also passed after tightening the unpaired-card detail-view condition. Logs: `/private/tmp/HackersPersonalHandicapNineEstimates-final-build.log` and `/private/tmp/HackersPersonalHandicapNineEstimates-delivery-build.log`. `git diff --check` passed. No league algorithm, completed scorecard, historical stroke allowance, PR #14, merge or deployment was changed by this work.
+
+Relevant suites cover personal calculation/profile, Course Handicap, scoring, commissioner overrides, league computation/history/accrual, series creation/sync, Codable, activation, V2 and round/session lifecycle behavior. New cases cover six nines, three eighteens, mixtures, cross-league pairing, unpaired initial cards, single-use pairing, pre-round expected estimates across plus/low/high Indexes, USGA/table comparisons, late/corrected/excluded scores, source-card versus differential pool counts, last-20 selection, manual retention, metadata persistence and frozen source snapshots.
 
 Live authenticated Firebase transactions/save-reload, concurrent multi-device publication, manual UI and physical-device acceptance were not exercised. Firebase admin inspection failed because existing credentials require reauthentication; no login, rules/database changes or deployment was attempted. Existing app-host Firebase permission/keychain and unpaired-watch messages can occur during unit tests. Source uses the existing `(default)` Firestore instance and SDK rather than provisioning or switching databases.

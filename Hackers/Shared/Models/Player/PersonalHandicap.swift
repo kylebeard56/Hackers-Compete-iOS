@@ -120,11 +120,16 @@ struct PersonalHandicapCalculation: Hashable, Codable {
     var inputFingerprint: String? = nil
     var retainedIndex: Double? = nil
     var retainedAsOf: Time? = nil
+    /// Differential IDs count paired nines once; score IDs retain both source cards.
+    var poolDifferentialIDs: [String]? = nil
+    var countingDifferentialIDs: [String]? = nil
+    var poolCount: Int { Set(poolDifferentialIDs ?? poolScoreIDs).count }
+    var countingCount: Int { Set(countingDifferentialIDs ?? countingScoreIDs).count }
 
     var qualifiedIndex: Double? {
         guard status == .qualified, basis == .eighteenHole, qualifyingHoles >= 54,
               Set(qualifyingScoreIDs).count >= 3, let index, index.isFinite, index <= 54,
-              !methodVersion.isEmpty else { return nil }
+              !methodVersion.isEmpty, poolDifferentialIDs.map({ Set($0).count >= 3 }) != false else { return nil }
         return index
     }
 
@@ -148,6 +153,7 @@ struct PersonalHandicapCalculation: Hashable, Codable {
         case asOf = "as_of", methodVersion = "method_version"
         case qualifyingScoreIDs = "qualifying_score_ids", qualifyingHoles = "qualifying_holes"
         case requiredHoles = "required_holes", poolScoreIDs = "pool_score_ids", countingScoreIDs = "counting_score_ids"
+        case poolDifferentialIDs = "pool_differential_ids", countingDifferentialIDs = "counting_differential_ids"
     }
 }
 
@@ -245,6 +251,23 @@ struct PersonalHandicapHistoryPoint: Hashable, Codable, Identifiable {
     }
 }
 
+enum PersonalHandicapDifferentialMethod: String, Codable {
+    case eighteenHole = "eighteen_hole"
+    case pairedNineEstimate = "hackers_paired_nine_estimate"
+    case expectedNineEstimate = "hackers_expected_nine_estimate"
+    case verifiedExternal = "verified_external"
+
+    var isEstimated: Bool { self == .pairedNineEstimate || self == .expectedNineEstimate }
+    var title: String {
+        switch self {
+        case .eighteenHole: return "Exact 18-hole differential"
+        case .pairedNineEstimate: return "Estimated · paired nines"
+        case .expectedNineEstimate: return "Estimated · expected nine"
+        case .verifiedExternal: return "Externally supplied differential"
+        }
+    }
+}
+
 struct PersonalHandicapScoreRecord: Hashable, Codable, Identifiable {
     var id: String { roundID }
     let playerID: String
@@ -253,7 +276,7 @@ struct PersonalHandicapScoreRecord: Hashable, Codable, Identifiable {
     let playedAt: Time
     let holeCount: Int
     let grossScore: Int?
-    let exclusionReason: String?
+    var exclusionReason: String?
     var pendingReason: String? = nil
     var qualifyingHoles: Int? = nil
     var adjustedGrossScore: Int? = nil
@@ -267,6 +290,20 @@ struct PersonalHandicapScoreRecord: Hashable, Codable, Identifiable {
     var partialReason: String? = nil
     var sourceCollection: String? = nil
     var playedAtSource: String? = nil
+    var courseID: String? = nil
+    var courseName: String? = nil
+    var teeID: String? = nil
+    var teeName: String? = nil
+    var courseRating: Double? = nil
+    var slopeRating: Int? = nil
+    var coursePar: Int? = nil
+    var differentialID: String? = nil
+    var differentialRoundIDs: [String]? = nil
+    var differentialMethod: PersonalHandicapDifferentialMethod? = nil
+    var differentialMethodVersion: String? = nil
+    /// Unrounded estimate and chronological calculated Index used, never a manual Index.
+    var expectedNineDifferential: Double? = nil
+    var expectedScoreIndex: Double? = nil
 
     enum CodingKeys: String, CodingKey {
         case playerID = "player_id", roundID = "round_id", roundTitle = "round_title", playedAt = "played_at"
@@ -278,6 +315,11 @@ struct PersonalHandicapScoreRecord: Hashable, Codable, Identifiable {
         case personalIndexAtPlay = "personal_index_at_play", sourceFingerprint = "source_fingerprint"
         case postingPurpose = "posting_purpose", partialReason = "partial_reason", sourceCollection = "source_collection"
         case playedAtSource = "played_at_source"
+        case courseID = "course_id", courseName = "course_name", teeID = "tee_id", teeName = "tee_name"
+        case courseRating = "course_rating", slopeRating = "slope_rating", coursePar = "course_par"
+        case differentialID = "differential_id", differentialRoundIDs = "differential_round_ids"
+        case differentialMethod = "differential_method", differentialMethodVersion = "differential_method_version"
+        case expectedNineDifferential = "expected_nine_differential", expectedScoreIndex = "expected_score_index"
     }
 }
 
@@ -336,6 +378,8 @@ extension PersonalHandicapCalculation {
         requiredHoles = try c.decodeIfPresent(Int.self, forKey: .requiredHoles)
         poolScoreIDs = try c.decode([String].self, forKey: .poolScoreIDs)
         countingScoreIDs = try c.decode([String].self, forKey: .countingScoreIDs)
+        poolDifferentialIDs = try c.decodeIfPresent([String].self, forKey: .poolDifferentialIDs)
+        countingDifferentialIDs = try c.decodeIfPresent([String].self, forKey: .countingDifferentialIDs)
         basis = try c.decode(SeriesHandicapStrokeBasis.self, forKey: .basis)
         blockers = try c.decodeIfPresent([String].self, forKey: .blockers)
         lowHandicapIndex = try c.decodeIfPresent(Double.self, forKey: .lowHandicapIndex)
@@ -356,6 +400,8 @@ extension PersonalHandicapCalculation {
         try c.encodeIfPresent(requiredHoles, forKey: .requiredHoles)
         try c.encode(poolScoreIDs, forKey: .poolScoreIDs)
         try c.encode(countingScoreIDs, forKey: .countingScoreIDs)
+        try c.encodeIfPresent(poolDifferentialIDs, forKey: .poolDifferentialIDs)
+        try c.encodeIfPresent(countingDifferentialIDs, forKey: .countingDifferentialIDs)
         try c.encode(basis, forKey: .basis)
         try c.encodeIfPresent(blockers, forKey: .blockers)
         try c.encodeIfPresent(lowHandicapIndex, forKey: .lowHandicapIndex)
