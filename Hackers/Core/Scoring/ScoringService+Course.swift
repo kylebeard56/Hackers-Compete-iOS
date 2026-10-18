@@ -17,6 +17,22 @@ extension ScoringService {
 }
 
 enum HandicapCalculator {
+    static func isValidDraft(_ text: String, format: HandicapEntryFormat) -> Bool {
+        let trimmed = text.trimmingCharacters(in: .whitespacesAndNewlines)
+        if trimmed.isEmpty { return format == .courseHandicap }
+        return Double(trimmed)?.isFinite == true
+    }
+
+    static func configuration(_ configuration: RoundConfiguration, settingHandicapBasis basis: SeriesHandicapStrokeBasis?, playedHoleCount: Int) -> RoundConfiguration {
+        var result = configuration
+        if configuration.handicapEntryFormat == .courseHandicap {
+            result.handicapIndexBasis = basis ?? .eighteenHole
+            // Course Handicap is already on the played segment's scale.
+            result.handicapStrokeBasis = .defaultBasis(holeCount: playedHoleCount)
+        } else { result.handicapStrokeBasis = basis }
+        return result
+    }
+
     static func calculation(
         index: Double?,
         tee: Tee?,
@@ -143,7 +159,7 @@ enum HandicapCalculator {
     }
 
     static func participant(
-        _ participant: RoundParticipant, applying input: Double, format: HandicapEntryFormat,
+        _ participant: RoundParticipant, applying input: Double?, format: HandicapEntryFormat,
         courseSegment: CourseSegment?, maximumHandicap: Int? = nil,
         handicapStrokeBasis: SeriesHandicapStrokeBasis? = .eighteenHole,
         approveEstimate: Bool = false, approvedBy: String? = nil
@@ -158,9 +174,9 @@ enum HandicapCalculator {
         let priorApproval = participant.handicapResolution
         let keepApproval = calculation == priorApproval?.calculation && priorApproval?.estimateApprovedAt != nil
         let approved = format == .courseHandicap && calculation?.status == .estimated && (approveEstimate || keepApproval)
-        let allowance = strokes(for: input, format: format, participant: participant, courseSegment: courseSegment,
+        let allowance = input.flatMap { strokes(for: $0, format: format, participant: participant, courseSegment: courseSegment,
                                 maximumHandicap: maximumHandicap, handicapStrokeBasis: handicapStrokeBasis,
-                                estimateApproved: approved)
+                                estimateApproved: approved) }
         if format == .courseHandicap {
             updated.handicapIndex = input
         } else if let allowance {

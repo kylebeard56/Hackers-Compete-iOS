@@ -100,3 +100,33 @@ xcodebuild -project Hackers.xcodeproj -scheme Sandbox -configuration Sandbox \
 - `HackersUnitTests/SeriesRoundSyncServiceTests.swift`
 - `HackersUnitTests/CourseHandicapCalculationRegressionTests.swift`
 - `Documentation/handicap-course-basis-wdx6zf368k.md` (this report)
+
+## Review-comment corrections
+
+Addresses all three findings in the [PR #14 audit](https://github.com/kylebeard56/Hackers-Compete-iOS/pull/14#issuecomment-6206802279), backported from the corresponding PR #15 fixes without importing personal-profile or plus-handicap functionality.
+
+- Changing the source Index basis in an unstarted Index-entry round also reconciles allocation basis to the actual played segment. A persisted nine-hole lobby with an old explicit eighteen-hole allocation now allocates its nine-hole Course Handicap once. The configured source basis remains separate; no historical participant or source scorecard is migrated.
+- Course/tee and Index-format/basis controls share the setters' lobby-only policy and explain the restriction after play starts. Manage Player closes setup sheets on a status change and preserves existing handicap/tee fields while saving unrelated live/paused edits. Existing league commissioner round-only overrides retain their dedicated permissions and behavior.
+- An empty Index is a valid setup draft, allowing gross-round name/group edits without inventing zero. The participant calculation accepts an optional Index and records unresolved effective strokes when absent. Net activation/application still requires resolved input; manual-stroke entry still requires a finite number.
+
+Three regression methods cover persisted nine-hole configuration decoding and allocation, empty/invalid drafts with unresolved net readiness, and unchanged course/tee/handicap setup in live, paused, complete and archived statuses. Draft validation lives in the existing shared `HandicapCalculator` so PR #14 builds independently of PR #15's profile models. The identical helper is used on the stacked PR #15 branch to keep the two implementations compatible.
+
+League Index algorithms, eligibility/accrual, caps, commissioner overrides, normalization and scoring formulas are unchanged. No completed-round snapshot or stored historical allowance is rewritten. Authenticated Firebase and manual UI/physical-device acceptance remain outside automated validation.
+
+The review-fix regression run passed **433 tests, 0 failures, 0 skips**, confirmed by `xcresulttool get test-results summary` on iPhone 17 Pro / iOS 26.3.1. Result bundle: `/private/tmp/HackersPR14Review-final.xcresult`; log: `/private/tmp/HackersPR14Review-final-tests.log`. It uses the Sandbox project/scheme/configuration, simulator destination and test flags documented above, with derived data `/private/tmp/HackersHandicapDerived`, and these suite selections:
+
+```text
+CourseHandicapCalculationRegressionTests  ScoringEngineTests
+SeriesRoundCreationMappingTests  RoundParticipantHandicapOverrideTests
+HandicapComputationTests  SeriesRoundSyncServiceTests
+SeriesHandicapHistoryTests  SeriesRoundHandicapAccrualTests
+SeriesRoundCodableTests  RoundActivationMatchupValidationTests
+SeriesRoundV2Tests  ScoreCarouselSelectionTests
+RoundSessionLifecycleTests  RoundSessionReloadTests
+LiveRoundResumeRegressionTests  AppSessionResumeTests
+FirebaseIDValidationTests  RoundSessionReadinessTests
+CourseSelectionViewModelTests  CompetitionScopeTests
+ScoringPipelineStageTests  SegmentResolverTests  GameTemplateValidationTests
+```
+
+The separate Sandbox simulator build passed with `CODE_SIGNING_ALLOWED=NO ONLY_ACTIVE_ARCH=YES`; log: `/private/tmp/HackersPR14Review-final-build.log`. `git diff --check` passed. No PR was merged and nothing was deployed.

@@ -15,7 +15,7 @@ extension RoundSession {
         let previousTeeID = snapshot.courseSegment?.defaultTee
         let previousTee = previousTeeID.flatMap { id in snapshot.tees.first(where: { $0.id == id }) }
 
-        guard snapshot.round.status == .lobby, previousTeeID != teeID, snapshot.courseSegment != nil else { return }
+        guard snapshot.round.status.allowsCourseHandicapSetupEdits, previousTeeID != teeID, snapshot.courseSegment != nil else { return }
 
         do {
             snapshot.round.configuration.courses[0].defaultTee = teeID
@@ -63,7 +63,7 @@ extension RoundSession {
     /// when the course is in our DB (PUT) or was edited from API (POST).
     func setCourseSegment(to segment: CourseSegment) async {
         addBreadcrumb()
-        guard snapshot.round.status == .lobby else { return }
+        guard snapshot.round.status.allowsCourseHandicapSetupEdits else { return }
         let previousSegment = snapshot.courseSegment
         let previousCourse = previousSegment.map { Course(info: $0.courseInfo) }
         let previousTee = previousSegment.flatMap { segment in

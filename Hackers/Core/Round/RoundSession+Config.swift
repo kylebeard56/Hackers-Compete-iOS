@@ -200,7 +200,7 @@ extension RoundSession {
     func setHandicapEntryFormat(_ format: HandicapEntryFormat, maximumHandicap: Int? = nil) async {
         addBreadcrumb()
         let previous = snapshot.configuration.handicapEntryFormat
-        guard snapshot.round.status == .lobby, !snapshot.participants.contains(where: { $0.seriesMemberID != nil }) else { return }
+        guard snapshot.round.status.allowsCourseHandicapSetupEdits, !snapshot.participants.contains(where: { $0.seriesMemberID != nil }) else { return }
         let resolvedFormat = format
 
         do {
@@ -241,16 +241,13 @@ extension RoundSession {
 
     func setHandicapStrokeBasis(_ basis: SeriesHandicapStrokeBasis?, maximumHandicap: Int? = nil) async {
         addBreadcrumb()
-        guard snapshot.round.status == .lobby, !snapshot.participants.contains(where: { $0.seriesMemberID != nil }) else { return }
+        guard snapshot.round.status.allowsCourseHandicapSetupEdits, !snapshot.participants.contains(where: { $0.seriesMemberID != nil }) else { return }
         let isIndex = snapshot.configuration.handicapEntryFormat == .courseHandicap
         let previous = isIndex ? snapshot.handicapIndexBasis : snapshot.configuration.handicapStrokeBasis
 
         do {
-            if isIndex {
-                snapshot.round.configuration.handicapIndexBasis = basis ?? .eighteenHole
-            } else {
-                snapshot.round.configuration.handicapStrokeBasis = basis
-            }
+            snapshot.round.configuration = HandicapCalculator.configuration(snapshot.configuration,
+                settingHandicapBasis: basis, playedHoleCount: snapshot.holeSegment.holeCount)
             _ = try await snapshot.round.put().get()
             if isIndex {
                 let recomputed = HandicapCalculator.recomputedParticipants(

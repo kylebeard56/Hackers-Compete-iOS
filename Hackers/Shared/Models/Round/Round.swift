@@ -256,6 +256,9 @@ enum RoundStatus: String, Codable {
     
     /// Soft deleted and therefore hidden from queries. Only settable by the creator.
     case archived
+    /// Course, tees and handicap inputs are frozen once scoring has started.
+    var allowsCourseHandicapSetupEdits: Bool { self == .lobby }
+
 }
 
 enum RoundTeamScoringMode: String, Codable, CaseIterable {
