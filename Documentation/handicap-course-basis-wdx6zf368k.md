@@ -130,3 +130,12 @@ ScoringPipelineStageTests  SegmentResolverTests  GameTemplateValidationTests
 ```
 
 The separate Sandbox simulator build passed with `CODE_SIGNING_ALLOWED=NO ONLY_ACTIVE_ARCH=YES`; log: `/private/tmp/HackersPR14Review-final-build.log`. `git diff --check` passed. No PR was merged and nothing was deployed.
+
+
+## Single personal Index entry — wdx6zf6nxe
+
+The subsequent [entry correction](https://app.clickup.com/t/wdx6zf6nxe) removes the personal Index-basis picker and ordinary Hole Basis menu. Ordinary registered/offline input uses one 18-hole Index, independent of selected round length or old shared-basis metadata. The existing Rule 6.1b formula remains unchanged; only its entry context is resolved consistently. Unstarted personal course/segment changes update allocation to the actual holes, retaining entered Indexes and explicit manual strokes. Completed-round metadata and internal league source bases are preserved.
+
+The four added regressions cover the supplied Paris Mountain front-nine inputs with independently checked hole pars (36), registered/offline 18→9→18 and tee changes with Codable reload, unchanged manual allowances, and internal nine-hole league/historical metadata. The Paris Mountain expectation is computed from the actual hole pars and supplied rating/slope, rather than taking the GHIN display as an input. Sources: [USGA Rule 6.1b](https://www.usga.org/content/usga/home-page/handicapping/roh/Content/rules/6%201b%209%20holes.htm), [White hole-by-hole scorecard](https://www.golfify.io/courses/paris-mountain-country-club), cross-checked with [18Birdies](https://18birdies.com/golf-courses/club/ae205950-86ac-11e4-8c28-020000005b00/paris-mountain-country-club). Provider yardages/ratings may differ from the supplied GHIN screenshot; production uses the selected tee's stored metadata.
+
+Upstream validation: **184 tests passed, 0 failed/skipped**, via XcodeBuildMCP, Sandbox / iPhone 17 Pro / iOS 26.3.1; `/private/tmp/HackersPersonalIndex14-verified.xcresult`. Includes Course Handicap, scoring, series creation/mapping and commissioner override regressions. The active release-candidate UI and full regression validation are performed on PR #16 after propagating through PR #15. This is a code correction, not a TestFlight release or device acceptance result. No production data is changed.

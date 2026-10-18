@@ -47,7 +47,9 @@ struct ManagePlayerView: View, Loggable {
     @State private var hasConfirmedHandicapOverride = false
     @State private var showHandicapOverrideAlert = false
     @State private var manualStrokes = false
-    @State private var indexBasis: SeriesHandicapStrokeBasis?
+    private var indexBasis: SeriesHandicapStrokeBasis? {
+        HandicapCalculator.entryIndexBasis(for: participant ?? .init(), configured: snapshot.handicapIndexBasis)
+    }
     @State private var estimateApproved = false
     @State private var showCourseData = false
     @State private var groupID: String? = nil
@@ -160,7 +162,6 @@ struct ManagePlayerView: View, Loggable {
             name = participant?.name.fullName ?? ""
             tee = snapshot.tees.first(where: { $0.id == participant?.teeBoxID }) ?? snapshot.defaultTee
             manualStrokes = participant?.handicapResolution?.entryFormat == .strokes
-            indexBasis = snapshot.handicapIndexBasis ?? participant?.handicapResolution?.calculation?.indexBasis
             if effectiveHandicapEntryFormat == .courseHandicap {
                 handicapValue = participant?.handicapIndex ?? 0
                 handicapString = participant?.handicapIndex.map { String(format: "%.1f", $0) } ?? ""
@@ -379,7 +380,7 @@ extension ManagePlayerView {
                             .accessibilityHint("Restores the league-computed handicap for this round")
                     }
 
-                    Text(effectiveHandicapEntryFormat == .courseHandicap ? "\(indexBasis?.holeCount ?? 18)-hole Index" : "Max: \(maximumHandicapValue)")
+                    Text(effectiveHandicapEntryFormat == .courseHandicap ? "Handicap Index" : "Max: \(maximumHandicapValue)")
                         .fontStyle(kFontName, size: 15, weight: .regular)
                         .foregroundStyle(Color.neutral3)
                 }
@@ -400,13 +401,6 @@ extension ManagePlayerView {
             }
 
             if effectiveHandicapEntryFormat == .courseHandicap {
-                if indexBasis == nil {
-                    Picker("Index basis", selection: $indexBasis) {
-                        Text("Choose Index basis").tag(nil as SeriesHandicapStrokeBasis?)
-                        Text("9 holes").tag(SeriesHandicapStrokeBasis.nineHole as SeriesHandicapStrokeBasis?)
-                        Text("18 holes (WHS)").tag(SeriesHandicapStrokeBasis.eighteenHole as SeriesHandicapStrokeBasis?)
-                    }
-                }
                 CourseHandicapStatusView(
                     calculation: courseHandicapCalculation,
                     strokes: courseHandicapCalculation.allowedStrokes(maximum: maximumHandicapValue, estimateApproved: estimateIsApproved),
