@@ -46,4 +46,8 @@ jobs:
           -only-testing:HackersUnitTests/InternalReleaseBlockerAuditTests
           -only-testing:HackersUnitTests/ScoringRobustnessTests
           -only-testing:HackersUnitTests/GolfCourseRepositoryTests
+          -only-testing:HackersUnitTests/RoundHandicapEntryTests
+          -only-testing:HackersUnitTests/CourseHandicapCalculationRegressionTests
+          -only-testing:HackersUnitTests/HandicapKeyboardDismissalTests
+          -only-testing:HackersUnitTests/ScoringEngineTests
           CODE_SIGNING_ALLOWED=NO

@@ -245,6 +245,142 @@ final class RoundHandicapEntryTests: XCTestCase {
         XCTAssertEqual(RoundHandicapEntryDraft(participant: player, defaultFormat: .courseHandicap).text, "12")
     }
 
+    func testRosterIndexPreviewUsesSelectedNineBeforeParticipantRecalculationFinishes() {
+        let player = indexed(course(.full18))
+        let front = course(.front9)
+        let expected = HandicapCalculator.calculation(index: 22.6, participant: player,
+            courseSegment: front, indexBasis: .eighteenHole).courseHandicap!
+        XCTAssertNotEqual(expected, player.handicapResolution?.calculation?.courseHandicap)
+        let label = CourseHandicapRosterDisplay.label(participant: player, courseSegment: front,
+            handicapStrokeBasis: .eighteenHole, defaultTee: nil, tees: [], maximumHandicap: 21,
+            previewCurrentSelection: true)
+        XCTAssertEqual(label, "Course HCP: \(expected) · Strokes Received: \(min(expected, 21))")
+        XCTAssertEqual(player.handicapIndex, 22.6)
+    }
+
+    func testOfflineTemporaryIndexCalculatesFromRoundDefaultTee() {
+        let segment = course(.front9)
+        let guest = RoundParticipant(id: "guest", name: Name("Guest", "Player"), teeBoxID: "")
+        let resolved = HandicapCalculator.participant(guest, applying: 17.7, format: .courseHandicap,
+            courseSegment: segment, handicapStrokeBasis: .eighteenHole)
+        XCTAssertTrue(resolved.isOffline)
+        XCTAssertEqual(resolved.handicapIndex, 17.7)
+        XCTAssertEqual(resolved.handicapResolution?.calculation?.status, .exact)
+        XCTAssertNotNil(resolved.handicapResolution?.effectiveStrokes)
+        let label = CourseHandicapRosterDisplay.label(participant: resolved, courseSegment: segment,
+            handicapStrokeBasis: .eighteenHole, defaultTee: segment.tee(from: "black"),
+            tees: segment.courseInfo.tees, maximumHandicap: nil)
+        XCTAssertTrue(label?.contains("Course HCP:") == true)
+        XCTAssertFalse(label?.contains("Unavailable") == true)
+    }
+
+    func testMixedRosterEntryUsesPerPlayerModeInsteadOfRoundWideIndex() throws {
+        let indexPlayer = indexed()
+        let manualPlayer = HandicapCalculator.participant(indexPlayer, applying: 12, format: .strokes, courseSegment: course())
+        let restored = try JSONDecoder().decode(RoundParticipant.self, from: JSONEncoder().encode(manualPlayer))
+        XCTAssertEqual(CourseHandicapRosterDisplay.entryFormat(for: indexPlayer, defaultFormat: .strokes), .courseHandicap)
+        XCTAssertEqual(CourseHandicapRosterDisplay.entryFormat(for: restored, defaultFormat: .courseHandicap), .strokes)
+        XCTAssertEqual(restored.handicapIndex, 22.6)
+        let draft = RoundHandicapEntryDraft(participant: restored, defaultFormat: .courseHandicap)
+        XCTAssertEqual(draft.format, .strokes)
+        XCTAssertEqual(draft.text, "12")
+        XCTAssertEqual(draft.indexText, "22.6")
+        XCTAssertEqual(CourseHandicapRosterDisplay.label(participant: restored, courseSegment: course(.front9),
+            handicapStrokeBasis: .eighteenHole, defaultTee: nil, tees: [], maximumHandicap: nil,
+            previewCurrentSelection: true), "Strokes Received: 12 (manual)")
+    }
+
+    func testRosterPreviewRequiresNewEstimateApprovalWhenSelectionChanges() throws {
+        let segment = course(.front9, estimated: true)
+        let approved = HandicapCalculator.participant(indexed(), applying: 22.6, format: .courseHandicap,
+            courseSegment: segment, maximumHandicap: 21, approveEstimate: true, approvedBy: "host")
+        let strokes = try XCTUnwrap(approved.handicapResolution?.effectiveStrokes)
+        let unchanged = CourseHandicapRosterDisplay.label(participant: approved, courseSegment: segment,
+            handicapStrokeBasis: .eighteenHole, defaultTee: nil, tees: [], maximumHandicap: 21,
+            previewCurrentSelection: true)
+        XCTAssertTrue(unchanged?.contains("Strokes Received: \(strokes)") == true)
+        let changed = CourseHandicapRosterDisplay.label(participant: approved,
+            courseSegment: course(.back9, slope: 120, estimated: true), handicapStrokeBasis: .eighteenHole,
+            defaultTee: nil, tees: [], maximumHandicap: 21, previewCurrentSelection: true)
+        XCTAssertTrue(changed?.contains("Estimated Course HCP:") == true)
+        XCTAssertTrue(changed?.contains("Confirmation required") == true)
+        XCTAssertFalse(changed?.contains("Strokes Received:") == true)
+        XCTAssertNotNil(approved.handicapResolution?.estimateApprovedAt)
+        XCTAssertEqual(approved.handicapResolution?.effectiveStrokes, strokes)
+    }
+
+    func testClearedIndexAndMissingCurrentCourseNeverPreviewOldAllowance() {
+        let original = indexed()
+        var cleared = original
+        cleared.handicapIndex = nil
+        for (player, segment) in [(cleared, course()), (original, nil)] {
+            XCTAssertEqual(CourseHandicapRosterDisplay.label(participant: player, courseSegment: segment,
+                handicapStrokeBasis: .eighteenHole, defaultTee: nil, tees: [], maximumHandicap: 21,
+                previewCurrentSelection: true), "Course HCP: Unavailable")
+        }
+        XCTAssertEqual(original.handicapIndex, 22.6)
+        XCTAssertEqual(original.handicapResolution?.effectiveStrokes, 21)
+    }
+
+    func testSavedHistoricalCalculationAndFrozenLeagueSeedKeepStoredAllowance() {
+        var player = indexed()
+        let saved = "Course HCP: 31 · Strokes Received: 21"
+        XCTAssertEqual(CourseHandicapRosterDisplay.label(participant: player, courseSegment: course(.front9),
+            handicapStrokeBasis: .nineHole, defaultTee: nil, tees: [], maximumHandicap: 21), saved)
+        player.leagueHandicapStrokesAtCreation = 21
+        XCTAssertEqual(CourseHandicapRosterDisplay.label(participant: player, courseSegment: course(.front9),
+            handicapStrokeBasis: .nineHole, defaultTee: nil, tees: [], maximumHandicap: 21,
+            previewCurrentSelection: true), saved)
+        XCTAssertEqual(player.handicapResolution?.calculation?.indexBasis, .eighteenHole)
+    }
+
+    func testMixedRegisteredOfflineAndManualEntriesKeepAllowancesThroughNavigationAndReload() throws {
+        var segment = course()
+        let alternate = Tee(id: "red", name: "Red", gender: "female", totalHoles: 18,
+            holes: segment.courseInfo.tees[0].holes, ratingFull: 70, slopeFull: 115,
+            ratingFront: 34, slopeFront: 112, ratingBack: 36, slopeBack: 119)
+        segment.courseInfo.tees.append(alternate)
+        let profiles = [Player(id: "registered", userID: "user", name: .init("Registered", "Player")),
+                        Player(id: "guest", userID: nil, name: .init("Offline", "Player"))]
+        var players = profiles.enumerated().map { offset, profile in
+            HandicapCalculator.participant(RoundParticipant(player: profile, teeBoxID: offset == 0 ? "black" : "red"),
+                applying: 22.6, format: .courseHandicap, courseSegment: segment, maximumHandicap: 21)
+        }
+        var manual = HandicapCalculator.participant(players[1], applying: 15, format: .strokes, courseSegment: segment)
+        manual.id = "manual"
+        players.append(manual)
+        let frozenOriginal = players
+        for holes in [HoleSegment.full18, .front9, .back9, .full18] {
+            segment.holeRange = holes.holeRange
+            let configuration = HandicapCalculator.personalConfiguration(
+                .init(courses: [segment], handicapEntryFormat: .courseHandicap), playedHoleCount: holes.holeCount)
+            players = HandicapCalculator.recomputedParticipants(players, format: .courseHandicap,
+                courseSegment: segment, maximumHandicap: 21, handicapStrokeBasis: configuration.handicapIndexBasis)
+            players = try JSONDecoder().decode([RoundParticipant].self, from: JSONEncoder().encode(players))
+            for player in players.prefix(2) {
+                let expected = HandicapCalculator.calculation(index: 22.6, participant: player,
+                    courseSegment: segment, indexBasis: .eighteenHole)
+                XCTAssertEqual(player.handicapResolution?.calculation, expected)
+                XCTAssertEqual(player.adjustedHandicap, expected.allowedStrokes(maximum: 21))
+                XCTAssertTrue(HandicapCalculator.isReady(player, format: .courseHandicap,
+                    courseSegment: segment, indexBasis: .eighteenHole))
+            }
+            for player in players {
+                let tee = try XCTUnwrap(segment.tee(from: player.teeBoxID))
+                let allocated = holes.holeRange.holeNumbers.reduce(0) { total, hole in
+                    total + ScoringEngine.strokesReceived(handicap: player.adjustedHandicap, holeNumber: hole,
+                        holes: tee.holes, playedHoleNumbers: holes.holeRange.holeNumbers, useHandicaps: true,
+                        handicapStrokeBasis: configuration.resolvedHandicapStrokeBasis(holeCount: holes.holeCount))
+                }
+                XCTAssertEqual(allocated, player.adjustedHandicap)
+                XCTAssertEqual(player.handicapIndex, 22.6)
+            }
+            XCTAssertEqual(players[2], manual)
+        }
+        XCTAssertEqual(frozenOriginal[0].handicapResolution?.calculation?.segment, .full18)
+        XCTAssertEqual(frozenOriginal[2], manual)
+    }
+
     func testEmptyAndSignedDecimalDraftValidationDoesNotInventZero() {
         var draft = RoundHandicapEntryDraft(participant: .init(), defaultFormat: .courseHandicap)
         for invalid in ["", "-", ".", "-."] {

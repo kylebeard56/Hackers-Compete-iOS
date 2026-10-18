@@ -141,11 +141,72 @@ final class HandicapKeyboardDismissalTests: XCTestCase {
         XCTAssertEqual(try screen.field("handicapEntryInput").text, "17.7")
     }
 
-    private func personalFrontNine() -> CourseSegment {
+    func testProductionLobbyUsesPlayerEntryModesAndPreviewsCourseChangesBeforeSavedPlayersRefresh() async throws {
+        let front = personalFrontNine(backRating: 34.5, backSlope: 130)
+        var back = front
+        back.holeRange = HoleSegment.back9.holeRange
+        var full = front
+        full.holeRange = HoleSegment.full18.holeRange
+        let player = HandicapCalculator.participant(
+            RoundParticipant(id: "roster-index", name: .init("Index", "Player"), teeBoxID: "white"),
+            applying: 17.7, format: .courseHandicap, courseSegment: full)
+        var manual = HandicapCalculator.participant(player, applying: 12, format: .strokes, courseSegment: full)
+        manual.id = "roster-manual"
+        manual.name = .init("Manual", "Player")
+        let session = RoundSession()
+        session.snapshot = .init(round: Round(id: "local-roster-test", status: .lobby,
+            configuration: .init(courses: [full], handicapEntryFormat: .courseHandicap)),
+            participants: [manual])
+        session.snapshot.round.configuration.handicapsEnabled = true
+        // No active round/series and no authentication restoration: this hosts
+        // the production lobby without attaching Firebase listeners or saving.
+        let app = AppSession(restoresAuthentication: false)
+        let screen = try HostedScreen(GameLobby().environmentObject(app).environmentObject(session))
+        defer { screen.close() }
+        try await pause()
+        screen.scrollToBottom()
+        let initialLabels = try await waitForLobbyLabels(in: screen, containing: "Manual Player")
+        XCTAssertTrue(initialLabels.contains("Strokes"), initialLabels.joined(separator: " | "))
+        XCTAssertTrue(initialLabels.contains { $0.contains("Strokes Received: 12 (manual)") })
+        XCTAssertFalse(initialLabels.contains { $0.contains("Manual Player") && $0.contains("Handicap Index") })
+
+        session.snapshot.participants = [player, manual]
+        for selection in [front, back, full] {
+            session.snapshot.round.configuration.courses = [selection]
+            try await pause()
+            screen.scrollToBottom()
+            let labels = try await waitForLobbyLabels(in: screen, containing: "Index Player")
+            let expected = try XCTUnwrap(HandicapCalculator.calculation(index: 17.7, participant: player,
+                courseSegment: selection, indexBasis: .eighteenHole).courseHandicap)
+            XCTAssertTrue(labels.contains("HCP"), labels.joined(separator: " | "))
+            XCTAssertTrue(labels.contains { $0.contains("Course HCP: \(expected) · Strokes Received: \(expected)") }, labels.joined(separator: " | "))
+            XCTAssertTrue(labels.contains { $0.contains("Strokes Received: 12 (manual)") })
+            XCTAssertFalse(labels.contains { $0.contains("Manual Player") && $0.contains("Handicap Index") })
+            attach(screen, name: "CourseHandicap-ProductionLobby-\(selection.holeSegment)")
+        }
+        XCTAssertEqual(session.snapshot.participants, [player, manual], "A display preview must not rewrite participant records")
+        screen.scrollToBottom()
+        try await pause()
+        attach(screen, name: "CourseHandicap-ProductionLobby-MixedEntries")
+    }
+
+    private func waitForLobbyLabels(in screen: HostedScreen, containing text: String) async throws -> [String] {
+        // SwiftUI creates the full lobby's accessibility tree asynchronously.
+        // Wait for the actual row rather than interpreting an empty first tree.
+        for _ in 0..<30 {
+            let labels = screen.accessibilityLabels
+            if labels.contains(where: { $0.contains(text) }) { return labels }
+            try await Task.sleep(for: .milliseconds(100))
+        }
+        XCTFail("Lobby did not render \(text): \(screen.accessibilityLabels)")
+        return screen.accessibilityLabels
+    }
+
+    private func personalFrontNine(backRating: Double? = nil, backSlope: Int? = nil) -> CourseSegment {
         let pars = [5, 4, 5, 4, 3, 4, 4, 3, 4, 4, 3, 5, 4, 5, 4, 3, 4, 4]
         let tee = Tee(id: "white", name: "White", gender: "male", totalHoles: 18,
             holes: pars.enumerated().map { Hole(number: $0.offset + 1, par: $0.element, yardage: 300, handicap: $0.offset + 1) },
-            ratingFull: 68.2, slopeFull: 129, ratingFront: 33.7, slopeFront: 128, ratingBack: nil, slopeBack: nil)
+            ratingFull: 68.2, slopeFull: 129, ratingFront: 33.7, slopeFront: 128, ratingBack: backRating, slopeBack: backSlope)
         return CourseSegment(courseInfo: .init(id: "paris-mountain-test", name: "Paris Mountain Country Club", totalHoles: 18, tees: [tee]),
             holeRange: HoleSegment.front9.holeRange, defaultTee: tee.id)
     }
@@ -351,6 +412,15 @@ private final class HostedScreen {
     }
 
     var accessibilityLabels: [String] { accessibilityNodes().compactMap(\.accessibilityLabel) }
+
+    func scrollToBottom() {
+        func scrollViews(in view: UIView) -> [UIScrollView] {
+            (view as? UIScrollView).map { [$0] } ?? view.subviews.flatMap { scrollViews(in: $0) }
+        }
+        for scroll in scrollViews(in: host.view) where scroll.contentSize.height > scroll.bounds.height {
+            scroll.setContentOffset(CGPoint(x: 0, y: max(0, scroll.contentSize.height - scroll.bounds.height)), animated: false)
+        }
+    }
 
     func button(_ label: String) throws -> NSObject {
         return try XCTUnwrap(accessibilityNodes().first {

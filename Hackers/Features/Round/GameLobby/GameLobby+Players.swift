@@ -469,6 +469,15 @@ extension GameLobby {
         }
     }
     
+    private var rosterHandicapColumnTitle: String {
+        if seriesHandicapLobbyLockActive { return "Strokes" }
+        let modes = snapshot.participants.map {
+            CourseHandicapRosterDisplay.entryFormat(for: $0, defaultFormat: snapshot.configuration.handicapEntryFormat)
+        }
+        if modes.contains(.courseHandicap) && modes.contains(.strokes) { return "HCP" }
+        return (modes.first ?? snapshot.configuration.handicapEntryFormat) == .strokes ? "Strokes" : "Index"
+    }
+
     private var rosterContent: some View {
         VStack(spacing: 12) {
             Text("\(snapshot.participants.count) players".uppercased())
@@ -513,7 +522,7 @@ extension GameLobby {
                 Spacer(minLength: 0)
                 
                 if snapshot.configuration.useHandicaps {
-                    Text(seriesHandicapLobbyLockActive || handicapEntryFormat == .strokes ? "Strokes" : "Index")
+                    Text(rosterHandicapColumnTitle)
                         .fontStyle(kFontName, size: 13, weight: .medium)
                         .foregroundStyle(Color.neutral)
                         .frame(width: seriesHandicapLobbyLockActive && isSeriesCommissioner ? 112 : 64)
@@ -547,7 +556,9 @@ extension GameLobby {
 
                     if snapshot.configuration.useHandicaps {
                         let seriesLock = seriesHandicapLobbyLockActive
-                        let rosterEntryFormat = participant.handicapResolution?.entryFormat ?? snapshot.configuration.handicapEntryFormat
+                        let rosterEntryFormat = CourseHandicapRosterDisplay.entryFormat(
+                            for: participant, defaultFormat: snapshot.configuration.handicapEntryFormat
+                        )
                         HandicapTextField(
                             id: participant.id,
                             initialValue: participant.adjustedHandicap,
@@ -1297,8 +1308,12 @@ extension GameLobby {
     }
 
     private func courseHandicapSubtitle(for participant: RoundParticipant) -> String? {
-        guard snapshot.configuration.useHandicaps,
-              snapshot.configuration.handicapEntryFormat == .courseHandicap else {
+        guard snapshot.configuration.useHandicaps else { return nil }
+        let mode = CourseHandicapRosterDisplay.entryFormat(
+            for: participant, defaultFormat: snapshot.configuration.handicapEntryFormat
+        )
+        // Legacy strokes-only rounds have no calculated Course Handicap.
+        guard mode == .courseHandicap || participant.handicapResolution != nil || participant.handicapSnapshot != nil else {
             return nil
         }
 
@@ -1308,20 +1323,30 @@ extension GameLobby {
             handicapStrokeBasis: snapshot.handicapIndexBasis ?? participant.handicapResolution?.calculation?.indexBasis,
             defaultTee: snapshot.defaultTee,
             tees: snapshot.tees,
-            maximumHandicap: effectiveSeriesLeagueHandicapMaximum
+            maximumHandicap: effectiveSeriesLeagueHandicapMaximum,
+            previewCurrentSelection: snapshot.round.status.allowsCourseHandicapSetupEdits
         )
     }
 
     private func handicapSubtitle(for participant: RoundParticipant) -> String {
+        let mode = CourseHandicapRosterDisplay.entryFormat(
+            for: participant, defaultFormat: snapshot.configuration.handicapEntryFormat
+        )
+        if mode == .strokes, participant.handicapResolution?.effectiveStrokes == nil,
+           participant.handicapResolution?.entryFormat == .strokes {
+            return "Enter strokes for this round"
+        }
         guard snapshot.configuration.handicapNormalizationMode == .field else {
-            if snapshot.configuration.handicapEntryFormat == .courseHandicap, let index = participant.handicapIndex {
+            if mode == .strokes { return "Strokes: \(participant.adjustedHandicap)" }
+            if let index = participant.handicapIndex {
                 return "Index \(String(format: "%.1f", index)) -> HCP \(participant.adjustedHandicap)"
             }
             return "HCP \(participant.adjustedHandicap)"
         }
         let normalized = HandicapCalculator.normalizedParticipantsForField(snapshot.participants)
             .first { $0.id == participant.id }?.adjustedHandicap ?? participant.adjustedHandicap
-        return "HCP \(participant.adjustedHandicap) -> Playing \(normalized)"
+        let input = mode == .strokes ? "Strokes" : "HCP"
+        return "\(input) \(participant.adjustedHandicap) -> Playing \(normalized)"
     }
 
     @ViewBuilder
@@ -1384,7 +1409,10 @@ extension GameLobby {
 
                 if components.contains(.courseHandicap),
                    let courseHandicapLabel = courseHandicapSubtitle(for: participant) {
-                    if participant.handicapIndex != nil || participant.handicapSnapshot?.handicapIndex != nil {
+                    if CourseHandicapRosterDisplay.entryFormat(
+                        for: participant, defaultFormat: snapshot.configuration.handicapEntryFormat
+                    ) == .courseHandicap,
+                       participant.handicapIndex != nil || participant.handicapSnapshot?.handicapIndex != nil {
                         Text(RoundHandicapEntryPresentation.indexLabel(participant, basis: snapshot.handicapIndexBasis))
                             .fontStyle(kFontName, size: 12, weight: .medium)
                             .foregroundStyle(Color.neutral)

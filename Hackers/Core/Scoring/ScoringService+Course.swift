@@ -451,10 +451,15 @@ enum RoundScoreCompleteness {
 }
 
 enum CourseHandicapRosterDisplay {
+    static func entryFormat(for participant: RoundParticipant, defaultFormat: HandicapEntryFormat) -> HandicapEntryFormat {
+        participant.handicapSnapshot?.entryFormat ?? participant.handicapResolution?.entryFormat ?? defaultFormat
+    }
+
     static func label(
         participant: RoundParticipant, courseSegment: CourseSegment?,
         handicapStrokeBasis: SeriesHandicapStrokeBasis?, defaultTee: Tee?, tees: [Tee],
-        maximumHandicap: Int?, allowOriginalHandicapFallback: Bool = false
+        maximumHandicap: Int?, allowOriginalHandicapFallback: Bool = false,
+        previewCurrentSelection: Bool = false
     ) -> String? {
         if let snapshot = participant.handicapSnapshot {
             guard let calculation = snapshot.calculation, snapshot.entryFormat == .courseHandicap else {
@@ -465,6 +470,22 @@ enum CourseHandicapRosterDisplay {
         if let resolution = participant.handicapResolution {
             if resolution.entryFormat == .strokes {
                 return resolution.effectiveStrokes.map { "Strokes Received: \($0) (manual)" } ?? "Enter strokes for this round"
+            }
+            // Lobby course changes arrive before asynchronous participant writes.
+            // Preview that selection without changing saved scoring allowances.
+            // Other callers retain the stored calculation for historical rounds.
+            if previewCurrentSelection, participant.leagueHandicapStrokesAtCreation == nil {
+                guard let index = participant.handicapIndex else { return "Course HCP: Unavailable" }
+                let basis = HandicapCalculator.entryIndexBasis(
+                    for: participant, configured: handicapStrokeBasis ?? resolution.calculation?.indexBasis
+                )
+                let current = HandicapCalculator.calculation(
+                    index: index, participant: participant, courseSegment: courseSegment, indexBasis: basis
+                )
+                let strokes = current == resolution.calculation
+                    ? resolution.effectiveStrokes
+                    : current.allowedStrokes(maximum: maximumHandicap)
+                return description(current, strokes: strokes)
             }
             if let calculation = resolution.calculation { return description(calculation, strokes: resolution.effectiveStrokes) }
         }
