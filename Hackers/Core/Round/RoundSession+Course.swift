@@ -92,9 +92,10 @@ extension RoundSession {
             } else {
                 snapshot.round.configuration.courses[0] = segmentToSave
             }
-            if snapshot.configuration.handicapIndexBasis != nil, !snapshot.participants.contains(where: { $0.seriesMemberID != nil }),
-               resolvedHandicapEntryFormat == .courseHandicap {
-                snapshot.round.configuration.handicapStrokeBasis = .defaultBasis(holeCount: segmentToSave.holeSegment.holeCount)
+            if snapshot.configuration.leagueHandicapMaximum == nil,
+               !snapshot.participants.contains(where: { $0.seriesMemberID != nil || $0.handicapSnapshot != nil || $0.leagueHandicapStrokesAtCreation != nil }) {
+                snapshot.round.configuration = HandicapCalculator.personalConfiguration(snapshot.configuration,
+                    playedHoleCount: segmentToSave.holeSegment.holeCount)
             }
             _ = try await snapshot.round.put().get()
 

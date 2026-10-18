@@ -23,10 +23,26 @@ enum HandicapCalculator {
         return Double(trimmed)?.isFinite == true
     }
 
+    /// Personal entry always uses the standard 18-hole Index. League inputs retain
+    /// their configured basis and continue through the existing conversion rules.
+    static func entryIndexBasis(for participant: RoundParticipant, configured: SeriesHandicapStrokeBasis?) -> SeriesHandicapStrokeBasis? {
+        if participant.seriesMemberID != nil || participant.handicapSnapshot != nil || participant.leagueHandicapStrokesAtCreation != nil {
+            return participant.handicapSnapshot?.calculation?.indexBasis ?? configured
+        }
+        return .eighteenHole
+    }
+
+    static func personalConfiguration(_ configuration: RoundConfiguration, playedHoleCount: Int) -> RoundConfiguration {
+        var result = configuration
+        result.handicapIndexBasis = .eighteenHole
+        result.handicapStrokeBasis = .defaultBasis(holeCount: playedHoleCount)
+        return result
+    }
+
     static func configuration(_ configuration: RoundConfiguration, settingHandicapBasis basis: SeriesHandicapStrokeBasis?, playedHoleCount: Int) -> RoundConfiguration {
         var result = configuration
         if configuration.handicapEntryFormat == .courseHandicap {
-            result.handicapIndexBasis = basis ?? .eighteenHole
+            result.handicapIndexBasis = .eighteenHole
             // Course Handicap is already on the played segment's scale.
             result.handicapStrokeBasis = .defaultBasis(holeCount: playedHoleCount)
         } else { result.handicapStrokeBasis = basis }
@@ -168,6 +184,7 @@ enum HandicapCalculator {
         // round-only override API and never rewrite the original calculation.
         guard participant.leagueHandicapStrokesAtCreation == nil, participant.handicapSnapshot == nil else { return participant }
         var updated = participant
+        let handicapStrokeBasis = entryIndexBasis(for: participant, configured: handicapStrokeBasis)
         let calculation = format == .courseHandicap
             ? self.calculation(index: input, participant: participant, courseSegment: courseSegment, indexBasis: handicapStrokeBasis)
             : participant.handicapResolution?.calculation

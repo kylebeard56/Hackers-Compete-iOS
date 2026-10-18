@@ -200,17 +200,13 @@ extension RoundSession {
     func setHandicapEntryFormat(_ format: HandicapEntryFormat, maximumHandicap: Int? = nil) async {
         addBreadcrumb()
         let previous = snapshot.configuration.handicapEntryFormat
-        guard snapshot.round.status.allowsCourseHandicapSetupEdits, !snapshot.participants.contains(where: { $0.seriesMemberID != nil }) else { return }
+        guard snapshot.round.status.allowsCourseHandicapSetupEdits, snapshot.configuration.leagueHandicapMaximum == nil,
+              !snapshot.participants.contains(where: { $0.seriesMemberID != nil || $0.handicapSnapshot != nil || $0.leagueHandicapStrokesAtCreation != nil }) else { return }
         let resolvedFormat = format
 
         do {
-            if format == .courseHandicap, snapshot.configuration.handicapIndexBasis == nil {
-                // Newly selected personal/WHS Index entry has an 18-hole source.
-                snapshot.round.configuration.handicapIndexBasis = snapshot.handicapIndexBasis ?? .eighteenHole
-            }
-            if format == .courseHandicap {
-                snapshot.round.configuration.handicapStrokeBasis = .defaultBasis(holeCount: snapshot.holeSegment.holeCount)
-            }
+            snapshot.round.configuration = HandicapCalculator.personalConfiguration(snapshot.configuration,
+                playedHoleCount: snapshot.holeSegment.holeCount)
             snapshot.round.configuration.handicapEntryFormat = resolvedFormat
             _ = try await snapshot.round.put().get()
 
@@ -241,7 +237,8 @@ extension RoundSession {
 
     func setHandicapStrokeBasis(_ basis: SeriesHandicapStrokeBasis?, maximumHandicap: Int? = nil) async {
         addBreadcrumb()
-        guard snapshot.round.status.allowsCourseHandicapSetupEdits, !snapshot.participants.contains(where: { $0.seriesMemberID != nil }) else { return }
+        guard snapshot.round.status.allowsCourseHandicapSetupEdits, snapshot.configuration.leagueHandicapMaximum == nil,
+              !snapshot.participants.contains(where: { $0.seriesMemberID != nil || $0.handicapSnapshot != nil || $0.leagueHandicapStrokesAtCreation != nil }) else { return }
         let isIndex = snapshot.configuration.handicapEntryFormat == .courseHandicap
         let previous = isIndex ? snapshot.handicapIndexBasis : snapshot.configuration.handicapStrokeBasis
 

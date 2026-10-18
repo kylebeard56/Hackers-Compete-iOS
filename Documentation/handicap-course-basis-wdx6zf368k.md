@@ -100,3 +100,42 @@ xcodebuild -project Hackers.xcodeproj -scheme Sandbox -configuration Sandbox \
 - `HackersUnitTests/SeriesRoundSyncServiceTests.swift`
 - `HackersUnitTests/CourseHandicapCalculationRegressionTests.swift`
 - `Documentation/handicap-course-basis-wdx6zf368k.md` (this report)
+
+## Review-comment corrections
+
+Addresses all three findings in the [PR #14 audit](https://github.com/kylebeard56/Hackers-Compete-iOS/pull/14#issuecomment-6206802279), backported from the corresponding PR #15 fixes without importing personal-profile or plus-handicap functionality.
+
+- Changing the source Index basis in an unstarted Index-entry round also reconciles allocation basis to the actual played segment. A persisted nine-hole lobby with an old explicit eighteen-hole allocation now allocates its nine-hole Course Handicap once. The configured source basis remains separate; no historical participant or source scorecard is migrated.
+- Course/tee and Index-format/basis controls share the setters' lobby-only policy and explain the restriction after play starts. Manage Player closes setup sheets on a status change and preserves existing handicap/tee fields while saving unrelated live/paused edits. Existing league commissioner round-only overrides retain their dedicated permissions and behavior.
+- An empty Index is a valid setup draft, allowing gross-round name/group edits without inventing zero. The participant calculation accepts an optional Index and records unresolved effective strokes when absent. Net activation/application still requires resolved input; manual-stroke entry still requires a finite number.
+
+Three regression methods cover persisted nine-hole configuration decoding and allocation, empty/invalid drafts with unresolved net readiness, and unchanged course/tee/handicap setup in live, paused, complete and archived statuses. Draft validation lives in the existing shared `HandicapCalculator` so PR #14 builds independently of PR #15's profile models. The identical helper is used on the stacked PR #15 branch to keep the two implementations compatible.
+
+League Index algorithms, eligibility/accrual, caps, commissioner overrides, normalization and scoring formulas are unchanged. No completed-round snapshot or stored historical allowance is rewritten. Authenticated Firebase and manual UI/physical-device acceptance remain outside automated validation.
+
+The review-fix regression run passed **433 tests, 0 failures, 0 skips**, confirmed by `xcresulttool get test-results summary` on iPhone 17 Pro / iOS 26.3.1. Result bundle: `/private/tmp/HackersPR14Review-final.xcresult`; log: `/private/tmp/HackersPR14Review-final-tests.log`. It uses the Sandbox project/scheme/configuration, simulator destination and test flags documented above, with derived data `/private/tmp/HackersHandicapDerived`, and these suite selections:
+
+```text
+CourseHandicapCalculationRegressionTests  ScoringEngineTests
+SeriesRoundCreationMappingTests  RoundParticipantHandicapOverrideTests
+HandicapComputationTests  SeriesRoundSyncServiceTests
+SeriesHandicapHistoryTests  SeriesRoundHandicapAccrualTests
+SeriesRoundCodableTests  RoundActivationMatchupValidationTests
+SeriesRoundV2Tests  ScoreCarouselSelectionTests
+RoundSessionLifecycleTests  RoundSessionReloadTests
+LiveRoundResumeRegressionTests  AppSessionResumeTests
+FirebaseIDValidationTests  RoundSessionReadinessTests
+CourseSelectionViewModelTests  CompetitionScopeTests
+ScoringPipelineStageTests  SegmentResolverTests  GameTemplateValidationTests
+```
+
+The separate Sandbox simulator build passed with `CODE_SIGNING_ALLOWED=NO ONLY_ACTIVE_ARCH=YES`; log: `/private/tmp/HackersPR14Review-final-build.log`. `git diff --check` passed. No PR was merged and nothing was deployed.
+
+
+## Single personal Index entry — wdx6zf6nxe
+
+The subsequent [entry correction](https://app.clickup.com/t/wdx6zf6nxe) removes the personal Index-basis picker and ordinary Hole Basis menu. Ordinary registered/offline input uses one 18-hole Index, independent of selected round length or old shared-basis metadata. The existing Rule 6.1b formula remains unchanged; only its entry context is resolved consistently. Unstarted personal course/segment changes update allocation to the actual holes, retaining entered Indexes and explicit manual strokes. Completed-round metadata and internal league source bases are preserved.
+
+The four added regressions cover the supplied Paris Mountain front-nine inputs with independently checked hole pars (36), registered/offline 18→9→18 and tee changes with Codable reload, unchanged manual allowances, and internal nine-hole league/historical metadata. The Paris Mountain expectation is computed from the actual hole pars and supplied rating/slope, rather than taking the GHIN display as an input. Sources: [USGA Rule 6.1b](https://www.usga.org/content/usga/home-page/handicapping/roh/Content/rules/6%201b%209%20holes.htm), [White hole-by-hole scorecard](https://www.golfify.io/courses/paris-mountain-country-club), cross-checked with [18Birdies](https://18birdies.com/golf-courses/club/ae205950-86ac-11e4-8c28-020000005b00/paris-mountain-country-club). Provider yardages/ratings may differ from the supplied GHIN screenshot; production uses the selected tee's stored metadata.
+
+Upstream validation: **184 tests passed, 0 failed/skipped**, via XcodeBuildMCP, Sandbox / iPhone 17 Pro / iOS 26.3.1; `/private/tmp/HackersPersonalIndex14-verified.xcresult`. Includes Course Handicap, scoring, series creation/mapping and commissioner override regressions. The active release-candidate UI and full regression validation are performed on PR #16 after propagating through PR #15. This is a code correction, not a TestFlight release or device acceptance result. No production data is changed.
