@@ -48,7 +48,10 @@ struct ManagePlayerView: View, Loggable {
     @State private var showHandicapOverrideAlert = false
     @State private var manualStrokes = false
     private var indexBasis: SeriesHandicapStrokeBasis? {
-        HandicapCalculator.entryIndexBasis(for: participant ?? .init(), configured: snapshot.handicapIndexBasis)
+        if !snapshot.round.status.allowsCourseHandicapSetupEdits {
+            return participant?.handicapResolution?.calculation?.indexBasis ?? snapshot.handicapIndexBasis
+        }
+        return HandicapCalculator.entryIndexBasis(for: participant ?? .init(), configured: snapshot.handicapIndexBasis)
     }
     @State private var estimateApproved = false
     @State private var showCourseData = false
