@@ -53,7 +53,12 @@ struct ManagePlayerView: View, Loggable {
     private var handicapValue: Double { handicapDraft.value ?? 0 }
     @State private var hasConfirmedHandicapOverride = false
     @State private var showHandicapOverrideAlert = false
-    @State private var indexBasis: SeriesHandicapStrokeBasis?
+    private var indexBasis: SeriesHandicapStrokeBasis? {
+        if !snapshot.round.status.allowsCourseHandicapSetupEdits {
+            return participant?.handicapResolution?.calculation?.indexBasis ?? snapshot.handicapIndexBasis
+        }
+        return HandicapCalculator.entryIndexBasis(for: participant ?? .init(), configured: snapshot.handicapIndexBasis)
+    }
     @State private var estimateApproved = false
     @State private var showCourseData = false
     @State private var groupID: String? = nil
@@ -69,8 +74,11 @@ struct ManagePlayerView: View, Loggable {
     private enum FocusField { case name, handicap }
     
     private var palette: DesignPalette { .init(theme: .primary, scheme: colorScheme) }
+    private var mayEditHandicapInput: Bool {
+        snapshot.round.status.allowsCourseHandicapSetupEdits || (seriesHandicapLockActive && isSeriesCommissioner)
+    }
     private var canSave: Bool {
-        name.isPopulated && tee.exists && (strokesHandicapReadOnly || handicapDraft.value != nil)
+        name.isPopulated && tee.exists && (!mayEditHandicapInput || strokesHandicapReadOnly || HandicapCalculator.isValidDraft(handicapString, format: effectiveHandicapEntryFormat))
     }
 
     private var strokesHandicapReadOnly: Bool {
@@ -143,6 +151,12 @@ struct ManagePlayerView: View, Loggable {
             )
         }
         .onChange(of: courseHandicapCalculation) { estimateApproved = false }
+        .onChange(of: snapshot.round.status) {
+            if !snapshot.round.status.allowsCourseHandicapSetupEdits {
+                showTeeSelection = false
+                showCourseData = false
+            }
+        }
         .sheet(isPresented: $showHostChangeSheet) {
             ChangeHostView(snapshot: snapshot) { newHost in
                 Task {
@@ -165,7 +179,6 @@ struct ManagePlayerView: View, Loggable {
                 handicapDraft.format = .strokes
                 handicapDraft.strokesText = String(participant?.adjustedHandicap ?? 0)
             }
-            indexBasis = snapshot.handicapIndexBasis ?? participant?.handicapResolution?.calculation?.indexBasis
             groupID = participant?.groupID
             teamID = participant?.teamID
             
@@ -195,12 +208,16 @@ extension ManagePlayerView {
     private var content: some View {
         VStack(spacing: 16) {
             nameSection
-            teeBoxSection
+            teeBoxSection.disabled(!snapshot.round.status.allowsCourseHandicapSetupEdits)
             teeGroupSection
             if snapshot.requiresTeams {
                 teamSection
             }
-            strokesSection
+            strokesSection.disabled(!mayEditHandicapInput)
+            if !snapshot.round.status.allowsCourseHandicapSetupEdits {
+                Text(mayEditHandicapInput ? "Course and tees are locked. League overrides apply only to this round." : "Course, tees and handicap inputs are locked after the round starts.")
+                    .font(.footnote).foregroundStyle(.secondary)
+            }
             Spacer(minLength: 0)
         }
         .padding(.horizontal, 16)
@@ -405,7 +422,7 @@ extension ManagePlayerView {
                             .accessibilityHint("Restores the league-computed handicap for this round")
                     }
 
-                    Text(effectiveHandicapEntryFormat == .courseHandicap ? "\(indexBasis?.holeCount ?? 18)-hole Index" : "Max: \(maximumHandicapValue)")
+                    Text(effectiveHandicapEntryFormat == .courseHandicap ? "Handicap Index" : "Max: \(maximumHandicapValue)")
                         .fontStyle(kFontName, size: 15, weight: .regular)
                         .foregroundStyle(Color.neutral3)
                 }
@@ -418,13 +435,6 @@ extension ManagePlayerView {
                     Text("Profile Index: \(ManualPersonalHandicap.display(input.index)) · \(input.source == .calculated ? "Hackers calculated" : "Manual starting"). Changes here apply only to this round.")
                         .fontStyle(kFontName, size: 13, weight: .regular)
                         .foregroundStyle(Color.neutral)
-                }
-                if indexBasis == nil {
-                    Picker("Index basis", selection: $indexBasis) {
-                        Text("Choose Index basis").tag(nil as SeriesHandicapStrokeBasis?)
-                        Text("9 holes").tag(SeriesHandicapStrokeBasis.nineHole as SeriesHandicapStrokeBasis?)
-                        Text("18 holes (WHS)").tag(SeriesHandicapStrokeBasis.eighteenHole as SeriesHandicapStrokeBasis?)
-                    }
                 }
                 CourseHandicapStatusView(
                     calculation: courseHandicapCalculation,
@@ -643,17 +653,15 @@ extension ManagePlayerView {
     private func finish() {
         var p = participant ?? .init()
         p.name = Name(name)
-        p.teeBoxID = tee?.id ?? ""
-        let courseSegment = participantCourseSegment
-        let computed = handicapDraft.applying(to: p, courseSegment: courseSegment,
-            indexBasis: indexBasis, maximum: maximumHandicapValue, approveEstimate: estimateIsApproved, approvedBy: approvalUserID)
+        if snapshot.round.status.allowsCourseHandicapSetupEdits { p.teeBoxID = tee?.id ?? "" }
         if seriesHandicapLockActive && isSeriesCommissioner {
             p = p.applyingLeagueHandicapOverride(
                 Int(handicapValue.rounded()),
                 maximum: maximumHandicapValue
             )
-        } else if !seriesHandicapLockActive {
-            p = computed
+        } else if !seriesHandicapLockActive && snapshot.round.status.allowsCourseHandicapSetupEdits {
+            p = handicapDraft.applying(to: p, courseSegment: participantCourseSegment,
+                indexBasis: indexBasis, maximum: maximumHandicapValue, approveEstimate: estimateIsApproved, approvedBy: approvalUserID)
         }
         p.groupID = groupID
         p.teamID = teamID

@@ -402,7 +402,11 @@ struct GameLobby: View, Loggable {
                 // TODO: Skeleton view for course info
                 
             } else {
-                courseSection
+                courseSection.disabled(!snapshot.round.status.allowsCourseHandicapSetupEdits)
+                if !snapshot.round.status.allowsCourseHandicapSetupEdits {
+                    Text("Course, tees and handicap setup are locked after the round starts.")
+                        .font(.footnote).foregroundStyle(.secondary)
+                }
                 gameFormatSection
                 gameConfigurationSection
                 playerTabPicker

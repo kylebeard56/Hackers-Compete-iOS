@@ -61,6 +61,9 @@ struct HandicapEntryView: View {
     @State private var draft = RoundHandicapEntryDraft()
     @State private var approveEstimate = false
     private var palette: DesignPalette { .init(theme: .primary, scheme: colorScheme) }
+    private var indexBasis: SeriesHandicapStrokeBasis? {
+        HandicapCalculator.entryIndexBasis(for: participant, configured: handicapStrokeBasis)
+    }
     private var locked: Bool { participant.handicapSnapshot != nil || participant.leagueHandicapStrokesAtCreation != nil }
 
     var body: some View {
@@ -82,7 +85,7 @@ struct HandicapEntryView: View {
                 HandicapEntryModePicker(selection: $draft.format)
                     .disabled(locked)
                 Text(draft.format == .courseHandicap
-                     ? RoundHandicapEntryPresentation.indexLabel(previewParticipant, basis: handicapStrokeBasis)
+                     ? RoundHandicapEntryPresentation.indexLabel(previewParticipant, basis: indexBasis)
                      : "Strokes this round · \(holes) holes · max \(maximumValue)")
                     .fontStyle(kFontName, size: 15, weight: .semibold)
                     .foregroundStyle(Color.neutral)
@@ -134,7 +137,7 @@ struct HandicapEntryView: View {
 
     private var calculation: CourseHandicapCalculation {
         HandicapCalculator.calculation(index: Double(draft.indexText), participant: participant,
-            courseSegment: courseSegment, indexBasis: handicapStrokeBasis)
+            courseSegment: courseSegment, indexBasis: indexBasis)
     }
 
     private var estimateIsApproved: Bool {
@@ -145,7 +148,7 @@ struct HandicapEntryView: View {
     private func finish() {
         guard !locked, draft.value != nil else { return }
         onComplete?(draft.applying(to: participant, courseSegment: courseSegment,
-            indexBasis: handicapStrokeBasis, maximum: maximumValue, approveEstimate: estimateIsApproved))
+            indexBasis: indexBasis, maximum: maximumValue, approveEstimate: estimateIsApproved))
     }
 }
 

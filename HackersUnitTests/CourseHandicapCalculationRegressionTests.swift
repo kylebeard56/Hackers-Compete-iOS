@@ -248,11 +248,14 @@ final class CourseHandicapCalculationRegressionTests: XCTestCase {
         XCTAssertEqual(received.filter { $0 == 2 }.count, 2)
         XCTAssertEqual(received.filter { $0 == 1 }.count, 7)
     }
-    func testExplicitLegacyBasisIsReadableButUnknownBasisIsNeverInferredFromRoundLength() {
+    func testPersonalBasisDefaultsToEighteenWhileUnknownLeagueBasisStaysUnknown() {
         var configuration = RoundConfiguration(courses: [segment(tee())], handicapEntryFormat: .courseHandicap)
         let unknown = RoundSnapshot(round: Round(configuration: configuration))
         XCTAssertEqual(unknown.handicapStrokeBasis, .nineHole)
-        XCTAssertNil(unknown.handicapIndexBasis)
+        XCTAssertEqual(unknown.handicapIndexBasis, .eighteenHole)
+        var league = configuration
+        league.leagueHandicapMaximum = 21
+        XCTAssertNil(RoundSnapshot(round: Round(configuration: league)).handicapIndexBasis)
         configuration.handicapStrokeBasis = .eighteenHole
         XCTAssertEqual(RoundSnapshot(round: Round(configuration: configuration)).handicapIndexBasis, .eighteenHole)
     }
@@ -270,6 +273,147 @@ final class CourseHandicapCalculationRegressionTests: XCTestCase {
         XCTAssertEqual(manual.handicapIndex, 23)
         XCTAssertEqual(manual.adjustedHandicap, 10)
         XCTAssertTrue(HandicapCalculator.isReady(manual, format: .strokes, courseSegment: segment(tee), indexBasis: .eighteenHole))
+    }
+
+    func testPersistedLegacyNineLobbyUsesPersonalIndexAndReconcilesAllocation() throws {
+        let tee = tee(rating: 72, slope: 113, frontRating: 36, frontSlope: 113, backRating: 36, backSlope: 113)
+        let legacy = RoundConfiguration(courses: [segment(tee, .front9)], handicapStrokeBasis: .eighteenHole,
+            handicapIndexBasis: nil, handicapEntryFormat: .courseHandicap)
+        let persisted = try JSONDecoder().decode(RoundConfiguration.self, from: JSONEncoder().encode(legacy))
+        let updated = HandicapCalculator.configuration(persisted, settingHandicapBasis: .nineHole, playedHoleCount: 9)
+        XCTAssertEqual(updated.handicapIndexBasis, .eighteenHole)
+        XCTAssertEqual(updated.handicapStrokeBasis, .nineHole)
+        let p = HandicapCalculator.participant(participant(tee), applying: 8.5, format: .courseHandicap,
+            courseSegment: segment(tee, .front9), handicapStrokeBasis: updated.handicapIndexBasis)
+        XCTAssertEqual(p.handicapResolution?.calculation?.courseHandicap, 4)
+        XCTAssertEqual(ScoringEngine.handicapStrokesForPlayedHoles(handicap: p.adjustedHandicap,
+            basis: updated.handicapStrokeBasis!, holesInPlay: 9), 4)
+        XCTAssertEqual(persisted.handicapStrokeBasis, .eighteenHole)
+    }
+
+    func testBlankIndexDraftSavesOtherFieldsWithoutInventingAHandicap() {
+        XCTAssertTrue(HandicapCalculator.isValidDraft("", format: .courseHandicap))
+        XCTAssertFalse(HandicapCalculator.isValidDraft("", format: .strokes))
+        for invalid in ["-", "NaN", "infinity", "1.2.3"] {
+            XCTAssertFalse(HandicapCalculator.isValidDraft(invalid, format: .courseHandicap))
+        }
+        let tee = tee()
+        var edited = participant(tee)
+        edited.name = Name("Edited", "Name")
+        edited.groupID = "new-group"
+        let saved = HandicapCalculator.participant(edited, applying: nil, format: .courseHandicap,
+            courseSegment: segment(tee), handicapStrokeBasis: .eighteenHole)
+        XCTAssertEqual(saved.name, edited.name)
+        XCTAssertEqual(saved.groupID, "new-group")
+        XCTAssertNil(saved.handicapIndex)
+        XCTAssertNil(saved.handicapResolution?.effectiveStrokes)
+        XCTAssertFalse(HandicapCalculator.isReady(saved, format: .courseHandicap, courseSegment: segment(tee), indexBasis: .eighteenHole))
+        XCTAssertEqual(saved.adjustedHandicap, edited.adjustedHandicap, "Unrelated legacy strokes are not silently changed to zero")
+    }
+
+    @MainActor
+    func testLiveAndPausedCourseHandicapSettersKeepFrozenSetup() async {
+        let tee = tee()
+        XCTAssertTrue(RoundStatus.lobby.allowsCourseHandicapSetupEdits)
+        for status: RoundStatus in [.live, .paused, .complete, .archived] {
+            XCTAssertFalse(status.allowsCourseHandicapSetupEdits)
+            let session = RoundSession()
+            let configuration = RoundConfiguration(courses: [segment(tee)], handicapStrokeBasis: .nineHole,
+                handicapIndexBasis: .eighteenHole, handicapEntryFormat: .courseHandicap)
+            let frozen = HandicapCalculator.participant(participant(tee), applying: 23, format: .courseHandicap,
+                courseSegment: segment(tee), handicapStrokeBasis: .eighteenHole)
+            session.snapshot = .init(round: Round(id: "frozen", status: status, configuration: configuration), participants: [frozen])
+            await session.setHandicapStrokeBasis(.nineHole)
+            await session.setHandicapEntryFormat(.strokes)
+            await session.setDefaultTee(to: "another-tee")
+            await session.setCourseSegment(to: segment(tee, .full18))
+            XCTAssertEqual(session.snapshot.configuration, configuration)
+            XCTAssertEqual(session.snapshot.participants, [frozen])
+        }
+    }
+
+    func testParisMountainFrontNineUsesVerifiedHoleParAndUnchangedPersonalIndex() {
+        // Hole pars cross-checked against Golfify's White scorecard and 18Birdies.
+        // Supplied GHIN screenshot supplies rating/slope; provider yardages differ.
+        // https://www.golfify.io/courses/paris-mountain-country-club
+        let pars = [5, 4, 5, 4, 3, 4, 4, 3, 4, 4, 3, 5, 4, 5, 4, 3, 4, 4]
+        let white = Tee(id: "paris-white", name: "White", gender: "male", totalHoles: 18,
+            holes: pars.enumerated().map { Hole(number: $0.offset + 1, par: $0.element, yardage: 300, handicap: $0.offset + 1) },
+            ratingFull: 68.2, slopeFull: 129, ratingFront: 33.7, slopeFront: 128, ratingBack: nil, slopeBack: nil)
+        let front = segment(white, .front9)
+        XCTAssertEqual(white.par(for: .front9), 36)
+        let result = HandicapCalculator.participant(participant(white), applying: 17.7, format: .courseHandicap,
+            courseSegment: front, handicapStrokeBasis: nil)
+        let halfIndex = (17.7 / 2 * 10).rounded() / 10
+        let expected = halfIndex * (128.0 / 113) + 33.7 - Double(pars.prefix(9).reduce(0, +))
+        XCTAssertEqual(result.handicapIndex, 17.7)
+        XCTAssertEqual(result.handicapResolution?.calculation?.indexBasis, .eighteenHole)
+        XCTAssertEqual(result.handicapResolution?.calculation?.calculationIndex, 8.9)
+        XCTAssertEqual(result.handicapResolution?.calculation?.rawValue ?? 0, expected, accuracy: 0.000001)
+        XCTAssertEqual(result.adjustedHandicap, Int(expected.rounded()))
+    }
+
+    func testRegisteredAndOfflinePersonalIndexSurvivesLengthTeesAndSaveReload() throws {
+        let white = tee()
+        let alternate = tee(id: "blue", frontRating: 37.1, frontSlope: 135)
+        for userID: String? in ["registered", nil] {
+            let profile = Player(id: "profile", userID: userID, name: Name("Test", "Player"))
+            var player = RoundParticipant(player: profile, teeBoxID: white.id)
+            player = HandicapCalculator.participant(player, applying: 17.7, format: .courseHandicap,
+                courseSegment: segment(white, .full18), handicapStrokeBasis: .nineHole)
+            for holes in [HoleSegment.full18, .front9, .back9, .full18] {
+                let course = segment(white, holes)
+                let configuration = HandicapCalculator.personalConfiguration(.init(courses: [course], handicapEntryFormat: .courseHandicap), playedHoleCount: holes.holeCount)
+                player = HandicapCalculator.recomputedParticipants([player], format: .courseHandicap,
+                    courseSegment: course, handicapStrokeBasis: configuration.handicapIndexBasis)[0]
+                player = try JSONDecoder().decode(RoundParticipant.self, from: JSONEncoder().encode(player))
+                let snapshot = RoundSnapshot(round: Round(status: .lobby, configuration: configuration), participants: [player])
+                XCTAssertEqual(player.handicapIndex, 17.7)
+                XCTAssertEqual(player.handicapResolution?.calculation?.indexBasis, .eighteenHole)
+                XCTAssertTrue(HandicapCalculator.isReady(player, format: .courseHandicap, courseSegment: course, indexBasis: snapshot.handicapIndexBasis))
+                let calculation = HandicapCalculator.calculation(index: 17.7, tee: white, segment: holes, indexBasis: .eighteenHole)
+                XCTAssertEqual(player.handicapResolution?.calculation, calculation)
+                let display = CourseHandicapRosterDisplay.label(participant: player, courseSegment: course,
+                    handicapStrokeBasis: snapshot.handicapIndexBasis, defaultTee: white, tees: [white], maximumHandicap: nil)
+                XCTAssertTrue(display?.contains("Course HCP:") == true)
+                XCTAssertTrue(display?.contains("Strokes Received:") == true)
+                let total = holes.holeRange.holeNumbers.reduce(0) { $0 + ScoringEngine.strokesReceived(handicap: player.adjustedHandicap, holeNumber: $1, holes: white.holes,
+                    playedHoleNumbers: holes.holeRange.holeNumbers, useHandicaps: true, handicapStrokeBasis: snapshot.handicapStrokeBasis) }
+                XCTAssertEqual(total, player.adjustedHandicap)
+            }
+            player.teeBoxID = alternate.id
+            let changed = HandicapCalculator.recomputedParticipants([player], format: .courseHandicap,
+                courseSegment: segment(alternate, .front9), handicapStrokeBasis: .nineHole)[0]
+            XCTAssertEqual(changed.handicapIndex, 17.7)
+            XCTAssertEqual(changed.handicapResolution?.calculation?.teeID, alternate.id)
+            XCTAssertEqual(changed.handicapResolution?.calculation?.slope, 135)
+        }
+    }
+
+    func testManualStrokesStayUnchangedAcrossPersonalRoundLengthChanges() {
+        let white = tee()
+        let manual = HandicapCalculator.participant(participant(white), applying: 15, format: .strokes, courseSegment: segment(white, .full18))
+        for holes in [HoleSegment.front9, .back9, .full18] {
+            let config = HandicapCalculator.personalConfiguration(.init(courses: [segment(white, holes)], handicapStrokeBasis: .eighteenHole), playedHoleCount: holes.holeCount)
+            let unchanged = HandicapCalculator.recomputedParticipants([manual], format: .courseHandicap,
+                courseSegment: segment(white, holes), handicapStrokeBasis: config.handicapIndexBasis)[0]
+            XCTAssertEqual(unchanged, manual)
+            XCTAssertEqual(ScoringEngine.handicapStrokesForPlayedHoles(handicap: unchanged.adjustedHandicap,
+                basis: config.handicapStrokeBasis!, holesInPlay: holes.holeCount), 15)
+        }
+    }
+
+    func testInternalLeagueNineIndexIsNotHalvedAndHistoricalBasisIsPreserved() {
+        let white = tee(rating: 72, slope: 113, frontRating: 36, frontSlope: 113)
+        var member = participant(white)
+        member.seriesMemberID = "league-member"
+        let league = HandicapCalculator.participant(member, applying: 8.5, format: .courseHandicap,
+            courseSegment: segment(white, .front9), handicapStrokeBasis: .nineHole)
+        XCTAssertEqual(league.handicapResolution?.calculation?.calculationIndex, 8.5)
+        XCTAssertEqual(league.adjustedHandicap, 9)
+        let config = RoundConfiguration(courses: [segment(white, .front9)], handicapStrokeBasis: .nineHole, handicapIndexBasis: .nineHole, handicapEntryFormat: .courseHandicap)
+        XCTAssertEqual(RoundSnapshot(round: Round(status: .lobby, configuration: config), participants: [league]).handicapIndexBasis, .nineHole)
+        XCTAssertEqual(RoundSnapshot(round: Round(status: .complete, configuration: config)).handicapIndexBasis, .nineHole)
     }
 
 }

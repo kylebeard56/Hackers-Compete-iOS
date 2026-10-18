@@ -17,6 +17,39 @@ extension ScoringService {
 }
 
 enum HandicapCalculator {
+    static func isValidDraft(_ text: String, format: HandicapEntryFormat) -> Bool {
+        let trimmed = text.trimmingCharacters(in: .whitespacesAndNewlines)
+        if trimmed.isEmpty { return format == .courseHandicap }
+        return Double(trimmed)?.isFinite == true
+    }
+
+    /// Personal entry always uses the standard 18-hole Index. League inputs retain
+    /// their configured basis and continue through the existing conversion rules.
+    static func entryIndexBasis(for participant: RoundParticipant, configured: SeriesHandicapStrokeBasis?) -> SeriesHandicapStrokeBasis? {
+        if participant.seriesMemberID != nil || participant.handicapSnapshot != nil || participant.leagueHandicapStrokesAtCreation != nil {
+            return participant.handicapSnapshot?.calculation?.indexBasis ?? configured
+        }
+        return .eighteenHole
+    }
+
+    static func personalConfiguration(_ configuration: RoundConfiguration, playedHoleCount: Int) -> RoundConfiguration {
+        var result = configuration
+        result.handicapIndexBasis = .eighteenHole
+        result.handicapStrokeBasis = .defaultBasis(holeCount: playedHoleCount)
+        return result
+    }
+
+    static func configuration(_ configuration: RoundConfiguration, settingHandicapBasis basis: SeriesHandicapStrokeBasis?, playedHoleCount: Int) -> RoundConfiguration {
+        var result = configuration
+        if configuration.handicapEntryFormat == .courseHandicap {
+            result.handicapIndexBasis = .eighteenHole
+            // Course Handicap is already on the played segment's scale.
+            result.handicapStrokeBasis = .defaultBasis(holeCount: playedHoleCount)
+        } else { result.handicapStrokeBasis = basis }
+        return result
+    }
+
+
     static func calculation(
         index: Double?,
         tee: Tee?,
@@ -143,7 +176,7 @@ enum HandicapCalculator {
     }
 
     static func participant(
-        _ participant: RoundParticipant, applying input: Double, format: HandicapEntryFormat,
+        _ participant: RoundParticipant, applying input: Double?, format: HandicapEntryFormat,
         courseSegment: CourseSegment?, maximumHandicap: Int? = nil,
         handicapStrokeBasis: SeriesHandicapStrokeBasis? = .eighteenHole,
         approveEstimate: Bool = false, approvedBy: String? = nil
@@ -152,15 +185,16 @@ enum HandicapCalculator {
         // round-only override API and never rewrite the original calculation.
         guard participant.leagueHandicapStrokesAtCreation == nil, participant.handicapSnapshot == nil else { return participant }
         var updated = participant
+        let handicapStrokeBasis = entryIndexBasis(for: participant, configured: handicapStrokeBasis)
         let calculation = format == .courseHandicap
             ? self.calculation(index: input, participant: participant, courseSegment: courseSegment, indexBasis: handicapStrokeBasis)
             : participant.handicapResolution?.calculation
         let priorApproval = participant.handicapResolution
         let keepApproval = calculation == priorApproval?.calculation && priorApproval?.estimateApprovedAt != nil
         let approved = format == .courseHandicap && calculation?.status == .estimated && (approveEstimate || keepApproval)
-        let allowance = strokes(for: input, format: format, participant: participant, courseSegment: courseSegment,
+        let allowance = input.flatMap { strokes(for: $0, format: format, participant: participant, courseSegment: courseSegment,
                                 maximumHandicap: maximumHandicap, handicapStrokeBasis: handicapStrokeBasis,
-                                estimateApproved: approved)
+                                estimateApproved: approved) }
         if format == .courseHandicap {
             updated.handicapIndex = input
         } else if let allowance {
@@ -172,8 +206,10 @@ enum HandicapCalculator {
             entryFormat: format, calculation: calculation, effectiveStrokes: allowance,
             estimateApprovedAt: approved ? (keepApproval ? priorApproval?.estimateApprovedAt : Time()) : nil,
             approvedBy: approved ? (keepApproval ? priorApproval?.approvedBy : approvedBy) : nil,
-            manualStrokes: format == .strokes && input.isFinite && input >= 0 && input < Double(Int.max)
-                ? Int(input.rounded()) : priorApproval?.manualStrokeInput
+            manualStrokes: input.flatMap { value in
+                format == .strokes && value.isFinite && value >= 0 && value < Double(Int.max)
+                    ? Int(value.rounded()) : nil
+            } ?? priorApproval?.manualStrokeInput
         )
         return updated
     }

@@ -457,7 +457,11 @@ struct RoundHandicapEntryDraft {
     func applying(to participant: RoundParticipant, courseSegment: CourseSegment?,
                   indexBasis: SeriesHandicapStrokeBasis?, maximum: Int?,
                   approveEstimate: Bool = false, approvedBy: String? = nil) -> RoundParticipant {
-        guard let value else { return participant }
+        guard let value else {
+            guard format == .courseHandicap, indexText.isEmpty else { return participant }
+            return HandicapCalculator.participant(participant, applying: nil, format: .courseHandicap,
+                courseSegment: courseSegment, maximumHandicap: maximum, handicapStrokeBasis: indexBasis)
+        }
         var updated = participant
         // Keep an edited Index visible even when the user explicitly chooses manual strokes.
         if format == .strokes, let index = Double(indexText), index.isFinite {
@@ -481,8 +485,8 @@ enum RoundHandicapEntryPresentation {
         if participant.handicapSnapshot?.source == .commissionerRepair { return "Commissioner Override" + holes }
         if participant.handicapSnapshot != nil || participant.seriesMemberID != nil { return "League Handicap Index" + holes }
         if let input = participant.personalHandicapInput, input.index == participant.handicapIndex {
-            return "Personal Handicap Index (18-hole)"
+            return "Handicap Index"
         }
-        return "Round Handicap Index" + holes
+        return "Handicap Index"
     }
 }

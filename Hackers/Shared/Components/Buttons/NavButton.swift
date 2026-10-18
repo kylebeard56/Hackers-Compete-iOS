@@ -86,7 +86,7 @@ struct HandicapOptionsMenu: View {
     let palette: DesignPalette
     var courseHandicapSubtitle: String?
     var showsEntryFormat = true
-    var allowsBasisChanges = true
+    var allowsBasisChanges = false
     var onEntryFormatChanged: (HandicapEntryFormat) -> Void = { _ in }
     var onNormalizationModeChanged: (HandicapNormalizationMode) -> Void = { _ in }
     var onStrokeBasisChanged: (SeriesHandicapStrokeBasis?) -> Void = { _ in }

@@ -166,7 +166,7 @@ extension GameLobby {
             palette: palette,
             courseHandicapSubtitle: courseHandicapMenuSubtitle,
             showsEntryFormat: false,
-            allowsBasisChanges: !handicapEntryModeLocked,
+            allowsBasisChanges: false,
             onEntryFormatChanged: { next in
                 Task { await roundSession.setHandicapEntryFormat(next, maximumHandicap: effectiveSeriesLeagueHandicapMaximum) }
             },
@@ -177,6 +177,8 @@ extension GameLobby {
                 Task { await roundSession.setHandicapStrokeBasis(next, maximumHandicap: effectiveSeriesLeagueHandicapMaximum) }
             }
         )
+        .disabled(!snapshot.round.status.allowsCourseHandicapSetupEdits)
+        .accessibilityHint("Handicap setup can be changed before the round starts")
     }
 
     private var courseHandicapMenuSubtitle: String {

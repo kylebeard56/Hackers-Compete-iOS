@@ -92,6 +92,64 @@ final class HandicapKeyboardDismissalTests: XCTestCase {
         XCTAssertEqual(audit.value, 8)
     }
 
+    func testManagePlayerShowsOnePersonalIndexForRegisteredAndOfflinePlayers() async throws {
+        for userID: String? in ["registered", nil] {
+            let profile = Player(id: "personal-entry", userID: userID, name: .init("Test", "Player"))
+            let course = personalFrontNine()
+            let player = RoundParticipant(player: profile, teeBoxID: "white")
+            let session = RoundSession()
+            session.snapshot = .init(round: Round(id: "local-index-test", status: .lobby,
+                configuration: .init(courses: [course], handicapEntryFormat: .courseHandicap)), participants: [player])
+            let screen = try HostedScreen(ManagePlayerView(roundSession: session, participant: player))
+            defer { screen.close() }
+            try await pause()
+            let field = try screen.field("managePlayerHandicapInput")
+            try await enter("17.7", into: field, format: .courseHandicap)
+            XCTAssertTrue(try dismissControl(in: screen).accessibilityActivate())
+            try await pause()
+            XCTAssertEqual(field.text, "17.7")
+            let labels = screen.accessibilityLabels
+            XCTAssertFalse(labels.contains { $0.contains("Index basis") || $0.contains("18 holes (WHS)") }, labels.joined(separator: " | "))
+            XCTAssertTrue(labels.contains { $0.contains("Course HCP: 8") }, labels.joined(separator: " | "))
+            XCTAssertTrue(labels.contains { $0.contains("Strokes Received: 8") }, labels.joined(separator: " | "))
+            attach(screen, name: userID == nil ? "PersonalIndex-Offline-FrontNine" : "PersonalIndex-Registered-FrontNine")
+        }
+    }
+
+    func testPersonalIndexPersistsThroughEditorSummaryAndBackNavigation() async throws {
+        let audit = PersonalIndexNavigationAudit(course: personalFrontNine())
+        let screen = try HostedScreen(PersonalIndexNavigationScreen(audit: audit))
+        defer { screen.close() }
+        try await pause()
+        XCTAssertTrue(try screen.button("Edit handicap").accessibilityActivate())
+        try await pause()
+        let field = try screen.field("handicapEntryInput")
+        try await enter("17.7", into: field, format: .courseHandicap)
+        XCTAssertTrue(try dismissControl(in: screen).accessibilityActivate())
+        try await pause()
+        XCTAssertTrue(try screen.button("Save handicap entry").accessibilityActivate())
+        try await pause()
+        XCTAssertFalse(audit.editing)
+        XCTAssertEqual(audit.participant.handicapIndex, 17.7)
+        XCTAssertEqual(audit.participant.handicapResolution?.calculation?.indexBasis, .eighteenHole)
+        XCTAssertTrue(screen.accessibilityLabels.contains { $0.contains("Handicap Index: 17.7") })
+        XCTAssertTrue(screen.accessibilityLabels.contains { $0.contains("Course HCP: 8") })
+        attach(screen, name: "PersonalIndex-RoundSummary")
+        audit.participant = try JSONDecoder().decode(RoundParticipant.self, from: JSONEncoder().encode(audit.participant))
+        XCTAssertTrue(try screen.button("Edit handicap").accessibilityActivate())
+        try await pause()
+        XCTAssertEqual(try screen.field("handicapEntryInput").text, "17.7")
+    }
+
+    private func personalFrontNine() -> CourseSegment {
+        let pars = [5, 4, 5, 4, 3, 4, 4, 3, 4, 4, 3, 5, 4, 5, 4, 3, 4, 4]
+        let tee = Tee(id: "white", name: "White", gender: "male", totalHoles: 18,
+            holes: pars.enumerated().map { Hole(number: $0.offset + 1, par: $0.element, yardage: 300, handicap: $0.offset + 1) },
+            ratingFull: 68.2, slopeFull: 129, ratingFront: 33.7, slopeFront: 128, ratingBack: nil, slopeBack: nil)
+        return CourseSegment(courseInfo: .init(id: "paris-mountain-test", name: "Paris Mountain Country Club", totalHoles: 18, tees: [tee]),
+            holeRange: HoleSegment.front9.holeRange, defaultTee: tee.id)
+    }
+
     private func checkHandicapEntry(_ format: HandicapEntryFormat, text: String) async throws {
         var saved: [RoundParticipant] = []
         var disappeared = false
@@ -271,7 +329,7 @@ private final class HostedScreen {
         return try XCTUnwrap(inputs.first, "Missing input \(identifier)")
     }
 
-    func button(_ label: String) throws -> NSObject {
+    private func accessibilityNodes() -> [NSObject] {
         var visited: Set<ObjectIdentifier> = []
         func nodes(in object: NSObject, depth: Int = 0) -> [NSObject] {
             guard depth < 20, visited.insert(ObjectIdentifier(object)).inserted else { return [] }
@@ -289,7 +347,13 @@ private final class HostedScreen {
             }
             return result
         }
-        return try XCTUnwrap(nodes(in: window).first {
+        return nodes(in: window)
+    }
+
+    var accessibilityLabels: [String] { accessibilityNodes().compactMap(\.accessibilityLabel) }
+
+    func button(_ label: String) throws -> NSObject {
+        return try XCTUnwrap(accessibilityNodes().first {
             $0.accessibilityLabel == label && $0.accessibilityTraits.contains(.button)
         }, "Missing accessible button \(label)")
     }
@@ -345,4 +409,32 @@ private final class KeyboardEvents: @unchecked Sendable {
             }
     }
     func stop() { if let observer { NotificationCenter.default.removeObserver(observer) } }
+}
+
+@MainActor
+private final class PersonalIndexNavigationAudit: ObservableObject {
+    @Published var participant = RoundParticipant(id: "local-player", name: .init("Test", "Player"), teeBoxID: "white")
+    @Published var editing = false
+    let course: CourseSegment
+    init(course: CourseSegment) { self.course = course }
+}
+
+private struct PersonalIndexNavigationScreen: View {
+    @ObservedObject var audit: PersonalIndexNavigationAudit
+    var body: some View {
+        NavigationStack {
+            VStack {
+                Text("Handicap Index: \(audit.participant.handicapIndex.map { String(format: "%.1f", $0) } ?? "—")")
+                Text(CourseHandicapRosterDisplay.label(participant: audit.participant, courseSegment: audit.course,
+                    handicapStrokeBasis: .eighteenHole, defaultTee: nil, tees: [], maximumHandicap: 36) ?? "—")
+                Button("Edit handicap") { audit.editing = true }
+            }
+            .navigationTitle("Round summary")
+            .navigationDestination(isPresented: $audit.editing) {
+                HandicapEntryView(participant: .constant(audit.participant), holes: 9, entryFormat: .courseHandicap,
+                    courseSegment: audit.course, handicapStrokeBasis: .nineHole,
+                    onComplete: { audit.participant = $0; audit.editing = false })
+            }
+        }
+    }
 }

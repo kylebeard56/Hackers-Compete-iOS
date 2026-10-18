@@ -3044,4 +3044,66 @@ final class ScoringEngineTests: XCTestCase {
         XCTAssertEqual(normalized["kyle"], 14)
         XCTAssertEqual(normalized["guest"], 20)
     }
+    func testPlusStrokeAllocationStartsAtHighestIndexesAndSupportsMultipleStrokes() {
+        XCTAssertEqual(ScoringEngine.strokesReceived(handicap: -2, holeHandicap: 18, useHandicaps: true), -1)
+        XCTAssertEqual(ScoringEngine.strokesReceived(handicap: -2, holeHandicap: 17, useHandicaps: true), -1)
+        XCTAssertEqual(ScoringEngine.strokesReceived(handicap: -2, holeHandicap: 16, useHandicaps: true), 0)
+        let allocated = (1...18).map { ScoringEngine.strokesReceived(handicap: -20, holeHandicap: $0, useHandicaps: true) }
+        XCTAssertEqual(allocated.reduce(0, +), -20)
+        XCTAssertEqual(Array(allocated.suffix(2)), [-2, -2])
+        XCTAssertEqual(ScoringEngine.strokesReceived(handicap: -20, holeHandicap: 18, useHandicaps: false), 0)
+        XCTAssertEqual(ScoringEngine.strokesReceived(handicap: -2, holeHandicap: nil, useHandicaps: true), 0)
+    }
+
+    func testPlusPersonalAllowanceAddsStrokesToActualNetScore() {
+        let holes = makeHoles()
+        let participant = makeParticipant(id: "plus", name: "Plus", handicap: -2)
+        let scores = holes.map { makeScoreEntry(participantID: participant.id, holeNumber: $0.number, strokes: $0.par) }
+        let result = ScoringEngine.computeStrokePlay(scores: scores, participants: [participant], segment: makeSegment(),
+            holes: holes, basis: .net, template: FormatTemplateRegistry.strokePlayNet)
+        XCTAssertEqual(result.rows.first?.total, 2)
+        for hole in holes {
+            XCTAssertEqual(result.rows.first?.holeValues[hole.number]?.netStrokes, hole.par + ((hole.handicap ?? 0) >= 17 ? 1 : 0))
+        }
+        XCTAssertEqual(participant.adjustedHandicap, -2)
+    }
+
+    func testPlusAllocationUsesHighestRankedActualNineAndSignedBasisScaling() {
+        let holes = makeHoles()
+        let played = Array(10...18)
+        let received = played.map { ScoringEngine.strokesReceived(handicap: -2, holeNumber: $0, holes: holes,
+            playedHoleNumbers: played, useHandicaps: true, handicapStrokeBasis: .nineHole) }
+        XCTAssertEqual(received.reduce(0, +), -2)
+        XCTAssertEqual(received[played.firstIndex(of: 15)!], -1) // SI 18
+        XCTAssertEqual(received[played.firstIndex(of: 11)!], -1) // SI 16
+        XCTAssertEqual(ScoringEngine.handicapStrokesForPlayedHoles(handicap: -4, basis: .eighteenHole, holesInPlay: 9), -2)
+        XCTAssertEqual(ScoringEngine.handicapStrokesForPlayedHoles(handicap: -2, basis: .nineHole, holesInPlay: 9), -2)
+    }
+
+    func testRelativeNormalizationIncludesPlusBaselineAndLeavesSourceAllowancesFrozen() {
+        let original = [makeParticipant(id: "plus", name: "Plus", handicap: -2), makeParticipant(id: "other", name: "Other", handicap: 10)]
+        XCTAssertEqual(HandicapCalculator.normalizedParticipantsForField(original).map(\.adjustedHandicap), [0, 12])
+        XCTAssertEqual(original.map(\.adjustedHandicap), [-2, 10])
+        let bothPlus = [makeParticipant(id: "one", name: "One", handicap: -4), makeParticipant(id: "two", name: "Two", handicap: -2)]
+        XCTAssertEqual(HandicapCalculator.normalizedParticipantsForField(bothPlus).map(\.adjustedHandicap), [0, 2])
+        let match = TeamMatchup(id: "match", teamIDs: [], participantIDs: ["plus", "other"], mode: .individual)
+        let outsider = makeParticipant(id: "outside", name: "Outside", handicap: 30)
+        XCTAssertEqual(HandicapCalculator.normalizedParticipants(original + [outsider], for: match, teams: [], scoringGroups: []).map(\.adjustedHandicap), [0, 12, 30])
+    }
+
+    func testRelativeMatchPlayAgainstPlusPlayerUsesFullSignedDifference() {
+        let holes = makeHoles()
+        let participants = [makeParticipant(id: "p1", name: "Plus", handicap: -2), makeParticipant(id: "p2", name: "Other", handicap: 10)]
+        let match = TeamMatchup(id: "match", teamIDs: [], participantIDs: ["p1", "p2"], mode: .individual)
+        let segment = RoundSegment(id: "seg1", roundID: "round1", holeRange: .init(startHole: 1, endHole: 18), matchups: [match], competitionScope: .matchup)
+        let scores = participants.flatMap { participant in holes.map { makeScoreEntry(participantID: participant.id, holeNumber: $0.number, strokes: $0.par) } }
+        let result = ScoringEngine.computeWithPipeline(scores: scores, participants: participants, teams: [], segment: segment,
+            holes: holes, basis: .net, template: FormatTemplateRegistry.matchPlayIndividual,
+            resolvedCompetitionScope: .matchup, handicapNormalizationMode: .matchup)
+        let rows = result.matchupResults.first?.rows ?? []
+        XCTAssertEqual(rows.first { $0.scoringUnitID == "p1" }?.total, 3)
+        XCTAssertEqual(rows.first { $0.scoringUnitID == "p2" }?.total, 15)
+        XCTAssertEqual(participants.map(\.adjustedHandicap), [-2, 10])
+    }
+
 }

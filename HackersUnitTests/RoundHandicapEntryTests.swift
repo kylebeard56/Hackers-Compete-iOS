@@ -182,7 +182,7 @@ final class RoundHandicapEntryTests: XCTestCase {
         XCTAssertEqual(prefilled.personalHandicapInput?.basis, .eighteenHole)
         XCTAssertEqual(prefilled.handicapResolution?.calculation?.courseHandicap, 11)
         XCTAssertEqual(prefilled.handicapResolution?.manualStrokes, 12)
-        XCTAssertEqual(RoundHandicapEntryPresentation.indexLabel(prefilled, basis: .eighteenHole), "Personal Handicap Index (18-hole)")
+        XCTAssertEqual(RoundHandicapEntryPresentation.indexLabel(prefilled, basis: .eighteenHole), "Handicap Index")
         XCTAssertEqual(profile.personalHandicap?.effectiveIndex, 23)
     }
 
