@@ -312,6 +312,77 @@ final class PersonalHandicapProfileTests: XCTestCase {
         let corrected = PersonalHandicapHistoryPoint(playerID: "p1", roundID: "r1", roundTitle: "Round", playedAt: date, calculation: calculation(index: nil, status: .collecting, asOf: 101))
         XCTAssertTrue(PersonalHandicapPresentation.trend([first, corrected], playerID: "p1").isEmpty)
     }
+
+    func testAuditPlusProfilePreservesSignedRoundAllowance() throws {
+        let round = prefill(try player(index: -2), configuration: config(.full18))
+        XCTAssertEqual(round.handicapResolution?.calculation?.courseHandicap, -2)
+        XCTAssertEqual(round.adjustedHandicap, -2, "A plus-two Index must not become scratch")
+        XCTAssertEqual(ScoringEngine.strokesReceived(handicap: -2, holeHandicap: 18, useHandicaps: true), -1)
+    }
+
+    func testUnchangedManualSaveKeepsOriginalDateAndPlayerTimestamp() throws {
+        var original = try player(index: 10)
+        original.lastUpdatedAt = date
+        let later = Time(iso: "", unix: date.unix + 86400)
+        let changed = try original.settingManualPersonalHandicap(.init(value: 10, source: .manual, updatedAt: later), as: "u1", at: later)
+        XCTAssertEqual(changed.personalHandicap, original.personalHandicap)
+        XCTAssertEqual(changed.lastUpdatedAt, original.lastUpdatedAt)
+        XCTAssertNil(changed.personalHandicap?.manualHistory)
+    }
+
+    func testManualEditsAndRemovalRetainDatedInputsForRegisteredAndOfflinePlayers() throws {
+        for owner: String? in ["u1", nil] {
+            let original = try player(userID: owner, index: 10)
+            let editTime = Time(iso: "", unix: date.unix + 86400)
+            let removeTime = Time(iso: "", unix: date.unix + 2 * 86400)
+            let edited = try original.settingManualPersonalHandicap(.init(value: 20, source: .external), as: "u1", at: editTime)
+            let cleared = try edited.settingManualPersonalHandicap(nil, as: "u1", at: removeTime)
+            let profile = try XCTUnwrap(cleared.personalHandicap)
+            XCTAssertEqual(profile.manualHistory?.count, 3)
+            XCTAssertNil(profile.manualEffective(at: .init(iso: "", unix: date.unix - 1)))
+            XCTAssertEqual(profile.manualEffective(at: date)?.value, 10)
+            XCTAssertEqual(profile.manualEffective(at: editTime)?.value, 20)
+            XCTAssertEqual(profile.manualEffective(at: editTime)?.source, .external)
+            XCTAssertNil(profile.manualEffective(at: removeTime))
+            XCTAssertNil(profile.manual)
+            let again = try cleared.settingManualPersonalHandicap(nil, as: "u1")
+            XCTAssertEqual(again.personalHandicap, profile)
+            XCTAssertEqual(again.lastUpdatedAt, cleared.lastUpdatedAt)
+            XCTAssertEqual(try JSONDecoder().decode(Player.self, from: JSONEncoder().encode(cleared)).personalHandicap, profile)
+        }
+    }
+
+    func testLegacyManualProfileWithoutHistoryKeepsItsKnownEffectiveDate() throws {
+        let original = try player(index: 10)
+        let decoded = try JSONDecoder().decode(Player.self, from: JSONEncoder().encode(original))
+        XCTAssertNil(decoded.personalHandicap?.manualHistory)
+        XCTAssertEqual(decoded.personalHandicap?.manualEffective(at: date)?.value, 10)
+        XCTAssertNil(decoded.personalHandicap?.manualEffective(at: .init(iso: "", unix: date.unix - 1)))
+    }
+
+    func testSourceOnlyManualEditDoesNotEraseThePriorSource() throws {
+        let original = try player(index: 10)
+        let later = Time(iso: "", unix: date.unix + 86400)
+        let changed = try original.settingManualPersonalHandicap(.init(value: 10, source: .external), as: "u1", at: later)
+        XCTAssertEqual(changed.personalHandicap?.manualEffective(at: date)?.source, .manual)
+        XCTAssertEqual(changed.personalHandicap?.manualEffective(at: later)?.source, .external)
+    }
+
+    func testPlusPrefillUsesSignedSegmentAllowanceAndDoesNotApplyLeaguePolicy() throws {
+        let nine = prefill(try player(index: -4), configuration: config(.front9))
+        XCTAssertEqual(nine.adjustedHandicap, -2)
+        XCTAssertEqual(nine.handicapResolution?.effectiveStrokes, -2)
+        XCTAssertEqual(nine.personalHandicapInput?.index, -4)
+        let full = prefill(try player(index: -2), configuration: config(.full18))
+        let calculation = try XCTUnwrap(full.handicapResolution?.calculation)
+        XCTAssertEqual(calculation.allowedStrokes(maximum: 21), 0, "League callers keep their existing nonnegative policy")
+        XCTAssertEqual(calculation.allowedStrokes(maximum: 21, allowsPlusHandicap: true), -2)
+        let frozen = full
+        var changed = try player(index: 25)
+        changed.personalHandicap?.calculation = self.calculation(index: 20)
+        XCTAssertEqual(PersonalHandicapRoundPrefill.participant(frozen, player: changed, configuration: config(.full18), isLeagueRound: false, status: .complete), frozen)
+    }
+
 }
 
 private extension Encodable {

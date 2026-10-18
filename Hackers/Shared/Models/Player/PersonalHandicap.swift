@@ -1,6 +1,12 @@
 import Foundation
 
 enum HandicapIndexEntry {
+    static func isValidDraft(_ text: String, format: HandicapEntryFormat) -> Bool {
+        let trimmed = text.trimmingCharacters(in: .whitespacesAndNewlines)
+        if trimmed.isEmpty { return format == .courseHandicap }
+        return Double(trimmed)?.isFinite == true
+    }
+
     /// Round editors use signed numeric values; negative denotes a plus handicap.
     static func filtered(_ text: String) -> String {
         var output = ""
@@ -157,13 +163,46 @@ struct PersonalHandicapCalculation: Hashable, Codable {
     }
 }
 
+/// A nil manual is an explicit removal, not an absent historical record.
+struct PersonalHandicapManualRevision: Hashable, Codable {
+    let manual: ManualPersonalHandicap?
+    let effectiveAt: Time
+
+    enum CodingKeys: String, CodingKey { case manual; case effectiveAt = "effective_at" }
+}
+
 struct PersonalHandicapProfile: Hashable, Codable {
     var manual: ManualPersonalHandicap?
     var calculation: PersonalHandicapCalculation?
+    var manualHistory: [PersonalHandicapManualRevision]?
 
-    init(manual: ManualPersonalHandicap? = nil, calculation: PersonalHandicapCalculation? = nil) {
+    init(manual: ManualPersonalHandicap? = nil, calculation: PersonalHandicapCalculation? = nil,
+         manualHistory: [PersonalHandicapManualRevision]? = nil) {
         self.manual = manual
         self.calculation = calculation
+        self.manualHistory = manualHistory
+    }
+
+    func manualEffective(at date: Time) -> ManualPersonalHandicap? {
+        // Last event wins at equal timestamps, including an explicit removal.
+        let event = (manualHistory ?? []).enumerated().filter { $0.element.effectiveAt.unix <= date.unix }.max {
+            $0.element.effectiveAt.unix == $1.element.effectiveAt.unix
+                ? $0.offset < $1.offset : $0.element.effectiveAt.unix < $1.element.effectiveAt.unix
+        }?.element
+        if let event { return event.manual }
+        return manual.flatMap { $0.updatedAt.unix <= date.unix ? $0 : nil }
+    }
+
+    func settingManual(_ input: ManualPersonalHandicap?, at time: Time) throws -> Self {
+        guard manual?.value != input?.value || manual?.source != input?.source else { return self }
+        var result = self
+        var revisions = manualHistory ?? []
+        // Seed the known legacy input before its first edit. Never guess an older one.
+        if revisions.isEmpty, let manual { revisions.append(.init(manual: manual, effectiveAt: manual.updatedAt)) }
+        result.manual = try input.map { try .init(value: $0.value, source: $0.source, updatedAt: time) }
+        revisions.append(.init(manual: result.manual, effectiveAt: time))
+        result.manualHistory = revisions
+        return result
     }
 
     var effectiveIndex: Double? { calculation?.effectiveCalculatedIndex ?? manual?.value }
@@ -173,6 +212,7 @@ struct PersonalHandicapProfile: Hashable, Codable {
 
     enum CodingKeys: String, CodingKey {
         case manual, calculation
+        case manualHistory = "manual_history"
         case effectiveIndex = "effective_index", effectiveSource = "effective_source"
     }
 
@@ -180,6 +220,7 @@ struct PersonalHandicapProfile: Hashable, Codable {
         let c = try decoder.container(keyedBy: CodingKeys.self)
         manual = try c.decodeIfPresent(ManualPersonalHandicap.self, forKey: .manual)
         calculation = try c.decodeIfPresent(PersonalHandicapCalculation.self, forKey: .calculation)
+        manualHistory = try c.decodeIfPresent([PersonalHandicapManualRevision].self, forKey: .manualHistory)
         // Effective fields are a persisted projection, never a competing authority.
     }
 
@@ -187,6 +228,7 @@ struct PersonalHandicapProfile: Hashable, Codable {
         var c = encoder.container(keyedBy: CodingKeys.self)
         try c.encodeIfPresent(manual, forKey: .manual)
         try c.encodeIfPresent(calculation, forKey: .calculation)
+        try c.encodeIfPresent(manualHistory, forKey: .manualHistory)
         try c.encodeIfPresent(effectiveIndex, forKey: .effectiveIndex)
         try c.encodeIfPresent(effectiveSource, forKey: .effectiveSource)
     }
@@ -357,8 +399,9 @@ extension Player {
     func settingManualPersonalHandicap(_ manual: ManualPersonalHandicap?, as userID: String?, at time: Time = .init()) throws -> Player {
         guard canEditPersonalHandicap(as: userID) else { throw PersonalHandicapError.notAuthorized }
         var updated = self
-        var profile = personalHandicap ?? .init()
-        profile.manual = manual
+        let previous = personalHandicap ?? .init()
+        let profile = try previous.settingManual(manual, at: time)
+        guard previous != profile else { return self }
         updated.personalHandicap = profile
         updated.lastUpdatedAt = time
         return updated

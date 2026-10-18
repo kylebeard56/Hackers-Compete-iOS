@@ -272,4 +272,61 @@ final class CourseHandicapCalculationRegressionTests: XCTestCase {
         XCTAssertTrue(HandicapCalculator.isReady(manual, format: .strokes, courseSegment: segment(tee), indexBasis: .eighteenHole))
     }
 
+    func testPersistedLegacyNineLobbyReconcilesAllocationWhenSourceBasisChanges() throws {
+        let tee = tee(rating: 72, slope: 113, frontRating: 36, frontSlope: 113, backRating: 36, backSlope: 113)
+        let legacy = RoundConfiguration(courses: [segment(tee, .front9)], handicapStrokeBasis: .eighteenHole,
+            handicapIndexBasis: nil, handicapEntryFormat: .courseHandicap)
+        let persisted = try JSONDecoder().decode(RoundConfiguration.self, from: JSONEncoder().encode(legacy))
+        let updated = HandicapCalculator.configuration(persisted, settingHandicapBasis: .nineHole, playedHoleCount: 9)
+        XCTAssertEqual(updated.handicapIndexBasis, .nineHole)
+        XCTAssertEqual(updated.handicapStrokeBasis, .nineHole)
+        let p = HandicapCalculator.participant(participant(tee), applying: 8.5, format: .courseHandicap,
+            courseSegment: segment(tee, .front9), handicapStrokeBasis: updated.handicapIndexBasis)
+        XCTAssertEqual(p.handicapResolution?.calculation?.courseHandicap, 9)
+        XCTAssertEqual(ScoringEngine.handicapStrokesForPlayedHoles(handicap: p.adjustedHandicap,
+            basis: updated.handicapStrokeBasis!, holesInPlay: 9), 9)
+        XCTAssertEqual(persisted.handicapStrokeBasis, .eighteenHole)
+    }
+
+    func testBlankIndexDraftSavesOtherFieldsWithoutInventingAHandicap() {
+        XCTAssertTrue(HandicapIndexEntry.isValidDraft("", format: .courseHandicap))
+        XCTAssertFalse(HandicapIndexEntry.isValidDraft("", format: .strokes))
+        for invalid in ["-", "NaN", "infinity", "1.2.3"] {
+            XCTAssertFalse(HandicapIndexEntry.isValidDraft(invalid, format: .courseHandicap))
+        }
+        let tee = tee()
+        var edited = participant(tee)
+        edited.name = Name("Edited", "Name")
+        edited.groupID = "new-group"
+        let saved = HandicapCalculator.participant(edited, applying: nil, format: .courseHandicap,
+            courseSegment: segment(tee), handicapStrokeBasis: .eighteenHole)
+        XCTAssertEqual(saved.name, edited.name)
+        XCTAssertEqual(saved.groupID, "new-group")
+        XCTAssertNil(saved.handicapIndex)
+        XCTAssertNil(saved.handicapResolution?.effectiveStrokes)
+        XCTAssertFalse(HandicapCalculator.isReady(saved, format: .courseHandicap, courseSegment: segment(tee), indexBasis: .eighteenHole))
+        XCTAssertEqual(saved.adjustedHandicap, edited.adjustedHandicap, "Unrelated legacy strokes are not silently changed to zero")
+    }
+
+    @MainActor
+    func testLiveAndPausedCourseHandicapSettersKeepFrozenSetup() async {
+        let tee = tee()
+        XCTAssertTrue(RoundStatus.lobby.allowsCourseHandicapSetupEdits)
+        for status: RoundStatus in [.live, .paused, .complete, .archived] {
+            XCTAssertFalse(status.allowsCourseHandicapSetupEdits)
+            let session = RoundSession()
+            let configuration = RoundConfiguration(courses: [segment(tee)], handicapStrokeBasis: .nineHole,
+                handicapIndexBasis: .eighteenHole, handicapEntryFormat: .courseHandicap)
+            let frozen = HandicapCalculator.participant(participant(tee), applying: 23, format: .courseHandicap,
+                courseSegment: segment(tee), handicapStrokeBasis: .eighteenHole)
+            session.snapshot = .init(round: Round(id: "frozen", status: status, configuration: configuration), participants: [frozen])
+            await session.setHandicapStrokeBasis(.nineHole)
+            await session.setHandicapEntryFormat(.strokes)
+            await session.setDefaultTee(to: "another-tee")
+            await session.setCourseSegment(to: segment(tee, .full18))
+            XCTAssertEqual(session.snapshot.configuration, configuration)
+            XCTAssertEqual(session.snapshot.participants, [frozen])
+        }
+    }
+
 }

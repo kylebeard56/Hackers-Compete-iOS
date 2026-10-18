@@ -142,6 +142,8 @@ extension GameLobby {
                 Task { await roundSession.setHandicapStrokeBasis(next, maximumHandicap: effectiveSeriesLeagueHandicapMaximum) }
             }
         )
+        .disabled(!snapshot.round.status.allowsCourseHandicapSetupEdits)
+        .accessibilityHint("Handicap setup can be changed before the round starts")
     }
 
     private var courseHandicapMenuSubtitle: String {

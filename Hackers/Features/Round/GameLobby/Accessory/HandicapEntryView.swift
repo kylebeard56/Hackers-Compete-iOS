@@ -78,7 +78,7 @@ struct HandicapEntryView: View {
             if effectiveFormat == .courseHandicap {
                 CourseHandicapStatusView(
                     calculation: calculation,
-                    strokes: calculation.allowedStrokes(maximum: maximumValue, estimateApproved: approveEstimate),
+                    strokes: calculation.allowedStrokes(maximum: maximumValue, estimateApproved: approveEstimate, allowsPlusHandicap: true),
                     estimateApproved: approveEstimate,
                     onUseEstimate: { approveEstimate = true },
                     onEnterStrokes: {

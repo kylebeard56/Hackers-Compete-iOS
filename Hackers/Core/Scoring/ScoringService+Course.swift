@@ -17,6 +17,16 @@ extension ScoringService {
 }
 
 enum HandicapCalculator {
+    static func configuration(_ configuration: RoundConfiguration, settingHandicapBasis basis: SeriesHandicapStrokeBasis?, playedHoleCount: Int) -> RoundConfiguration {
+        var result = configuration
+        if configuration.handicapEntryFormat == .courseHandicap {
+            result.handicapIndexBasis = basis ?? .eighteenHole
+            // Course Handicap is already on the played segment's scale.
+            result.handicapStrokeBasis = .defaultBasis(holeCount: playedHoleCount)
+        } else { result.handicapStrokeBasis = basis }
+        return result
+    }
+
     static func calculation(
         index: Double?,
         tee: Tee?,
@@ -138,12 +148,12 @@ enum HandicapCalculator {
         case .courseHandicap:
             return calculation(index: input, participant: participant, courseSegment: courseSegment,
                                indexBasis: handicapStrokeBasis)
-                .allowedStrokes(maximum: maximumHandicap, estimateApproved: estimateApproved)
+                .allowedStrokes(maximum: maximumHandicap, estimateApproved: estimateApproved, allowsPlusHandicap: true)
         }
     }
 
     static func participant(
-        _ participant: RoundParticipant, applying input: Double, format: HandicapEntryFormat,
+        _ participant: RoundParticipant, applying input: Double?, format: HandicapEntryFormat,
         courseSegment: CourseSegment?, maximumHandicap: Int? = nil,
         handicapStrokeBasis: SeriesHandicapStrokeBasis? = .eighteenHole,
         approveEstimate: Bool = false, approvedBy: String? = nil
@@ -158,9 +168,9 @@ enum HandicapCalculator {
         let priorApproval = participant.handicapResolution
         let keepApproval = calculation == priorApproval?.calculation && priorApproval?.estimateApprovedAt != nil
         let approved = format == .courseHandicap && calculation?.status == .estimated && (approveEstimate || keepApproval)
-        let allowance = strokes(for: input, format: format, participant: participant, courseSegment: courseSegment,
+        let allowance = input.flatMap { strokes(for: $0, format: format, participant: participant, courseSegment: courseSegment,
                                 maximumHandicap: maximumHandicap, handicapStrokeBasis: handicapStrokeBasis,
-                                estimateApproved: approved)
+                                estimateApproved: approved) }
         if format == .courseHandicap {
             updated.handicapIndex = input
         } else if let allowance {
@@ -271,7 +281,8 @@ enum HandicapCalculator {
 
     private static func normalized(_ participant: RoundParticipant, subtracting baseline: Int) -> RoundParticipant {
         var updated = participant
-        updated.adjustedHandicap = max(0, participant.adjustedHandicap - max(0, baseline))
+        let (difference, overflow) = participant.adjustedHandicap.subtractingReportingOverflow(baseline)
+        updated.adjustedHandicap = overflow ? (participant.adjustedHandicap >= baseline ? Int.max : 0) : max(0, difference)
         return updated
     }
 
@@ -437,7 +448,7 @@ enum CourseHandicapRosterDisplay {
     ) -> String? {
         let calculation = HandicapCalculator.calculation(index: index, participant: participant,
             courseSegment: courseSegment, indexBasis: handicapStrokeBasis)
-        var label = description(calculation, strokes: calculation.allowedStrokes(maximum: maximumHandicap))
+        var label = description(calculation, strokes: calculation.allowedStrokes(maximum: maximumHandicap, allowsPlusHandicap: true))
         if let defaultTee, participant.teeBoxID != defaultTee.id,
            let participantTee = tees.first(where: { $0.id == participant.teeBoxID }) {
             label += " (\(participantTee.name) tees)"

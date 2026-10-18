@@ -63,8 +63,11 @@ struct ManagePlayerView: View, Loggable {
     private enum FocusField { case name, handicap }
     
     private var palette: DesignPalette { .init(theme: .primary, scheme: colorScheme) }
+    private var mayEditHandicapInput: Bool {
+        snapshot.round.status.allowsCourseHandicapSetupEdits || (seriesHandicapLockActive && isSeriesCommissioner)
+    }
     private var canSave: Bool {
-        name.isPopulated && tee.exists && (strokesHandicapReadOnly || Double(handicapString) != nil)
+        name.isPopulated && tee.exists && (!mayEditHandicapInput || strokesHandicapReadOnly || HandicapIndexEntry.isValidDraft(handicapString, format: effectiveHandicapEntryFormat))
     }
 
     private var strokesHandicapReadOnly: Bool {
@@ -134,6 +137,12 @@ struct ManagePlayerView: View, Loggable {
             )
         }
         .onChange(of: courseHandicapCalculation) { estimateApproved = false }
+        .onChange(of: snapshot.round.status) {
+            if !snapshot.round.status.allowsCourseHandicapSetupEdits {
+                showTeeSelection = false
+                showCourseData = false
+            }
+        }
         .sheet(isPresented: $showHostChangeSheet) {
             ChangeHostView(snapshot: snapshot) { newHost in
                 Task {
@@ -188,12 +197,16 @@ extension ManagePlayerView {
     private var content: some View {
         VStack(spacing: 16) {
             nameSection
-            teeBoxSection
+            teeBoxSection.disabled(!snapshot.round.status.allowsCourseHandicapSetupEdits)
             teeGroupSection
             if snapshot.requiresTeams {
                 teamSection
             }
-            strokesSection
+            strokesSection.disabled(!mayEditHandicapInput)
+            if !snapshot.round.status.allowsCourseHandicapSetupEdits {
+                Text(mayEditHandicapInput ? "Course and tees are locked. League overrides apply only to this round." : "Course, tees and handicap inputs are locked after the round starts.")
+                    .font(.footnote).foregroundStyle(.secondary)
+            }
             Spacer(minLength: 0)
         }
         .padding(.horizontal, 16)
@@ -401,7 +414,7 @@ extension ManagePlayerView {
                 }
                 CourseHandicapStatusView(
                     calculation: courseHandicapCalculation,
-                    strokes: courseHandicapCalculation.allowedStrokes(maximum: maximumHandicapValue, estimateApproved: estimateIsApproved),
+                    strokes: courseHandicapCalculation.allowedStrokes(maximum: maximumHandicapValue, estimateApproved: estimateIsApproved, allowsPlusHandicap: true),
                     estimateApproved: estimateIsApproved,
                     onUseEstimate: { estimateApproved = true },
                     onFixCourseData: { showCourseData = true },
@@ -621,24 +634,16 @@ extension ManagePlayerView {
     private func finish() {
         var p = participant ?? .init()
         p.name = Name(name)
-        p.teeBoxID = tee?.id ?? ""
-        let courseSegment = participantCourseSegment
-        let computed = HandicapCalculator.participant(
-            p,
-            applying: handicapValue,
-            format: effectiveHandicapEntryFormat,
-            courseSegment: courseSegment,
-            maximumHandicap: maximumHandicapValue,
-            handicapStrokeBasis: indexBasis,
-            approveEstimate: estimateIsApproved
-        )
+        if snapshot.round.status.allowsCourseHandicapSetupEdits { p.teeBoxID = tee?.id ?? "" }
         if seriesHandicapLockActive && isSeriesCommissioner {
             p = p.applyingLeagueHandicapOverride(
                 Int(handicapValue.rounded()),
                 maximum: maximumHandicapValue
             )
-        } else if !seriesHandicapLockActive {
-            p = computed
+        } else if !seriesHandicapLockActive && snapshot.round.status.allowsCourseHandicapSetupEdits {
+            p = HandicapCalculator.participant(p, applying: Double(handicapString), format: effectiveHandicapEntryFormat,
+                courseSegment: participantCourseSegment, maximumHandicap: maximumHandicapValue,
+                handicapStrokeBasis: indexBasis, approveEstimate: estimateIsApproved)
         }
         p.groupID = groupID
         p.teamID = teamID

@@ -52,11 +52,12 @@ struct CourseHandicapCalculation: Hashable, Codable {
         case missingFields = "missing_fields"
     }
 
-    func allowedStrokes(maximum: Int?, estimateApproved: Bool = false) -> Int? {
+    func allowedStrokes(maximum: Int?, estimateApproved: Bool = false, allowsPlusHandicap: Bool = false) -> Int? {
         guard status == .exact || (status == .estimated && estimateApproved),
               let courseHandicap else { return nil }
-        let nonNegative = max(0, courseHandicap)
-        return maximum.map { min(nonNegative, max(0, $0)) } ?? nonNegative
+        // League callers retain their existing nonnegative allowance policy.
+        let allowance = allowsPlusHandicap ? courseHandicap : max(0, courseHandicap)
+        return maximum.map { min(allowance, max(0, $0)) } ?? allowance
     }
 }
 

@@ -880,4 +880,72 @@ final class PersonalHandicapCalculationTests: XCTestCase {
         XCTAssertEqual(imported.scores, chronological.scores)
     }
 
+    func testAuditResavingSameManualIndexPreservesHistoricalLeagueDifferentials() throws {
+        let base = 1_700_000_000.0
+        let reviews = (0..<3).map { n -> PersonalHandicapRoundReview in
+            var source = snapshot(id: "audit-league-\(n)")
+            source.round.firstScoredAt = Time(iso: "", unix: base + Double(n) * 86400)
+            source.participants[0].seriesMemberID = "league-member"
+            for i in source.scoring.indices { source.scoring[i].strokes = 10 }
+            return review(source)
+        }
+        let original = try ManualPersonalHandicap(value: 10, source: .manual, updatedAt: .init(iso: "", unix: base - 86400))
+        var player = Player(id: "p1", userID: "u1", name: Name("Test", "Player"))
+        player.personalHandicap = .init(manual: original)
+        let now = Time(iso: "", unix: base + 3 * 86400)
+        let savedAgain = try player.settingManualPersonalHandicap(.init(value: 10, source: .manual, updatedAt: now), as: "u1", at: now)
+        let before = PersonalHandicapEngine.rebuild(playerID: "p1", reviews: reviews, manual: original)
+        let after = PersonalHandicapEngine.rebuild(playerID: "p1", reviews: reviews, manual: savedAgain.personalHandicap?.manual)
+        XCTAssertEqual(before.calculation.qualifiedIndex, 44)
+        XCTAssertEqual(before.scores.first?.adjustedGrossScore, 118)
+        XCTAssertEqual(after.scores.first?.personalIndexAtPlay, 10)
+        XCTAssertEqual(after.scores.first?.adjustedGrossScore, before.scores.first?.adjustedGrossScore)
+        XCTAssertEqual(after.calculation.qualifiedIndex, before.calculation.qualifiedIndex)
+    }
+
+    func testRealManualEditAndRemovalPreserveHistoricalLeagueHoleLimitsAndTrend() throws {
+        let base = 1_700_000_000.0
+        let reviews = (0..<3).map { n -> PersonalHandicapRoundReview in
+            var source = snapshot(id: "historical-league-\(n)")
+            source.round.firstScoredAt = .init(iso: "", unix: base + Double(n) * 86400)
+            source.participants[0].seriesMemberID = "member"
+            for i in source.scoring.indices { source.scoring[i].strokes = 10 }
+            return review(source)
+        }
+        var player = Player(id: "p1", userID: "u1", name: Name("Test", "Player"))
+        let manual = try ManualPersonalHandicap(value: 10, source: .manual, updatedAt: .init(iso: "", unix: base - 86400))
+        player.personalHandicap = .init(manual: manual)
+        let before = PersonalHandicapEngine.rebuild(playerID: "p1", reviews: reviews, manual: manual)
+        let edited = try player.settingManualPersonalHandicap(.init(value: 20, source: .external), as: "u1", at: .init(iso: "", unix: base + 4 * 86400))
+        let cleared = try edited.settingManualPersonalHandicap(nil, as: "u1", at: .init(iso: "", unix: base + 5 * 86400))
+        for profile in [edited.personalHandicap!, cleared.personalHandicap!] {
+            let after = PersonalHandicapEngine.rebuild(playerID: "p1", reviews: reviews, manual: profile.manual, manualHistory: profile.manualHistory ?? [])
+            XCTAssertEqual(after.scores.first?.personalIndexAtPlay, 10)
+            XCTAssertEqual(after.scores.first?.adjustedGrossScore, 118)
+            XCTAssertEqual(after.calculation.qualifiedIndex, 44)
+            XCTAssertEqual(after.calculation.qualifiedIndex, before.calculation.qualifiedIndex)
+            XCTAssertTrue(PersonalHandicapPersistence.sameHistory(before.history[0], after.history[0]))
+        }
+    }
+
+    func testDatedManualChangesOnlyAffectRoundsPlayedAfterTheirEffectiveDate() throws {
+        let base = 1_700_000_000.0
+        let reviews = [0, 2].map { day -> PersonalHandicapRoundReview in
+            var source = snapshot(id: "between-\(day)")
+            source.round.firstScoredAt = .init(iso: "", unix: base + Double(day) * 86400)
+            for i in source.scoring.indices { source.scoring[i].strokes = 10 }
+            return review(source)
+        }
+        let first = try ManualPersonalHandicap(value: 10, source: .manual, updatedAt: .init(iso: "", unix: base - 86400))
+        var profile = PersonalHandicapProfile(manual: first)
+        profile = try profile.settingManual(.init(value: 20, source: .external), at: .init(iso: "", unix: base + 86400))
+        let result = PersonalHandicapEngine.rebuild(playerID: "p1", reviews: reviews, manual: profile.manual, manualHistory: profile.manualHistory ?? [])
+        XCTAssertEqual(result.scores.map(\.personalIndexAtPlay), [10, 20])
+        XCTAssertEqual(result.scores.map(\.adjustedGrossScore), [118, 128])
+        profile = try profile.settingManual(nil, at: .init(iso: "", unix: base + 86400))
+        let cleared = PersonalHandicapEngine.rebuild(playerID: "p1", reviews: reviews, manual: nil, manualHistory: profile.manualHistory ?? [])
+        XCTAssertEqual(cleared.scores.map(\.personalIndexAtPlay), [10, nil])
+        XCTAssertEqual(cleared.scores.last?.adjustedGrossScore, 162)
+    }
+
 }

@@ -118,6 +118,7 @@ enum PersonalHandicapEngine {
     private struct ReplayInput: Encodable {
         let sources: [String]
         let manual: ManualPersonalHandicap?
+        let manualHistory: [PersonalHandicapManualRevision]
         let verified: [PersonalHandicapVerifiedDifferential]
     }
 
@@ -144,14 +145,16 @@ enum PersonalHandicapEngine {
     /// a future result. Source scorecards and scoring snapshots are immutable.
     static func rebuild(
         playerID: String, reviews: [PersonalHandicapRoundReview],
-        verified: [PersonalHandicapVerifiedDifferential] = [], manual: ManualPersonalHandicap? = nil, asOf: Time = .init()
+        verified: [PersonalHandicapVerifiedDifferential] = [], manual: ManualPersonalHandicap? = nil,
+        manualHistory: [PersonalHandicapManualRevision] = [], asOf: Time = .init()
     ) -> PersonalHandicapRebuild {
         let reviews = PersonalHandicapEligibility.unique(reviews, playerID: playerID)
         let verified = verified.filter { $0.playerID == playerID }
         let supplied = Dictionary(grouping: verified, by: \.roundID)
         let fingerprint = PersonalHandicapFingerprint.hash(ReplayInput(
             sources: reviews.map { $0.fingerprint.isEmpty ? PersonalHandicapFingerprint.hash($0.score) + String($0.revision) : $0.fingerprint },
-            manual: manual, verified: verified.sorted { $0.roundID == $1.roundID ? $0.postingID < $1.postingID : $0.roundID < $1.roundID }))
+            manual: manual, manualHistory: manualHistory, verified: verified.sorted { $0.roundID == $1.roundID ? $0.postingID < $1.postingID : $0.roundID < $1.roundID }))
+        let manualProfile = PersonalHandicapProfile(manual: manual, manualHistory: manualHistory)
         var scores: [PersonalHandicapScoreRecord] = []
         var history: [PersonalHandicapHistoryPoint] = []
         var differentials: [Differential] = []
@@ -181,7 +184,7 @@ enum PersonalHandicapEngine {
             var pairInitialNine = false
             if let card = review.card {
                 indexInEffect = card.frozenPersonalIndex ?? previousIndex
-                    ?? manual.flatMap { $0.updatedAt.unix <= score.playedAt.unix ? $0.value : nil }
+                    ?? manualProfile.manualEffective(at: score.playedAt)?.value
                 score.personalIndexAtPlay = indexInEffect
                 score.personalIndexProvenance = card.frozenPersonalIndex != nil ? "frozen_personal_input"
                     : previousIndex != nil ? "replayed_personal_history"
