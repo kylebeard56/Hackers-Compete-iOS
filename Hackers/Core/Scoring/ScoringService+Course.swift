@@ -17,6 +17,12 @@ extension ScoringService {
 }
 
 enum HandicapCalculator {
+    static func isValidDraft(_ text: String, format: HandicapEntryFormat) -> Bool {
+        let trimmed = text.trimmingCharacters(in: .whitespacesAndNewlines)
+        if trimmed.isEmpty { return format == .courseHandicap }
+        return Double(trimmed)?.isFinite == true
+    }
+
     static func configuration(_ configuration: RoundConfiguration, settingHandicapBasis basis: SeriesHandicapStrokeBasis?, playedHoleCount: Int) -> RoundConfiguration {
         var result = configuration
         if configuration.handicapEntryFormat == .courseHandicap {

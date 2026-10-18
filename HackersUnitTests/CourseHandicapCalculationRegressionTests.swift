@@ -289,10 +289,10 @@ final class CourseHandicapCalculationRegressionTests: XCTestCase {
     }
 
     func testBlankIndexDraftSavesOtherFieldsWithoutInventingAHandicap() {
-        XCTAssertTrue(HandicapIndexEntry.isValidDraft("", format: .courseHandicap))
-        XCTAssertFalse(HandicapIndexEntry.isValidDraft("", format: .strokes))
+        XCTAssertTrue(HandicapCalculator.isValidDraft("", format: .courseHandicap))
+        XCTAssertFalse(HandicapCalculator.isValidDraft("", format: .strokes))
         for invalid in ["-", "NaN", "infinity", "1.2.3"] {
-            XCTAssertFalse(HandicapIndexEntry.isValidDraft(invalid, format: .courseHandicap))
+            XCTAssertFalse(HandicapCalculator.isValidDraft(invalid, format: .courseHandicap))
         }
         let tee = tee()
         var edited = participant(tee)

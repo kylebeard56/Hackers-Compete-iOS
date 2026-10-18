@@ -1,12 +1,6 @@
 import Foundation
 
 enum HandicapIndexEntry {
-    static func isValidDraft(_ text: String, format: HandicapEntryFormat) -> Bool {
-        let trimmed = text.trimmingCharacters(in: .whitespacesAndNewlines)
-        if trimmed.isEmpty { return format == .courseHandicap }
-        return Double(trimmed)?.isFinite == true
-    }
-
     /// Round editors use signed numeric values; negative denotes a plus handicap.
     static func filtered(_ text: String) -> String {
         var output = ""

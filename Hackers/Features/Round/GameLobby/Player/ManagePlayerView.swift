@@ -67,7 +67,7 @@ struct ManagePlayerView: View, Loggable {
         snapshot.round.status.allowsCourseHandicapSetupEdits || (seriesHandicapLockActive && isSeriesCommissioner)
     }
     private var canSave: Bool {
-        name.isPopulated && tee.exists && (!mayEditHandicapInput || strokesHandicapReadOnly || HandicapIndexEntry.isValidDraft(handicapString, format: effectiveHandicapEntryFormat))
+        name.isPopulated && tee.exists && (!mayEditHandicapInput || strokesHandicapReadOnly || HandicapCalculator.isValidDraft(handicapString, format: effectiveHandicapEntryFormat))
     }
 
     private var strokesHandicapReadOnly: Bool {
