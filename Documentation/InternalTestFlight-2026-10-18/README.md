@@ -31,5 +31,28 @@ app-store-connect export, manageAppVersionAndBuildNumber=false and
  testFlightInternalTestingOnly=true. No production services, external TestFlight,
 App Store publication or main merge is authorized.
 
-Archive/upload/processing: pending; final receipt will be appended after verification.
-ClickUp updates are currently blocked by the connector daily limit (100/100).
+Archive, signed export, signature verification and upload succeeded. Apple build
+08cfc8cb-a30f-4e91-952e-f415505cc9bc is VALID / INTERNAL_ONLY /
+IN_BETA_TESTING; the internal Beta group contains this exact build and the
+external Beta Testers group does not. AVAILABLE for internal installation.
+The main Hackers Compete app was not uploaded by this request.
+
+Archive: /private/tmp/HackersInternalTest20261018.xcarchive.
+IPA: /private/tmp/HackersInternalTest20261018-export/Hackers.ipa.
+SHA256: 43b95d95abd1440c9223b7a664f471503111970eef948fbebf2f77764299b3f7.
+Archive/export/upload logs share prefix /private/tmp/HackersInternalTest20261018-.
+Apple receipt: apple-build-status.json; test counts: validation.json.
+The iPhone app and Live Activity extension both contain version1.0.0/build2026.10.18.1.
+Missing dSYMs for the main app, extension and ten vendor frameworks limit crash
+symbolication; Apple accepted and processed the binary despite those warnings.
+ClickUp connector hit its daily quota; the authenticated web interface was used
+successfully to post release scope and validation comments on all ten linked
+tickets. GitHub connector writes returned 403; the authenticated GitHub web interface
+was used for the four PR descriptions after the Git credential PATCH timed out. PR16 source was fast-forward pushed;
+PR14/15/17 retain their independent heads. Broader source-resolution ticket
+wdx6zf65p7 remains open rather than claiming all its scope is complete.
+
+All four PR description updates were confirmed by GitHub API readback. All nine
+implemented linked tickets were moved to TestFlight and visibly verified; broader
+source-resolution follow-up wdx6zf65p7 remains open. Details: tracking-updates.json.
+App-code commit remains d03a2355; this final receipt commit changes documentation only.
