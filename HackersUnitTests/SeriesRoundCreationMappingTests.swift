@@ -1332,7 +1332,8 @@ final class SeriesRoundCreationMappingTests: XCTestCase {
         XCTAssertFalse(payloads[1].isHost)
         XCTAssertEqual(payloads[1].adjustedHandicap, 12)
         XCTAssertEqual(payloads[1].leagueHandicapStrokesAtCreation, 12)
-        XCTAssertEqual(payloads[0].leagueHandicapStrokesAtCreation, 0)
+        XCTAssertNil(payloads[0].leagueHandicapStrokesAtCreation, "Missing input must not become a frozen scratch allowance")
+        XCTAssertNil(payloads[0].handicapResolution?.effectiveStrokes)
     }
 
     func testBuildParticipantPayloads_capsSeriesHandicapForRoundStrokes() {

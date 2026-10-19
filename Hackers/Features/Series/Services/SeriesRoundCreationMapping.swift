@@ -23,8 +23,8 @@ struct SeriesCourseHandicapValidationIssue: Hashable {
 
 struct SeriesCourseHandicapResolution: Hashable {
     let calculation: CourseHandicapCalculation
-    let effectiveStrokes: Int?
-    let handicapIndex: Double?
+    var effectiveStrokes: Int?
+    var handicapIndex: Double?
     let tee: Tee?
     let courseID: String
     let courseName: String
@@ -33,9 +33,9 @@ struct SeriesCourseHandicapResolution: Hashable {
     let courseSlope: Int?
     let par: Int
     let entryFormat: HandicapEntryFormat
-    let handicapStrokeBasis: SeriesHandicapStrokeBasis?
+    var handicapStrokeBasis: SeriesHandicapStrokeBasis?
     let maximumHandicap: Int?
-    let calculatorFingerprint: String
+    var calculatorFingerprint: String
     let validationIssue: SeriesCourseHandicapValidationIssue?
 
     func snapshot(
@@ -71,7 +71,7 @@ struct SeriesCourseHandicapResolution: Hashable {
 
 /// Single source of truth for the roster Course HCP display and series-round participant seeding.
 enum SeriesCourseHandicapResolver {
-    static let calculatorVersion = 2
+    static let calculatorVersion = 3
 
     static func resolve(
         effectiveIndex: Double?,
@@ -79,15 +79,18 @@ enum SeriesCourseHandicapResolver {
         courseSegment: CourseSegment,
         entryFormat: HandicapEntryFormat,
         handicapStrokeBasis: SeriesHandicapStrokeBasis?,
-        maximumHandicap: Int?
+        maximumHandicap: Int?,
+        roundInput: SeriesRoundHandicapInput? = nil
     ) -> SeriesCourseHandicapResolution {
+        var member = member
+        if let teeBoxID = roundInput?.teeBoxID { member.defaultTeeBoxID = teeBoxID }
         let requestedTeeID = SeriesRoundCreationMapping.resolvedTeeBoxID(
             for: member,
             courseSegment: courseSegment
         )
         let tee = courseSegment.tee(from: requestedTeeID)
-        return resolve(
-            effectiveIndex: effectiveIndex,
+        var resolution = resolve(
+            effectiveIndex: roundInput.map { $0.isValid ? $0.value : nil } ?? effectiveIndex,
             memberID: member.id,
             memberName: member.name.fullName,
             requestedTeeID: requestedTeeID,
@@ -95,10 +98,12 @@ enum SeriesCourseHandicapResolver {
             courseID: courseSegment.courseInfo.id,
             courseName: courseSegment.courseInfo.name,
             holeSegment: courseSegment.holeSegment,
-            entryFormat: entryFormat,
-            handicapStrokeBasis: handicapStrokeBasis,
-            maximumHandicap: maximumHandicap
+            entryFormat: roundInput.map { $0.method == .personalIndex ? .courseHandicap : .strokes } ?? entryFormat,
+            handicapStrokeBasis: roundInput.map { $0.method == .personalIndex ? .eighteenHole : .defaultBasis(holeCount: courseSegment.holeSegment.holeCount) } ?? handicapStrokeBasis,
+            maximumHandicap: roundInput?.method == .strokes ? nil : maximumHandicap
         )
+        if roundInput?.method == .strokes { resolution.handicapIndex = nil }
+        return resolution
     }
 
     static func resolve(
@@ -116,10 +121,11 @@ enum SeriesCourseHandicapResolver {
     ) -> SeriesCourseHandicapResolution {
         let calculation = HandicapCalculator.calculation(
             index: effectiveIndex, tee: tee, segment: holeSegment, indexBasis: handicapStrokeBasis
-        )
+        ).limitingIndex(to: entryFormat == .courseHandicap ? maximumHandicap : nil)
         var missingFields = entryFormat == .courseHandicap ? calculation.missingFields : []
         if effectiveIndex == nil, entryFormat == .strokes { missingFields.append("handicap index") }
         if tee == nil, entryFormat == .strokes { missingFields.append("selected tee") }
+        if entryFormat == .strokes, calculation.missingFields.contains("par") { missingFields.append("par") }
         // Series creation keeps its stricter course-data preflight. A casual-round
         // confirmation must never bypass league validation or commissioner authority.
         if entryFormat == .courseHandicap, calculation.status == .estimated {
@@ -137,7 +143,7 @@ enum SeriesCourseHandicapResolver {
                   effectiveIndex > Double(Int.min), effectiveIndex < Double(Int.max) else { return nil }
             switch entryFormat {
             case .strokes: return capped(Int(effectiveIndex.rounded()), maximumHandicap: maximumHandicap)
-            case .courseHandicap: return calculation.allowedStrokes(maximum: maximumHandicap)
+            case .courseHandicap: return calculation.allowedStrokes(maximum: nil)
             }
         }()
 
@@ -177,13 +183,30 @@ enum SeriesCourseHandicapResolver {
         )
     }
 
+    /// New round-only values describe the actual holes played. When mixed with a
+    /// legacy strokes-basis series, keep the old allowance calculation/cap and
+    /// apply the existing scoring conversion once before storing the frozen total.
+    static func onPlayedHoleBasis(_ resolution: SeriesCourseHandicapResolution,
+                                  sourceBasis: SeriesHandicapStrokeBasis?, holeCount: Int) -> SeriesCourseHandicapResolution {
+        guard let strokes = resolution.effectiveStrokes, let sourceBasis else { return resolution }
+        let playedBasis = SeriesHandicapStrokeBasis.defaultBasis(holeCount: holeCount)
+        guard sourceBasis != playedBasis else { return resolution }
+        var result = resolution
+        result.effectiveStrokes = ScoringEngine.handicapStrokesForPlayedHoles(
+            handicap: strokes, basis: sourceBasis, holesInPlay: holeCount)
+        result.handicapStrokeBasis = playedBasis
+        result.calculatorFingerprint += "|played-strokes:\(holeCount)"
+        return result
+    }
+
     static func validationIssues(
         members: [SeriesMember],
         handicaps: [String: SeriesMemberHandicap],
         courseSegment: CourseSegment,
         entryFormat: HandicapEntryFormat,
         handicapStrokeBasis: SeriesHandicapStrokeBasis?,
-        maximumHandicap: Int?
+        maximumHandicap: Int?,
+        roundInputs: [String: SeriesRoundHandicapInput] = [:]
     ) -> [SeriesCourseHandicapValidationIssue] {
         members.compactMap { member in
             resolve(
@@ -192,7 +215,8 @@ enum SeriesCourseHandicapResolver {
                 courseSegment: courseSegment,
                 entryFormat: entryFormat,
                 handicapStrokeBasis: handicapStrokeBasis,
-                maximumHandicap: maximumHandicap
+                maximumHandicap: maximumHandicap,
+                roundInput: roundInputs[member.id]
             ).validationIssue
         }
     }
@@ -398,7 +422,7 @@ enum SeriesRoundCreationMapping {
         primaryGameFormat(series: series, seriesRound: seriesRound)
     }
 
-    private static func primaryGameFormat(series: Series, seriesRound: SeriesRound) -> GameFormat {
+    static func primaryGameFormat(series: Series, seriesRound: SeriesRound) -> GameFormat {
         var format = seriesRound.roundConfig.legacyGameFormat
         if series.handicapConfig.isEnabled, seriesRound.roundConfig.scoreBasisOverride == nil {
             format.configuration.basis = .net
@@ -448,7 +472,7 @@ enum SeriesRoundCreationMapping {
             matchTiePolicy: seriesRound.roundConfig.matchTiePolicy,
             selectionDomain: resolvedSelectionDomain(for: seriesRound),
             sequentialTeeStartsEnabled: false,
-            handicapStrokeBasis: seriesRound.roundConfig.handicapEntryFormat == .courseHandicap
+            handicapStrokeBasis: (seriesRound.roundConfig.handicapEntryFormat == .courseHandicap || !seriesRound.handicapInputs.isEmpty)
                 ? .defaultBasis(holeCount: courseSegment.holeSegment.holeCount)
                 : seriesRound.roundConfig.handicapStrokeBasis,
             handicapIndexBasis: series.handicapConfig.strokeBasis,
@@ -979,6 +1003,8 @@ enum SeriesRoundCreationMapping {
         handicapEntryFormat: HandicapEntryFormat = .strokes,
         handicapStrokeBasis: SeriesHandicapStrokeBasis? = nil,
         selectedHandicapScoreIDsByMemberID: [String: Set<String>] = [:],
+        roundHandicapInputs: [String: SeriesRoundHandicapInput] = [:],
+        roundScoringStrokeBasis: SeriesHandicapStrokeBasis? = nil,
         hostPlayerID: String?,
         presenceStatusByMemberID: [String: RoundParticipantPresenceStatus] = [:],
         plannedSeatsByMemberID: [String: SeriesRoundPlannedSeat] = [:]
@@ -1008,19 +1034,27 @@ enum SeriesRoundCreationMapping {
                 ? plannedSeat?.representedTeamID
                 : member.teamID
             let teamMapping = representedTeamID.flatMap { teamMappings[$0] }
-            let teeBoxID = resolvedTeeBoxID(for: member, courseSegment: courseSegment)
-            let resolution = SeriesCourseHandicapResolver.resolve(
+            let roundInput = roundHandicapInputs[member.id]
+            let teeBoxID = roundInput?.teeBoxID ?? resolvedTeeBoxID(for: member, courseSegment: courseSegment)
+            var resolution = SeriesCourseHandicapResolver.resolve(
                 effectiveIndex: effectiveIndex,
                 member: member,
                 courseSegment: courseSegment,
                 entryFormat: handicapEntryFormat,
                 handicapStrokeBasis: resolvedHandicapStrokeBasis,
-                maximumHandicap: maximumHandicap
+                maximumHandicap: maximumHandicap,
+                roundInput: roundInput
             )
+            if !roundHandicapInputs.isEmpty, roundInput == nil, handicapEntryFormat == .strokes {
+                resolution = SeriesCourseHandicapResolver.onPlayedHoleBasis(resolution,
+                    sourceBasis: roundScoringStrokeBasis ?? .defaultBasis(holeCount: courseSegment.holeSegment.holeCount),
+                    holeCount: courseSegment.holeSegment.holeCount)
+            }
             let computedHandicap = resolution.effectiveStrokes ?? (handicapEntryFormat == .strokes ? effectiveHandicap : 0)
             // Retain the legacy integer field for old clients, but never read it as an Index.
-            let originalHandicap = handicapEntryFormat == .courseHandicap
-                ? max(0, Int((effectiveIndex ?? 0).rounded())) : effectiveHandicap
+            let originalHandicap = roundInput.flatMap { $0.isValid ? max(0, Int($0.value.rounded())) : nil }
+                ?? (handicapEntryFormat == .courseHandicap
+                    ? max(0, Int((effectiveIndex ?? 0).rounded())) : effectiveHandicap)
             return RoundParticipant(
                 id: HackersID.string(),
                 userID: member.userID,
@@ -1029,15 +1063,18 @@ enum SeriesRoundCreationMapping {
                 teeBoxID: teeBoxID,
                 originalHandicap: originalHandicap,
                 adjustedHandicap: computedHandicap,
-                handicapIndex: handicapEntryFormat == .courseHandicap ? effectiveIndex : nil,
-                leagueHandicapStrokesAtCreation: handicapEntryFormat == .strokes ? computedHandicap : resolution.effectiveStrokes,
+                handicapIndex: roundInput == nil
+                    ? (handicapEntryFormat == .courseHandicap ? effectiveIndex : nil)
+                    : resolution.handicapIndex,
+                leagueHandicapStrokesAtCreation: resolution.effectiveStrokes,
                 handicapSnapshot: resolution.snapshot(
-                    selectedHandicapScoreIDs: selectedHandicapScoreIDsByMemberID[member.id] ?? []
+                    selectedHandicapScoreIDs: roundInput == nil ? (selectedHandicapScoreIDsByMemberID[member.id] ?? []) : [],
+                    source: roundInput == nil ? .league : .roundSetup
                 ),
                 handicapResolution: RoundHandicapResolution(
-                    entryFormat: handicapEntryFormat,
-                    calculation: handicapEntryFormat == .courseHandicap ? resolution.calculation : nil,
-                    effectiveStrokes: handicapEntryFormat == .strokes ? computedHandicap : resolution.effectiveStrokes
+                    entryFormat: resolution.entryFormat,
+                    calculation: resolution.entryFormat == .courseHandicap ? resolution.calculation : nil,
+                    effectiveStrokes: resolution.effectiveStrokes
                 ),
                 seriesMemberID: member.id,
                 teamID: teamMapping?.roundTeamID,
@@ -1939,5 +1976,130 @@ enum SeriesRoundPlanningService {
                     parentID: roundID
                 )
             ]
+    }
+}
+
+/// An explicit commissioner input for one planned round. Personal Indexes always use the
+/// 18-hole basis; strokes are the final allowance for the holes actually being played.
+struct SeriesRoundHandicapInput: Hashable, Codable {
+    enum Method: String, Codable, CaseIterable {
+        case personalIndex
+        case strokes
+    }
+
+    var method: Method
+    var value: Double
+    var teeBoxID: String?
+
+    var isValid: Bool {
+        guard value.isFinite else { return false }
+        switch method {
+        case .personalIndex: return (-10...54).contains(value) && abs(value * 10 - (value * 10).rounded()) < 0.000_001
+        case .strokes: return value >= 0 && value <= Double(Int32.max) && value.rounded() == value
+        }
+    }
+}
+
+/// Unsaved editor state survives closing/reopening the setup sheet, including invalid text.
+struct SeriesRoundHandicapDraft: Equatable, Codable {
+    enum Method: String, CaseIterable, Codable {
+        case series = "Series handicap"
+        case personalIndex = "Handicap Index"
+        case strokes = "Strokes Received"
+    }
+
+    var method: Method = .personalIndex
+    var text: String = ""
+    var teeBoxID: String = ""
+
+    init(input: SeriesRoundHandicapInput? = nil, seriesIndex: Double? = nil, personalIndex: Double? = nil, teeBoxID: String) {
+        self.teeBoxID = input?.teeBoxID ?? teeBoxID
+        if let input {
+            method = input.method == .personalIndex ? .personalIndex : .strokes
+            text = SeriesMemberHandicap.formatHandicapIndexForDisplay(input.value)
+        } else if seriesIndex != nil {
+            method = .series
+        } else if let personalIndex {
+            text = SeriesMemberHandicap.formatHandicapIndexForDisplay(personalIndex)
+        }
+    }
+
+    var input: SeriesRoundHandicapInput? {
+        guard method != .series,
+              let value = Double(text.trimmingCharacters(in: .whitespacesAndNewlines).replacingOccurrences(of: ",", with: ".")) else { return nil }
+        let input = SeriesRoundHandicapInput(
+            method: method == .personalIndex ? .personalIndex : .strokes,
+            value: value, teeBoxID: teeBoxID
+        )
+        return input.isValid ? input : nil
+    }
+}
+
+/// Shared preflight for the review screen and the actual round writer. The series
+/// computation remains independent from the round-only personal/manual inputs.
+enum SeriesRoundHandicapSetup {
+    enum DraftError: Error { case invalidInput(String), roundUnavailable }
+
+    static func updating(_ current: SeriesRound, from candidate: SeriesRound) throws -> SeriesRound {
+        guard current.id == candidate.id, current.parentID == candidate.parentID,
+              current.status == .planned, current.roundID == nil,
+              current.lastUpdatedAt == candidate.lastUpdatedAt,
+              candidate.handicapInputs.values.allSatisfy(\.isValid) else { throw DraftError.roundUnavailable }
+        var updated = current
+        updated.handicapInputs = candidate.handicapInputs
+        updated.courseOverride = candidate.courseOverride
+        updated.roundConfig.scoreBasisOverride = candidate.roundConfig.scoreBasisOverride
+        updated.lastUpdatedAt = .init()
+        return updated
+    }
+
+    static func applying(drafts: [String: SeriesRoundHandicapDraft], to round: SeriesRound) throws -> SeriesRound {
+        var result = round
+        for (memberID, draft) in drafts {
+            if draft.method == .series { result.handicapInputs[memberID] = nil }
+            else if let input = draft.input { result.handicapInputs[memberID] = input }
+            else if !draft.text.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty || round.handicapInputs[memberID] != nil {
+                throw DraftError.invalidInput(memberID)
+            }
+        }
+        return result
+    }
+
+    static func requiresHandicaps(series: Series, round: SeriesRound) -> Bool {
+        round.roundConfig.handicapEntryFormat == .courseHandicap
+            || SeriesRoundCreationMapping.primaryGameFormat(series: series, seriesRound: round).configuration.basis == .net
+    }
+
+    static func issues(
+        series: Series, round: SeriesRound, members: [SeriesMember],
+        handicaps: [String: SeriesMemberHandicap], course: CourseSegment
+    ) -> [SeriesCourseHandicapValidationIssue] {
+        let requiresInput = requiresHandicaps(series: series, round: round)
+        return members.compactMap { member in
+            guard requiresInput || round.handicapInputs[member.id] != nil else { return nil }
+            return resolution(series: series, round: round, member: member,
+                              handicaps: handicaps, course: course).validationIssue
+        }
+    }
+
+    static func resolution(
+        series: Series, round: SeriesRound, member: SeriesMember,
+        handicaps: [String: SeriesMemberHandicap], course: CourseSegment
+    ) -> SeriesCourseHandicapResolution {
+        let resolution = SeriesCourseHandicapResolver.resolve(
+            effectiveIndex: handicaps[member.id]?.effectiveIndex,
+            member: member, courseSegment: course,
+            entryFormat: round.roundConfig.handicapEntryFormat,
+            handicapStrokeBasis: series.handicapConfig.strokeBasis,
+            maximumHandicap: series.handicapConfig.isEnabled ? series.handicapConfig.config.maximumHandicap : nil,
+            roundInput: round.handicapInputs[member.id]
+        )
+        if !round.handicapInputs.isEmpty, round.handicapInputs[member.id] == nil,
+           round.roundConfig.handicapEntryFormat == .strokes {
+            return SeriesCourseHandicapResolver.onPlayedHoleBasis(resolution,
+                sourceBasis: round.roundConfig.handicapStrokeBasis ?? .defaultBasis(holeCount: course.holeSegment.holeCount),
+                holeCount: course.holeSegment.holeCount)
+        }
+        return resolution
     }
 }

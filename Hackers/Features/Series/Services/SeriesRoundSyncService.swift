@@ -49,25 +49,13 @@ struct SeriesRoundSyncService: Loggable {
            participatingMembers.isEmpty {
             return .failure(.noParticipants)
         }
-        if seriesRound.roundConfig.handicapEntryFormat == .courseHandicap,
-           options.syncPlayerData || options.syncFormat || options.syncHandicapSettings {
-            let resolvedHandicapStrokeBasis = series.handicapConfig.strokeBasis
-            let issues = SeriesCourseHandicapResolver.validationIssues(
-                members: participatingMembers,
-                handicaps: handicaps,
-                courseSegment: courseSegment,
-                entryFormat: .courseHandicap,
-                handicapStrokeBasis: resolvedHandicapStrokeBasis,
-                maximumHandicap: series.handicapConfig.isEnabled
-                    ? series.handicapConfig.config.maximumHandicap
-                    : nil
+        if options.syncPlayerData || options.syncFormat || options.syncHandicapSettings {
+            let issues = SeriesRoundHandicapSetup.issues(
+                series: series, round: seriesRound, members: participatingMembers,
+                handicaps: handicaps, course: courseSegment
             )
-            if issues.isPopulated {
-                return .failure(
-                    .preflightFailed(
-                        issues.map { $0.message }.joined(separator: "\n")
-                    )
-                )
+            if !issues.isEmpty {
+                return .failure(.preflightFailed(issues.map(\.message).joined(separator: "\n")))
             }
         }
 
@@ -299,6 +287,8 @@ struct SeriesRoundSyncService: Loggable {
                         courseSegment: courseSegment,
                         handicapEntryFormat: workingRound.configuration.handicapEntryFormat,
                         handicapStrokeBasis: series.handicapConfig.strokeBasis,
+                        roundHandicapInputs: seriesRound.handicapInputs,
+                        roundScoringStrokeBasis: seriesRound.roundConfig.handicapStrokeBasis,
                         hostPlayerID: hostPlayerID,
                         plannedSeatsByMemberID: plannedSeatsByMemberID
                     )
@@ -465,6 +455,9 @@ struct SeriesRoundSyncService: Loggable {
                 courseSegment: courseSegment,
                 handicapEntryFormat: workingRound.configuration.handicapEntryFormat,
                 handicapStrokeBasis: series.handicapConfig.strokeBasis,
+                roundHandicapInputs: seriesRound.handicapInputs,
+                roundScoringStrokeBasis: seriesRound.roundConfig.handicapStrokeBasis,
+                preserveFrozenRoundSetup: roundStatus != .lobby,
                 hostPlayerID: hostPlayerID,
                 plannedSeatsByMemberID: plannedSeatsByMemberID,
                 preserveManualHandicapEdits: options.preserveManualHandicapEdits
@@ -478,6 +471,7 @@ struct SeriesRoundSyncService: Loggable {
                       let member = participatingMembersByID[memberID] else {
                     return existing
                 }
+                if roundStatus != .lobby, existing.handicapSnapshot != nil { return existing }
                 if options.preserveManualHandicapEdits, existing.isLeagueHandicapModifiedFromCreation {
                     guard workingRound.configuration.handicapEntryFormat == .courseHandicap,
                           existing.handicapIndex == nil,
@@ -492,29 +486,21 @@ struct SeriesRoundSyncService: Loggable {
                 let effectiveIndex = handicaps[memberID]?.effectiveIndex
                     ?? existing.handicapIndex
 
-                let resolvedBasis = series.handicapConfig.strokeBasis
-                let maximumHandicap = series.handicapConfig.isEnabled
-                    ? series.handicapConfig.config.maximumHandicap
-                    : nil
-                let resolution = SeriesCourseHandicapResolver.resolve(
-                    effectiveIndex: effectiveIndex,
-                    member: member,
-                    courseSegment: courseSegment,
-                    entryFormat: workingRound.configuration.handicapEntryFormat,
-                    handicapStrokeBasis: resolvedBasis,
-                    maximumHandicap: maximumHandicap
-                )
+                var resolvingHandicaps = handicaps
+                if resolvingHandicaps[memberID]?.effectiveIndex == nil, let effectiveIndex {
+                    resolvingHandicaps[memberID] = SeriesMemberHandicap(memberID: memberID, computedIndex: effectiveIndex)
+                }
+                let resolution = SeriesRoundHandicapSetup.resolution(series: series, round: seriesRound,
+                    member: member, handicaps: resolvingHandicaps, course: courseSegment)
                 guard let effectiveStrokes = resolution.effectiveStrokes else { return existing }
                 var next = existing
                 next.teeBoxID = resolution.tee?.id ?? existing.teeBoxID
                 next.originalHandicap = workingRound.configuration.handicapEntryFormat == .courseHandicap
                     ? max(0, Int((effectiveIndex ?? 0).rounded())) : effectiveStrokes
                 next.adjustedHandicap = effectiveStrokes
-                next.handicapIndex = workingRound.configuration.handicapEntryFormat == .courseHandicap
-                    ? effectiveIndex
-                    : nil
+                next.handicapIndex = resolution.entryFormat == .courseHandicap ? resolution.handicapIndex : nil
                 next.leagueHandicapStrokesAtCreation = next.adjustedHandicap
-                next.handicapSnapshot = resolution.snapshot()
+                next.handicapSnapshot = resolution.snapshot(source: seriesRound.handicapInputs[memberID] == nil ? .league : .roundSetup)
                 next.handicapResolution = RoundHandicapResolution(entryFormat: resolution.entryFormat, calculation: resolution.calculation, effectiveStrokes: effectiveStrokes)
                 next.lastUpdatedAt = .init()
                 return next

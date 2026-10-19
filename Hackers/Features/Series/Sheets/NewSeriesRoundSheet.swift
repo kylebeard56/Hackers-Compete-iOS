@@ -3809,6 +3809,7 @@ struct SeriesRoundHandicapParticipationCard: View {
     @Binding var excludedHandicapMemberIDs: [String]
 
     @State private var showCustomizationSheet = false
+    @State private var showHandicapSettings = false
 
     private var palette: DesignPalette { .init(theme: .primary, scheme: colorScheme) }
     private var members: [SeriesMember] { viewModel.handicapParticipationMembers(for: seriesRound) }
@@ -3827,21 +3828,19 @@ struct SeriesRoundHandicapParticipationCard: View {
 
     var body: some View {
         SeriesSheetCard(palette: palette) {
-            HStack(spacing: 8) {
-                Text("SERIES HANDICAPS")
-                    .fontStyle(kFontName, size: 14, weight: .semibold)
-                    .foregroundStyle(palette.foregroundColor)
-
-                Spacer(minLength: 0)
-
-                Chip(
-                    text: handicapMode.isEnabled ? "ON" : "OFF",
-                    size: .xSmall,
-                    foreground: handicapMode.isEnabled ? Color.accentGreen : Color.neutral,
-                    background: handicapMode.isEnabled
-                        ? Color.accentGreen.opacity(palette.scheme.translucent)
-                        : palette.cardEmbeddedRowBackground
-                )
+            if viewModel.isCommissioner {
+                Button {
+                    showHandicapSettings = true
+                } label: {
+                    handicapHeader
+                        .frame(minHeight: 44)
+                        .contentShape(Rectangle())
+                }
+                .buttonStyle(.plain)
+                .accessibilityLabel("Handicap Settings · \(handicapMode.displayName)")
+                .accessibilityIdentifier("series.round.handicapSettings")
+            } else {
+                handicapHeader
             }
 
             if handicapMode == .dynamic {
@@ -3919,6 +3918,10 @@ struct SeriesRoundHandicapParticipationCard: View {
                     .fixedSize(horizontal: false, vertical: true)
             }
         }
+        .sheet(isPresented: $showHandicapSettings) {
+            SeriesHandicapSettingsView(viewModel: viewModel)
+                .presentationDragIndicator(.visible)
+        }
         .onAppear(perform: enforceFormatEligibility)
         .onChange(of: selectedTemplateID) { _, _ in
             enforceFormatEligibility()
@@ -3931,6 +3934,30 @@ struct SeriesRoundHandicapParticipationCard: View {
             )
             .presentationDetents([.medium, .large])
             .presentationDragIndicator(.visible)
+        }
+    }
+
+    private var handicapHeader: some View {
+        HStack(spacing: 8) {
+            Text("SERIES HANDICAPS")
+                .fontStyle(kFontName, size: 14, weight: .semibold)
+                .foregroundStyle(palette.foregroundColor)
+
+            Spacer(minLength: 0)
+
+            Chip(
+                text: handicapMode.isEnabled ? "ON" : "OFF",
+                size: .xSmall,
+                foreground: handicapMode.isEnabled ? Color.accentGreen : Color.neutral,
+                background: handicapMode.isEnabled
+                    ? Color.accentGreen.opacity(palette.scheme.translucent)
+                    : palette.cardEmbeddedRowBackground
+            )
+            if viewModel.isCommissioner {
+                Image(systemName: "chevron.right")
+                    .font(.caption.weight(.semibold))
+                    .foregroundStyle(Color.neutral)
+            }
         }
     }
 

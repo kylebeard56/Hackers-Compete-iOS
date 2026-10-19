@@ -25,6 +25,7 @@ struct SeriesRoundRuntimeState: Hashable {
     let plannedMatchups: [SeriesRoundPlannedMatchup]
     let plannedTeeGroups: [SeriesRoundPlannedTeeGroup]
     let partnershipPlans: [SeriesRoundPartnershipPlan]
+    let handicapInputs: [String: SeriesRoundHandicapInput]
     let notes: String?
     let awardsStatus: String
     let awardsFinalizedAt: Time?
@@ -52,6 +53,7 @@ struct SeriesRoundRuntimeState: Hashable {
         plannedMatchups = round.plannedMatchups
         plannedTeeGroups = round.plannedTeeGroups
         partnershipPlans = round.partnershipPlans
+        handicapInputs = round.handicapInputs
         notes = round.notes
         awardsStatus = round.awardsStatus.rawValue
         awardsFinalizedAt = round.awardsFinalizedAt

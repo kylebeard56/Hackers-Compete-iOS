@@ -26,6 +26,8 @@ struct CourseHandicapCalculation: Hashable, Codable {
     var handicapIndex: Double?
     var indexBasis: SeriesHandicapStrokeBasis?
     var calculationIndex: Double?
+    /// Series Index ceiling, applied before tee/segment conversion. Nil on legacy frozen calculations.
+    var maximumIndex: Int? = nil
     var teeID: String?
     var segment: HoleSegment?
     var rating: Double?
@@ -43,6 +45,7 @@ struct CourseHandicapCalculation: Hashable, Codable {
         case handicapIndex = "handicap_index"
         case indexBasis = "index_basis"
         case calculationIndex = "calculation_index"
+        case maximumIndex = "maximum_index"
         case teeID = "tee_id"
         case ratingProvenance = "rating_provenance"
         case slopeProvenance = "slope_provenance"
@@ -52,10 +55,28 @@ struct CourseHandicapCalculation: Hashable, Codable {
         case missingFields = "missing_fields"
     }
 
+    func limitingIndex(to maximum: Int?) -> CourseHandicapCalculation {
+        guard let maximum else { return self }
+        var result = self
+        result.maximumIndex = max(0, maximum)
+        guard let index = handicapIndex, index.isFinite, let basis = indexBasis,
+              let segment, let rating, let slope, let par,
+              courseHandicap != nil else { return result }
+        let limitedIndex = min(index, Double(max(0, maximum)))
+        let calculationIndex = HandicapCalculator.courseHandicapIndexBasis(limitedIndex, inputBasis: basis, segment: segment)
+        let raw = calculationIndex * Double(slope) / 113.0 + rating - Double(par)
+        guard raw.isFinite, raw > Double(Int.min), raw < Double(Int.max) else { return result }
+        result.calculationIndex = calculationIndex
+        result.rawValue = raw
+        result.courseHandicap = Int(raw.rounded())
+        return result
+    }
+
     func allowedStrokes(maximum: Int?, estimateApproved: Bool = false) -> Int? {
         guard status == .exact || (status == .estimated && estimateApproved),
               let courseHandicap else { return nil }
-        // A plus handicap gives strokes back; an upper cap never makes it scratch.
+        // Explicit playing-allowance caps remain available to legacy/manual callers.
+        // A series Index ceiling must be applied before conversion with limitingIndex.
         return maximum.map { min(courseHandicap, max(0, $0)) } ?? courseHandicap
     }
 }
@@ -95,6 +116,7 @@ enum RoundParticipantPresenceStatus: String, Codable, CaseIterable {
 enum RoundParticipantHandicapSnapshotSource: String, Codable {
     case league
     case commissionerRepair = "commissioner_repair"
+    case roundSetup = "round_setup"
 }
 
 /// Immutable inputs used to seed a participant's handicap for one round.
@@ -362,9 +384,9 @@ extension RoundParticipant {
     }
 
     /// Returns a round-local strokes override without mutating the league calculation inputs.
-    func applyingLeagueHandicapOverride(_ strokes: Int, maximum: Int) -> RoundParticipant {
+    func applyingLeagueHandicapOverride(_ strokes: Int, maximum: Int?) -> RoundParticipant {
         var participant = self
-        participant.adjustedHandicap = min(max(strokes, 0), max(maximum, 0))
+        participant.adjustedHandicap = maximum.map { min(max(strokes, 0), max($0, 0)) } ?? max(strokes, 0)
         return participant
     }
 

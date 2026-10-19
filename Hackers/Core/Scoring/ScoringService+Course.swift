@@ -259,7 +259,7 @@ enum HandicapCalculator {
         return format == .strokes
     }
 
-    private static func courseHandicapIndexBasis(_ index: Double, inputBasis: SeriesHandicapStrokeBasis, segment: HoleSegment) -> Double {
+    static func courseHandicapIndexBasis(_ index: Double, inputBasis: SeriesHandicapStrokeBasis, segment: HoleSegment) -> Double {
         let targetBasis: SeriesHandicapStrokeBasis = segment.holeCount <= 9 ? .nineHole : .eighteenHole
         switch (inputBasis, targetBasis) {
         case (.eighteenHole, .nineHole): return (index / 2.0 * 10).rounded() / 10

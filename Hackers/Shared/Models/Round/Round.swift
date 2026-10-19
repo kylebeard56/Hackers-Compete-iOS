@@ -393,7 +393,7 @@ struct RoundConfiguration: Hashable, Codable {
     var handicapEntryFormat: HandicapEntryFormat
     /// Whether net scoring should play from the lowest handicap in the field or matchup.
     var handicapNormalizationMode: HandicapNormalizationMode
-    /// Optional league cap for participant playing handicaps injected from a linked series.
+    /// Series maximum Index before Course Handicap conversion; legacy strokes entries retain their existing limit.
     var leagueHandicapMaximum: Int?
     /// When false, team avatars and dots use neutral styling; team names follow indexed "Team N" when reset from lobby.
     var teamColorsEnabled: Bool

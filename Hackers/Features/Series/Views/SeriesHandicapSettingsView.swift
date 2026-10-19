@@ -27,6 +27,7 @@ struct SeriesHandicapSettingsView: View {
     @State private var exampleScores: String = ""
     @State private var previewResult: HandicapIndexResult?
 
+    @State private var didLoadConfig = false
     @State private var showOverrideList = false
     @State private var selectedMemberForScores: SeriesMember?
 
@@ -47,6 +48,11 @@ struct SeriesHandicapSettingsView: View {
             content: {
                 VStack(spacing: 16) {
                     enableToggle
+                    Text("Personal 18-hole Indexes and manual strokes can be entered when starting a round, even with series handicaps Off.")
+                        .font(.footnote)
+                    if let error = viewModel.handicapSettingsErrorMessage {
+                        Text(error).foregroundStyle(.red).accessibilityIdentifier("series.handicap.settings.error")
+                    }
                     if handicapMode.isEnabled {
                         configSection
                         livePreviewSection
@@ -67,12 +73,9 @@ struct SeriesHandicapSettingsView: View {
                         buttonColor: palette.foregroundColor,
                         theme: palette.theme,
                         fillWidth: true,
-                        isDisabled: .false,
-                        isLoading: .false,
-                        onTap: {
-                            save()
-                            dismiss()
-                        }
+                        isDisabled: .constant(!viewModel.isCommissioner || viewModel.isSavingHandicapSettings),
+                        isLoading: .constant(viewModel.isSavingHandicapSettings),
+                        onTap: { save() }
                     )
                     .padding(.horizontal, 16)
                     .padding(.vertical, 12)
@@ -82,7 +85,9 @@ struct SeriesHandicapSettingsView: View {
             onScroll: { _ in }
         )
         .background(palette.backgroundColor.ignoresSafeArea())
-        .onAppear { loadFromConfig() }
+        .onAppear {
+            if !didLoadConfig { loadFromConfig(); didLoadConfig = true }
+        }
         .sheet(item: $selectedMemberForScores) { member in
             SeriesBaselineScoresView(viewModel: viewModel, member: member)
                 .presentationDragIndicator(.visible)
@@ -113,6 +118,7 @@ struct SeriesHandicapSettingsView: View {
                     ForEach(SeriesHandicapMode.allCases, id: \.self) { mode in
                         Button {
                             handicapMode = mode
+                            viewModel.handicapSettingsErrorMessage = nil
                         } label: {
                             Text(mode.displayName)
                                 .fontStyle(kFontName, size: 13, weight: .semibold)
@@ -124,6 +130,8 @@ struct SeriesHandicapSettingsView: View {
                                 .clipShape(Capsule())
                         }
                         .buttonStyle(.plain)
+                        .disabled(!viewModel.isCommissioner || viewModel.isSavingHandicapSettings)
+                        .accessibilityIdentifier("series.handicap.settings.\(mode.rawValue)")
                     }
                 }
 
@@ -318,7 +326,7 @@ struct SeriesHandicapSettingsView: View {
             }
 
             SeriesSheetRow(palette: palette) {
-                configRow(title: "Max handicap", subtitle: "Ceiling for computed index") {
+                configRow(title: "Max handicap", subtitle: "Maximum Index before tee conversion. Course Handicap strokes can be higher.") {
                     Menu {
                         ForEach([15, 18, 21, 24, 30, 36, 54], id: \.self) { val in
                             Button {
@@ -707,7 +715,7 @@ struct SeriesHandicapSettingsView: View {
             normalizationMode: normalizationMode
         )
         Task {
-            await viewModel.saveHandicapSettings(config)
+            if await viewModel.saveHandicapSettings(config) { dismiss() }
         }
     }
 

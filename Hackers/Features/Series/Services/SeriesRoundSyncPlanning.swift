@@ -514,6 +514,9 @@ enum SeriesRoundSyncPlanning {
         courseSegment: CourseSegment,
         handicapEntryFormat: HandicapEntryFormat = .strokes,
         handicapStrokeBasis: SeriesHandicapStrokeBasis? = nil,
+        roundHandicapInputs: [String: SeriesRoundHandicapInput] = [:],
+        roundScoringStrokeBasis: SeriesHandicapStrokeBasis? = nil,
+        preserveFrozenRoundSetup: Bool = false,
         hostPlayerID: String?,
         plannedSeatsByMemberID: [String: SeriesRoundPlannedSeat] = [:],
         preserveManualHandicapEdits: Bool
@@ -528,6 +531,8 @@ enum SeriesRoundSyncPlanning {
             courseSegment: courseSegment,
             handicapEntryFormat: handicapEntryFormat,
             handicapStrokeBasis: handicapStrokeBasis,
+            roundHandicapInputs: roundHandicapInputs,
+            roundScoringStrokeBasis: roundScoringStrokeBasis,
             hostPlayerID: hostPlayerID,
             plannedSeatsByMemberID: plannedSeatsByMemberID
         )
@@ -556,10 +561,12 @@ enum SeriesRoundSyncPlanning {
             next.teeOrder = existing.teeOrder
             next.presenceStatus = existing.presenceStatus
 
-            if preserveManualHandicapEdits, existing.isLeagueHandicapModifiedFromCreation {
+            let frozenSetup = preserveFrozenRoundSetup && existing.handicapSnapshot != nil
+            if frozenSetup { next.teeBoxID = existing.teeBoxID }
+            if (preserveManualHandicapEdits && existing.isLeagueHandicapModifiedFromCreation) || frozenSetup {
                 next.originalHandicap = existing.originalHandicap
                 next.adjustedHandicap = existing.adjustedHandicap
-                next.handicapIndex = existing.handicapIndex ?? next.handicapIndex
+                next.handicapIndex = frozenSetup ? existing.handicapIndex : (existing.handicapIndex ?? next.handicapIndex)
                 next.leagueHandicapStrokesAtCreation = existing.leagueHandicapStrokesAtCreation
                 next.handicapSnapshot = existing.handicapSnapshot
                 next.handicapResolution = existing.handicapResolution
@@ -711,6 +718,8 @@ enum SeriesRoundSyncPlanning {
             courseSegment: courseSegment,
             handicapEntryFormat: seriesRound.roundConfig.handicapEntryFormat,
             handicapStrokeBasis: series.handicapConfig.strokeBasis,
+            roundHandicapInputs: seriesRound.handicapInputs,
+            roundScoringStrokeBasis: seriesRound.roundConfig.handicapStrokeBasis,
             hostPlayerID: hostPlayerID,
             presenceStatusByMemberID: presenceStatusByMemberID,
             plannedSeatsByMemberID: plannedSeatsByMemberID

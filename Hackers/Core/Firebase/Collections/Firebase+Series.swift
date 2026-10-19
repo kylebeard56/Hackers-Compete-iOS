@@ -66,6 +66,31 @@ extension FirebaseService {
         }
     }
 
+    /// Reads the latest round atomically before applying setup-only fields. A stale
+    /// editor can never downgrade a linked/live/completed round or overwrite history.
+    func savePlannedSeriesRoundHandicaps(_ candidate: SeriesRound) async -> Result<SeriesRound, Error> {
+        let db = Firestore.firestore()
+        let reference = db.collection(Collections.series.rawValue).document(candidate.parentID)
+            .collection(SeriesSubcollection.rounds.rawValue).document(candidate.id)
+        do {
+            let result = try await db.runTransaction { transaction, errorPointer -> Any? in
+                do {
+                    let current = try transaction.getDocument(reference).data(as: SeriesRound.self)
+                    let updated = try SeriesRoundHandicapSetup.updating(current, from: candidate)
+                    transaction.setData(try updated.toDictionary(), forDocument: reference)
+                    return try JSONEncoder().encode(updated)
+                } catch {
+                    errorPointer?.pointee = error as NSError
+                    return nil
+                }
+            }
+            guard let data = result as? Data else { throw SeriesRoundHandicapSetup.DraftError.roundUnavailable }
+            return .success(try JSONDecoder().decode(SeriesRound.self, from: data))
+        } catch {
+            return .failure(error)
+        }
+    }
+
     func updateSeries(_ series: Series) async -> Result<Series, Error> {
         addBreadcrumb(message: "\(#function), id: \(series.id)")
         return await series.put()

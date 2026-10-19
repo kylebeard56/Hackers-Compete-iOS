@@ -559,6 +559,7 @@ extension GameLobby {
                         let rosterEntryFormat = CourseHandicapRosterDisplay.entryFormat(
                             for: participant, defaultFormat: snapshot.configuration.handicapEntryFormat
                         )
+                        let strokeMaximum = rosterEntryFormat == .courseHandicap ? nil : effectiveSeriesLeagueHandicapMaximum
                         HandicapTextField(
                             id: participant.id,
                             initialValue: participant.adjustedHandicap,
@@ -571,11 +572,11 @@ extension GameLobby {
                             isUnresolved: participant.handicapResolution != nil && participant.handicapResolution?.effectiveStrokes == nil,
                             focusedField: $focus,
                             palette: palette,
-                            maximumValue: seriesLock ? effectiveSeriesLeagueHandicapMaximum : nil,
+                            maximumValue: seriesLock ? strokeMaximum : nil,
                             onDebouncedEdit: { newValue in
                                 if seriesLock {
                                     guard isSeriesCommissioner else { return }
-                                    let maximum = effectiveSeriesLeagueHandicapMaximum ?? 36
+                                    let maximum = strokeMaximum
                                     let updated = participant.applyingLeagueHandicapOverride(
                                         Int(newValue.rounded()),
                                         maximum: maximum

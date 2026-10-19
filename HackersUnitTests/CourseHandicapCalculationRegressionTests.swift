@@ -66,7 +66,7 @@ final class CourseHandicapCalculationRegressionTests: XCTestCase {
         }
     }
 
-    func testRawFullCourseHandicapIsCalculatedBeforeLeagueCap() throws {
+    func testSeriesMaximumLimitsIndexBeforeCourseHandicapConversion() throws {
         let tee = tee()
         let result = HandicapCalculator.calculation(index: 22.6, tee: tee, segment: .full18, indexBasis: .eighteenHole)
         XCTAssertEqual(result.courseHandicap, 31)
@@ -76,10 +76,10 @@ final class CourseHandicapCalculationRegressionTests: XCTestCase {
             requestedTeeID: tee.id, tee: tee, courseID: "c", courseName: "Course", holeSegment: .full18,
             entryFormat: .courseHandicap, handicapStrokeBasis: .eighteenHole, maximumHandicap: 21)
         let snapshot = try XCTUnwrap(resolved.snapshot())
-        XCTAssertEqual(snapshot.authoritativeCourseHandicap, 31)
-        XCTAssertEqual(snapshot.effectiveStrokes, 21)
+        XCTAssertEqual(snapshot.authoritativeCourseHandicap, 28)
+        XCTAssertEqual(snapshot.effectiveStrokes, 28)
         XCTAssertEqual(snapshot.handicapIndex, 22.6)
-        XCTAssertEqual(snapshot.calculation, result)
+        XCTAssertEqual(snapshot.calculation, result.limitingIndex(to: 21))
     }
 
     func testExactSegmentValuesWinAndPartialFallbackPreservesEveryExactInput() {

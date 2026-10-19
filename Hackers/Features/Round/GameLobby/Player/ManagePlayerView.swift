@@ -110,6 +110,18 @@ struct ManagePlayerView: View, Loggable {
         seriesHandicapLockActive ? (seriesHandicapMaximum ?? 36) : 36
     }
     
+    private var maximumStrokeAllowance: Int? {
+        if seriesHandicapLockActive,
+           snapshot.configuration.handicapEntryFormat == .courseHandicap || participant?.handicapSnapshot?.entryFormat == .courseHandicap {
+            return nil
+        }
+        return maximumHandicapValue
+    }
+
+    private var strokeLimitLabel: String {
+        maximumStrokeAllowance.map { "Max: \($0)" } ?? "Strokes this round"
+    }
+
     var body: some View {
         StickyScrollView(
             header: { header },
@@ -353,7 +365,7 @@ extension ManagePlayerView {
                         .font(.system(size: 12, weight: .semibold))
                         .foregroundStyle(Color.neutral3)
                     Spacer(minLength: 0)
-                    Text("Max: \(maximumHandicapValue)")
+                    Text(strokeLimitLabel)
                         .fontStyle(kFontName, size: 15, weight: .regular)
                         .foregroundStyle(Color.neutral3)
                 }
@@ -378,7 +390,7 @@ extension ManagePlayerView {
                             .font(.system(size: 12, weight: .semibold))
                             .foregroundStyle(Color.neutral3)
                         Spacer(minLength: 0)
-                        Text("Max: \(maximumHandicapValue)")
+                        Text(strokeLimitLabel)
                             .fontStyle(kFontName, size: 15, weight: .regular)
                             .foregroundStyle(Color.neutral3)
                     }
@@ -422,7 +434,7 @@ extension ManagePlayerView {
                             .accessibilityHint("Restores the league-computed handicap for this round")
                     }
 
-                    Text(effectiveHandicapEntryFormat == .courseHandicap ? "Handicap Index" : "Max: \(maximumHandicapValue)")
+                    Text(effectiveHandicapEntryFormat == .courseHandicap ? "Handicap Index" : strokeLimitLabel)
                         .fontStyle(kFontName, size: 15, weight: .regular)
                         .foregroundStyle(Color.neutral3)
                 }
@@ -655,10 +667,11 @@ extension ManagePlayerView {
         p.name = Name(name)
         if snapshot.round.status.allowsCourseHandicapSetupEdits { p.teeBoxID = tee?.id ?? "" }
         if seriesHandicapLockActive && isSeriesCommissioner {
-            p = p.applyingLeagueHandicapOverride(
-                Int(handicapValue.rounded()),
-                maximum: maximumHandicapValue
-            )
+            if Int(handicapValue.rounded()) != p.lockedHandicapAllowance {
+                p = p.applyingLeagueHandicapOverride(
+                    Int(handicapValue.rounded()), maximum: maximumStrokeAllowance
+                )
+            }
         } else if !seriesHandicapLockActive && snapshot.round.status.allowsCourseHandicapSetupEdits {
             p = handicapDraft.applying(to: p, courseSegment: participantCourseSegment,
                 indexBasis: indexBasis, maximum: maximumHandicapValue, approveEstimate: estimateIsApproved, approvedBy: approvalUserID)
@@ -682,7 +695,7 @@ extension ManagePlayerView {
             format: effectiveHandicapEntryFormat,
             participant: handicapComputationParticipant,
             courseSegment: participantCourseSegment,
-            maximumHandicap: maximumHandicapValue,
+            maximumHandicap: maximumStrokeAllowance,
             handicapStrokeBasis: snapshot.handicapIndexBasis
         ) ?? participant?.adjustedHandicap ?? 0
     }
