@@ -72,6 +72,12 @@ struct SeriesRoundSyncService: Loggable {
             pods: pods,
             courseSegment: courseSegment
         )
+        if let error = SeriesRoundSyncPlanning.validateFrozenHandicapBasis(
+            snapshot: snapshot, proposedConfiguration: resolvedPlan.roundConfiguration,
+            options: options, roundStatus: roundStatus
+        ) {
+            return .failure(error)
+        }
         let plannedSeatsByMemberID = Dictionary(
             uniqueKeysWithValues: resolvedPlan.plannedStructure.teeGroups.flatMap(\.seats).map { ($0.memberID, $0) }
         )

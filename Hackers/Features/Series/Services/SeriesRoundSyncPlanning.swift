@@ -193,6 +193,20 @@ enum SeriesRoundSyncPlanning {
         }
     }
 
+    /// A frozen integer allowance must retain its scoring basis as well as its value.
+    static func validateFrozenHandicapBasis(
+        snapshot: RoundSnapshot, proposedConfiguration: RoundConfiguration,
+        options: SeriesRoundSyncOptions, roundStatus: RoundStatus
+    ) -> SeriesRoundSyncError? {
+        guard roundStatus != .lobby,
+              snapshot.participants.contains(where: { $0.handicapSnapshot != nil }),
+              options.syncFormat || options.syncHandicapSettings || options.syncPlayerData || options.syncOrganization,
+              snapshot.handicapStrokeBasis != proposedConfiguration.resolvedHandicapStrokeBasis(
+                holeCount: snapshot.holeSegment.holeCount
+              ) else { return nil }
+        return .preflightFailed("This sync would change the 9-/18-hole basis of handicaps already locked for this round. Keep the series round's handicap basis consistent with the live round before syncing.")
+    }
+
     static func participatingMembersForSync(
         seriesRound: SeriesRound,
         snapshot: RoundSnapshot,

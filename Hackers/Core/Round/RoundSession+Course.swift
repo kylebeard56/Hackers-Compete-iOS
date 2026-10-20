@@ -21,19 +21,17 @@ extension RoundSession {
             snapshot.round.configuration.courses[0].defaultTee = teeID
             _ = try await snapshot.round.put().get()
 
-            if snapshot.configuration.handicapEntryFormat == .courseHandicap {
-                var updatedSegment = snapshot.courseSegment
-                updatedSegment?.defaultTee = teeID
-                let recomputed = HandicapCalculator.recomputedParticipants(
-                    snapshot.participants,
-                    format: .courseHandicap,
-                    courseSegment: updatedSegment,
-                    maximumHandicap: snapshot.configuration.leagueHandicapMaximum,
-                    handicapStrokeBasis: snapshot.handicapIndexBasis
-                )
-                for participant in recomputed where snapshot.participants.first(where: { $0.id == participant.id }) != participant {
-                    try await update(participant: participant)
-                }
+            var updatedSegment = snapshot.courseSegment
+            updatedSegment?.defaultTee = teeID
+            let recomputed = HandicapCalculator.recomputedParticipants(
+                snapshot.participants,
+                format: snapshot.configuration.handicapEntryFormat,
+                courseSegment: updatedSegment,
+                maximumHandicap: snapshot.configuration.leagueHandicapMaximum,
+                handicapStrokeBasis: snapshot.handicapIndexBasis
+            )
+            for participant in recomputed where snapshot.participants.first(where: { $0.id == participant.id }) != participant {
+                try await update(participant: participant)
             }
 
             var props: [String: Any] = [:]
@@ -85,8 +83,6 @@ extension RoundSession {
         }
 
         do {
-            let previousHandicapEntryFormat = snapshot.configuration.handicapEntryFormat
-            let resolvedHandicapEntryFormat = previousHandicapEntryFormat
             if snapshot.round.configuration.courses.isEmpty {
                 snapshot.round.configuration.courses = [segmentToSave]
             } else {
@@ -105,17 +101,15 @@ extension RoundSession {
                 try await resequenceTeeGroupsForSequentialStarts()
             }
 
-            if previousHandicapEntryFormat == .courseHandicap || resolvedHandicapEntryFormat == .courseHandicap {
-                let recomputed = HandicapCalculator.recomputedParticipants(
-                    snapshot.participants,
-                    format: resolvedHandicapEntryFormat,
-                    courseSegment: segmentToSave,
-                    maximumHandicap: snapshot.configuration.leagueHandicapMaximum,
-                    handicapStrokeBasis: snapshot.handicapIndexBasis
-                )
-                for participant in recomputed where snapshot.participants.first(where: { $0.id == participant.id }) != participant {
-                    try await update(participant: participant)
-                }
+            let recomputed = HandicapCalculator.recomputedParticipants(
+                snapshot.participants,
+                format: snapshot.configuration.handicapEntryFormat,
+                courseSegment: segmentToSave,
+                maximumHandicap: snapshot.configuration.leagueHandicapMaximum,
+                handicapStrokeBasis: snapshot.handicapIndexBasis
+            )
+            for participant in recomputed where snapshot.participants.first(where: { $0.id == participant.id }) != participant {
+                try await update(participant: participant)
             }
 
             guard previousSegment != segmentToSave || didSyncSegment else { return }

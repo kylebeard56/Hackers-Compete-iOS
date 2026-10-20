@@ -2066,17 +2066,15 @@ enum SeriesRoundHandicapSetup {
     }
 
     static func requiresHandicaps(series: Series, round: SeriesRound) -> Bool {
-        round.roundConfig.handicapEntryFormat == .courseHandicap
-            || SeriesRoundCreationMapping.primaryGameFormat(series: series, seriesRound: round).configuration.basis == .net
+        SeriesRoundCreationMapping.primaryGameFormat(series: series, seriesRound: round).configuration.basis == .net
     }
 
     static func issues(
         series: Series, round: SeriesRound, members: [SeriesMember],
         handicaps: [String: SeriesMemberHandicap], course: CourseSegment
     ) -> [SeriesCourseHandicapValidationIssue] {
-        let requiresInput = requiresHandicaps(series: series, round: round)
+        guard requiresHandicaps(series: series, round: round) else { return [] }
         return members.compactMap { member in
-            guard requiresInput || round.handicapInputs[member.id] != nil else { return nil }
             return resolution(series: series, round: round, member: member,
                               handicaps: handicaps, course: course).validationIssue
         }

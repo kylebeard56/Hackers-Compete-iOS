@@ -231,8 +231,8 @@ enum HandicapCalculator {
                 return pending
             }
             // A manual allowance is independent of changes to the selected tee.
-            guard (changingEntryFormat || participant.handicapResolution?.entryFormat != .strokes),
-                  format == .courseHandicap else { return participant }
+            let entryFormat = changingEntryFormat ? format : (participant.handicapResolution?.entryFormat ?? format)
+            guard entryFormat == .courseHandicap else { return participant }
             guard let index = participant.handicapIndex else {
                 var unresolved = participant
                 unresolved.handicapResolution = RoundHandicapResolution(
@@ -242,7 +242,7 @@ enum HandicapCalculator {
                 )
                 return unresolved
             }
-            return self.participant(participant, applying: index, format: format, courseSegment: courseSegment,
+            return self.participant(participant, applying: index, format: entryFormat, courseSegment: courseSegment,
                                     maximumHandicap: maximumHandicap, handicapStrokeBasis: handicapStrokeBasis ?? participant.handicapResolution?.calculation?.indexBasis)
         }
     }
