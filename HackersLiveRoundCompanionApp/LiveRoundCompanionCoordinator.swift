@@ -53,6 +53,9 @@ final class LiveRoundCompanionCoordinator: ObservableObject, Loggable {
         let resolvedPreferences = preferences ?? UserCompanionPreferences()
         self.preferences = resolvedPreferences
         let resolvedSelectionStore = selectionStore ?? SelectedLiveRoundStore()
+        if let userID = resolvedPreferences.state.userID {
+            resolvedSelectionStore.selectUser(userID)
+        }
         let resolvedWatchConnectivity = watchConnectivity ?? PhoneWatchConnectivityService()
         self.selectionStore = resolvedSelectionStore
         self.watchConnectivity = resolvedWatchConnectivity
@@ -165,7 +168,8 @@ final class LiveRoundCompanionCoordinator: ObservableObject, Loggable {
 
     func reconcileEligibleRounds(_ rounds: [Round], currentPlayerID: String?) {
         guard let currentPlayerID else {
-            selectionStore.reconcile(eligibleRoundIDs: [])
+            // Player data can still be loading during same-account restoration.
+            // Sign-out clears selections explicitly in resetSelections().
             return
         }
         let eligibleRoundIDs = rounds.filter {
@@ -190,12 +194,14 @@ final class LiveRoundCompanionCoordinator: ObservableObject, Loggable {
 
     func resetSelections() {
         preferences.selectUser(nil)
+        selectionStore.selectUser(nil)
         selectionStore.select(nil)
     }
 
     private func preferencesDidChange(to state: UserCompanionPreferences.State) {
         let previous = preferences.state
         let identityChanged = previous.userID != state.userID
+        let selectionOwnerChanged = identityChanged && selectionStore.selectUser(state.userID)
         if identityChanged || previous.appleWatch != state.appleWatch {
             watchActivationTask?.cancel()
             watchProjectionTask?.cancel()
@@ -212,12 +218,8 @@ final class LiveRoundCompanionCoordinator: ObservableObject, Loggable {
             activityRoundSession.stop()
             scheduleActivityActivation(
                 for: liveActivityRoundID,
-                endExistingActivity: identityChanged || !state.liveActivities
+                endExistingActivity: selectionOwnerChanged || !state.liveActivities
             )
-        }
-        if identityChanged {
-            // Never reuse another account's selected round on this device.
-            selectionStore.select(nil)
         }
     }
 
