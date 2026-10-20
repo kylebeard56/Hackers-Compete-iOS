@@ -67,6 +67,69 @@ final class UserCompanionPreferencesTests: XCTestCase {
         XCTAssertTrue(preferences.state.liveActivities)
     }
 
+    func testSameAccountRestorationPreservesSelectionBeforeAndAfterPreferenceHydration() {
+        for hydrateFirst in [false, true] {
+            let store = SelectedLiveRoundStore(defaults: defaults)
+            store.selectUser("user-a")
+            store.select("selected-round")
+            let preferences = UserCompanionPreferences(defaults: defaults)
+            if hydrateFirst { preferences.selectUser("user-a") }
+            let coordinator = LiveRoundCompanionCoordinator(
+                selectionStore: SelectedLiveRoundStore(defaults: defaults), preferences: preferences
+            )
+            preferences.selectUser("user-a")
+            XCTAssertEqual(coordinator.selectedRoundID, "selected-round")
+            XCTAssertEqual(coordinator.liveActivityRoundID, "selected-round")
+            XCTAssertEqual(SelectedLiveRoundStore(defaults: defaults).roundID, "selected-round")
+        }
+    }
+
+    func testDifferentAccountRestorationAndSignOutClearSelection() {
+        let store = SelectedLiveRoundStore(defaults: defaults)
+        store.selectUser("user-a")
+        store.select("round-a")
+        let preferences = UserCompanionPreferences(defaults: defaults)
+        let coordinator = LiveRoundCompanionCoordinator(
+            selectionStore: SelectedLiveRoundStore(defaults: defaults), preferences: preferences
+        )
+        preferences.selectUser("user-b")
+        XCTAssertNil(coordinator.selectedRoundID)
+        XCTAssertNil(coordinator.liveActivityRoundID)
+        coordinator.select(roundID: "round-b")
+        preferences.selectUser("user-a")
+        XCTAssertNil(coordinator.selectedRoundID)
+        coordinator.select(roundID: "round-a")
+        coordinator.resetSelections()
+        XCTAssertNil(coordinator.selectedRoundID)
+        XCTAssertNil(SelectedLiveRoundStore(defaults: defaults).roundID)
+        preferences.selectUser("user-a")
+        XCTAssertNil(coordinator.selectedRoundID)
+    }
+
+    func testLegacySelectionWithoutOwnerIsNotAdoptedBySignedInAccount() {
+        defaults.set("unknown-owner-round", forKey: "selected_live_round_for_watch_v1")
+        let preferences = UserCompanionPreferences(defaults: defaults)
+        let coordinator = LiveRoundCompanionCoordinator(
+            selectionStore: SelectedLiveRoundStore(defaults: defaults), preferences: preferences
+        )
+        preferences.selectUser("user-a")
+        XCTAssertNil(coordinator.selectedRoundID)
+        XCTAssertNil(coordinator.liveActivityRoundID)
+    }
+
+    func testMissingPlayerDuringRestorationDoesNotEraseSavedSelection() {
+        let preferences = UserCompanionPreferences(defaults: defaults)
+        preferences.selectUser("user-a")
+        let coordinator = LiveRoundCompanionCoordinator(
+            selectionStore: SelectedLiveRoundStore(defaults: defaults), preferences: preferences
+        )
+        coordinator.select(roundID: "selected-round")
+        coordinator.reconcileEligibleRounds([], currentPlayerID: nil)
+        XCTAssertEqual(coordinator.selectedRoundID, "selected-round")
+        coordinator.reconcileEligibleRounds([], currentPlayerID: "player-a")
+        XCTAssertNil(coordinator.selectedRoundID)
+    }
+
     func testCoordinatorRejectsWatchMutationsWhileDisabled() async throws {
         let preferences = UserCompanionPreferences(defaults: defaults)
         preferences.selectUser("user-a")
