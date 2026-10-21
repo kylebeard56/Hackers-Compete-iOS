@@ -1,0 +1,46 @@
+{
+  "branch": "codex/testflight-complete-2026-10-21",
+  "source_commit": "43dabbec57e272cf6e6c551d008c53e09eb9d7eb",
+  "version": "1.0.0",
+  "build": "2026.10.21.1",
+  "main": "731f5619be98d7aab45a572844b1acf6efa396fc",
+  "pull_requests": {
+    "14": "140f22ce7cba212baa7f830d822d58a10168a2cb",
+    "15": "e9782443accdeb31844f26cde5f71fddcc071133",
+    "16": "5c5d9c03fb635ed733a9320462eeb4a412703486",
+    "17": "165b76e35e1cab9a52eb8327e77b2f1567dc534d"
+  },
+  "distribution": "Archives prepared; IPA export blocked by missing Xcode account/distribution identity and API key cloud-signing permission",
+  "variants": [
+    "Sandbox",
+    "Production"
+  ],
+  "local_changes_included": true,
+  "local_snapshot": "local-snapshot/manifest.json",
+  "app_code_commit": "84b9ad2a",
+  "local_integration": {
+    "applied": [
+      "scorecard renderer access and policy comments",
+      "GolfCourseFailureRegressionTests (updated to current typed IDs and cache contracts)",
+      "RoundResumeRobustnessTests",
+      "RoundSessionConcurrencyTests",
+      "ScorecardStrokeDotRegressionTests",
+      "scorecard stroke-dot documentation and screenshots"
+    ],
+    "already_present_or_superseded": [
+      "AppSession settings identity",
+      "Dashboard Settings and complete personal Handicap section",
+      "LiveRoundCompanionCoordinator (retain newer account-owner restoration)",
+      "RoundLiveActivityManager",
+      "UserCompanionPreferences",
+      "UserCompanionPreferencesTests (retain newer restoration cases)",
+      "ScoringRobustnessTests (same suite already at root of test target)",
+      "Settings report/screenshots"
+    ],
+    "preserved_in_snapshot": [
+      ".DS_Store",
+      "Xcode user interface/scheme state",
+      "previous simulator app ZIP"
+    ]
+  }
+}
