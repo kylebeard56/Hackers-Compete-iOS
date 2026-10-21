@@ -1,0 +1,78 @@
+{
+  "branch": "codex/consolidated-rc-2026-10-21",
+  "base": "be248b513b35fd7caba05aa3674a20218f8ce27d",
+  "build": "2026.10.21.2",
+  "pr_heads": {
+    "14": "140f22ce7cba212baa7f830d822d58a10168a2cb",
+    "15": "e9782443accdeb31844f26cde5f71fddcc071133",
+    "16": "5c5d9c03fb635ed733a9320462eeb4a412703486",
+    "17": "165b76e35e1cab9a52eb8327e77b2f1567dc534d"
+  },
+  "main": "731f5619be98d7aab45a572844b1acf6efa396fc",
+  "integration": {
+    "base": "be248b513b35fd7caba05aa3674a20218f8ce27d",
+    "copied": [
+      "Hackers/Features/Round/CourseSelection/CourseSelectionConfirmation.swift",
+      "Hackers/Features/Series/Services/SeriesRoundConfigurationReconciler.swift",
+      "Hackers/Features/Series/Services/SeriesRoundCreationMapping.swift",
+      "Hackers/Features/Series/Services/SeriesRoundCreationService.swift",
+      "Hackers/Features/Series/Services/SeriesRoundDraft.swift",
+      "Hackers/Features/Series/Sheets/CourseSelectionForSeriesRoundSheet.swift",
+      "Hackers/Features/Series/Sheets/EditSeriesRoundSheet.swift",
+      "Hackers/Features/Series/Sheets/NewSeriesRoundSheet.swift",
+      "Hackers/Features/Series/ViewModels/SeriesViewModel.swift",
+      "Hackers/Shared/Models/Round/Round+Course.swift",
+      "HackersUnitTests/SeriesRoundStartAuditTests.swift",
+      "HackersUnitTests/SeriesCourseHandicapValidationTests.swift"
+    ],
+    "retained": [
+      "Hackers/Features/Round/LiveRound/Accessory/Components/ScorecardHoleCell.swift",
+      "Hackers/Features/Round/LiveRound/Accessory/Sheets/FullScorecardView.swift (combined upstream + same local scorecard hunks retained)",
+      "Hackers/Features/Round/RoundOutcome/IndividualScorecardView.swift (combined upstream + same local scorecard hunks retained)"
+    ]
+  },
+  "validation_status": "passed",
+  "push_merge_upload_performed": false,
+  "archive_directory": "/Users/Kirsten/Developer/Hackers-Combined/build-artifacts/consolidated-rc-2026-10-21",
+  "test_simulator": "23DF6611-8329-4397-955A-E373C878C9E4",
+  "source_commit": "743a54c3",
+  "validation": {
+    "result": "Passed",
+    "passedTests": 1175,
+    "failedTests": 0,
+    "skippedTests": 5,
+    "totalTestCount": 1180,
+    "evidence": [
+      "legacy-test-result.json (action succeeded, testsCount 1180, skipped 5)",
+      "final-tests.log (1059 XCTest cases passed; 116 Swift Testing cases passed)"
+    ],
+    "report_note": "Optional simulator diagnostics collection was stopped after tests completed. Modern test-results summary returns unknown; legacy action metrics and command exit 0 confirm completion."
+  },
+  "sandbox_archive": "/Users/Kirsten/Developer/Hackers-Combined/build-artifacts/consolidated-rc-2026-10-21/Hackers-Sandbox.xcarchive",
+  "sandbox_archive_signature_verified": true,
+  "testflight_upload": "Xcode Organizer confirmed upload completed with warnings; archive marked Uploaded to Apple; waiting for App Store Connect build record",
+  "new_distribution_certificate": "0E65D26AA342065FB5AD04B19A2B9E189F039EBD",
+  "production_archive": "not completed; first attempt exhausted disk space; Sandbox prioritized per testing context",
+  "push_performed": false,
+  "merge_performed": false,
+  "upload_warnings": {
+    "type": "missing vendor framework dSYMs",
+    "frameworks": [
+      "FirebaseAnalytics",
+      "FirebaseFirestoreInternal",
+      "GoogleAdsOnDeviceConversion",
+      "GoogleAppMeasurement",
+      "GoogleAppMeasurementIdentitySupport",
+      "Sentry",
+      "absl",
+      "grpc",
+      "grpcpp",
+      "openssl_grpc"
+    ],
+    "application_symbols_verified": true
+  },
+  "internal_beta_group": {
+    "name": "Beta",
+    "hasAccessToAllBuilds": true
+  }
+}
