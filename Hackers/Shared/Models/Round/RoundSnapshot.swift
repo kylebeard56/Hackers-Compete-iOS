@@ -81,6 +81,16 @@ extension RoundSnapshot {
     var handicapStrokeBasis: SeriesHandicapStrokeBasis {
         configuration.resolvedHandicapStrokeBasis(holeCount: holeRange?.count ?? holeSegment.holeCount)
     }
+    var handicapIndexBasis: SeriesHandicapStrokeBasis? {
+        // The old explicit setting was also used as the source Index basis.
+        // Read that stored setting for compatibility; never use the inferred scoring basis.
+        if round.status == .lobby, configuration.leagueHandicapMaximum == nil,
+           !participants.contains(where: { $0.seriesMemberID != nil || $0.handicapSnapshot != nil || $0.leagueHandicapStrokesAtCreation != nil }) {
+            return .eighteenHole
+        }
+        return configuration.handicapIndexBasis
+            ?? (configuration.handicapEntryFormat == .courseHandicap ? configuration.handicapStrokeBasis : nil)
+    }
     var defaultTee: Tee? { courseInfo?.teeMap[courseSegment?.defaultTee ?? ""] }
     var tees: [Tee] { courseInfo?.tees ?? [] }
     

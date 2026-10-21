@@ -12,6 +12,7 @@ struct DashboardProfileView: View, Loggable {
     let currentPlayerID: String?
 
     @EnvironmentObject private var appSession: AppSession
+    @EnvironmentObject private var liveRoundCompanion: LiveRoundCompanionCoordinator
 
     @State private var loadedUser: HackersUser?
     @State private var loadedPlayer: Player?
@@ -31,6 +32,33 @@ struct DashboardProfileView: View, Loggable {
 
                 profileCard
                     .padding(.horizontal, 16)
+
+                NavigationLink {
+                    UserSettingsView(
+                        palette: palette,
+                        preferences: liveRoundCompanion.preferences,
+                        companion: liveRoundCompanion
+                    )
+                } label: {
+                    HStack {
+                        Label("Settings", systemImage: "gearshape")
+                        Spacer()
+                        Image(systemName: "chevron.right")
+                    }
+                    .fontStyle(kFontName, size: 17, weight: .semibold)
+                    .foregroundStyle(palette.foregroundColor)
+                    .padding(16)
+                    .glassCardEffect(forceMaterial: true, tint: palette.cardColor)
+                }
+                .padding(.horizontal, 16)
+                .accessibilityIdentifier("profile.settings")
+
+                if let player = loadedPlayer {
+                    PersonalHandicapSection(player: player, palette: palette, onSaved: { loadedPlayer = $0 }) { leagueID in
+                        appSession.routeTo(.series(id: leagueID))
+                    }
+                    .padding(.horizontal, 16)
+                }
 
                 if let saveErrorMessage {
                     Text(saveErrorMessage)
@@ -144,7 +172,7 @@ struct DashboardProfileView: View, Loggable {
     private func loadProfile() async {
         saveErrorMessage = nil
         let user = await AppData.shared.user
-        let player = await AppData.shared.getPrimaryPlayer()
+        let player = await AppData.shared.getPrimaryPlayer(forceRefresh: true)
         loadedUser = user
         loadedPlayer = player
     }
@@ -170,4 +198,81 @@ struct DashboardProfileView: View, Loggable {
 #Preview {
     DashboardProfileView(palette: .init(theme: .glass, scheme: .light), currentPlayerID: nil)
         .environmentObject(AppSession.forPreview())
+        .environmentObject(LiveRoundCompanionCoordinator())
+}
+
+
+/// Native Settings use the same semantic palette as the rest of the iOS app.
+struct UserSettingsView: View {
+    let palette: DesignPalette
+    @ObservedObject var preferences: UserCompanionPreferences
+    @ObservedObject var companion: LiveRoundCompanionCoordinator
+
+    private var canUseWatch: Bool {
+        companion.watchIsPaired && companion.watchAppIsInstalled
+    }
+
+    var body: some View {
+        Form {
+            Section {
+                Toggle(isOn: Binding(
+                    get: { preferences.state.appleWatch },
+                    set: { preferences.setAppleWatch($0) }
+                )) {
+                    settingLabel(
+                        "Apple Watch",
+                        description: "View your round and enter scores in the Hackers Apple Watch app."
+                    )
+                }
+                .disabled(preferences.state.userID == nil || (!canUseWatch && !preferences.state.appleWatch))
+                .accessibilityIdentifier("settings.appleWatch")
+                if !canUseWatch {
+                    Text("Pair an Apple Watch and install Hackers on it to use this integration.")
+                        .font(.footnote)
+                        .foregroundStyle(Color.neutral)
+                }
+            }
+            .listRowBackground(palette.cardColor)
+
+            Section {
+                Toggle(isOn: Binding(
+                    get: { preferences.state.liveActivities },
+                    set: { preferences.setLiveActivities($0) }
+                )) {
+                    settingLabel(
+                        "Live Activities",
+                        description: "Show live round updates on your Lock Screen and Dynamic Island."
+                    )
+                }
+                .disabled(preferences.state.userID == nil || (!companion.liveActivitiesAvailable && !preferences.state.liveActivities))
+                .accessibilityIdentifier("settings.liveActivities")
+                if !companion.liveActivitiesAvailable {
+                    Text("Live Activities are unavailable or disabled for Hackers in iOS Settings.")
+                        .font(.footnote)
+                        .foregroundStyle(Color.neutral)
+                }
+            } footer: {
+                Text("Dynamic Island appears on supported devices. iOS controls where Live Activities appear, including on paired devices.")
+            }
+            .listRowBackground(palette.cardColor)
+        }
+        .tint(.accentGreen)
+        .foregroundStyle(palette.foregroundColor)
+        .scrollContentBackground(.hidden)
+        .background(palette.backgroundColor.ignoresSafeArea())
+        .navigationTitle("Settings")
+        .navigationBarTitleDisplayMode(.inline)
+    }
+
+    private func settingLabel(_ title: String, description: String) -> some View {
+        VStack(alignment: .leading, spacing: 6) {
+            Text(title)
+                .font(.headline)
+            Text(description)
+                .font(.subheadline)
+                .foregroundStyle(Color.neutral)
+                .fixedSize(horizontal: false, vertical: true)
+        }
+        .padding(.vertical, 4)
+    }
 }

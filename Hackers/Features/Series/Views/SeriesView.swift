@@ -86,6 +86,7 @@ struct SeriesView: View {
     @State private var showAddPlayersSheet = false
     @State private var showSetDefaultCourseSheet = false
     @State private var roundToStart: SeriesRound?
+    @State private var forceRoundCourseSelection = false
     @State private var roundToEdit: SeriesRound?
     @State private var roundToPreviewTeeSheet: SeriesRound?
     @State private var roundToAttendance: SeriesRound?
@@ -136,7 +137,7 @@ struct SeriesView: View {
         .alert(
             "Cannot start round",
             isPresented: Binding(
-                get: { viewModel.roundCreationErrorMessage != nil },
+                get: { viewModel.roundCreationErrorMessage != nil && roundToStart == nil },
                 set: { if !$0 { viewModel.roundCreationErrorMessage = nil } }
             )
         ) {
@@ -244,7 +245,7 @@ struct SeriesView: View {
             .presentationDragIndicator(.visible)
         }
         .sheet(item: $roundToStart) { round in
-            CourseSelectionForSeriesRoundSheet(viewModel: viewModel, seriesRound: round) { roundID in
+            CourseSelectionForSeriesRoundSheet(viewModel: viewModel, seriesRound: round, reviewSavedCourse: !forceRoundCourseSelection) { roundID in
                 roundToStart = nil
                 appSession.activeRoundID = roundID
                 appSession.routeTo(.lobby)
@@ -1646,17 +1647,8 @@ struct SeriesView: View {
     }
 
     private func startRound(_ round: SeriesRound, forceCourseSelection: Bool = false) {
-        guard viewModel.creatingRoundID != round.id else { return }
-        guard forceCourseSelection || round.resolvedCourse(using: viewModel.series) == nil else {
-            Task {
-                if let roundID = await viewModel.createLiveRound(from: round) {
-                    appSession.activeRoundID = roundID
-                    appSession.routeTo(.lobby)
-                }
-            }
-            return
-        }
-
+        guard viewModel.isCommissioner, viewModel.creatingRoundID != round.id else { return }
+        forceRoundCourseSelection = forceCourseSelection
         roundToStart = round
     }
 

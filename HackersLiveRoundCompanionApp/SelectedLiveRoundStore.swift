@@ -9,6 +9,8 @@ final class SelectedLiveRoundStore: ObservableObject {
     private let key: String
     private let liveActivityKey: String
     private let legacyLiveActivityEnabledKey: String
+    private let ownerKey: String
+    private var userID: String?
 
     init(
         defaults: UserDefaults = .standard,
@@ -20,6 +22,8 @@ final class SelectedLiveRoundStore: ObservableObject {
         self.key = key
         self.liveActivityKey = liveActivityKey
         self.legacyLiveActivityEnabledKey = legacyLiveActivityEnabledKey
+        ownerKey = key + ".user_id"
+        userID = defaults.string(forKey: ownerKey)
         let storedWatchRoundID = defaults.string(forKey: key).flatMap {
             $0.isPopulated ? $0 : nil
         }
@@ -36,6 +40,22 @@ final class SelectedLiveRoundStore: ObservableObject {
             defaults.set(activeRoundID, forKey: liveActivityKey)
         }
         defaults.removeObject(forKey: legacyLiveActivityEnabledKey)
+    }
+
+    /// Restoring the same owner preserves the selection; switches and legacy
+    /// selections with no known owner must not carry a round across accounts.
+    @discardableResult
+    func selectUser(_ userID: String?) -> Bool {
+        let normalized = userID?.isPopulated == true ? userID : nil
+        guard normalized != self.userID else { return false }
+        select(nil)
+        self.userID = normalized
+        if let normalized {
+            defaults.set(normalized, forKey: ownerKey)
+        } else {
+            defaults.removeObject(forKey: ownerKey)
+        }
+        return true
     }
 
     func select(_ roundID: String?) {

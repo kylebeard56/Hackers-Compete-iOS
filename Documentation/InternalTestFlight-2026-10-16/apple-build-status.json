@@ -1,0 +1,82 @@
+{
+  "verifiedAtUTC": "2026-10-16T11:57:59.828363+00:00",
+  "appCodeCommit": "9459c7170733767bb572c8eeba242624cb9d3b2a",
+  "includedPRs": [
+    14,
+    15,
+    16,
+    17
+  ],
+  "tests": {
+    "focusedPassed": 286,
+    "fullPassed": 1001,
+    "fullFailed": 0,
+    "existingOptInSkipped": 5
+  },
+  "apps": [
+    {
+      "name": "Hackers Compete Test",
+      "appID": "6757443901",
+      "bundleID": "com.tigermindlabs.hackers.compete.sandbox",
+      "build": {
+        "id": "1b037977-6313-4da7-997a-d53163e71772",
+        "version": "2026.10.16.1",
+        "marketingVersion": "1.0.0",
+        "processingState": "VALID",
+        "buildAudienceType": "INTERNAL_ONLY",
+        "uploadedDate": "2026-10-16T04:09:41-07:00",
+        "betaDetail": {
+          "autoNotifyEnabled": true,
+          "internalBuildState": "IN_BETA_TESTING",
+          "externalBuildState": "NOT_APPLICABLE"
+        }
+      },
+      "internalGroupAccess": [
+        {
+          "groupID": "aba65b43-f4b9-40f5-a828-5fa2c279674b",
+          "name": "Beta",
+          "containsCandidate": true
+        }
+      ],
+      "externalGroupAccess": [
+        {
+          "groupID": "0528e291-fbde-461d-ab26-3880b1264444",
+          "name": "Beta Testers",
+          "containsCandidate": false
+        }
+      ]
+    },
+    {
+      "name": "Hackers Compete",
+      "appID": "6757131203",
+      "bundleID": "com.tigermindlabs.hackers.compete",
+      "build": {
+        "id": "01708b51-3cee-40a7-a26e-e78e88b6fff4",
+        "version": "2026.10.16.1",
+        "marketingVersion": "1.0.0",
+        "processingState": "VALID",
+        "buildAudienceType": "INTERNAL_ONLY",
+        "uploadedDate": "2026-10-16T04:45:55-07:00",
+        "betaDetail": {
+          "autoNotifyEnabled": true,
+          "internalBuildState": "IN_BETA_TESTING",
+          "externalBuildState": "NOT_APPLICABLE"
+        }
+      },
+      "internalGroupAccess": [
+        {
+          "groupID": "5b4877fb-cd30-42c9-9c55-d2b27bc9d2ca",
+          "name": "Beta",
+          "containsCandidate": true
+        }
+      ],
+      "externalGroupAccess": [
+        {
+          "groupID": "7f02d8bf-079a-4e78-a247-9f28b7325131",
+          "name": "Beta Testers",
+          "containsCandidate": false
+        }
+      ]
+    }
+  ]
+}

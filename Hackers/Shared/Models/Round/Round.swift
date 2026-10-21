@@ -78,6 +78,7 @@ struct Round: FirebaseIdentifiable {
     var configuration: RoundConfiguration
     var players: [String]
     var completedPlayers: [CompletedPlayer]
+    var personalHandicapPCC: PersonalHandicapPCC? = nil
     var firstScoredAt: Time?
     var teeGroupDisplayNamesByPlayerID: [String: [String]]
     var createdAt: Time
@@ -119,6 +120,7 @@ struct Round: FirebaseIdentifiable {
         case shareCode = "share_code"
         case createdBy = "created_by"
         case completedPlayers = "completed_players"
+        case personalHandicapPCC = "personal_handicap_pcc"
         case firstScoredAt = "first_scored_at"
         case teeGroupDisplayNamesByPlayerID = "tee_group_display_names_by_player_id"
         case createdAt = "created_at"
@@ -135,6 +137,7 @@ struct Round: FirebaseIdentifiable {
         configuration = try c.decode(RoundConfiguration.self, forKey: .configuration)
         players = try c.decode([String].self, forKey: .players)
         completedPlayers = try c.decodeIfPresent([CompletedPlayer].self, forKey: .completedPlayers) ?? []
+        personalHandicapPCC = try c.decodeIfPresent(PersonalHandicapPCC.self, forKey: .personalHandicapPCC)
         firstScoredAt = try c.decodeIfPresent(Time.self, forKey: .firstScoredAt)
         teeGroupDisplayNamesByPlayerID = try c.decodeIfPresent([String: [String]].self, forKey: .teeGroupDisplayNamesByPlayerID) ?? [:]
         createdAt = try c.decode(Time.self, forKey: .createdAt)
@@ -151,6 +154,7 @@ struct Round: FirebaseIdentifiable {
         try c.encode(configuration, forKey: .configuration)
         try c.encode(players, forKey: .players)
         try c.encode(completedPlayers, forKey: .completedPlayers)
+        try c.encodeIfPresent(personalHandicapPCC, forKey: .personalHandicapPCC)
         try c.encodeIfPresent(firstScoredAt, forKey: .firstScoredAt)
         try c.encode(teeGroupDisplayNamesByPlayerID, forKey: .teeGroupDisplayNamesByPlayerID)
         try c.encode(createdAt, forKey: .createdAt)
@@ -256,6 +260,9 @@ enum RoundStatus: String, Codable {
     
     /// Soft deleted and therefore hidden from queries. Only settable by the creator.
     case archived
+    /// Course, tees and handicap inputs are frozen once scoring has started.
+    var allowsCourseHandicapSetupEdits: Bool { self == .lobby }
+
 }
 
 enum RoundTeamScoringMode: String, Codable, CaseIterable {
@@ -333,8 +340,8 @@ enum HandicapEntryFormat: String, CaseIterable, Codable {
 
     var displayName: String {
         switch self {
-        case .strokes: return "Strokes"
-        case .courseHandicap: return "Course Handicap"
+        case .strokes: return "Strokes Received"
+        case .courseHandicap: return "Handicap Index"
         }
     }
 }
@@ -376,6 +383,8 @@ struct RoundConfiguration: Hashable, Codable {
     var scoresRevealed: Bool?              // Host flips this to true to unveil all scores
     /// Basis for interpreting participant handicap values in net scoring. Missing legacy docs infer from hole count.
     var handicapStrokeBasis: SeriesHandicapStrokeBasis?
+    /// Source Index basis. Nil on legacy rounds means unknown, not the round length.
+    var handicapIndexBasis: SeriesHandicapStrokeBasis?
     /// Explicit gross/net switch for modern round docs. Missing legacy docs infer from the primary format.
     var handicapsEnabled: Bool?
     /// Optional format-specific allowance for shared-score scoring units, applied by handicap rank.
@@ -384,7 +393,7 @@ struct RoundConfiguration: Hashable, Codable {
     var handicapEntryFormat: HandicapEntryFormat
     /// Whether net scoring should play from the lowest handicap in the field or matchup.
     var handicapNormalizationMode: HandicapNormalizationMode
-    /// Optional league cap for participant playing handicaps injected from a linked series.
+    /// Series maximum Index before Course Handicap conversion; legacy strokes entries retain their existing limit.
     var leagueHandicapMaximum: Int?
     /// When false, team avatars and dots use neutral styling; team names follow indexed "Team N" when reset from lobby.
     var teamColorsEnabled: Bool
@@ -422,6 +431,7 @@ struct RoundConfiguration: Hashable, Codable {
         secretScoring: Bool? = nil,
         scoresRevealed: Bool? = nil,
         handicapStrokeBasis: SeriesHandicapStrokeBasis? = nil,
+        handicapIndexBasis: SeriesHandicapStrokeBasis? = nil,
         handicapsEnabled: Bool? = nil,
         sharedScoreHandicapConfig: HandicapConfiguration? = nil,
         handicapEntryFormat: HandicapEntryFormat = .strokes,
@@ -453,6 +463,7 @@ struct RoundConfiguration: Hashable, Codable {
         self.secretScoring = secretScoring
         self.scoresRevealed = scoresRevealed
         self.handicapStrokeBasis = handicapStrokeBasis
+        self.handicapIndexBasis = handicapIndexBasis
         self.handicapsEnabled = handicapsEnabled
         self.sharedScoreHandicapConfig = sharedScoreHandicapConfig
         self.handicapEntryFormat = handicapEntryFormat
@@ -497,6 +508,7 @@ struct RoundConfiguration: Hashable, Codable {
         case secretScoring = "secret_scoring"
         case scoresRevealed = "scores_revealed"
         case handicapStrokeBasis = "handicap_stroke_basis"
+        case handicapIndexBasis = "handicap_index_basis"
         case handicapsEnabled = "use_handicaps"
         case sharedScoreHandicapConfig = "shared_score_handicap_config"
         case handicapEntryFormat = "handicap_entry_format"
@@ -610,6 +622,7 @@ struct RoundConfiguration: Hashable, Codable {
         sequentialTeeStartsEnabled = try c.decodeIfPresent(Bool.self, forKey: .sequentialTeeStartsEnabled) ?? false
         secretScoring = try c.decodeIfPresent(Bool.self, forKey: .secretScoring)
         scoresRevealed = try c.decodeIfPresent(Bool.self, forKey: .scoresRevealed)
+        handicapIndexBasis = try c.decodeIfPresent(SeriesHandicapStrokeBasis.self, forKey: .handicapIndexBasis)
         handicapStrokeBasis = try c.decodeIfPresent(SeriesHandicapStrokeBasis.self, forKey: .handicapStrokeBasis)
         handicapsEnabled = try c.decodeIfPresent(Bool.self, forKey: .handicapsEnabled)
         sharedScoreHandicapConfig = try c.decodeIfPresent(HandicapConfiguration.self, forKey: .sharedScoreHandicapConfig)
@@ -662,6 +675,7 @@ struct RoundConfiguration: Hashable, Codable {
         try c.encodeIfPresent(secretScoring, forKey: .secretScoring)
         try c.encodeIfPresent(scoresRevealed, forKey: .scoresRevealed)
         try c.encodeIfPresent(handicapStrokeBasis, forKey: .handicapStrokeBasis)
+        try c.encodeIfPresent(handicapIndexBasis, forKey: .handicapIndexBasis)
         try c.encodeIfPresent(handicapsEnabled, forKey: .handicapsEnabled)
         try c.encodeIfPresent(sharedScoreHandicapConfig, forKey: .sharedScoreHandicapConfig)
         try c.encode(handicapEntryFormat, forKey: .handicapEntryFormat)

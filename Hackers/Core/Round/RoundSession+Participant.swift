@@ -119,9 +119,10 @@ extension RoundSession {
                 players.upsert(created)
             }
 
+            players = await refreshingPersonalHandicapsForSetup(players)
             // 2. Create participants locally (no DB writes yet)
             var participants = players.map {
-                let participant = RoundParticipant(
+                var participant = RoundParticipant(
                     player: $0,
                     teeBoxID: snapshot.defaultTee?.id ?? "",
                     teamID: nil,
@@ -130,15 +131,26 @@ extension RoundSession {
                     isHost: $0.isHost(in: snapshot),
                     parentID: roundID ?? snapshot.round.id
                 )
-                let input = Double(participant.originalHandicap)
-                return HandicapCalculator.participant(
-                    participant,
-                    applying: input,
-                    format: snapshot.configuration.handicapEntryFormat,
+                participant = PersonalHandicapRoundPrefill.participant(
+                    participant, player: $0, configuration: snapshot.configuration,
+                    isLeagueRound: snapshot.participants.contains { $0.seriesMemberID != nil || $0.handicapSnapshot != nil }
+                        || snapshot.configuration.leagueHandicapMaximum != nil,
+                    status: snapshot.round.status
+                )
+                // Legacy integer profile handicaps are strokes, not a decimal Index.
+                if snapshot.configuration.handicapEntryFormat == .strokes {
+                    return HandicapCalculator.participant(
+                        participant, applying: Double(participant.originalHandicap), format: .strokes,
+                        courseSegment: snapshot.courseSegment,
+                        maximumHandicap: snapshot.configuration.leagueHandicapMaximum
+                    )
+                }
+                return HandicapCalculator.recomputedParticipants(
+                    [participant], format: snapshot.configuration.handicapEntryFormat,
                     courseSegment: snapshot.courseSegment,
                     maximumHandicap: snapshot.configuration.leagueHandicapMaximum,
-                    handicapStrokeBasis: snapshot.handicapStrokeBasis
-                )
+                    handicapStrokeBasis: snapshot.handicapIndexBasis
+                )[0]
             }
 
             // 3. Optional auto-assignment
@@ -203,6 +215,34 @@ extension RoundSession {
             addBreadcrumb(level: .error, message: "Failed to add participants", error: error)
             throw error
         }
+    }
+
+    /// A personal-history refresh improves prefill, but is never a prerequisite
+    /// for adding a player. On failure keep the saved profile and its provenance.
+    func refreshingPersonalHandicapsForSetup(
+        _ players: [Player],
+        refresh: (String) async throws -> Player? = {
+            try await FirebaseService.shared.fetchPersonalHandicapHistory(playerID: $0).player
+        }
+    ) async -> [Player] {
+        guard snapshot.round.status == .lobby,
+              snapshot.configuration.handicapEntryFormat == .courseHandicap,
+              snapshot.configuration.leagueHandicapMaximum == nil,
+              !snapshot.participants.contains(where: { $0.seriesMemberID != nil || $0.handicapSnapshot != nil })
+        else { return players }
+
+        var result = players
+        for i in players.indices {
+            do {
+                guard let refreshed = try await refresh(players[i].id), refreshed.id == players[i].id else { continue }
+                // Refresh only the Index profile, never identity, legacy strokes,
+                // or any participant values already frozen in this round.
+                result[i].personalHandicap = refreshed.personalHandicap
+            } catch {
+                addBreadcrumb(level: .warning, message: "Personal handicap refresh unavailable; using saved profile for player \(players[i].id)", error: error)
+            }
+        }
+        return result
     }
 
     private func computeTeeAssignments(

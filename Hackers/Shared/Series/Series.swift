@@ -2392,6 +2392,8 @@ struct SeriesRound: FirebaseSubcollectable, IndexIterable {
     var plannedMatchups: [SeriesRoundPlannedMatchup]
     var plannedTeeGroups: [SeriesRoundPlannedTeeGroup]
     var partnershipPlans: [SeriesRoundPartnershipPlan]
+    /// Commissioner inputs scoped to this round; never personal profiles or the series handicap pool.
+    var handicapInputs: [String: SeriesRoundHandicapInput]
     var notes: String?
     var awardsStatus: SeriesAwardsStatus
     var awardsFinalizedAt: Time?
@@ -2426,6 +2428,7 @@ struct SeriesRound: FirebaseSubcollectable, IndexIterable {
         plannedMatchups: [SeriesRoundPlannedMatchup] = [],
         plannedTeeGroups: [SeriesRoundPlannedTeeGroup] = [],
         partnershipPlans: [SeriesRoundPartnershipPlan] = [],
+        handicapInputs: [String: SeriesRoundHandicapInput] = [:],
         notes: String? = nil,
         awardsStatus: SeriesAwardsStatus = .pending,
         awardsFinalizedAt: Time? = nil,
@@ -2455,6 +2458,7 @@ struct SeriesRound: FirebaseSubcollectable, IndexIterable {
         self.plannedMatchups = plannedMatchups
         self.plannedTeeGroups = plannedTeeGroups
         self.partnershipPlans = partnershipPlans
+        self.handicapInputs = handicapInputs
         self.notes = notes
         self.awardsStatus = awardsStatus
         self.awardsFinalizedAt = awardsFinalizedAt
@@ -2483,6 +2487,7 @@ struct SeriesRound: FirebaseSubcollectable, IndexIterable {
         case plannedMatchups = "planned_matchups"
         case plannedTeeGroups = "planned_tee_groups"
         case partnershipPlans = "partnership_plans"
+        case handicapInputs = "handicap_inputs"
         case awardsStatus = "awards_status"
         case awardsFinalizedAt = "awards_finalized_at"
         case automaticAwardsEngineVersion = "automatic_awards_engine_version"
@@ -2514,6 +2519,7 @@ struct SeriesRound: FirebaseSubcollectable, IndexIterable {
         plannedMatchups = try c.decodeIfPresent([SeriesRoundPlannedMatchup].self, forKey: .plannedMatchups) ?? []
         plannedTeeGroups = try c.decodeIfPresent([SeriesRoundPlannedTeeGroup].self, forKey: .plannedTeeGroups) ?? []
         partnershipPlans = try c.decodeIfPresent([SeriesRoundPartnershipPlan].self, forKey: .partnershipPlans) ?? []
+        handicapInputs = try c.decodeIfPresent([String: SeriesRoundHandicapInput].self, forKey: .handicapInputs) ?? [:]
         notes = try c.decodeIfPresent(String.self, forKey: .notes)
         awardsStatus = try c.decodeIfPresent(SeriesAwardsStatus.self, forKey: .awardsStatus) ?? .pending
         awardsFinalizedAt = try c.decodeIfPresent(Time.self, forKey: .awardsFinalizedAt)
@@ -2546,6 +2552,7 @@ struct SeriesRound: FirebaseSubcollectable, IndexIterable {
         try c.encode(plannedMatchups, forKey: .plannedMatchups)
         try c.encode(plannedTeeGroups, forKey: .plannedTeeGroups)
         try c.encode(partnershipPlans, forKey: .partnershipPlans)
+        if !handicapInputs.isEmpty { try c.encode(handicapInputs, forKey: .handicapInputs) }
         try c.encodeIfPresent(notes, forKey: .notes)
         try c.encode(awardsStatus, forKey: .awardsStatus)
         try c.encodeIfPresent(awardsFinalizedAt, forKey: .awardsFinalizedAt)

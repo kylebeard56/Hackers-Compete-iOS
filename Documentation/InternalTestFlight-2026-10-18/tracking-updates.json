@@ -1,0 +1,47 @@
+{
+  "appCodeCommit": "d03a2355ed1dd367acbf9a68f6bf8ba2749e6809",
+  "openPRs": [
+    {
+      "number": 14,
+      "head": "140f22ce7cba212baa7f830d822d58a10168a2cb"
+    },
+    {
+      "number": 15,
+      "head": "e9782443accdeb31844f26cde5f71fddcc071133"
+    },
+    {
+      "number": 16,
+      "head": "d03a2355ed1dd367acbf9a68f6bf8ba2749e6809"
+    },
+    {
+      "number": 17,
+      "head": "be001f41cdd4a33c05068d094b7c8af9ebc9bc00"
+    }
+  ],
+  "prDescriptions": "All four release headers saved and verified by GitHub API readback.",
+  "ticketsWithReleaseComments": [
+    "wdx6zf368k",
+    "wdx6zf65p6",
+    "wdx6zf0n03",
+    "wdx6zf0n2f",
+    "wdx6zf3848",
+    "wdx6zf6nxe",
+    "wdx6zf6nxf",
+    "wdx6zf6nxg",
+    "wdx6zf6nxh",
+    "wdx6zf65p7"
+  ],
+  "broaderFollowupKeptOpen": "wdx6zf65p7",
+  "updatedVia": "Authenticated GitHub and ClickUp web UI; GitHub API readback verifies PR descriptions.",
+  "ticketsMovedToTestFlight": [
+    "wdx6zf368k",
+    "wdx6zf65p6",
+    "wdx6zf0n03",
+    "wdx6zf0n2f",
+    "wdx6zf3848",
+    "wdx6zf6nxe",
+    "wdx6zf6nxf",
+    "wdx6zf6nxg",
+    "wdx6zf6nxh"
+  ]
+}

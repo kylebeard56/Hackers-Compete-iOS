@@ -1,0 +1,510 @@
+import Combine
+import SwiftUI
+import UIKit
+import XCTest
+@testable import Hackers
+
+/// Exercises the real SwiftUI editors, UIKit text input, and accessible Done
+/// activation without a Firebase connection or a separate app test route.
+@MainActor
+final class HandicapKeyboardDismissalTests: XCTestCase {
+    func testHandicapEntryIndexDoneKeepsDraftWithoutSavingOrDismissing() async throws {
+        try await checkHandicapEntry(.courseHandicap, text: "22.6")
+    }
+
+    func testHandicapEntryStrokesDoneKeepsDraftWithoutSavingOrDismissing() async throws {
+        try await checkHandicapEntry(.strokes, text: "14")
+    }
+
+    func testManagePlayerIndexDoneKeepsDraftWithoutUpdatingOrNavigating() async throws {
+        try await checkManagePlayer(.courseHandicap, text: "22.6")
+    }
+
+    func testManagePlayerStrokesDoneKeepsDraftWithoutUpdatingOrNavigating() async throws {
+        try await checkManagePlayer(.strokes, text: "14")
+    }
+
+    func testRosterIndexDoneAddsNoSaveAndKeepsAutosavedValue() async throws {
+        try await checkRoster(.courseHandicap, text: "22.6", dismissImmediately: false)
+    }
+
+    func testRosterStrokesDoneAddsNoSaveAndKeepsAutosavedValue() async throws {
+        try await checkRoster(.strokes, text: "14", dismissImmediately: false)
+    }
+
+    func testRosterFastIndexDismissPreservesPendingInput() async throws {
+        try await checkRoster(.courseHandicap, text: "22.6", dismissImmediately: true)
+    }
+
+    func testRosterFastStrokesDismissPreservesPendingInput() async throws {
+        try await checkRoster(.strokes, text: "14", dismissImmediately: true)
+    }
+
+    func testRosterEmptyDismissDoesNotCreateAZeroOrSave() async throws {
+        let audit = RosterAudit(value: 8)
+        let screen = try HostedScreen(RosterEditor(format: .strokes, audit: audit))
+        defer { screen.close() }
+        try await pause()
+        XCTAssertTrue(try screen.button("Handicap 8").accessibilityActivate())
+        try await Task.sleep(for: .milliseconds(200))
+        let field = try screen.field("roster-player-handicapInput")
+        XCTAssertTrue(field.isFirstResponder)
+        let done = try screen.button("Done")
+        XCTAssertTrue(done.accessibilityActivate())
+        try await pause()
+        XCTAssertFalse(field.isFirstResponder)
+        XCTAssertTrue(audit.edits.isEmpty)
+        XCTAssertEqual(audit.value, 8)
+    }
+
+    func testRosterExplicitZeroResolvesPendingStrokesWithoutSavingOnDone() async throws {
+        let audit = RosterAudit(value: 0)
+        audit.isUnresolved = true
+        let screen = try HostedScreen(RosterEditor(format: .strokes, audit: audit))
+        defer { screen.close() }
+        try await pause()
+        XCTAssertTrue(try screen.button("Handicap —").accessibilityActivate())
+        try await Task.sleep(for: .milliseconds(200))
+        let field = try screen.field("roster-player-handicapInput")
+        try await enter("0", into: field, format: .strokes)
+        XCTAssertEqual(audit.edits, [0], "Explicit zero must resolve an initially pending value")
+        XCTAssertFalse(audit.isUnresolved)
+        XCTAssertTrue(try dismissControl(in: screen).accessibilityActivate())
+        try await pause()
+        XCTAssertFalse(field.isFirstResponder)
+        XCTAssertEqual(audit.edits, [0], "Done must not submit another edit")
+        XCTAssertEqual(audit.value, 0)
+        XCTAssertNotNil(try screen.button("Handicap 0"))
+    }
+
+    func testPendingRosterIndexDoesNotAutosaveAsStrokesAfterModeChange() async throws {
+        let audit = RosterAudit(value: 8)
+        let screen = try HostedScreen(RosterEditor(format: .courseHandicap, audit: audit))
+        defer { screen.close() }
+        try await pause()
+        XCTAssertTrue(try screen.button("Handicap 8.0").accessibilityActivate())
+        try await Task.sleep(for: .milliseconds(200))
+        let field = try screen.field("roster-player-handicapInput")
+        try await enter("22.6", into: field, format: .courseHandicap, settle: false)
+        audit.format = .strokes
+        try await pause()
+        XCTAssertTrue(audit.edits.isEmpty, "A pending Index edit must never be submitted as strokes")
+        XCTAssertEqual(audit.value, 8)
+    }
+
+    func testManagePlayerShowsOnePersonalIndexForRegisteredAndOfflinePlayers() async throws {
+        for userID: String? in ["registered", nil] {
+            let profile = Player(id: "personal-entry", userID: userID, name: .init("Test", "Player"))
+            let course = personalFrontNine()
+            let player = RoundParticipant(player: profile, teeBoxID: "white")
+            let session = RoundSession()
+            session.snapshot = .init(round: Round(id: "local-index-test", status: .lobby,
+                configuration: .init(courses: [course], handicapEntryFormat: .courseHandicap)), participants: [player])
+            let screen = try HostedScreen(ManagePlayerView(roundSession: session, participant: player))
+            defer { screen.close() }
+            try await pause()
+            let field = try screen.field("managePlayerHandicapInput")
+            try await enter("17.7", into: field, format: .courseHandicap)
+            XCTAssertTrue(try dismissControl(in: screen).accessibilityActivate())
+            try await pause()
+            XCTAssertEqual(field.text, "17.7")
+            let labels = screen.accessibilityLabels
+            XCTAssertFalse(labels.contains { $0.contains("Index basis") || $0.contains("18 holes (WHS)") }, labels.joined(separator: " | "))
+            XCTAssertTrue(labels.contains { $0.contains("Course HCP: 8") }, labels.joined(separator: " | "))
+            XCTAssertTrue(labels.contains { $0.contains("Strokes Received: 8") }, labels.joined(separator: " | "))
+            attach(screen, name: userID == nil ? "PersonalIndex-Offline-FrontNine" : "PersonalIndex-Registered-FrontNine")
+        }
+    }
+
+    func testPersonalIndexPersistsThroughEditorSummaryAndBackNavigation() async throws {
+        let audit = PersonalIndexNavigationAudit(course: personalFrontNine())
+        let screen = try HostedScreen(PersonalIndexNavigationScreen(audit: audit))
+        defer { screen.close() }
+        try await pause()
+        XCTAssertTrue(try screen.button("Edit handicap").accessibilityActivate())
+        try await pause()
+        let field = try screen.field("handicapEntryInput")
+        try await enter("17.7", into: field, format: .courseHandicap)
+        XCTAssertTrue(try dismissControl(in: screen).accessibilityActivate())
+        try await pause()
+        XCTAssertTrue(try screen.button("Save handicap entry").accessibilityActivate())
+        try await pause()
+        XCTAssertFalse(audit.editing)
+        XCTAssertEqual(audit.participant.handicapIndex, 17.7)
+        XCTAssertEqual(audit.participant.handicapResolution?.calculation?.indexBasis, .eighteenHole)
+        XCTAssertTrue(screen.accessibilityLabels.contains { $0.contains("Handicap Index: 17.7") })
+        XCTAssertTrue(screen.accessibilityLabels.contains { $0.contains("Course HCP: 8") })
+        attach(screen, name: "PersonalIndex-RoundSummary")
+        audit.participant = try JSONDecoder().decode(RoundParticipant.self, from: JSONEncoder().encode(audit.participant))
+        XCTAssertTrue(try screen.button("Edit handicap").accessibilityActivate())
+        try await pause()
+        XCTAssertEqual(try screen.field("handicapEntryInput").text, "17.7")
+    }
+
+    func testProductionLobbyUsesPlayerEntryModesAndPreviewsCourseChangesBeforeSavedPlayersRefresh() async throws {
+        let front = personalFrontNine(backRating: 34.5, backSlope: 130)
+        var back = front
+        back.holeRange = HoleSegment.back9.holeRange
+        var full = front
+        full.holeRange = HoleSegment.full18.holeRange
+        let player = HandicapCalculator.participant(
+            RoundParticipant(id: "roster-index", name: .init("Index", "Player"), teeBoxID: "white"),
+            applying: 17.7, format: .courseHandicap, courseSegment: full)
+        var manual = HandicapCalculator.participant(player, applying: 12, format: .strokes, courseSegment: full)
+        manual.id = "roster-manual"
+        manual.name = .init("Manual", "Player")
+        let session = RoundSession()
+        session.snapshot = .init(round: Round(id: "local-roster-test", status: .lobby,
+            configuration: .init(courses: [full], handicapEntryFormat: .courseHandicap)),
+            participants: [manual])
+        session.snapshot.round.configuration.handicapsEnabled = true
+        // No active round/series and no authentication restoration: this hosts
+        // the production lobby without attaching Firebase listeners or saving.
+        let app = AppSession(restoresAuthentication: false)
+        let screen = try HostedScreen(GameLobby().environmentObject(app).environmentObject(session))
+        defer { screen.close() }
+        try await pause()
+        screen.scrollToBottom()
+        let initialLabels = try await waitForLobbyLabels(in: screen, containing: "Manual Player")
+        XCTAssertTrue(initialLabels.contains("Strokes"), initialLabels.joined(separator: " | "))
+        XCTAssertTrue(initialLabels.contains { $0.contains("Strokes Received: 12 (manual)") })
+        XCTAssertFalse(initialLabels.contains { $0.contains("Manual Player") && $0.contains("Handicap Index") })
+
+        session.snapshot.participants = [player, manual]
+        for selection in [front, back, full] {
+            session.snapshot.round.configuration.courses = [selection]
+            try await pause()
+            screen.scrollToBottom()
+            let labels = try await waitForLobbyLabels(in: screen, containing: "Index Player")
+            let expected = try XCTUnwrap(HandicapCalculator.calculation(index: 17.7, participant: player,
+                courseSegment: selection, indexBasis: .eighteenHole).courseHandicap)
+            XCTAssertTrue(labels.contains("HCP"), labels.joined(separator: " | "))
+            XCTAssertTrue(labels.contains { $0.contains("Course HCP: \(expected) · Strokes Received: \(expected)") }, labels.joined(separator: " | "))
+            XCTAssertTrue(labels.contains { $0.contains("Strokes Received: 12 (manual)") })
+            XCTAssertFalse(labels.contains { $0.contains("Manual Player") && $0.contains("Handicap Index") })
+            attach(screen, name: "CourseHandicap-ProductionLobby-\(selection.holeSegment)")
+        }
+        XCTAssertEqual(session.snapshot.participants, [player, manual], "A display preview must not rewrite participant records")
+        screen.scrollToBottom()
+        try await pause()
+        attach(screen, name: "CourseHandicap-ProductionLobby-MixedEntries")
+    }
+
+    private func waitForLobbyLabels(in screen: HostedScreen, containing text: String) async throws -> [String] {
+        // SwiftUI creates the full lobby's accessibility tree asynchronously.
+        // Wait for the actual row rather than interpreting an empty first tree.
+        for _ in 0..<30 {
+            let labels = screen.accessibilityLabels
+            if labels.contains(where: { $0.contains(text) }) { return labels }
+            try await Task.sleep(for: .milliseconds(100))
+        }
+        XCTFail("Lobby did not render \(text): \(screen.accessibilityLabels)")
+        return screen.accessibilityLabels
+    }
+
+    private func personalFrontNine(backRating: Double? = nil, backSlope: Int? = nil) -> CourseSegment {
+        let pars = [5, 4, 5, 4, 3, 4, 4, 3, 4, 4, 3, 5, 4, 5, 4, 3, 4, 4]
+        let tee = Tee(id: "white", name: "White", gender: "male", totalHoles: 18,
+            holes: pars.enumerated().map { Hole(number: $0.offset + 1, par: $0.element, yardage: 300, handicap: $0.offset + 1) },
+            ratingFull: 68.2, slopeFull: 129, ratingFront: 33.7, slopeFront: 128, ratingBack: backRating, slopeBack: backSlope)
+        return CourseSegment(courseInfo: .init(id: "paris-mountain-test", name: "Paris Mountain Country Club", totalHoles: 18, tees: [tee]),
+            holeRange: HoleSegment.front9.holeRange, defaultTee: tee.id)
+    }
+
+    private func checkHandicapEntry(_ format: HandicapEntryFormat, text: String) async throws {
+        var saved: [RoundParticipant] = []
+        var disappeared = false
+        let player = participant()
+        let screen = try HostedScreen(
+            HandicapEntryView(participant: .constant(player), entryFormat: format,
+                courseSegment: course(), onComplete: { saved.append($0) })
+                .onDisappear { disappeared = true }
+        )
+        defer { screen.close() }
+        try await pause()
+        let field = try screen.field("handicapEntryInput")
+        try await enter(text, into: field, format: format)
+        let events = KeyboardEvents()
+        defer { events.stop() }
+        try await dismissKeyboard(in: screen, field: field, events: events, name: "HandicapEntry-\(format.rawValue)")
+        XCTAssertEqual(field.text, text)
+        XCTAssertTrue(saved.isEmpty, "Done must not call the separate Save action")
+        XCTAssertFalse(disappeared)
+        XCTAssertNotNil(field.window, "The editor stays on screen")
+        // A later explicit Save still receives the preserved draft, including decimals.
+        XCTAssertTrue(try screen.button("Save handicap entry").accessibilityActivate())
+        try await pause()
+        XCTAssertEqual(saved.count, 1)
+        if format == .courseHandicap {
+            XCTAssertEqual(saved.first?.handicapIndex, Double(text))
+        } else {
+            XCTAssertEqual(saved.first?.handicapResolution?.effectiveStrokes, Int(text))
+        }
+    }
+
+    private func checkManagePlayer(_ format: HandicapEntryFormat, text: String) async throws {
+        let player = participant()
+        let session = RoundSession()
+        session.snapshot = RoundSnapshot(round: Round(id: "keyboard-test", status: .lobby,
+            configuration: RoundConfiguration(courses: [course()], handicapIndexBasis: .eighteenHole,
+                handicapsEnabled: true, handicapEntryFormat: format)), participants: [player])
+        let original = session.snapshot
+        var disappeared = false
+        let screen = try HostedScreen(ManagePlayerView(roundSession: session, participant: player)
+            .onDisappear { disappeared = true })
+        defer { screen.close() }
+        try await pause()
+        let field = try screen.field("managePlayerHandicapInput")
+        let events = KeyboardEvents()
+        defer { events.stop() }
+        try await enter(text, into: field, format: format)
+        try await dismissKeyboard(in: screen, field: field, events: events, name: "ManagePlayer-\(format.rawValue)")
+        XCTAssertEqual(field.text, text)
+        XCTAssertFalse(disappeared, "Done must not invoke Update player or dismiss this sheet")
+        XCTAssertEqual(session.snapshot.round, original.round)
+        XCTAssertEqual(session.snapshot.participants, original.participants)
+        XCTAssertNotNil(field.window)
+        XCTAssertNotNil(try screen.button("Update player"))
+    }
+
+    private func checkRoster(_ format: HandicapEntryFormat, text: String, dismissImmediately: Bool) async throws {
+        let audit = RosterAudit(value: 8)
+        let screen = try HostedScreen(RosterEditor(format: format, audit: audit))
+        defer { screen.close() }
+        try await pause()
+        XCTAssertTrue(try screen.button(format == .courseHandicap ? "Handicap 8.0" : "Handicap 8").accessibilityActivate())
+        try await Task.sleep(for: .milliseconds(200))
+        let field = try screen.field("roster-player-handicapInput")
+        let events = KeyboardEvents()
+        defer { events.stop() }
+        try await enter(text, into: field, format: format, settle: !dismissImmediately)
+        let done = try dismissControl(in: screen)
+        attach(screen, name: "Roster-\(format.rawValue)-keyboard-active")
+        if !dismissImmediately {
+            XCTAssertEqual(audit.edits, [Double(text)!], "The input edit autosaves before Done")
+        } else {
+            XCTAssertTrue(audit.edits.isEmpty)
+        }
+        let countBeforeDone = audit.edits.count
+        XCTAssertTrue(done.accessibilityActivate())
+        XCTAssertEqual(audit.edits.count, countBeforeDone, "Done itself must not submit an edit")
+        try await pause()
+        XCTAssertFalse(field.isFirstResponder)
+        XCTAssertGreaterThan(events.hideCount, 0, "Done must dismiss the system keyboard")
+        XCTAssertEqual(audit.edits, [Double(text)!], "Only the intended input autosave may occur")
+        XCTAssertEqual(audit.value, Double(text))
+        XCTAssertFalse(audit.disappeared)
+        XCTAssertNotNil(try screen.button("Handicap \(text)"), "The roster still shows the entered value")
+        attach(screen, name: "Roster-\(format.rawValue)-\(dismissImmediately ? "fast" : "settled")-dismissed")
+    }
+
+    private func enter(_ text: String, into field: UITextField, format: HandicapEntryFormat, settle: Bool = true) async throws {
+        field.becomeFirstResponder()
+        // Let FocusState establish editing before changing the real UIKit input.
+        try await Task.sleep(for: .milliseconds(100))
+        field.text = ""
+        field.sendActions(for: .editingChanged)
+        field.insertText(text)
+        XCTAssertEqual(field.keyboardType, format == .courseHandicap ? .numbersAndPunctuation : .numberPad)
+        if settle { try await pause() }
+        XCTAssertTrue(field.isFirstResponder)
+        XCTAssertEqual(field.text, text)
+    }
+
+    private func dismissKeyboard(in screen: HostedScreen, field: UITextField, events: KeyboardEvents, name: String) async throws {
+        let done = try dismissControl(in: screen)
+        attach(screen, name: name + "-keyboard-active")
+        XCTAssertTrue(done.accessibilityActivate())
+        try await pause()
+        XCTAssertFalse(field.isFirstResponder)
+        XCTAssertGreaterThan(events.hideCount, 0, "The system keyboard receives a hide event")
+        attach(screen, name: name + "-keyboard-dismissed")
+    }
+
+    private func dismissControl(in screen: HostedScreen) throws -> NSObject {
+        let done = try screen.button("Done")
+        XCTAssertEqual(done.accessibilityHint, "Dismiss keyboard and keep the entered value")
+        XCTAssertGreaterThanOrEqual(done.accessibilityFrame.height, 44)
+        XCTAssertTrue(screen.window.frame.contains(done.accessibilityFrame), "Done must be visible within the mobile screen")
+        return done
+    }
+
+    private func pause() async throws { try await Task.sleep(for: .milliseconds(600)) }
+
+    private func attach(_ screen: HostedScreen, name: String) {
+        let image = UIGraphicsImageRenderer(bounds: screen.window.bounds).image { _ in
+            screen.window.drawHierarchy(in: screen.window.bounds, afterScreenUpdates: true)
+        }
+        let attachment = XCTAttachment(image: image)
+        attachment.name = name
+        attachment.lifetime = .keepAlways
+        add(attachment)
+    }
+
+    private func participant() -> RoundParticipant {
+        RoundParticipant(id: "keyboard-player", name: Name("Keyboard", "Player"), teeBoxID: "white",
+            originalHandicap: 8, adjustedHandicap: 8, handicapIndex: 8.5)
+    }
+
+    private func course() -> CourseSegment {
+        let tee = Tee(id: "white", name: "White", gender: "male", totalHoles: 18,
+            holes: (1...18).map { Hole(number: $0, par: 4, yardage: 400, handicap: $0) },
+            ratingFull: 72, slopeFull: 113, ratingFront: nil, slopeFront: nil, ratingBack: nil, slopeBack: nil)
+        return CourseSegment(courseInfo: .init(id: "keyboard-course", name: "Keyboard Course", totalHoles: 18, tees: [tee]),
+            holeRange: HoleSegment.full18.holeRange, defaultTee: tee.id)
+    }
+}
+
+@MainActor
+private final class HostedScreen {
+    let window: UIWindow
+    private let previous: UIWindow?
+    private let host: UIHostingController<AnyView>
+
+    init<V: View>(_ view: V) throws {
+        let scene = try XCTUnwrap(UIApplication.shared.connectedScenes.compactMap { $0 as? UIWindowScene }.first)
+        previous = scene.windows.first(where: \.isKeyWindow)
+        window = UIWindow(windowScene: scene)
+        window.frame = scene.coordinateSpace.bounds
+        host = UIHostingController(rootView: AnyView(view))
+        window.rootViewController = host
+        window.makeKeyAndVisible()
+    }
+
+    func close() {
+        window.endEditing(true)
+        window.isHidden = true
+        previous?.makeKeyAndVisible()
+    }
+
+    func field(_ identifier: String) throws -> UITextField {
+        func fields(in view: UIView) -> [UITextField] {
+            (view as? UITextField).map { [$0] } ?? view.subviews.flatMap { fields(in: $0) }
+        }
+        // SwiftUI places identifiers on its accessibility wrapper rather than
+        // the backing UITextField. Each editor has one numeric input.
+        let inputs = fields(in: host.view).filter {
+            $0.keyboardType == .numberPad || $0.keyboardType == .numbersAndPunctuation
+        }
+        XCTAssertEqual(inputs.count, 1, "Expected one numeric input for \(identifier)")
+        return try XCTUnwrap(inputs.first, "Missing input \(identifier)")
+    }
+
+    private func accessibilityNodes() -> [NSObject] {
+        var visited: Set<ObjectIdentifier> = []
+        func nodes(in object: NSObject, depth: Int = 0) -> [NSObject] {
+            guard depth < 20, visited.insert(ObjectIdentifier(object)).inserted else { return [] }
+            var result = [object]
+            if let view = object as? UIView {
+                for child in view.subviews { result += nodes(in: child, depth: depth + 1) }
+            }
+            let count = object.accessibilityElementCount()
+            if count > 0, count < 500 {
+                for index in 0..<count {
+                    if let child = object.accessibilityElement(at: index) as? NSObject {
+                        result += nodes(in: child, depth: depth + 1)
+                    }
+                }
+            }
+            return result
+        }
+        return nodes(in: window)
+    }
+
+    var accessibilityLabels: [String] { accessibilityNodes().compactMap(\.accessibilityLabel) }
+
+    func scrollToBottom() {
+        func scrollViews(in view: UIView) -> [UIScrollView] {
+            (view as? UIScrollView).map { [$0] } ?? view.subviews.flatMap { scrollViews(in: $0) }
+        }
+        for scroll in scrollViews(in: host.view) where scroll.contentSize.height > scroll.bounds.height {
+            scroll.setContentOffset(CGPoint(x: 0, y: max(0, scroll.contentSize.height - scroll.bounds.height)), animated: false)
+        }
+    }
+
+    func button(_ label: String) throws -> NSObject {
+        return try XCTUnwrap(accessibilityNodes().first {
+            $0.accessibilityLabel == label && $0.accessibilityTraits.contains(.button)
+        }, "Missing accessible button \(label)")
+    }
+}
+
+/// The roster's real input and dismiss control with in-memory persistence so
+/// assertions detect saves, duplicates, focus loss, and navigation independently.
+@MainActor
+private final class RosterAudit: ObservableObject {
+    @Published var value: Double
+    @Published var format: HandicapEntryFormat?
+    @Published var isUnresolved = false
+    var edits: [Double] = []
+    var disappeared = false
+    init(value: Double) { self.value = value }
+}
+
+private struct RosterEditor: View {
+    let format: HandicapEntryFormat
+    @ObservedObject var audit: RosterAudit
+    @FocusState private var focus: String?
+    private var entryFormat: HandicapEntryFormat { audit.format ?? format }
+    private var palette: DesignPalette { .init(theme: .primary, scheme: .light) }
+
+    var body: some View {
+        VStack {
+            HandicapTextField(id: "roster-player", initialValue: Int(audit.value),
+                entryValue: entryFormat == .courseHandicap ? audit.value : nil, entryFormat: entryFormat,
+                isUnresolved: audit.isUnresolved,
+                focusedField: $focus, palette: palette,
+                onDebouncedEdit: { value in
+                    audit.edits.append(value)
+                    audit.value = value
+                    audit.isUnresolved = false
+                })
+            Spacer()
+            if focus != nil { HandicapKeyboardDismissBar { focus = nil } }
+        }
+        .onDisappear { audit.disappeared = true }
+    }
+}
+
+private final class KeyboardEvents: @unchecked Sendable {
+    private let lock = NSLock()
+    private var count = 0
+    private var observer: NSObjectProtocol?
+    var hideCount: Int { lock.lock(); defer { lock.unlock() }; return count }
+    init() {
+        observer = NotificationCenter.default.addObserver(forName: UIResponder.keyboardDidHideNotification,
+            object: nil, queue: .main) { [weak self] _ in
+                guard let self else { return }
+                self.lock.lock(); self.count += 1; self.lock.unlock()
+            }
+    }
+    func stop() { if let observer { NotificationCenter.default.removeObserver(observer) } }
+}
+
+@MainActor
+private final class PersonalIndexNavigationAudit: ObservableObject {
+    @Published var participant = RoundParticipant(id: "local-player", name: .init("Test", "Player"), teeBoxID: "white")
+    @Published var editing = false
+    let course: CourseSegment
+    init(course: CourseSegment) { self.course = course }
+}
+
+private struct PersonalIndexNavigationScreen: View {
+    @ObservedObject var audit: PersonalIndexNavigationAudit
+    var body: some View {
+        NavigationStack {
+            VStack {
+                Text("Handicap Index: \(audit.participant.handicapIndex.map { String(format: "%.1f", $0) } ?? "—")")
+                Text(CourseHandicapRosterDisplay.label(participant: audit.participant, courseSegment: audit.course,
+                    handicapStrokeBasis: .eighteenHole, defaultTee: nil, tees: [], maximumHandicap: 36) ?? "—")
+                Button("Edit handicap") { audit.editing = true }
+            }
+            .navigationTitle("Round summary")
+            .navigationDestination(isPresented: $audit.editing) {
+                HandicapEntryView(participant: .constant(audit.participant), holes: 9, entryFormat: .courseHandicap,
+                    courseSegment: audit.course, handicapStrokeBasis: .nineHole,
+                    onComplete: { audit.participant = $0; audit.editing = false })
+            }
+        }
+    }
+}

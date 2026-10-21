@@ -18,6 +18,7 @@ struct PlayerProfileView: View {
 
     @StateObject private var viewModel = PlayerProfileViewModel()
     @Environment(\.colorScheme) var colorScheme
+    @EnvironmentObject private var appSession: AppSession
 
     private var sharedRounds: [(Round, RoundPlayedRef)] {
         let roundIDs = Set(entry.rounds.map(\.roundID))
@@ -38,6 +39,12 @@ struct PlayerProfileView: View {
                         statsSkeleton
                     } else {
                         statsSection
+                    }
+                    if let player = viewModel.player {
+                        PersonalHandicapSection(player: player, palette: palette, onSaved: { viewModel.didSave($0) }) { leagueID in
+                            onDismiss()
+                            appSession.routeTo(.series(id: leagueID))
+                        }
                     }
                     roundsTogetherSection
                 }
@@ -192,6 +199,8 @@ struct PlayerProfileView: View {
 final class PlayerProfileViewModel: ObservableObject {
     @Published private(set) var player: Player?
     @Published private(set) var isLoading = true
+
+    func didSave(_ player: Player) { self.player = player }
 
     func load(playerID: String) async {
         isLoading = true

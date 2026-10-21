@@ -193,6 +193,20 @@ enum SeriesRoundSyncPlanning {
         }
     }
 
+    /// A frozen integer allowance must retain its scoring basis as well as its value.
+    static func validateFrozenHandicapBasis(
+        snapshot: RoundSnapshot, proposedConfiguration: RoundConfiguration,
+        options: SeriesRoundSyncOptions, roundStatus: RoundStatus
+    ) -> SeriesRoundSyncError? {
+        guard roundStatus != .lobby,
+              snapshot.participants.contains(where: { $0.handicapSnapshot != nil }),
+              options.syncFormat || options.syncHandicapSettings || options.syncPlayerData || options.syncOrganization,
+              snapshot.handicapStrokeBasis != proposedConfiguration.resolvedHandicapStrokeBasis(
+                holeCount: snapshot.holeSegment.holeCount
+              ) else { return nil }
+        return .preflightFailed("This sync would change the 9-/18-hole basis of handicaps already locked for this round. Keep the series round's handicap basis consistent with the live round before syncing.")
+    }
+
     static func participatingMembersForSync(
         seriesRound: SeriesRound,
         snapshot: RoundSnapshot,
@@ -514,6 +528,9 @@ enum SeriesRoundSyncPlanning {
         courseSegment: CourseSegment,
         handicapEntryFormat: HandicapEntryFormat = .strokes,
         handicapStrokeBasis: SeriesHandicapStrokeBasis? = nil,
+        roundHandicapInputs: [String: SeriesRoundHandicapInput] = [:],
+        roundScoringStrokeBasis: SeriesHandicapStrokeBasis? = nil,
+        preserveFrozenRoundSetup: Bool = false,
         hostPlayerID: String?,
         plannedSeatsByMemberID: [String: SeriesRoundPlannedSeat] = [:],
         preserveManualHandicapEdits: Bool
@@ -528,6 +545,8 @@ enum SeriesRoundSyncPlanning {
             courseSegment: courseSegment,
             handicapEntryFormat: handicapEntryFormat,
             handicapStrokeBasis: handicapStrokeBasis,
+            roundHandicapInputs: roundHandicapInputs,
+            roundScoringStrokeBasis: roundScoringStrokeBasis,
             hostPlayerID: hostPlayerID,
             plannedSeatsByMemberID: plannedSeatsByMemberID
         )
@@ -556,12 +575,15 @@ enum SeriesRoundSyncPlanning {
             next.teeOrder = existing.teeOrder
             next.presenceStatus = existing.presenceStatus
 
-            if preserveManualHandicapEdits, existing.isLeagueHandicapModifiedFromCreation {
+            let frozenSetup = preserveFrozenRoundSetup && existing.handicapSnapshot != nil
+            if frozenSetup { next.teeBoxID = existing.teeBoxID }
+            if (preserveManualHandicapEdits && existing.isLeagueHandicapModifiedFromCreation) || frozenSetup {
                 next.originalHandicap = existing.originalHandicap
                 next.adjustedHandicap = existing.adjustedHandicap
-                next.handicapIndex = existing.handicapIndex ?? next.handicapIndex
+                next.handicapIndex = frozenSetup ? existing.handicapIndex : (existing.handicapIndex ?? next.handicapIndex)
                 next.leagueHandicapStrokesAtCreation = existing.leagueHandicapStrokesAtCreation
                 next.handicapSnapshot = existing.handicapSnapshot
+                next.handicapResolution = existing.handicapResolution
             }
 
             next.lastUpdatedAt = .init()
@@ -709,7 +731,9 @@ enum SeriesRoundSyncPlanning {
             maximumHandicap: series.handicapConfig.isEnabled ? series.handicapConfig.config.maximumHandicap : nil,
             courseSegment: courseSegment,
             handicapEntryFormat: seriesRound.roundConfig.handicapEntryFormat,
-            handicapStrokeBasis: seriesRound.roundConfig.handicapStrokeBasis,
+            handicapStrokeBasis: series.handicapConfig.strokeBasis,
+            roundHandicapInputs: seriesRound.handicapInputs,
+            roundScoringStrokeBasis: seriesRound.roundConfig.handicapStrokeBasis,
             hostPlayerID: hostPlayerID,
             presenceStatusByMemberID: presenceStatusByMemberID,
             plannedSeatsByMemberID: plannedSeatsByMemberID
@@ -794,7 +818,8 @@ enum SeriesRoundSyncPlanning {
         } else {
             round.configuration.handicapsEnabled = resolvedPlan.roundConfiguration.useHandicaps
             round.configuration.sequentialTeeStartsEnabled = false
-            round.configuration.handicapStrokeBasis = seriesRound.roundConfig.handicapStrokeBasis
+            round.configuration.handicapStrokeBasis = resolvedPlan.roundConfiguration.handicapStrokeBasis
+            round.configuration.handicapIndexBasis = series.handicapConfig.strokeBasis
             round.configuration.leagueHandicapMaximum = series.handicapConfig.isEnabled
                 ? series.handicapConfig.config.maximumHandicap
                 : nil

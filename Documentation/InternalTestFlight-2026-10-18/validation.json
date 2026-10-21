@@ -1,0 +1,24 @@
+{
+  "fullSuite": {
+    "totalTestCount": 1077,
+    "passedTests": 1072,
+    "failedTests": 0,
+    "skippedTests": 5
+  },
+  "fullSuiteResult": "/private/tmp/hackers-series-index-and-display-full.xcresult",
+  "finalDisplayTests": {
+    "passed": 2,
+    "failed": 0,
+    "result": "/private/tmp/hackers-index-display-final-ui.xcresult"
+  },
+  "appCodeCommit": "d03a2355ed1dd367acbf9a68f6bf8ba2749e6809",
+  "target": "Hackers Compete Test",
+  "version": "1.0.0",
+  "build": "2026.10.18.1",
+  "includedPRs": [
+    14,
+    15,
+    16,
+    17
+  ]
+}

@@ -81,7 +81,6 @@ struct GameLobby: View, Loggable {
     @State private var previousRoundStatus: RoundStatus?
     @State private var didTrackLobbyView = false
     @State private var isSyncingTeams = false
-    @State private var isCorrectingMissingCourseHandicapData = false
     @State private var isShowingRoundNameAlert = false
     @State private var roundNameDraft = ""
 
@@ -250,20 +249,8 @@ struct GameLobby: View, Loggable {
             secretScoringEnabled = s.isSecretScoring
             handicapEntryFormat = s.configuration.handicapEntryFormat
             handicapNormalizationMode = s.configuration.handicapNormalizationMode
-            handicapStrokeBasis = s.configuration.handicapStrokeBasis
-            if s.configuration.handicapEntryFormat == .courseHandicap,
-               !HandicapCalculator.hasCourseHandicapData(courseSegment: s.courseSegment) {
-                handicapEntryFormat = .strokes
-                if !isCorrectingMissingCourseHandicapData {
-                    isCorrectingMissingCourseHandicapData = true
-                    Task {
-                        await roundSession.setHandicapEntryFormat(.strokes, maximumHandicap: effectiveSeriesLeagueHandicapMaximum)
-                        await MainActor.run { isCorrectingMissingCourseHandicapData = false }
-                    }
-                }
-            } else {
-                isCorrectingMissingCourseHandicapData = false
-            }
+            handicapStrokeBasis = s.configuration.handicapEntryFormat == .courseHandicap ? s.handicapIndexBasis : s.configuration.handicapStrokeBasis
+
             sharedScoreAllowanceText = Self.allowanceText(
                 from: s.configuration.sharedScoreHandicapConfig ?? s.resolvedActiveTemplate.requirements.defaultHandicapConfig
             )
@@ -371,7 +358,8 @@ struct GameLobby: View, Loggable {
                 seriesHandicapLockActive: seriesHandicapLobbyLockActive,
                 isSeriesCommissioner: isSeriesCommissioner,
                 canTransferHost: roundManagementAccess.canTransferHost,
-                seriesHandicapMaximum: effectiveSeriesLeagueHandicapMaximum
+                seriesHandicapMaximum: effectiveSeriesLeagueHandicapMaximum,
+                approvalUserID: currentUserID
             )
             .presentationDragIndicator(.visible)
         }
@@ -414,7 +402,11 @@ struct GameLobby: View, Loggable {
                 // TODO: Skeleton view for course info
                 
             } else {
-                courseSection
+                courseSection.disabled(!snapshot.round.status.allowsCourseHandicapSetupEdits)
+                if !snapshot.round.status.allowsCourseHandicapSetupEdits {
+                    Text("Course, tees and handicap setup are locked after the round starts.")
+                        .font(.footnote).foregroundStyle(.secondary)
+                }
                 gameFormatSection
                 gameConfigurationSection
                 playerTabPicker
@@ -590,44 +582,7 @@ extension GameLobby {
             }
             .padding(.horizontal, 16)
         } else {
-//            let canGoUp = currentIndex > 0
-//            let canGoDown = currentIndex < roster.count - 1
-
-            HStack(spacing: 16) {
-//                NavButton(
-//                    style: .glass,
-//                    icon: "chevron.up",
-//                    color: canGoUp ? palette.foregroundColor : Color.neutral3,
-//                    onTap: {
-//                        if canGoUp {
-//                            focus = roster[currentIndex - 1].id
-//                        }
-//                    }
-//                )
-//                .disabled(!canGoUp)
-//
-//                NavButton(
-//                    style: .glass,
-//                    icon: "chevron.down",
-//                    color: canGoDown ? palette.foregroundColor : Color.neutral3,
-//                    onTap: {
-//                        if canGoDown {
-//                            focus = roster[currentIndex + 1].id
-//                        }
-//                    }
-//                )
-//                .disabled(!canGoDown)
-
-                Spacer(minLength: 0)
-
-                NavButton(
-                    style: .glass,
-                    icon: "keyboard.chevron.compact.down",
-                    color: palette.foregroundColor,
-                    onTap: { focus = nil }
-                )
-            }
-            .padding(16)
+            HandicapKeyboardDismissBar(theme: .glass) { focus = nil }
         }
     }
 }

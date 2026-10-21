@@ -70,34 +70,11 @@ struct SeriesRoundCreationService: Loggable {
             plannedTeeGroups: seriesRound.plannedTeeGroups
         )
 
-        if seriesRound.roundConfig.handicapEntryFormat == .courseHandicap {
-            let resolvedHandicapStrokeBasis = seriesRound.roundConfig.handicapStrokeBasis
-                ?? SeriesHandicapStrokeBasis.defaultBasis(
-                    holeCount: courseSegment.holeSegment.holeCount
-                )
-            let issues = SeriesCourseHandicapResolver.validationIssues(
-                members: effectiveMembers,
-                handicaps: handicaps,
-                courseSegment: courseSegment,
-                entryFormat: .courseHandicap,
-                handicapStrokeBasis: resolvedHandicapStrokeBasis,
-                maximumHandicap: series.handicapConfig.isEnabled
-                    ? series.handicapConfig.config.maximumHandicap
-                    : nil
-            )
-            guard issues.isEmpty else {
-                addBreadcrumb(
-                    level: .warning,
-                    message: "Series round creation blocked by participant Course HCP preflight",
-                    parameters: [
-                        "Series ID": series.id,
-                        "Series Round ID": seriesRound.id,
-                        "Issue Count": "\(issues.count)"
-                    ]
-                )
-                return .failure(.invalidCourseHandicaps(issues))
-            }
-        }
+        let issues = SeriesRoundHandicapSetup.issues(
+            series: series, round: seriesRound, members: effectiveMembers,
+            handicaps: handicaps, course: courseSegment
+        )
+        guard issues.isEmpty else { return .failure(.invalidCourseHandicaps(issues)) }
 
         let shareCode = await FirebaseService.shared.getUniqueShareCode()
         let roundID = HackersID.string()
@@ -185,8 +162,10 @@ struct SeriesRoundCreationService: Loggable {
                 maximumHandicap: series.handicapConfig.isEnabled ? series.handicapConfig.config.maximumHandicap : nil,
                 courseSegment: courseSegment,
                 handicapEntryFormat: seriesRound.roundConfig.handicapEntryFormat,
-                handicapStrokeBasis: seriesRound.roundConfig.handicapStrokeBasis,
+                handicapStrokeBasis: series.handicapConfig.strokeBasis,
                 selectedHandicapScoreIDsByMemberID: selectedHandicapScoreIDsByMemberID,
+                roundHandicapInputs: seriesRound.handicapInputs,
+                roundScoringStrokeBasis: seriesRound.roundConfig.handicapStrokeBasis,
                 hostPlayerID: player.id,
                 presenceStatusByMemberID: presenceStatusByMemberID,
                 plannedSeatsByMemberID: plannedSeatsByMemberID
