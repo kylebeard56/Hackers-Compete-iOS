@@ -1,0 +1,41 @@
+{
+  "currentBranch": "codex/wdx6zf361d-wdx6zf361e",
+  "currentHead": "260923639b6dac19fcd210630d00166c115dc7b5",
+  "rcBase": "d03a2355ed1dd367acbf9a68f6bf8ba2749e6809",
+  "pr16HeadWithIdenticalAppCode": "897278c06c4d9eb2720fa677e2a0634c74175272",
+  "currentBranchTests": {
+    "passed": 67,
+    "failed": 0,
+    "skipped": 0,
+    "xcresult": "/private/tmp/HackersStrokeDotsCurrentFinal.xcresult"
+  },
+  "originalRCRenderingRepro": {
+    "passed": 0,
+    "failed": 2,
+    "assertionFailures": 15,
+    "xcresult": "/private/tmp/HackersStrokeDotsRCBefore.xcresult"
+  },
+  "patchedRCAllUnitTests": {
+    "passedTests": 1084,
+    "failedTests": 0,
+    "skippedTests": 5,
+    "totalTestCount": 1089,
+    "result": "Passed"
+  },
+  "patchedRCResultBundle": "/private/tmp/HackersStrokeDotsRCAll.xcresult",
+  "device": {
+    "architecture": "arm64",
+    "deviceId": "C136E3C7-BE88-4383-85D3-163F366C7F60",
+    "deviceName": "Hackers Handicap Tests",
+    "modelName": "iPhone 17 Pro",
+    "osBuildNumber": "23D8133",
+    "osVersion": "26.3.1",
+    "platform": "iOS Simulator"
+  },
+  "rcTrackedChangesLimitedToThreeScorecardFiles": true,
+  "patchAppliesToOriginalAndCurrentPR16Head": true,
+  "patchSHA256": "ba06e3bc87edd3e8da6375cff9e7d839491e887ef86f0818722c0c564e6b6f1d",
+  "merged": false,
+  "deployed": false,
+  "uploadedToTestFlight": false
+}

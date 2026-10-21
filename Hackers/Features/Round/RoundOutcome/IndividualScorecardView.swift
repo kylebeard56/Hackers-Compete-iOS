@@ -384,7 +384,7 @@ struct IndividualScorecardView: View {
         return scorecardValueRow(label: "HCP", values: values, total: nil)
     }
 
-    private func scorecardScoreRow(holes: [Int]) -> some View {
+    func scorecardScoreRow(holes: [Int]) -> some View {
         let values = holes.map { holeNum -> String in
             guard let gross = viewModel.grossStrokes(for: participant.id, holeNumber: holeNum) else {
                 return "—"
@@ -404,7 +404,7 @@ struct IndividualScorecardView: View {
         )
     }
 
-    private func scorecardNetRow(holes: [Int]) -> some View {
+    func scorecardNetRow(holes: [Int]) -> some View {
         let values = holes.map { holeNum -> String in
             guard let net = viewModel.netStrokesOnHole(participant: participant, holeNumber: holeNum) else {
                 return "—"

@@ -932,6 +932,10 @@ private extension FullScorecardView {
             .padding(.vertical, layout.cellVerticalPadding)
     }
     
+}
+
+// Keep the production cell renderable by regression tests.
+extension FullScorecardView {
     func scoreCell(
         par: Int?,
         gross: Int?,
@@ -971,6 +975,7 @@ private extension FullScorecardView {
                     .foregroundStyle(textColor)
             }
             
+            // Keep this independent of isScored, including in the embedded live table.
             let visibleDotCount = ScorecardStrokeDotPolicy.visibleCount(
                 strokesReceived: strokesReceived,
                 basis: viewModel.scoreBasis
@@ -997,6 +1002,9 @@ private extension FullScorecardView {
         .padding(.vertical, layout.cellVerticalPadding)
     }
     
+}
+
+private extension FullScorecardView {
     func totalScoreLabel(for participant: RoundParticipant) -> some View {
         let score = viewModel.scoreToPar(for: participant, basis: viewModel.scoreBasis)
         let label = scoreToParLabel(score)
