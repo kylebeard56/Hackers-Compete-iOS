@@ -4,6 +4,7 @@
 //
 
 import Foundation
+import Combine
 
 enum SeriesRoundMatchupSource: String, CaseIterable, Hashable, Sendable {
     case byTeam = "by_team"
@@ -48,6 +49,7 @@ enum SeriesRoundDraftValidationError: Error, Equatable, LocalizedError {
     case invalidSharedScoreAllowance(String)
     case invalidTeamScoringCount
     case unavailableCourseHandicap
+    case courseValidation(String)
 
     var errorDescription: String? {
         switch self {
@@ -56,7 +58,8 @@ enum SeriesRoundDraftValidationError: Error, Equatable, LocalizedError {
         case .invalidTeamScoringCount:
             return "Team scoring must count at least one score."
         case .unavailableCourseHandicap:
-            return "Course Handicap is selected, but the chosen tee is missing rating or slope data for this hole segment. Repair the course data or explicitly select Strokes."
+            return "Verify the selected course, tee, and hole segment before saving Handicap Index scoring. Retry the course check or select the tee again."
+        case .courseValidation(let message): return message
         }
     }
 }
@@ -227,6 +230,24 @@ struct SeriesRoundDraft: Equatable {
 
     func persistedValues(
         usesTeams: Bool,
+        courseValidation: SeriesCourseHandicapValidation,
+        fallbackTitle: String
+    ) throws -> SeriesRoundDraftPersistenceValues {
+        if handicapEntryFormat == .courseHandicap {
+            guard courseValidation.selection == displayedCourse,
+                  courseValidation.permitsConfiguration,
+                  let selection = courseValidation.selection,
+                  let segment = courseValidation.courseSegment,
+                  SeriesRoundCourseHandicapAvailability.evaluate(selection, segment: segment).permitsConfiguration else {
+                throw SeriesRoundDraftValidationError.courseValidation(courseValidation.message)
+            }
+        }
+        return try persistedValues(usesTeams: usesTeams,
+            courseHandicapAvailable: courseValidation.permitsConfiguration, fallbackTitle: fallbackTitle)
+    }
+
+    func persistedValues(
+        usesTeams: Bool,
         courseHandicapAvailable: Bool,
         fallbackTitle: String
     ) throws -> SeriesRoundDraftPersistenceValues {
@@ -347,5 +368,160 @@ struct SeriesRoundDraft: Equatable {
     ) -> HandicapNormalizationMode {
         guard mode != .off else { return .off }
         return scope == .matchup ? .matchup : .field
+    }
+}
+
+
+/// One course/tee/segment snapshot for setup presentation and validation. Course
+/// metadata is checked through the same calculator used by the live round.
+struct SeriesCourseHandicapValidation: Equatable {
+    enum Status: Equatable {
+        case checking, ready, loadFailed, teeUnavailable, missingData, estimated, noCourse
+    }
+
+    let selection: SeriesCourseSelection?
+    var status: Status
+    var courseSegment: CourseSegment?
+    var calculation: CourseHandicapCalculation?
+
+    var permitsConfiguration: Bool { status == .ready || status == .estimated }
+
+    var message: String {
+        let tee = selection?.defaultTeeName ?? "selected"
+        let segment = selection?.holeSegment.title ?? "selected holes"
+        switch status {
+        case .checking: return "Checking course data…"
+        case .ready: return "\(tee) tees · \(segment)"
+        case .loadFailed: return "Could not load course data for \(selection?.cachedName ?? "this course"). Retry or select the course again."
+        case .teeUnavailable: return "Unable to verify \(tee) tees. Select the tee again; its saved identity is unavailable or has changed."
+        case .missingData:
+            let fields = calculation?.missingFields.map {
+                switch $0 {
+                case "course rating": return "Course Rating"
+                case "slope rating": return "Slope"
+                case "par": return "hole pars"
+                default: return $0
+                }
+            }.joined(separator: ", ") ?? "course data"
+            return "Unable to verify \(tee) tees — \(segment): \(fields). Retry or select another tee."
+        case .estimated: return "\(tee) tees · \(segment): estimated rating or slope. Estimates require approval before use; series handicaps require exact segment data."
+        case .noCourse: return "Select a course and tee to verify Handicap Index scoring."
+        }
+    }
+
+    var detail: String? {
+        guard let calculation else { return nil }
+        return [calculation.rating.map { "Rating \(String(format: "%.1f", $0))" },
+                calculation.slope.map { "Slope \($0)" }, calculation.par.map { "Par \($0)" }]
+            .compactMap { $0 }.joined(separator: " · ")
+    }
+}
+
+enum SeriesRoundCourseHandicapAvailability {
+    typealias Loader = @MainActor (SeriesCourseSelection) async throws -> Course
+
+    /// Preserve the actual library document, including custom/OCR course data.
+    /// A provider reference is provenance, not a replacement document identity.
+    static func selection(from segment: CourseSegment) -> SeriesCourseSelection {
+        let tee = segment.defaultTee.flatMap { segment.tee(from: $0) }
+        return SeriesCourseSelection(courseID: segment.courseInfo.seriesCourseSelectionID,
+            cachedName: segment.courseInfo.name, defaultTeeBoxID: segment.defaultTee ?? "",
+            defaultTeeName: tee?.name, defaultTeeGender: tee?.gender, holeSegment: segment.holeSegment)
+    }
+
+    @MainActor
+    static func loadCourse(for selection: SeriesCourseSelection) async throws -> Course {
+        // Read the selected document before considering the provider. In particular,
+        // do not canonicalize a UUID tee into another cached course's tee IDs.
+        if let course = try await FirebaseService.shared.getLibraryCourse(id: selection.courseID) { return course }
+        if let apiID = GolfCourseID(selection.courseID) {
+            return try await GolfCourseRepository.shared.course(by: apiID)
+        }
+        throw SeriesCourseDataError.courseUnavailable
+    }
+
+    enum SeriesCourseDataError: Error { case courseUnavailable }
+
+    static func evaluate(_ selection: SeriesCourseSelection, course: Course) -> SeriesCourseHandicapValidation {
+        guard course.id == selection.courseID else {
+            return .init(selection: selection, status: .loadFailed)
+        }
+        // Never choose the first tee or match by name after a stale ID. The user
+        // must explicitly review a changed identity, even if its ratings look valid.
+        guard let tee = course.tees.first(where: { $0.id == selection.defaultTeeBoxID }),
+              selection.defaultTeeName.map({ $0.caseInsensitiveCompare(tee.name) == .orderedSame }) ?? true,
+              selection.defaultTeeGender.map({ $0.caseInsensitiveCompare(tee.gender) == .orderedSame }) ?? true else {
+            return .init(selection: selection, status: .teeUnavailable)
+        }
+        let segment = CourseSegment(courseInfo: CourseInfo(course: course, for: selection.holeSegment),
+            holeRange: selection.holeSegment.holeRange, defaultTee: tee.id)
+        return evaluate(selection, segment: segment)
+    }
+
+    static func evaluate(_ selection: SeriesCourseSelection, segment: CourseSegment) -> SeriesCourseHandicapValidation {
+        guard selection.courseID == segment.courseInfo.seriesCourseSelectionID,
+              selection.holeSegment == segment.holeSegment,
+              selection.defaultTeeBoxID == segment.defaultTee,
+              let tee = segment.tee(from: selection.defaultTeeBoxID),
+              selection.defaultTeeName.map({ $0.caseInsensitiveCompare(tee.name) == .orderedSame }) ?? true,
+              selection.defaultTeeGender.map({ $0.caseInsensitiveCompare(tee.gender) == .orderedSame }) ?? true else {
+            return .init(selection: selection, status: .teeUnavailable)
+        }
+        let calculation = HandicapCalculator.calculation(index: 0,
+            tee: segment.tee(from: selection.defaultTeeBoxID), segment: selection.holeSegment, indexBasis: .eighteenHole)
+        let status: SeriesCourseHandicapValidation.Status = switch calculation.status {
+        case .exact: .ready
+        case .estimated: .estimated
+        case .unavailable: .missingData
+        }
+        return .init(selection: selection, status: status, courseSegment: segment, calculation: calculation)
+    }
+
+    @MainActor
+    static func check(_ selection: SeriesCourseSelection?, load: Loader = loadCourse) async -> SeriesCourseHandicapValidation {
+        guard let selection, selection.courseID.isPopulated else { return .init(selection: selection, status: .noCourse) }
+        do {
+            let course = try await load(selection)
+            try Task.checkCancellation()
+            return evaluate(selection, course: course)
+        } catch {
+            return .init(selection: selection, status: .loadFailed)
+        }
+    }
+
+    @MainActor
+    static func isAvailable(for selection: SeriesCourseSelection?) async -> Bool {
+        await check(selection).permitsConfiguration
+    }
+}
+
+/// A response can publish only for its request and selection. This also protects
+/// against a loader that doesn't cooperate with Swift task cancellation.
+@MainActor
+final class SeriesCourseHandicapValidationStore: ObservableObject {
+    @Published private(set) var result = SeriesCourseHandicapValidation(selection: nil, status: .checking)
+    private var requestID = UUID()
+    private let load: SeriesRoundCourseHandicapAvailability.Loader
+
+    init(load: @escaping SeriesRoundCourseHandicapAvailability.Loader = SeriesRoundCourseHandicapAvailability.loadCourse) {
+        self.load = load
+    }
+
+    func refresh(_ selection: SeriesCourseSelection?) async {
+        let request = UUID()
+        requestID = request
+        result = .init(selection: selection, status: .checking)
+        let checked = await SeriesRoundCourseHandicapAvailability.check(selection, load: load)
+        guard requestID == request, !Task.isCancelled else { return }
+        result = checked
+    }
+
+    func current(for selection: SeriesCourseSelection?) -> SeriesCourseHandicapValidation {
+        result.selection == selection ? result : .init(selection: selection, status: .checking)
+    }
+
+    func revalidate(_ selection: SeriesCourseSelection?) async -> SeriesCourseHandicapValidation {
+        await refresh(selection)
+        return current(for: selection)
     }
 }

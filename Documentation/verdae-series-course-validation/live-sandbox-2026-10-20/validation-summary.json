@@ -1,0 +1,33 @@
+{
+  "project": "hackers-compete-sandbox",
+  "reconciledHead": "5c5d9c03fb635ed733a9320462eeb4a412703486",
+  "liveIsolated": {
+    "passed": 1,
+    "failed": 0,
+    "skipped": 0,
+    "functionalCases": 4,
+    "createdAndDeletedDocuments": 286,
+    "protectedDocumentsUnchanged": 5
+  },
+  "regression": {
+    "passed": 1137,
+    "failed": 0,
+    "skipped": 5
+  },
+  "settledReadOnlyUI": {
+    "passed": 1,
+    "failed": 0,
+    "skipped": 0,
+    "states": 5
+  },
+  "earlierLiveRun": {
+    "functionalCases": 4,
+    "failedPreservationChecks": 1,
+    "createdAndDeletedDocuments": 285
+  },
+  "totalFixtureDocumentsDeletedAndVerified": 571,
+  "temporaryRoundReferencesOnExistingPlayer": false,
+  "originalSessionSourceRestored": true,
+  "productSourceChangedByValidation": false,
+  "productionDataModified": false
+}

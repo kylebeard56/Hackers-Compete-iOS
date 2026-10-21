@@ -76,6 +76,8 @@ struct CourseInfo_WithCourseToReduceDuplication: Hashable, Codable {
 
 /// Friendly, usable snapshot of canonical `Course` which may or may not live in the DB.
 struct CourseInfo: Hashable, Codable {
+    /// Retain the selected library record when it has a provider reference too.
+    var seriesCourseSelectionID: String { id.isPopulated ? id : (golfCourseApiID.map(String.init) ?? "") }
     var id: String                  // Matches the stable, external ID in the `courses` collection
     let golfCourseApiID: GolfCourseID?       // ID of the course from the Golf Course API (if not manual)
     var name: String

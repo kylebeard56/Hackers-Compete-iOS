@@ -141,7 +141,7 @@ enum SeriesRoundConfigurationReconciler {
         guard let segment else { return nil }
         let defaultTee = segment.defaultTee.flatMap { segment.tee(from: $0) }
         return SeriesCourseSelection(
-            courseID: segment.courseInfo.golfCourseApiID.map(String.init) ?? segment.courseInfo.id,
+            courseID: segment.courseInfo.seriesCourseSelectionID,
             cachedName: segment.courseInfo.name,
             defaultTeeBoxID: segment.defaultTee ?? "",
             defaultTeeName: defaultTee?.name,
@@ -185,7 +185,7 @@ enum SeriesRoundConfigurationReconciler {
     private static func courseIdentity(_ segment: CourseSegment?) -> CourseIdentity? {
         segment.map {
             CourseIdentity(
-                courseID: $0.courseInfo.golfCourseApiID.map(String.init) ?? $0.courseInfo.id,
+                courseID: $0.courseInfo.seriesCourseSelectionID,
                 teeID: $0.defaultTee ?? "",
                 holeSegment: $0.holeSegment
             )

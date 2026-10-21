@@ -1639,6 +1639,7 @@ final class SeriesViewModel: ObservableObject, Loggable {
     @Published var creatingRoundID: String?
     @Published var roundCreationErrorMessage: String?
     @Published var roundSetupCourses: [String: CourseSegment] = [:]
+    @Published var roundSetupScoreBases: [String: ScoreBasis] = [:]
     @Published var personalIndexesByMemberID: [String: Double] = [:]
     @Published var roundHandicapDrafts: [String: [String: SeriesRoundHandicapDraft]] = [:]
     @Published var handicapSetupErrorMessage: String?
@@ -4188,14 +4189,17 @@ final class SeriesViewModel: ObservableObject, Loggable {
 
     func addRound(
         draft: SeriesRoundDraft,
-        courseHandicapAvailable: Bool,
+        courseValidation: SeriesCourseHandicapValidation,
         fallbackTitle: String
     ) async -> SeriesRound? {
+        guard isCommissioner, !isSavingSeriesRoundDraft else { return nil }
+        isSavingSeriesRoundDraft = true
+        defer { isSavingSeriesRoundDraft = false }
         let values: SeriesRoundDraftPersistenceValues
         do {
             values = try draft.persistedValues(
                 usesTeams: usesTeams,
-                courseHandicapAvailable: courseHandicapAvailable,
+                courseValidation: courseValidation,
                 fallbackTitle: fallbackTitle
             )
         } catch {
@@ -4356,14 +4360,17 @@ final class SeriesViewModel: ObservableObject, Loggable {
     func updateSeriesRound(
         _ round: SeriesRound,
         draft: SeriesRoundDraft,
-        courseHandicapAvailable: Bool,
+        courseValidation: SeriesCourseHandicapValidation,
         syncLinkedLobby: Bool = true
     ) async -> Bool {
+        guard isCommissioner, !isSavingSeriesRoundDraft else { return false }
+        isSavingSeriesRoundDraft = true
+        defer { isSavingSeriesRoundDraft = false }
         let values: SeriesRoundDraftPersistenceValues
         do {
             values = try draft.persistedValues(
                 usesTeams: usesTeams,
-                courseHandicapAvailable: courseHandicapAvailable,
+                courseValidation: courseValidation,
                 fallbackTitle: round.title.isPopulated ? round.title : "Round \(round.index + 1)"
             )
         } catch {
@@ -5379,6 +5386,8 @@ final class SeriesViewModel: ObservableObject, Loggable {
         )
     }
 
+    private var isSavingSeriesRoundDraft = false
+
     // MARK: - Round Creation
 
     private func loadPersonalRoundHandicapDefaults() async {
@@ -5415,6 +5424,17 @@ final class SeriesViewModel: ObservableObject, Loggable {
         )
     }
 
+    func handicapReadiness(for round: SeriesRound, course: CourseSegment) -> SeriesRoundHandicapReadiness {
+        let attendance = SeriesRoundCreationMapping.participatingMembersAndPresenceStatuses(
+            series: series, eligibleMembers: eligibleMembers,
+            attendance: attendanceByRound[round.id] ?? [], plannedTeeGroups: round.plannedTeeGroups)
+        return SeriesRoundHandicapSetup.readiness(series: series, round: round, members: attendance.members,
+            handicaps: memberHandicaps, course: course,
+            drafts: Dictionary(uniqueKeysWithValues: attendance.members.map {
+                ($0.id, handicapDraft(for: $0, round: round, course: course))
+            }), presenceStatusByMemberID: attendance.presenceStatusByMemberID)
+    }
+
     private func handicapDraftKey(roundID: String) -> String? {
         guard let currentUserID, currentUserID.isPopulated else { return nil }
         return "series.round-handicap-draft.\(currentUserID).\(seriesID).\(roundID)"
@@ -5447,7 +5467,8 @@ final class SeriesViewModel: ObservableObject, Loggable {
         guard let current = rounds.first(where: { $0.id == candidate.id }),
               current.roundID == nil, current.status == .planned,
               candidate.parentID == seriesID,
-              !isSavingRoundHandicaps else {
+              candidate.lastUpdatedAt == current.lastUpdatedAt,
+              creatingRoundID == nil, !isSavingRoundHandicaps else {
             handicapSetupErrorMessage = "This round has already started or is no longer available."
             return false
         }
@@ -5465,6 +5486,7 @@ final class SeriesViewModel: ObservableObject, Loggable {
         case .success(let saved):
             if let index = rounds.firstIndex(where: { $0.id == saved.id }) { rounds[index] = saved }
             roundHandicapDrafts[candidate.id] = nil
+            roundSetupScoreBases[candidate.id] = nil
             if let key = handicapDraftKey(roundID: candidate.id) { handicapDraftDefaults.removeObject(forKey: key) }
             return true
         case .failure(let error):
@@ -5479,7 +5501,8 @@ final class SeriesViewModel: ObservableObject, Loggable {
             roundCreationErrorMessage = "Only a commissioner can start a series round."
             return nil
         }
-        guard var workingRound = rounds.first(where: { $0.id == seriesRound.id }),
+        guard creatingRoundID == nil, !isSavingRoundHandicaps,
+              var workingRound = rounds.first(where: { $0.id == seriesRound.id }),
               workingRound.roundID == nil, workingRound.status == .planned else { return nil }
         roundCreationErrorMessage = nil
         creatingRoundID = seriesRound.id
@@ -5488,7 +5511,7 @@ final class SeriesViewModel: ObservableObject, Loggable {
         if let courseSegment {
             let defaultTee = courseSegment.defaultTee.flatMap { courseSegment.tee(from: $0) }
             workingRound.courseOverride = SeriesCourseSelection(
-                courseID: courseSegment.courseInfo.golfCourseApiID.map(String.init) ?? courseSegment.courseInfo.id,
+                courseID: courseSegment.courseInfo.seriesCourseSelectionID,
                 cachedName: courseSegment.courseInfo.name,
                 defaultTeeBoxID: courseSegment.defaultTee ?? "",
                 defaultTeeName: defaultTee?.name,

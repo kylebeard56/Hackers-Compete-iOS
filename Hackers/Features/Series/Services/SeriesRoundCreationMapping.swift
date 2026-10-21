@@ -123,7 +123,14 @@ enum SeriesCourseHandicapResolver {
             index: effectiveIndex, tee: tee, segment: holeSegment, indexBasis: handicapStrokeBasis
         ).limitingIndex(to: entryFormat == .courseHandicap ? maximumHandicap : nil)
         var missingFields = entryFormat == .courseHandicap ? calculation.missingFields : []
-        if effectiveIndex == nil, entryFormat == .strokes { missingFields.append("handicap index") }
+        if entryFormat == .strokes {
+            if let effectiveIndex, effectiveIndex.isFinite,
+               effectiveIndex > Double(Int.min), effectiveIndex < Double(Int.max) {
+                // Explicit zero is complete, just like any other valid stroke input.
+            } else {
+                missingFields.append("handicap index")
+            }
+        }
         if tee == nil, entryFormat == .strokes { missingFields.append("selected tee") }
         if entryFormat == .strokes, calculation.missingFields.contains("par") { missingFields.append("par") }
         // Series creation keeps its stricter course-data preflight. A casual-round
@@ -1658,7 +1665,7 @@ struct SeriesRoundResolvedPlan: Equatable {
     private static func courseSelection(from segment: CourseSegment) -> SeriesCourseSelection {
         let defaultTee = segment.defaultTee.flatMap { segment.tee(from: $0) }
         return SeriesCourseSelection(
-            courseID: segment.courseInfo.golfCourseApiID.map(String.init) ?? segment.courseInfo.id,
+            courseID: segment.courseInfo.seriesCourseSelectionID,
             cachedName: segment.courseInfo.name,
             defaultTeeBoxID: segment.defaultTee ?? "",
             defaultTeeName: defaultTee?.name,
@@ -2099,5 +2106,149 @@ enum SeriesRoundHandicapSetup {
                 holeCount: course.holeSegment.holeCount)
         }
         return resolution
+    }
+}
+
+
+/// Presentation-independent readiness for both course-selection paths. All calculations
+/// come from the same resolver used by the writer; invalid local edits cannot fall back
+/// to an older saved value and incorrectly appear ready.
+struct SeriesRoundHandicapReadiness {
+    struct Player: Identifiable {
+        let member: SeriesMember
+        let resolution: SeriesCourseHandicapResolution
+        let issue: SeriesCourseHandicapValidationIssue?
+        let source: String
+        var strokes: Int?
+        var allocationContext: String? = nil
+
+        var id: String { member.id }
+        var isReady: Bool { issue == nil }
+        var summary: String {
+            guard isReady else { return issueSummary }
+            guard let strokes else { return "No handicap set · Gross scoring" }
+            if resolution.entryFormat == .courseHandicap, let index = resolution.handicapIndex {
+                return "Index \(ManualPersonalHandicap.display(index)) → \(strokes) strokes"
+            }
+            return "\(strokes) strokes · \(source == "Manual Strokes" ? "Manual entry" : source)"
+        }
+        var issueSummary: String {
+            guard let issue else { return "Ready" }
+            let handicapFields = issue.missingFields.filter { $0.contains("handicap") || $0.contains("index") || $0.contains("Index") || $0.contains("strokes") }
+            let courseFields = issue.missingFields.filter { !handicapFields.contains($0) }
+            var messages: [String] = []
+            if !handicapFields.isEmpty { messages.append("Enter a valid Handicap Index or whole-number strokes.") }
+            if !courseFields.isEmpty { messages.append("Review tee data: " + courseFields.joined(separator: ", ") + ".") }
+            return messages.joined(separator: " ")
+        }
+        var maximumSummary: String? {
+            guard let maximum = resolution.calculation.maximumIndex,
+                  let index = resolution.handicapIndex, index > Double(maximum) else { return nil }
+            return "Original Index \(ManualPersonalHandicap.display(index)) · Series maximum \(maximum) applied before tee conversion"
+        }
+        var allocationSummary: String? {
+            if let allocationContext { return allocationContext }
+            guard let strokes, resolution.entryFormat == .courseHandicap,
+                  let courseHandicap = resolution.calculation.courseHandicap,
+                  strokes != courseHandicap else { return nil }
+            return "Course Handicap \(courseHandicap) · \(strokes) strokes received for the holes played"
+        }
+    }
+
+    let players: [Player]
+    var readyCount: Int { players.filter(\.isReady).count }
+    var affectedMemberIDs: Set<String> { Set(players.filter { !$0.isReady }.map(\.id)) }
+    var isReady: Bool { affectedMemberIDs.isEmpty }
+    var title: String { isReady ? "Ready to Start" : "Handicap Setup Needed" }
+    var summary: String {
+        isReady ? "\(readyCount) of \(players.count) players ready"
+            : "\(players.count - readyCount) of \(players.count) players need attention"
+    }
+}
+
+extension SeriesRoundHandicapSetup {
+    static func readiness(
+        series: Series, round: SeriesRound, members: [SeriesMember],
+        handicaps: [String: SeriesMemberHandicap], course: CourseSegment,
+        drafts: [String: SeriesRoundHandicapDraft] = [:],
+        presenceStatusByMemberID: [String: RoundParticipantPresenceStatus] = [:]
+    ) -> SeriesRoundHandicapReadiness {
+        var candidate = round
+        var previewHandicaps = handicaps
+        var invalidMemberIDs = Set<String>()
+        for member in members {
+            guard let draft = drafts[member.id] else { continue }
+            if draft.method == .series { candidate.handicapInputs[member.id] = nil }
+            else if let input = draft.input { candidate.handicapInputs[member.id] = input }
+            else {
+                candidate.handicapInputs[member.id] = nil
+                previewHandicaps[member.id] = nil
+                if requiresHandicaps(series: series, round: round)
+                    || round.handicapInputs[member.id] != nil
+                    || !draft.text.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
+                    invalidMemberIDs.insert(member.id)
+                    // Preserve the chosen entry method and tee while validating bad text.
+                    // This temporary unresolved input is never persisted by applying(drafts:to:).
+                    candidate.handicapInputs[member.id] = .init(
+                        method: draft.method == .personalIndex ? .personalIndex : .strokes,
+                        value: .nan, teeBoxID: draft.teeBoxID)
+                }
+            }
+        }
+        let issuesByID = Dictionary(uniqueKeysWithValues: issues(series: series, round: candidate,
+            members: members, handicaps: previewHandicaps, course: course).map { ($0.memberID, $0) })
+        var players: [SeriesRoundHandicapReadiness.Player] = members.map { member in
+            let resolved = resolution(series: series, round: candidate, member: member,
+                handicaps: previewHandicaps, course: course)
+            var issue = issuesByID[member.id]
+            if invalidMemberIDs.contains(member.id) {
+                issue = SeriesCourseHandicapValidationIssue(memberID: member.id,
+                    memberName: member.name.fullName, teeBoxID: resolved.tee?.id ?? "",
+                    teeName: resolved.tee?.name,
+                    missingFields: ["valid handicap input"] + (issue?.missingFields.filter { $0 != "handicap index" } ?? []))
+            }
+            let source: String
+            switch candidate.handicapInputs[member.id]?.method {
+            case .personalIndex: source = "Personal Index"
+            case .strokes: source = "Manual Strokes"
+            case nil: source = "Series"
+            }
+            let strokes = resolved.effectiveStrokes.map {
+                ScoringEngine.handicapStrokesForPlayedHoles(handicap: $0,
+                    basis: resolved.entryFormat == .courseHandicap || !candidate.handicapInputs.isEmpty
+                        ? .defaultBasis(holeCount: course.holeSegment.holeCount)
+                        : (candidate.roundConfig.handicapStrokeBasis ?? .defaultBasis(holeCount: course.holeSegment.holeCount)),
+                    holesInPlay: course.holeSegment.holeCount)
+            }
+            return .init(member: member, resolution: resolved, issue: issue, source: source, strokes: strokes)
+        }
+        let basis = SeriesRoundCreationMapping.primaryGameFormat(series: series, seriesRound: candidate).configuration.basis
+        if basis == .net, candidate.roundConfig.handicapNormalizationMode == .field,
+           players.allSatisfy({ $0.isReady && $0.resolution.effectiveStrokes != nil }) {
+            let participants = players.map { player in
+                RoundParticipant(id: player.id, adjustedHandicap: player.resolution.effectiveStrokes!,
+                    presenceStatus: presenceStatusByMemberID[player.id] ?? .active,
+                    isSubstitute: candidate.plannedTeeGroups.flatMap(\.seats).contains { $0.memberID == player.id && $0.isSubstitute })
+            }
+            let eligible = ScoringEngine.scoringEligibleParticipants(participants,
+                substitutesScore: candidate.policyBinding?.resolvedSubstitutesScore ?? series.settings.substitutesScore,
+                attendanceConfirmationEnabled: series.settings.isAttendanceEnabled)
+            let normalized = Dictionary(uniqueKeysWithValues: HandicapCalculator.normalizedParticipantsForField(eligible).map { ($0.id, $0.adjustedHandicap) })
+            for index in players.indices {
+                guard let allowance = normalized[players[index].id] else { continue }
+                let resolved = players[index].resolution
+                let strokes = ScoringEngine.handicapStrokesForPlayedHoles(handicap: allowance,
+                    basis: resolved.entryFormat == .courseHandicap || !candidate.handicapInputs.isEmpty
+                        ? .defaultBasis(holeCount: course.holeSegment.holeCount)
+                        : (candidate.roundConfig.handicapStrokeBasis ?? .defaultBasis(holeCount: course.holeSegment.holeCount)),
+                    holesInPlay: course.holeSegment.holeCount)
+                players[index].strokes = strokes
+                if let original = resolved.effectiveStrokes, original != allowance {
+                    let label = resolved.entryFormat == .courseHandicap ? "Course Handicap" : "Round allowance"
+                    players[index].allocationContext = "\(label) \(original) · \(strokes) strokes received after field normalization to the lowest handicap"
+                }
+            }
+        }
+        return SeriesRoundHandicapReadiness(players: players)
     }
 }

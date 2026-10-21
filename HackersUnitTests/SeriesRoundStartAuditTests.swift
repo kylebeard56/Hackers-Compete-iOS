@@ -414,12 +414,12 @@ final class SeriesRoundStartAuditTests: XCTestCase {
         let screen = try SeriesAuditHostedScreen(SeriesRoundHandicapReviewView(viewModel: vm,
             seriesRound: round, course: course(), onRoundCreated: { created = $0 }))
         defer { screen.close() }
-        _ = try await screen.waitForButton("Handicap Settings")
+        _ = try await screen.waitForButton("Edit Handicaps")
         screen.attach(to: self, name: "Series-Review-Partial-Seven-Players")
-        XCTAssertTrue(screen.labels.contains { $0.contains("Course HCP 18") })
+        XCTAssertTrue(screen.labels.contains { $0.contains("Index 17.7 → 18 strokes") })
         screen.scrollToBottom()
         let startButton = try await screen.waitForButton("Start Round")
-        XCTAssertTrue(startButton.accessibilityActivate())
+        XCTAssertTrue(startButton.accessibilityTraits.contains(.notEnabled))
         try await Task.sleep(for: .milliseconds(250))
         XCTAssertNil(created)
         XCTAssertTrue(saves.isEmpty, "Start must revalidate before any persistence or creation")
@@ -539,8 +539,8 @@ final class SeriesRoundStartAuditTests: XCTestCase {
         _ = try await screen.waitForButton("Handicap Settings")
         screen.scrollToBottom()
         try await Task.sleep(for: .milliseconds(300))
-        XCTAssertTrue(screen.labels.contains("Handicap Index: 17.7"))
-        XCTAssertTrue(screen.labels.contains("Course HCP 18 · Strokes Received 18"))
+        XCTAssertTrue(screen.labels.contains("Index 17.7 → 18 strokes"))
+        XCTAssertFalse(screen.labels.contains { $0.contains("Course HCP 18 · Strokes Received 18") })
         screen.attach(to: self, name: "Series-Review-Index-Course-HCP-Strokes")
     }
 
@@ -558,8 +558,319 @@ final class SeriesRoundStartAuditTests: XCTestCase {
         _ = try await screen.waitForButton("Handicap Settings")
         screen.scrollToBottom()
         try await Task.sleep(for: .milliseconds(300))
-        XCTAssertTrue(screen.labels.contains("Handicap Index: Not set"))
-        XCTAssertFalse(screen.labels.contains("Handicap Index: 17.7"))
+        XCTAssertTrue(screen.labels.contains("18 strokes · Series"))
+        XCTAssertFalse(screen.labels.contains { $0.contains("Index 17.7") })
+    }
+
+    func testEveryoneReadyUsesCompactConfirmationAndOptionalEditor() async throws {
+        let vm = model(.fixed)
+        vm.members = Array(vm.members.prefix(3)) + [vm.members[6]]
+        vm.memberHandicaps = Dictionary(uniqueKeysWithValues: vm.members.map {
+            ($0.id, .init(memberID: $0.id, computedIndex: 17))
+        })
+        var round = plannedRound()
+        round.handicapInputs["m3"] = .init(method: .strokes, value: 12, teeBoxID: "white")
+        round.handicapInputs["m7"] = .init(method: .personalIndex, value: 8, teeBoxID: "white")
+        vm.rounds = [round]
+        let screen = try SeriesAuditHostedScreen(SeriesRoundHandicapReviewView(viewModel: vm,
+            seriesRound: round, course: course(), onRoundCreated: { _ in XCTFail("No start was requested") }))
+        defer { screen.close() }
+        _ = try await screen.waitForButton("Edit Handicaps")
+        XCTAssertTrue(screen.labels.contains("Ready to Start"))
+        XCTAssertTrue(screen.labels.contains("4 of 4 players ready"))
+        XCTAssertFalse(screen.labels.contains { $0.hasPrefix("Entry method") })
+        XCTAssertFalse(screen.hasIdentifier("series.handicap.m2.value"))
+        XCTAssertFalse(screen.labels.contains("Save Entries"))
+        let start = try await screen.waitForButton("Start Round")
+        XCTAssertFalse(start.accessibilityTraits.contains(.notEnabled))
+        screen.attach(to: self, name: "Streamlined-Ready-Confirmation")
+        XCTAssertTrue(try screen.button("Edit Player 1").accessibilityActivate())
+        try await Task.sleep(for: .milliseconds(250))
+        XCTAssertTrue(screen.labels.contains("Done editing Player 1"))
+        XCTAssertEqual(screen.labels.filter { $0.hasPrefix("Entry method") }.count, 1)
+        screen.attach(to: self, name: "Streamlined-Optional-Player-Editor")
+    }
+
+    func testOnlyMissingOfflinePlayerExpandsAndReadinessUpdatesInline() async throws {
+        let vm = model(.off)
+        vm.members = [vm.members[0], vm.members[6]]
+        var round = plannedRound()
+        round.handicapInputs["m1"] = .init(method: .strokes, value: 12, teeBoxID: "white")
+        vm.rounds = [round]
+        let screen = try SeriesAuditHostedScreen(SeriesRoundHandicapReviewView(viewModel: vm,
+            seriesRound: round, course: course(), onRoundCreated: { _ in XCTFail("Incomplete setup must not start") }))
+        defer { screen.close() }
+        _ = try await screen.waitForButton("Edit Handicaps")
+        XCTAssertTrue(screen.labels.contains("Handicap Setup Needed"))
+        XCTAssertTrue(screen.labels.contains("1 of 2 players need attention"))
+        XCTAssertFalse(screen.hasIdentifier("series.handicap.m1.method"))
+        let field = try screen.field("series.handicap.m7.value")
+        field.text = "0.0"
+        field.sendActions(for: .editingChanged)
+        try await Task.sleep(for: .milliseconds(250))
+        XCTAssertTrue(vm.handicapReadiness(for: round, course: course()).isReady)
+        XCTAssertTrue(screen.labels.contains("Ready to Start"))
+        XCTAssertTrue(screen.labels.contains("Index 0.0 → 0 strokes"))
+        XCTAssertEqual(vm.rounds[0].handicapInputs.count, 1, "Typing is round-local draft state")
+        screen.attach(to: self, name: "Streamlined-Missing-Player-Resolved-Inline")
+    }
+
+    func testReadinessUsesMixedSavedInputsZerosAndSelectedTeesInEverySeriesMode() throws {
+        for mode in SeriesHandicapMode.allCases {
+            let vm = model(mode)
+            for segment in [HoleSegment.front9, .back9, .full18] {
+                var round = plannedRound()
+                round.handicapInputs = Dictionary(uniqueKeysWithValues: vm.members.enumerated().map { i, member in
+                    (member.id, .init(method: i.isMultiple(of: 2) ? .personalIndex : .strokes,
+                                     value: i < 2 ? 0 : 18, teeBoxID: i == 6 ? "blue" : "white"))
+                })
+                let reopened = try JSONDecoder().decode(SeriesRound.self, from: JSONEncoder().encode(round))
+                let ready = vm.handicapReadiness(for: reopened, course: course(segment))
+                XCTAssertTrue(ready.isReady)
+                XCTAssertEqual(ready.readyCount, 7)
+                XCTAssertEqual(ready.players[0].strokes, 0)
+                XCTAssertEqual(ready.players[1].strokes, 0)
+                XCTAssertEqual(ready.players[0].source, "Personal Index")
+                XCTAssertEqual(ready.players[1].source, "Manual Strokes")
+                XCTAssertEqual(ready.players[6].resolution.tee?.id, "blue")
+                XCTAssertEqual(ready.players[6].strokes, segment == .full18 ? 22 : 11)
+                XCTAssertEqual(reopened.handicapInputs, round.handicapInputs)
+            }
+        }
+    }
+
+    func testTeeDataIssuesAreSeparateFromMissingIndexAndManualStrokesNeedNoRatings() {
+        let vm = model(.off)
+        vm.members = Array(vm.members.prefix(2))
+        var round = plannedRound()
+        round.handicapInputs = ["m1": .init(method: .personalIndex, value: 0, teeBoxID: "white"),
+                                "m2": .init(method: .strokes, value: 0, teeBoxID: "white")]
+        for rating in [0.0, Double.nan] {
+            var invalidCourse = course()
+            let tee = invalidCourse.courseInfo.tees[0]
+            invalidCourse.courseInfo.tees[0] = Tee(id: tee.id, name: tee.name, gender: tee.gender,
+                totalHoles: tee.totalHoles, holes: tee.holes, ratingFull: rating, slopeFull: 0,
+                ratingFront: 36, slopeFront: 113, ratingBack: 36, slopeBack: 113)
+            let ready = vm.handicapReadiness(for: round, course: invalidCourse)
+            XCTAssertEqual(ready.affectedMemberIDs, ["m1"])
+            XCTAssertTrue(ready.players[0].issueSummary.contains("tee data"))
+            XCTAssertFalse(ready.players[0].issueSummary.contains("Enter a valid"))
+            XCTAssertEqual(Set(ready.players[0].issue?.missingFields ?? []), ["course rating", "slope rating"])
+            XCTAssertTrue(ready.players[1].isReady, "Manual strokes require playable holes, not rating/slope")
+        }
+        var missingTee = round
+        missingTee.handicapInputs["m2"]?.teeBoxID = "deleted-tee"
+        XCTAssertEqual(vm.handicapReadiness(for: missingTee, course: course()).affectedMemberIDs, ["m2"])
+    }
+
+    func testGrossBasisPreservesUpstreamOptionalHandicapPreflightAndNetRequiresInput() {
+        let vm = model(.off)
+        vm.members = [vm.members[0]]
+        var round = plannedRound()
+        round.roundConfig.handicapEntryFormat = .strokes
+        round.roundConfig.scoreBasisOverride = .gross
+        var ready = vm.handicapReadiness(for: round, course: course())
+        XCTAssertTrue(ready.isReady)
+        XCTAssertNil(ready.players[0].strokes, "Absent optional handicaps must never be represented as zero")
+        XCTAssertEqual(ready.players[0].summary, "No handicap set · Gross scoring")
+        var invalidCourse = course()
+        invalidCourse.courseInfo.tees = []
+        XCTAssertTrue(vm.handicapReadiness(for: round, course: invalidCourse).isReady,
+            "Gross competition must preserve the upstream rule that optional handicap metadata does not block start")
+        round.roundConfig.scoreBasisOverride = .net
+        ready = vm.handicapReadiness(for: round, course: course())
+        XCTAssertFalse(ready.isReady)
+        XCTAssertTrue(ready.players[0].issueSummary.contains("Enter a valid"))
+    }
+
+    func testInvalidDraftCannotReuseSavedAllowanceOrOverwriteItOnReopen() {
+        let vm = model(.fixed)
+        vm.members = [vm.members[0]]
+        var round = plannedRound()
+        round.handicapInputs["m1"] = .init(method: .strokes, value: 12, teeBoxID: "blue")
+        var draft = vm.handicapDraft(for: vm.members[0], round: round, course: course())
+        draft.text = "oops"
+        vm.setHandicapDraft(draft, memberID: "m1", roundID: round.id)
+        XCTAssertEqual(vm.handicapReadiness(for: round, course: course()).affectedMemberIDs, ["m1"])
+        XCTAssertEqual(vm.handicapDraft(for: vm.members[0], round: round, course: course()), draft)
+        XCTAssertEqual(round.handicapInputs["m1"]?.value, 12)
+        XCTAssertEqual(round.handicapInputs["m1"]?.teeBoxID, "blue")
+        // Clear this test's persistent draft; persistence isolation is exercised separately.
+        vm.roundHandicapDrafts = [:]
+    }
+
+    func testReadySeriesStrokeSummaryShowsPlayedHoleAllowanceWithoutInventingIndex() {
+        let vm = model(.fixed)
+        vm.members = [vm.members[0]]
+        vm.memberHandicaps["m1"] = .init(memberID: "m1", computedIndex: 18)
+        var round = plannedRound()
+        round.roundConfig.handicapEntryFormat = .strokes
+        round.roundConfig.handicapStrokeBasis = .eighteenHole
+        let ready = vm.handicapReadiness(for: round, course: course(.front9))
+        XCTAssertEqual(ready.players[0].summary, "9 strokes · Series")
+        XCTAssertNil(ready.players[0].maximumSummary)
+    }
+
+    func testReadySummaryPreservesOriginalIndexAndAppliedMaximum() {
+        let vm = model(.fixed)
+        vm.members = [vm.members[0]]
+        vm.series.handicapConfig.config.maximumHandicap = 21
+        vm.memberHandicaps["m1"] = .init(memberID: "m1", computedIndex: 30)
+        let ready = vm.handicapReadiness(for: plannedRound(), course: course())
+        XCTAssertEqual(ready.players[0].summary, "Index 30.0 → 21 strokes")
+        XCTAssertTrue(ready.players[0].maximumSummary?.contains("Original Index 30.0") == true)
+        XCTAssertTrue(ready.players[0].maximumSummary?.contains("maximum 21") == true)
+    }
+
+    func testBusyStartedAndCompletedRoundsRejectSetupAndDuplicateStartBeforeAnyWrites() async {
+        var writes = 0
+        let vm = model(.fixed, saveRound: { writes += 1; return .success($0) })
+        let round = plannedRound()
+        vm.rounds = [round]
+        vm.creatingRoundID = round.id
+        let busySave = await vm.saveRoundHandicapSetup(round)
+        let duplicate = await vm.createLiveRound(from: round, courseSegment: course())
+        XCTAssertFalse(busySave)
+        XCTAssertNil(duplicate)
+        XCTAssertEqual(vm.creatingRoundID, round.id)
+        vm.creatingRoundID = nil
+        for status in [SeriesRoundStatus.live, .complete] {
+            vm.rounds[0].status = status
+            vm.rounds[0].roundID = "existing-round"
+            let saved = await vm.saveRoundHandicapSetup(round)
+            let created = await vm.createLiveRound(from: round, courseSegment: course())
+            XCTAssertFalse(saved)
+            XCTAssertNil(created)
+        }
+        XCTAssertEqual(writes, 0)
+    }
+
+    func testReadinessRespectsSubstitutionAndAttendanceExclusions() {
+        let vm = model(.off)
+        vm.members = [vm.members[0], vm.members[1], vm.members[6]]
+        vm.members[2].role = .substitute
+        vm.series.settings.isAttendanceEnabled = true
+        var round = plannedRound()
+        round.plannedTeeGroups = [.init(id: "sub-group", seats: [
+            .init(memberID: "m7", teeOrder: 1, isSubstitute: true, substituteForSeriesMemberID: "m1")
+        ])]
+        round.handicapInputs["m7"] = .init(method: .strokes, value: 12, teeBoxID: "white")
+        vm.attendanceByRound[round.id] = [
+            .init(memberID: "m1", status: SeriesRoundAttendanceStatus.no.rawValue),
+            .init(memberID: "m2", status: SeriesRoundAttendanceStatus.no.rawValue)
+        ]
+        let ready = vm.handicapReadiness(for: round, course: course())
+        XCTAssertEqual(ready.players.map(\.id), ["m7"])
+        XCTAssertTrue(ready.isReady)
+    }
+
+    func testStaleSetupCannotReplaceSavedCourseOrScoringOptions() async {
+        var writes = 0
+        let vm = model(.fixed, saveRound: { writes += 1; return .success($0) })
+        let stale = plannedRound()
+        var current = stale
+        current.lastUpdatedAt = Time(for: Date(timeIntervalSince1970: stale.lastUpdatedAt.unix + 10))
+        current.roundConfig.scoreBasisOverride = .gross
+        current.courseOverride = .init(courseID: "chosen-course", cachedName: "Chosen Course",
+            defaultTeeBoxID: "blue", holeSegment: .back9)
+        vm.rounds = [current]
+        let saved = await vm.saveRoundHandicapSetup(stale)
+        XCTAssertFalse(saved)
+        XCTAssertEqual(writes, 0)
+        XCTAssertEqual(vm.rounds, [current])
+    }
+
+    func testSavedAndNewCoursePathsBothPresentCompactReadyConfirmation() async throws {
+        for savedCourse in [true, false] {
+            let vm = model(.off)
+            vm.members = [vm.members[0]]
+            var round = plannedRound()
+            round.handicapInputs["m1"] = .init(method: .personalIndex, value: 18, teeBoxID: "blue")
+            vm.rounds = [round]
+            let selectedCourse = course(.back9)
+            if savedCourse { vm.roundSetupCourses[round.id] = selectedCourse }
+            let selection = CourseSelectionViewModel()
+            let app = AppSession(restoresAuthentication: false)
+            let screen = try SeriesAuditHostedScreen(CourseSelectionForSeriesRoundSheet(
+                viewModel: vm, seriesRound: round, reviewSavedCourse: savedCourse,
+                courseViewModel: selection, onRoundCreated: { _ in XCTFail("Confirmation must await Start") })
+                .environmentObject(app).environmentObject(LocationService()).environmentObject(RoundSession()))
+            defer { screen.close() }
+            if !savedCourse {
+                for _ in 0..<30 {
+                    if selection.onSetSeriesRoundCourse != nil { break }
+                    try await Task.sleep(for: .milliseconds(100))
+                }
+                let choose = try XCTUnwrap(selection.onSetSeriesRoundCourse)
+                choose(selectedCourse)
+            }
+            _ = try await screen.waitForButton("Edit Handicaps")
+            XCTAssertTrue(screen.labels.contains("Ready to Start"))
+            XCTAssertTrue(screen.labels.contains("Audit Course · 9 Holes"))
+            XCTAssertTrue(screen.labels.contains("Index 18.0 → 11 strokes"))
+            XCTAssertFalse(screen.labels.contains { $0.hasPrefix("Entry method") })
+            XCTAssertEqual(vm.roundSetupCourses[round.id], selectedCourse)
+            XCTAssertEqual(vm.rounds[0], round)
+            screen.attach(to: self, name: savedCourse ? "Streamlined-Saved-Course" : "Streamlined-New-Course")
+            screen.close()
+        }
+    }
+
+    func testFieldNormalizedSummaryLabelsCourseHandicapAndActualStrokesSeparately() {
+        let vm = model(.fixed)
+        vm.series.settings.isAttendanceEnabled = false
+        vm.members = Array(vm.members.prefix(2))
+        vm.memberHandicaps = ["m1": .init(memberID: "m1", computedIndex: 12),
+                              "m2": .init(memberID: "m2", computedIndex: 18)]
+        var round = plannedRound()
+        round.roundConfig.handicapNormalizationMode = .field
+        let ready = vm.handicapReadiness(for: round, course: course())
+        XCTAssertEqual(ready.players.map(\.strokes), [0, 6])
+        XCTAssertEqual(ready.players[1].summary, "Index 18.0 → 6 strokes")
+        XCTAssertTrue(ready.players[1].allocationSummary?.contains("Course Handicap 18") == true)
+        XCTAssertTrue(ready.players[1].allocationSummary?.contains("field normalization") == true)
+        XCTAssertEqual(vm.memberHandicaps["m2"]?.computedIndex, 18)
+    }
+
+    func testInvalidTextRetainsSelectedTeeValidationAndManualSource() {
+        let vm = model(.off)
+        vm.members = [vm.members[0]]
+        var draft = SeriesRoundHandicapDraft(teeBoxID: "deleted-tee")
+        draft.method = .strokes
+        draft.text = "oops"
+        let ready = SeriesRoundHandicapSetup.readiness(series: vm.series, round: plannedRound(),
+            members: vm.members, handicaps: [:], course: course(), drafts: ["m1": draft])
+        XCTAssertFalse(ready.isReady)
+        XCTAssertEqual(ready.players[0].source, "Manual Strokes")
+        XCTAssertTrue(ready.players[0].issueSummary.contains("Enter a valid"))
+        XCTAssertTrue(ready.players[0].issueSummary.contains("tee data"))
+        XCTAssertNil(ready.players[0].strokes)
+    }
+
+    func testCompactConfirmationSaveKeepsCustomInputsCourseAndInheritedScoringBasis() async throws {
+        var saves: [SeriesRound] = []
+        let vm = model(.fixed, saveRound: { saves.append($0); return .success($0) })
+        vm.members = [vm.members[0]]
+        var round = plannedRound()
+        round.roundConfig.scoreBasisOverride = nil
+        round.handicapInputs["m1"] = .init(method: .strokes, value: 12, teeBoxID: "blue")
+        round.courseOverride = .init(courseID: "course", cachedName: "Audit Course",
+            defaultTeeBoxID: "white", defaultTeeName: "White", defaultTeeGender: "male", holeSegment: .back9)
+        vm.rounds = [round]
+        let screen = try SeriesAuditHostedScreen(SeriesRoundHandicapReviewView(viewModel: vm,
+            seriesRound: round, course: course(.back9), onRoundCreated: { _ in XCTFail("Save must not start") }))
+        defer { screen.close() }
+        let edit = try await screen.waitForButton("Edit Handicaps")
+        XCTAssertTrue(edit.accessibilityActivate())
+        try await Task.sleep(for: .milliseconds(200))
+        screen.scrollToBottom()
+        let save = try await screen.waitForButton("Save Entries")
+        XCTAssertTrue(save.accessibilityActivate())
+        for _ in 0..<30 { if !saves.isEmpty { break }; try await Task.sleep(for: .milliseconds(100)) }
+        let saved = try XCTUnwrap(saves.first)
+        XCTAssertEqual(saved.handicapInputs, round.handicapInputs)
+        XCTAssertEqual(saved.courseOverride, round.courseOverride)
+        XCTAssertNil(saved.roundConfig.scoreBasisOverride, "An untouched inherited basis must remain inherited")
     }
 
     private func plannedRound() -> SeriesRound {
@@ -585,7 +896,9 @@ final class SeriesRoundStartAuditTests: XCTestCase {
     private func model(_ mode: SeriesHandicapMode,
                        saveSeries: ((Series) async -> Result<Series, Error>)? = nil,
                        saveRound: ((SeriesRound) async -> Result<SeriesRound, Error>)? = nil) -> SeriesViewModel {
-        let vm = SeriesViewModel(persistHandicapSettings: saveSeries, persistRoundHandicaps: saveRound)
+        let defaults = UserDefaults(suiteName: "SeriesStartAudit." + UUID().uuidString)!
+        let vm = SeriesViewModel(persistHandicapSettings: saveSeries, persistRoundHandicaps: saveRound,
+                                 handicapDraftDefaults: defaults)
         var settings = SeriesSettings(experiencePreset: .trip, useTeams: false)
         settings.handicapConfig = .init(mode: mode, strokeBasis: .eighteenHole, entryFormat: .courseHandicap)
         vm.series = Series(id: "audit-trip", name: "Andrew's golf trip — local fixture", commissionerUserID: "owner", settings: settings)
@@ -658,6 +971,10 @@ private final class SeriesAuditHostedScreen {
         return visit(window)
     }
     var labels: [String] { nodes().compactMap(\.accessibilityLabel) }
+    func hasIdentifier(_ id: String) -> Bool { nodes().contains { ($0 as? UIAccessibilityIdentification)?.accessibilityIdentifier == id } }
+    func field(_ id: String) throws -> UITextField {
+        try XCTUnwrap(nodes().compactMap { $0 as? UITextField }.first { $0.accessibilityIdentifier == id })
+    }
     func waitForButton(_ label: String) async throws -> NSObject {
         for _ in 0..<40 {
             if let button = nodes().first(where: { $0.accessibilityLabel == label && $0.accessibilityTraits.contains(.button) }) { return button }
@@ -674,7 +991,7 @@ private final class SeriesAuditHostedScreen {
             (view as? UIScrollView).map { [$0] } ?? view.subviews.flatMap(scrolls)
         }
         for scroll in scrolls(window) where scroll.contentSize.height > scroll.bounds.height {
-            scroll.setContentOffset(CGPoint(x: 0, y: max(0, scroll.contentSize.height - scroll.bounds.height)), animated: false)
+            scroll.setContentOffset(CGPoint(x: 0, y: max(0, scroll.contentSize.height - scroll.bounds.height + scroll.adjustedContentInset.bottom)), animated: false)
         }
         window.layoutIfNeeded()
     }
