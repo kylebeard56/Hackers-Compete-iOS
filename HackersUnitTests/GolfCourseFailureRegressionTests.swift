@@ -22,6 +22,7 @@ struct GolfCourseFailureRegressionTests {
         } catch {
             #expect(error as? CourseRepositoryFailure == .offline)
         }
+        await repository.finishPendingSaves()
         #expect(cache.cachedBatches.isEmpty)
 
         remote.detailResult = .success(makeAPIModel(id: 42))
@@ -30,6 +31,7 @@ struct GolfCourseFailureRegressionTests {
         #expect(recovered.golfCourseApiID == 42)
         #expect(recovered.hasCanonicalGolfCourseAPIIdentity)
         #expect(remote.detailRequestIDs == [42, 42])
+        await repository.finishPendingSaves()
         #expect(cache.cachedBatches.map { $0.map(\.id) } == [["42"]])
     }
 
@@ -45,6 +47,7 @@ struct GolfCourseFailureRegressionTests {
         } catch {
             #expect(error as? CourseRepositoryFailure == .offline)
         }
+        await repository.finishPendingSaves()
         #expect(cache.cachedBatches.isEmpty)
 
         remote.searchResult = .success([makeAPIModel(id: 42)])
@@ -52,6 +55,7 @@ struct GolfCourseFailureRegressionTests {
 
         #expect(recovered.map(\.id) == [42])
         #expect(remote.searchQueries == ["Recovery Club", "Recovery Club"])
+        await repository.finishPendingSaves()
         #expect(cache.cachedBatches.map { $0.map(\.id) } == [["42"]])
     }
 
@@ -69,6 +73,7 @@ struct GolfCourseFailureRegressionTests {
         }
 
         #expect(remote.detailRequestIDs == [42])
+        await repository.finishPendingSaves()
         #expect(cache.cachedBatches.isEmpty)
     }
 
@@ -86,19 +91,21 @@ struct GolfCourseFailureRegressionTests {
         }
 
         #expect(remote.searchQueries == ["Recovery Club"])
+        await repository.finishPendingSaves()
         #expect(cache.cachedBatches.isEmpty)
     }
 
-    @Test("Unusable cached search rows still fall back to the provider")
+    @Test("Explicit provider search supplements cached rows without usable provider scorecards")
     func unusableCachedRowsDoNotSuppressRemoteSearch() async throws {
         let remote = RegressionGolfCourseRemote(searchResult: .success([makeAPIModel(id: 42)]))
         let cache = RegressionGolfCourseCache(searchResultsOverride: unusableCachedCourses())
         let repository = GolfCourseRepository(remote: remote, cache: cache)
 
-        let models = try await repository.searchCourseModels(with: "Recovery Club")
+        let courses = try await repository.searchCourses(with: "Recovery Club", searchMore: true)
 
-        #expect(models.map(\.id) == [42])
+        #expect(courses.contains { $0.golfCourseApiID == 42 && $0.hasPlayableScorecard })
         #expect(remote.searchQueries == ["Recovery Club"])
+        await repository.finishPendingSaves()
         #expect(cache.cachedBatches.map { $0.map(\.id) } == [["42"]])
     }
 
@@ -117,6 +124,7 @@ struct GolfCourseFailureRegressionTests {
         #expect(models.map(\.id) == [42, 43])
         #expect(models.map(\.courseName) == ["Recovery Course 42", "Recovery Course 43"])
         #expect(remote.searchQueries.isEmpty)
+        await repository.finishPendingSaves()
         #expect(cache.cachedBatches.isEmpty)
     }
 
@@ -128,12 +136,19 @@ struct GolfCourseFailureRegressionTests {
 
         let first = try await repository.course(by: 42)
         let second = try await repository.course(by: 42)
+        #expect(remote.detailRequestIDs == [42]) // The current session retains fetched detail.
+        await repository.finishPendingSaves()
+        let restarted = GolfCourseRepository(remote: remote, cache: cache)
+        let retried = try await restarted.course(by: 42)
+        await restarted.finishPendingSaves()
+        #expect(retried.id == first.id)
 
         #expect(first.id == "42")
         #expect(first.courseName == "Recovery Course 42")
         #expect(second.id == first.id)
         #expect(second.hasCanonicalGolfCourseAPIIdentity)
         #expect(remote.detailRequestIDs == [42, 42])
+        await repository.finishPendingSaves()
         #expect(cache.cachedBatches.map { $0.map(\.id) } == [["42"], ["42"]])
     }
 
@@ -147,10 +162,17 @@ struct GolfCourseFailureRegressionTests {
 
         let first = try await repository.searchCourseModels(with: "Recovery Club")
         let second = try await repository.searchCourseModels(with: "Recovery Club")
+        #expect(remote.searchQueries == ["Recovery Club"]) // Repeated session searches reuse results.
+        await repository.finishPendingSaves()
+        let restarted = GolfCourseRepository(remote: remote, cache: cache)
+        let retried = try await restarted.searchCourseModels(with: "Recovery Club")
+        await restarted.finishPendingSaves()
+        #expect(retried.map(\.id) == first.map(\.id))
 
         #expect(first.map(\.id) == [43, 42])
         #expect(second.map(\.id) == [43, 42])
         #expect(remote.searchQueries == ["Recovery Club", "Recovery Club"])
+        await repository.finishPendingSaves()
         #expect(cache.cachedBatches.map { $0.map(\.id) } == [["43", "42"], ["43", "42"]])
     }
 
@@ -164,12 +186,14 @@ struct GolfCourseFailureRegressionTests {
         let repository = GolfCourseRepository(remote: remote, cache: cache)
 
         _ = try await repository.searchCourseModels(with: "Recovery Club")
+        await repository.finishPendingSaves()
         let selected = try await repository.course(by: 43)
 
         #expect(selected.hasCanonicalGolfCourseAPIIdentity)
         #expect(selected.golfCourseApiID == 43)
         #expect(selected.courseName == "Recovery Course 43")
         #expect(remote.detailRequestIDs.isEmpty)
+        await repository.finishPendingSaves()
         #expect(cache.cachedBatches.count == 1)
     }
 
@@ -183,15 +207,17 @@ struct GolfCourseFailureRegressionTests {
         let repository = GolfCourseRepository(remote: remote, cache: cache)
 
         _ = try await repository.course(by: 42)
+        await repository.finishPendingSaves()
         let models = try await repository.searchCourseModels(with: "Recovery Club")
 
         #expect(models.map(\.id) == [42])
         #expect(models.first?.clubName == "Recovery Club")
         #expect(remote.searchQueries.isEmpty)
+        await repository.finishPendingSaves()
         #expect(cache.cachedBatches.count == 1)
     }
 
-    @Test("An empty provider search does not prevent a later successful search")
+    @Test("An empty provider search is cached briefly and can recover in a new session")
     func emptySearchDoesNotPoisonSubsequentSearch() async throws {
         let remote = RegressionGolfCourseRemote(searchResult: .success([]))
         let cache = RegressionGolfCourseCache()
@@ -199,17 +225,23 @@ struct GolfCourseFailureRegressionTests {
 
         let empty = try await repository.searchCourseModels(with: "Recovery Club")
         #expect(empty.isEmpty)
+        await repository.finishPendingSaves()
         #expect(cache.cachedBatches.flatMap { $0 }.isEmpty)
 
         remote.searchResult = .success([makeAPIModel(id: 42)])
-        let recovered = try await repository.searchCourseModels(with: "Recovery Club")
+        let rememberedEmpty = try await repository.searchCourseModels(with: "Recovery Club")
+        #expect(rememberedEmpty.isEmpty)
+        #expect(remote.searchQueries == ["Recovery Club"])
+        let restarted = GolfCourseRepository(remote: remote, cache: cache)
+        let recovered = try await restarted.searchCourseModels(with: "Recovery Club")
 
         #expect(recovered.map(\.id) == [42])
         #expect(remote.searchQueries == ["Recovery Club", "Recovery Club"])
+        await restarted.finishPendingSaves()
         #expect(cache.cachedBatches.flatMap { $0 }.map(\.id) == ["42"])
     }
 
-    private func makeAPIModel(id: Int) -> GolfCourseAPIModel {
+    private func makeAPIModel(id: GolfCourseID) -> GolfCourseAPIModel {
         GolfCourseAPIModel(
             id: id,
             clubName: "Recovery Club",
@@ -222,7 +254,12 @@ struct GolfCourseFailureRegressionTests {
                 latitude: 34.85,
                 longitude: -82.40
             ),
-            tees: GolfCourseAPITees(female: nil, male: nil)
+            tees: GolfCourseAPITees(female: nil, male: [GolfCourseAPITee(cachedTee: Tee(
+                id: "white_male", name: "White", gender: "male", totalHoles: 18,
+                holes: (1...18).map { Hole(number: $0, par: 4, yardage: 350, handicap: $0) },
+                ratingFull: 72, slopeFull: 113, ratingFront: 36, slopeFront: 113,
+                ratingBack: 36, slopeBack: 113
+            ))])
         )
     }
 
@@ -232,9 +269,9 @@ struct GolfCourseFailureRegressionTests {
             Course(
                 id: "legacy-random-document-id",
                 golfCourseApiID: 50,
-                origin: .golfCourseAPI,
+                origin: .hackers,
                 clubName: "Recovery Club",
-                courseName: "Legacy Course",
+                courseName: "Non-provider Course",
                 location: location
             ),
             Course(
@@ -265,7 +302,7 @@ private enum CourseRepositoryFailure: Error, Equatable {
 private final class RegressionGolfCourseRemote: GolfCourseAPIRemoteProviding {
     var detailResult: Result<GolfCourseAPIModel, Error>
     var searchResult: Result<[GolfCourseAPIModel], Error>
-    private(set) var detailRequestIDs: [Int] = []
+    private(set) var detailRequestIDs: [GolfCourseID] = []
     private(set) var searchQueries: [String] = []
 
     init(
@@ -276,7 +313,7 @@ private final class RegressionGolfCourseRemote: GolfCourseAPIRemoteProviding {
         self.searchResult = searchResult
     }
 
-    func getCourseModel(by id: Int) async throws -> GolfCourseAPIModel {
+    func getCourseModel(by id: GolfCourseID) async throws -> GolfCourseAPIModel {
         detailRequestIDs.append(id)
         return try detailResult.get()
     }
@@ -291,7 +328,7 @@ private final class RegressionGolfCourseRemote: GolfCourseAPIRemoteProviding {
 private final class RegressionGolfCourseCache: GolfCourseCacheProviding {
     private let persistsWrites: Bool
     private let searchResultsOverride: [Course]?
-    private var coursesByID: [Int: Course] = [:]
+    private var coursesByID: [GolfCourseID: Course] = [:]
     private(set) var cachedBatches: [[Course]] = []
 
     init(persistsWrites: Bool = true, searchResultsOverride: [Course]? = nil) {
@@ -299,7 +336,7 @@ private final class RegressionGolfCourseCache: GolfCourseCacheProviding {
         self.searchResultsOverride = searchResultsOverride
     }
 
-    func course(byGolfCourseAPIID id: Int) async -> Course? {
+    func course(byGolfCourseAPIID id: GolfCourseID) async -> Course? {
         coursesByID[id]
     }
 
