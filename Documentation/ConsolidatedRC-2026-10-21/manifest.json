@@ -32,7 +32,6 @@
     ]
   },
   "validation_status": "passed",
-  "push_merge_upload_performed": false,
   "archive_directory": "/Users/Kirsten/Developer/Hackers-Combined/build-artifacts/consolidated-rc-2026-10-21",
   "test_simulator": "23DF6611-8329-4397-955A-E373C878C9E4",
   "source_commit": "743a54c3",
@@ -52,7 +51,39 @@
   "sandbox_archive_signature_verified": true,
   "testflight_upload": "Complete: VALID / IN_BETA_TESTING",
   "new_distribution_certificate": "0E65D26AA342065FB5AD04B19A2B9E189F039EBD",
-  "production_archive": "not completed; first attempt exhausted disk space; Sandbox prioritized per testing context",
+  "production_archive": {
+    "status": "succeeded",
+    "path": "/Users/Kirsten/Developer/Hackers-Combined/build-artifacts/consolidated-rc-2026-10-21/Hackers-Production.xcarchive",
+    "verification": {
+      "bundles": [
+        {
+          "bundle": "com.tigermindlabs.hackers.compete",
+          "version": "1.0.0",
+          "build": "2026.10.21.2",
+          "symbols_match": true,
+          "binary_sha256": "c649adc8c8c240299a5af354e27951ccb89be9627ac68d2eb07bbd69c144863c"
+        },
+        {
+          "bundle": "com.tigermindlabs.hackers.compete.liveactivity",
+          "version": "1.0.0",
+          "build": "2026.10.21.2",
+          "symbols_match": true,
+          "binary_sha256": "a15c27a38a4e033844b698158f58aa0ac0b72c0946dbcffdcf1cbe3eddac35d2"
+        },
+        {
+          "bundle": "com.tigermindlabs.hackers.compete.watchkitapp",
+          "version": "1.0.0",
+          "build": "2026.10.21.2",
+          "symbols_match": true,
+          "binary_sha256": "769e9a39bac8db1c35dddc5f9893cf6a6735e6ed221951bf4f62fb7907d782f9"
+        }
+      ],
+      "firebase_project": "hackers-compete",
+      "production_compiler_flags_verified": true,
+      "source_hashes_match": true,
+      "recursive_signature_verified": true
+    }
+  },
   "push_performed": false,
   "merge_performed": false,
   "upload_warnings": {
@@ -92,5 +123,66 @@
   "testflight_build_id": "61f460c3-8775-41f0-82d8-f6e47b06fc58",
   "testflight_processing_state": "VALID",
   "testflight_internal_state": "IN_BETA_TESTING",
-  "app_name": "Hackers Compete Test"
+  "app_name": "Hackers Compete Test",
+  "production_testflight_upload": "Complete: VALID / IN_BETA_TESTING",
+  "production_app_id": "6757131203",
+  "production_upload_receipt": {
+    "app": "6757131203",
+    "bundleId": "com.tigermindlabs.hackers.compete",
+    "version": "1.0.0",
+    "build": "2026.10.21.2",
+    "status": "UPLOAD SUCCEEDED with no errors",
+    "organizerWarnings": "vendor dSYM upload failures (10)",
+    "receiptBuildIDs": [
+      "08086e19-e50e-48af-8976-c0c90b7ec900",
+      "3b0c2f0e-cbdf-4f22-8a7c-fda1b43282f6"
+    ]
+  },
+  "production_upload_warnings": {
+    "type": "missing vendor framework dSYMs",
+    "frameworks": [
+      "FirebaseAnalytics",
+      "FirebaseFirestoreInternal",
+      "GoogleAdsOnDeviceConversion",
+      "GoogleAppMeasurement",
+      "GoogleAppMeasurementIdentitySupport",
+      "Sentry",
+      "absl",
+      "grpc",
+      "grpcpp",
+      "openssl_grpc"
+    ],
+    "application_symbols_verified": true
+  },
+  "production_internal_beta_group": {
+    "name": "Beta",
+    "hasAccessToAllBuilds": true
+  },
+  "production_testflight_build_id": "3b0c2f0e-cbdf-4f22-8a7c-fda1b43282f6",
+  "production_app_name": "Hackers Compete",
+  "both_testflight_builds": [
+    {
+      "app": "Hackers Compete Test",
+      "appID": "6757443901",
+      "bundle": "com.tigermindlabs.hackers.compete.sandbox",
+      "build": "2026.10.21.2",
+      "buildID": "61f460c3-8775-41f0-82d8-f6e47b06fc58",
+      "processingState": "VALID",
+      "internalBuildState": "IN_BETA_TESTING"
+    },
+    {
+      "app": "Hackers Compete",
+      "appID": "6757131203",
+      "bundle": "com.tigermindlabs.hackers.compete",
+      "build": "2026.10.21.2",
+      "buildID": "3b0c2f0e-cbdf-4f22-8a7c-fda1b43282f6",
+      "processingState": "VALID",
+      "internalBuildState": "IN_BETA_TESTING"
+    }
+  ],
+  "uploads_performed": [
+    "Sandbox",
+    "Production"
+  ],
+  "backend_deploy_performed": false
 }

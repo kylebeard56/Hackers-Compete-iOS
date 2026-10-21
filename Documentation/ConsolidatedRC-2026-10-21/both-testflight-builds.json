@@ -1,0 +1,20 @@
+[
+  {
+    "app": "Hackers Compete Test",
+    "appID": "6757443901",
+    "bundle": "com.tigermindlabs.hackers.compete.sandbox",
+    "build": "2026.10.21.2",
+    "buildID": "61f460c3-8775-41f0-82d8-f6e47b06fc58",
+    "processingState": "VALID",
+    "internalBuildState": "IN_BETA_TESTING"
+  },
+  {
+    "app": "Hackers Compete",
+    "appID": "6757131203",
+    "bundle": "com.tigermindlabs.hackers.compete",
+    "build": "2026.10.21.2",
+    "buildID": "3b0c2f0e-cbdf-4f22-8a7c-fda1b43282f6",
+    "processingState": "VALID",
+    "internalBuildState": "IN_BETA_TESTING"
+  }
+]

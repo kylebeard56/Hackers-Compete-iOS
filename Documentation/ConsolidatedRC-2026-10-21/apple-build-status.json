@@ -125,7 +125,7 @@
     }
   ],
   "links": {
-    "self": "https://api.appstoreconnect.apple.com/v1/builds?filter%5Bversion%5D=2026.10.21.2&filter%5Bapp%5D=6757443901&include=buildBetaDetail"
+    "self": "https://api.appstoreconnect.apple.com/v1/builds?filter%5Bapp%5D=6757443901&filter%5Bversion%5D=2026.10.21.2&include=buildBetaDetail"
   },
   "meta": {
     "paging": {

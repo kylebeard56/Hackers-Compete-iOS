@@ -1,0 +1,12 @@
+{
+  "app": "6757131203",
+  "bundleId": "com.tigermindlabs.hackers.compete",
+  "version": "1.0.0",
+  "build": "2026.10.21.2",
+  "status": "UPLOAD SUCCEEDED with no errors",
+  "organizerWarnings": "vendor dSYM upload failures (10)",
+  "receiptBuildIDs": [
+    "08086e19-e50e-48af-8976-c0c90b7ec900",
+    "3b0c2f0e-cbdf-4f22-8a7c-fda1b43282f6"
+  ]
+}
