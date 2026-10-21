@@ -1,0 +1,10 @@
+[
+  {
+    "bundle": "com.tigermindlabs.hackers.compete.sandbox",
+    "symbols_match": true
+  },
+  {
+    "bundle": "com.tigermindlabs.hackers.compete.sandbox.liveactivity",
+    "symbols_match": true
+  }
+]

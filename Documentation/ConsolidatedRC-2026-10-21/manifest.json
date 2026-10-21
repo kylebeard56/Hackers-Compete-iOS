@@ -50,7 +50,7 @@
   },
   "sandbox_archive": "/Users/Kirsten/Developer/Hackers-Combined/build-artifacts/consolidated-rc-2026-10-21/Hackers-Sandbox.xcarchive",
   "sandbox_archive_signature_verified": true,
-  "testflight_upload": "Xcode Organizer confirmed upload completed with warnings; archive marked Uploaded to Apple; waiting for App Store Connect build record",
+  "testflight_upload": "Complete: VALID / IN_BETA_TESTING",
   "new_distribution_certificate": "0E65D26AA342065FB5AD04B19A2B9E189F039EBD",
   "production_archive": "not completed; first attempt exhausted disk space; Sandbox prioritized per testing context",
   "push_performed": false,
@@ -74,5 +74,23 @@
   "internal_beta_group": {
     "name": "Beta",
     "hasAccessToAllBuilds": true
-  }
+  },
+  "upload_receipt": {
+    "app": "6757443901",
+    "bundleId": "com.tigermindlabs.hackers.compete.sandbox",
+    "version": "1.0.0",
+    "build": "2026.10.21.2",
+    "status": "UPLOAD SUCCEEDED with no errors",
+    "completedAt": "2026-10-21T11:35:20.515Z",
+    "bytesSent": 81877251,
+    "organizerWarnings": "vendor dSYM upload failures (10)",
+    "receiptBuildIDs": [
+      "61f460c3-8775-41f0-82d8-f6e47b06fc58",
+      "9bf63160-522b-4102-84ef-4a2319925d42"
+    ]
+  },
+  "testflight_build_id": "61f460c3-8775-41f0-82d8-f6e47b06fc58",
+  "testflight_processing_state": "VALID",
+  "testflight_internal_state": "IN_BETA_TESTING",
+  "app_name": "Hackers Compete Test"
 }
