@@ -10,7 +10,7 @@
     "16": "5c5d9c03fb635ed733a9320462eeb4a412703486",
     "17": "165b76e35e1cab9a52eb8327e77b2f1567dc534d"
   },
-  "distribution": "Archives prepared; IPA export blocked by missing Xcode account/distribution identity and API key cloud-signing permission",
+  "distribution": "Both archives succeeded; IPA export blocked by missing Xcode distribution account/certificate and API cloud-signing permission. No upload performed.",
   "variants": [
     "Sandbox",
     "Production"
@@ -42,5 +42,66 @@
       "Xcode user interface/scheme state",
       "previous simulator app ZIP"
     ]
+  },
+  "archives": [
+    {
+      "scheme": "Sandbox",
+      "archive": "/Users/Kirsten/Developer/Hackers-Combined/build-artifacts/complete-2026-10-21/Hackers-Sandbox.xcarchive",
+      "signature_verified": true,
+      "bundles": [
+        {
+          "id": "com.tigermindlabs.hackers.compete.sandbox",
+          "version": "1.0.0",
+          "build": "2026.10.21.1",
+          "symbols_match": true,
+          "binary_sha256": "e46fe503cc14a847cfcbf58ff769f9d452abe0ba5f08940da808d4e28701efd0"
+        },
+        {
+          "id": "com.tigermindlabs.hackers.compete.sandbox.liveactivity",
+          "version": "1.0.0",
+          "build": "2026.10.21.1",
+          "symbols_match": true,
+          "binary_sha256": "9d35bd9a7afc9dbbdc0b86a66ee655ab6bc6021da280aab809f622427a4cb37c"
+        }
+      ]
+    },
+    {
+      "scheme": "Production",
+      "archive": "/Users/Kirsten/Developer/Hackers-Combined/build-artifacts/complete-2026-10-21/Hackers-Production.xcarchive",
+      "signature_verified": true,
+      "bundles": [
+        {
+          "id": "com.tigermindlabs.hackers.compete",
+          "version": "1.0.0",
+          "build": "2026.10.21.1",
+          "symbols_match": true,
+          "binary_sha256": "a2a42d9bf6d4549648dd8a4793ccb4102d70303631a1854b76e076e25ad16fe5"
+        },
+        {
+          "id": "com.tigermindlabs.hackers.compete.liveactivity",
+          "version": "1.0.0",
+          "build": "2026.10.21.1",
+          "symbols_match": true,
+          "binary_sha256": "f675600d2b70b8d64990413c07aeccc9c318753e1d1a26d3a5f4bc188afcad9f"
+        },
+        {
+          "id": "com.tigermindlabs.hackers.compete.watchkitapp",
+          "version": "1.0.0",
+          "build": "2026.10.21.1",
+          "symbols_match": true,
+          "binary_sha256": "8ea178a0fd03c3d22ee20c034645bc16fb233359c9d9be79bcd1fe0ab36460a7"
+        }
+      ]
+    }
+  ],
+  "simulator_smoke": {
+    "result": "Build/install/launch passed; restored round screen visually verified without editing scores",
+    "screenshot": "simulator-launch.jpg"
+  },
+  "validation": {
+    "passed": 1128,
+    "failed": 0,
+    "skipped": 5,
+    "xcresult": "/Users/Kirsten/Developer/Hackers-Combined/build-artifacts/complete-2026-10-21/final-tests.xcresult"
   }
 }

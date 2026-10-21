@@ -12,11 +12,11 @@ The original checkout was not switched or edited. `local-snapshot/working-files.
 
 ## Validation
 
-Full final suite: **1,128 passed, 0 failed, 5 existing opt-in skips**, confirmed by `xcresulttool`. Simulator: iPhone 17 Pro / iOS 26.3.1. No new skips or disabled tests. Signing was enabled for simulator tests so the keychain diagnostic passed. Result: `/private/tmp/HackersComplete20261021-final-validated.xcresult`; machine-readable summary: `validation.json`.
+Full final suite: **1,128 passed, 0 failed, 5 existing opt-in skips**, confirmed by `xcresulttool`. Simulator: iPhone 17 Pro / iOS 26.3.1. No new skips or disabled tests. Signing was enabled for simulator tests so the keychain diagnostic passed. Result: `/Users/Kirsten/Developer/Hackers-Combined/build-artifacts/complete-2026-10-21/final-tests.xcresult`; machine-readable summary: `validation.json`.
 
 The initial GitHub-only unsigned baseline passed 1,088 cases and failed only keychain access. Enabling simulator signing resolved that environment failure. Retained local scorecard/resume/concurrency cases passed; all eleven reconciled course failure cases passed before the full final run.
 
-Both archives use the same combined source and override `CURRENT_PROJECT_VERSION=2026.10.21.1` and `DEBUG_INFORMATION_FORMAT=dwarf-with-dsym`. Production includes Watch and Live Activities; Sandbox retains its existing Watch exclusion. Archive receipt and smoke results are recorded in `manifest.json`.
+Both archives use the same combined source and override `CURRENT_PROJECT_VERSION=2026.10.21.1` and `DEBUG_INFORMATION_FORMAT=dwarf-with-dsym`. Production includes Watch and Live Activities; Sandbox retains its existing Watch exclusion. Both device archives succeeded. All five app/extension bundles have the expected version/build, pass recursive signature verification, and have matching application dSYMs. These are development-signed archives awaiting App Store distribution export. A normal Sandbox simulator build/install/launch also passed; the restored round screen was visually verified without entering or changing scores (`simulator-launch.jpg`). Archive receipts and binary SHA-256 hashes are recorded in `manifest.json`. Existing compiler warnings remain, including the previously documented unused recursive helpers and Swift 6 migration warnings; current language/optimization settings were retained.
 
 Physical-device/paired Watch/Lock Screen and authenticated Firebase multi-device acceptance have not been performed during this preparation.
 
