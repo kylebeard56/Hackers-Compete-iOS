@@ -84,3 +84,15 @@ The user subsequently authorized committing/pushing, creating PR #19, and deploy
 The archive contains application source commit `bc76855bdfe49d860b1b36ca39d4a0b2e8db7da3`. Sandbox app and Live Activity bundle IDs, versions, signatures, and matching application dSYMs were verified. The exported IPA uses the existing Apple Distribution certificate and cached Xcode-managed App Store profiles, with internal-only TestFlight export enabled. `altool` reported no upload errors; the App Store Connect API independently confirmed availability. The Mac was locked, so the successful upload used the existing API key after an offline cached-profile export. No new signing certificate or provisioning profile was created.
 
 Archive, IPA, and original logs are preserved in `/Users/Kirsten/Developer/Hackers-Combined/build-artifacts/commissioner-ux-2026-10-21/`. Release hashes and receipt: [testflight-release.json](testflight-release.json). Fresh Apple state: [testflight-apple-status.json](testflight-apple-status.json). Live Firebase/device acceptance remains manual; this deployment does not certify those workflows.
+
+## Production TestFlight — 2026-10-22
+
+The user authorized Production distribution to both internal and external beta testers using Fastlane. **Hackers Compete 1.0.0 (2026.10.22.1)** was archived, signed, and uploaded with the repository’s Fastlane 2.230.0 deployment lane. Apple confirms **VALID**, **APP_STORE_ELIGIBLE**, and internal **IN_BETA_TESTING**. The existing internal **Beta** group has access to all builds. Build ID: `d006390d-0e6d-4c96-ae41-16600d562309`.
+
+**Testing notes are updated and independently verified in Apple’s en-US beta build localization.** [Device testing checklist](TESTFLIGHT-CHECKLIST.md).
+
+External distribution to **Beta Testers** is not complete: Apple returns `READY_FOR_BETA_SUBMISSION`; the current API key is forbidden from submitting beta app review. Fastlane successfully uploaded the binary and notes before that failure. A fresh-token retry confirmed the review-submission permission error. An App Store Connect login with external beta review permission is required to finish. External availability is not claimed.
+
+The archive includes iPhone app, Watch app, and Live Activity with Production bundle IDs, build 2026.10.22.1, verified signatures, and matching dSYMs. Source commit: `774b6ad1f3df601bebf970d2bb61a954e6e9b2aa`. The newer release-base commit changes only CI/documentation. No application code changed for this deployment. Physical-device and authenticated Firebase acceptance remain manual.
+
+Release receipt: [testflight-production-release.json](testflight-production-release.json). Archive, IPA, symbols, and logs: `/Users/Kirsten/Developer/Hackers-Combined/build-artifacts/production-commissioner-2026-10-22/`.
