@@ -263,6 +263,15 @@ struct SeriesRoundHandicapReviewView: View {
                 .accessibilityIdentifier("series.handicap.\(member.id).edit")
                 .frame(minWidth: 44, minHeight: 44)
             }
+            Picker("Player tees", selection: draftBinding(member, \.teeBoxID)) {
+                if !course.courseInfo.tees.contains(where: { $0.id == draft.teeBoxID }) {
+                    Text("Select tee").tag(draft.teeBoxID)
+                }
+                ForEach(course.courseInfo.tees, id: \.id) { tee in
+                    Text("\(tee.name) · \(tee.gender)").tag(tee.id)
+                }
+            }
+            .accessibilityIdentifier("series.handicap.\(member.id).tee")
             if expanded.wrappedValue {
                 Picker("Entry method", selection: draftBinding(member, \.method)) {
                     if viewModel.memberHandicaps[member.id]?.effectiveIndex != nil {
@@ -279,15 +288,7 @@ struct SeriesRoundHandicapReviewView: View {
                         .focused($focusedMemberID, equals: member.id)
                         .accessibilityLabel("\(member.name.fullName) \(draft.method.rawValue)")
                         .accessibilityIdentifier("series.handicap.\(member.id).value")
-                    Picker("Player tees", selection: draftBinding(member, \.teeBoxID)) {
-                        if !course.courseInfo.tees.contains(where: { $0.id == draft.teeBoxID }) {
-                            Text("Select tee").tag(draft.teeBoxID)
-                        }
-                        ForEach(course.courseInfo.tees, id: \.id) { tee in
-                            Text("\(tee.name) · \(tee.gender)").tag(tee.id)
-                        }
-                    }
-                    .accessibilityIdentifier("series.handicap.\(member.id).tee")
+
                 }
                 DisclosureGroup("Handicap Details") {
                     Text("Source: \(player.source)")

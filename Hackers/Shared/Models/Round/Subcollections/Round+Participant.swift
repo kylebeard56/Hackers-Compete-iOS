@@ -372,6 +372,32 @@ extension RoundParticipant {
     var resolvedPresenceStatus: RoundParticipantPresenceStatus { presenceStatus ?? .active }
     var isPresenceActive: Bool { resolvedPresenceStatus != .noShow }
 
+    /// Rebuild only an unstarted Series player's tee-dependent allowance. Index
+    /// provenance and intentional round-only strokes remain independent of tees.
+    func selectingSeriesTee(_ teeID: String, course: CourseSegment, status: RoundStatus) -> RoundParticipant? {
+        guard status.allowsCourseHandicapSetupEdits else { return self }
+        guard teeID != teeBoxID else { return self }
+        guard let saved = handicapSnapshot else { return nil }
+        let resolution = SeriesCourseHandicapResolver.resolve(
+            effectiveIndex: saved.entryFormat == .courseHandicap ? saved.handicapIndex : Double(saved.effectiveStrokes),
+            memberID: seriesMemberID ?? id, memberName: name.fullName,
+            requestedTeeID: teeID, tee: course.tee(from: teeID),
+            courseID: course.courseInfo.id, courseName: course.courseInfo.name,
+            holeSegment: course.holeSegment, entryFormat: saved.entryFormat,
+            handicapStrokeBasis: saved.calculation?.indexBasis ?? saved.handicapStrokeBasis,
+            maximumHandicap: saved.entryFormat == .courseHandicap ? saved.maximumHandicap : nil)
+        guard resolution.validationIssue == nil,
+              let updatedSnapshot = resolution.snapshot(selectedHandicapScoreIDs: Set(saved.selectedHandicapScoreIDs), source: saved.source) else { return nil }
+        var result = self
+        result.teeBoxID = teeID
+        result.handicapSnapshot = updatedSnapshot
+        result.leagueHandicapStrokesAtCreation = updatedSnapshot.effectiveStrokes
+        if !isLeagueHandicapModifiedFromCreation { result.adjustedHandicap = updatedSnapshot.effectiveStrokes }
+        result.handicapResolution = RoundHandicapResolution(entryFormat: resolution.entryFormat,
+            calculation: resolution.calculation, effectiveStrokes: result.adjustedHandicap)
+        return result
+    }
+
     /// Computed Series allowance that can be restored after a round-local override.
     var leagueHandicapComputedBaseline: Int? {
         leagueHandicapStrokesAtCreation ?? handicapSnapshot?.effectiveStrokes

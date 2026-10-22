@@ -529,6 +529,7 @@ enum SeriesRoundSyncPlanning {
         handicapEntryFormat: HandicapEntryFormat = .strokes,
         handicapStrokeBasis: SeriesHandicapStrokeBasis? = nil,
         roundHandicapInputs: [String: SeriesRoundHandicapInput] = [:],
+        playerTeeBoxIDs: [String: String] = [:],
         roundScoringStrokeBasis: SeriesHandicapStrokeBasis? = nil,
         preserveFrozenRoundSetup: Bool = false,
         hostPlayerID: String?,
@@ -546,6 +547,7 @@ enum SeriesRoundSyncPlanning {
             handicapEntryFormat: handicapEntryFormat,
             handicapStrokeBasis: handicapStrokeBasis,
             roundHandicapInputs: roundHandicapInputs,
+            playerTeeBoxIDs: playerTeeBoxIDs,
             roundScoringStrokeBasis: roundScoringStrokeBasis,
             hostPlayerID: hostPlayerID,
             plannedSeatsByMemberID: plannedSeatsByMemberID
@@ -733,6 +735,7 @@ enum SeriesRoundSyncPlanning {
             handicapEntryFormat: seriesRound.roundConfig.handicapEntryFormat,
             handicapStrokeBasis: series.handicapConfig.strokeBasis,
             roundHandicapInputs: seriesRound.handicapInputs,
+            playerTeeBoxIDs: seriesRound.playerTeeBoxIDs,
             roundScoringStrokeBasis: seriesRound.roundConfig.handicapStrokeBasis,
             hostPlayerID: hostPlayerID,
             presenceStatusByMemberID: presenceStatusByMemberID,

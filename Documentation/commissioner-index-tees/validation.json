@@ -1,0 +1,33 @@
+{
+  "baseCommit": "6087a48d62b06fe22ad710900e6e7c51b8f8f620",
+  "build": "Sandbox simulator test compilation passed; Address Sanitizer retained",
+  "runs": [
+    {
+      "name": "small-iPhone",
+      "result": "Passed",
+      "passedTests": 59,
+      "failedTests": 0,
+      "skippedTests": 0,
+      "totalTestCount": 59,
+      "command": "/Applications/Xcode.app/Contents/Developer/usr/bin/xcodebuild -project Hackers.xcodeproj -scheme Sandbox -configuration Sandbox -destination \"platform=iOS Simulator,id=86E85B10-4FA2-4FCB-B62B-36D27193854A\" -derivedDataPath /private/tmp/HackersCommissionerDerived -clonedSourcePackagesDirPath /private/tmp/HackersComplete20261021Packages -disableAutomaticPackageResolution -skipMacroValidation -parallel-testing-enabled NO -resultBundlePath /private/tmp/HackersCommissionerSmallVerified.xcresult ONLY_ACTIVE_ARCH=YES COMPILER_INDEX_STORE_ENABLE=NO test \"-only-testing:HackersUnitTests/SeriesRoundStartAuditTests\"",
+      "log": "/private/tmp/HackersCommissionerSmallVerified.log",
+      "xcresult": "/private/tmp/HackersCommissionerSmallVerified.xcresult"
+    },
+    {
+      "name": "full-unit-target",
+      "result": "Passed",
+      "passedTests": 1180,
+      "failedTests": 0,
+      "skippedTests": 5,
+      "totalTestCount": 1185,
+      "command": "/Applications/Xcode.app/Contents/Developer/usr/bin/xcodebuild -project Hackers.xcodeproj -scheme Sandbox -configuration Sandbox -destination \"platform=iOS Simulator,id=23DF6611-8329-4397-955A-E373C878C9E4\" -derivedDataPath /private/tmp/HackersCommissionerDerived -clonedSourcePackagesDirPath /private/tmp/HackersComplete20261021Packages -disableAutomaticPackageResolution -parallel-testing-enabled NO -resultBundlePath /private/tmp/HackersCommissionerFull.xcresult ONLY_ACTIVE_ARCH=YES COMPILER_INDEX_STORE_ENABLE=NO test-without-building \"-only-testing:HackersUnitTests\"",
+      "log": "/private/tmp/HackersCommissionerFull.log",
+      "xcresult": "/private/tmp/HackersCommissionerFull.xcresult"
+    }
+  ],
+  "legacyTargetAttempt": {
+    "target": "HackersTests",
+    "result": "Unavailable: not a member of the test plan or scheme. The inherited scheme contains a stale reference; no HackersTests source directory is present.",
+    "log": "/private/tmp/HackersCommissionerIntegration.log"
+  }
+}

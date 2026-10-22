@@ -1648,6 +1648,7 @@ final class SeriesViewModel: ObservableObject, Loggable {
     @Published private(set) var isSavingRoundHandicaps = false
     private let handicapDraftDefaults: UserDefaults
     private let persistHandicapSettings: (Series) async -> Result<Series, Error>
+    private let persistHandicapOverride: (SeriesHandicapOverride, SeriesHandicapOverride?) async -> Result<SeriesHandicapOverride, Error>
     private let persistRoundHandicaps: (SeriesRound) async -> Result<SeriesRound, Error>
     @Published var correctingRoundID: String?
     @Published var scoreCorrectionErrorMessage: String?
@@ -1701,8 +1702,14 @@ final class SeriesViewModel: ObservableObject, Loggable {
         standingsPublicationService: SeriesStandingsPublicationService? = nil,
         persistHandicapSettings: ((Series) async -> Result<Series, Error>)? = nil,
         persistRoundHandicaps: ((SeriesRound) async -> Result<SeriesRound, Error>)? = nil,
+        persistHandicapOverride: ((SeriesHandicapOverride) async -> Result<SeriesHandicapOverride, Error>)? = nil,
         handicapDraftDefaults: UserDefaults = .standard
     ) {
+        if let persistHandicapOverride {
+            self.persistHandicapOverride = { value, _ in await persistHandicapOverride(value) }
+        } else {
+            self.persistHandicapOverride = { await FirebaseService.shared.upsertHandicapOverride($0, expected: $1) }
+        }
         self.handicapDraftDefaults = handicapDraftDefaults
         self.persistHandicapSettings = persistHandicapSettings ?? { await FirebaseService.shared.updateSeries($0) }
         self.persistRoundHandicaps = persistRoundHandicaps ?? { await FirebaseService.shared.savePlannedSeriesRoundHandicaps($0) }
@@ -5160,7 +5167,16 @@ final class SeriesViewModel: ObservableObject, Loggable {
         )
     }
 
-    func setHandicapOverride(memberID: String, value: Double?, isOverridden: Bool) async {
+    @discardableResult
+    func setHandicapOverride(memberID: String, value: Double?, isOverridden: Bool,
+                             expectedOverride: SeriesHandicapOverride? = nil, rejectStaleEdits: Bool = false) async -> Bool {
+        guard isCommissioner, series.handicapConfig.isEnabled,
+              activeMembers.contains(where: { $0.id == memberID }),
+              !isOverridden || (value.map { $0.isFinite && (-10...54).contains($0) } ?? false) else { return false }
+        let previous = handicapOverrides.first { $0.memberID == memberID }
+        if rejectStaleEdits {
+            guard SeriesHandicapOverride.matchesSavedVersion(previous, expectedOverride) else { return false }
+        }
         let override = SeriesHandicapOverride(
             id: memberID,
             memberID: memberID,
@@ -5170,8 +5186,9 @@ final class SeriesViewModel: ObservableObject, Loggable {
             lastUpdatedAt: .init(),
             parentID: seriesID
         )
-        switch await FirebaseService.shared.upsertHandicapOverride(override) {
+        switch await persistHandicapOverride(override, previous) {
         case .success(let saved):
+            guard saved.parentID == seriesID else { return false }
             if let index = handicapOverrides.firstIndex(where: { $0.memberID == memberID }) {
                 handicapOverrides[index] = saved
             } else {
@@ -5185,8 +5202,10 @@ final class SeriesViewModel: ObservableObject, Loggable {
                     "has_value": saved.overrideIndex != nil
                 ])
             )
+            return true
         case .failure(let error):
             addBreadcrumb(level: .error, message: "Failed to save handicap override", error: error)
+            return false
         }
     }
 
@@ -5420,7 +5439,7 @@ final class SeriesViewModel: ObservableObject, Loggable {
         roundHandicapDrafts[round.id]?[member.id] ?? cachedHandicapDrafts(roundID: round.id)[member.id] ?? SeriesRoundHandicapDraft(
             input: round.handicapInputs[member.id], seriesIndex: memberHandicaps[member.id]?.effectiveIndex,
             personalIndex: personalIndexesByMemberID[member.id],
-            teeBoxID: SeriesRoundCreationMapping.resolvedTeeBoxID(for: member, courseSegment: course)
+            teeBoxID: round.playerTeeBoxIDs[member.id] ?? SeriesRoundCreationMapping.resolvedTeeBoxID(for: member, courseSegment: course)
         )
     }
 
@@ -5479,6 +5498,7 @@ final class SeriesViewModel: ObservableObject, Loggable {
         isSavingRoundHandicaps = true
         defer { isSavingRoundHandicaps = false }
         var update = current
+        update.playerTeeBoxIDs = candidate.playerTeeBoxIDs
         update.handicapInputs = candidate.handicapInputs
         update.courseOverride = candidate.courseOverride
         update.roundConfig.scoreBasisOverride = candidate.roundConfig.scoreBasisOverride

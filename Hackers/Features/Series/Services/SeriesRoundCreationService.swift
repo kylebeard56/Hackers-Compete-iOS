@@ -168,6 +168,7 @@ struct SeriesRoundCreationService: Loggable {
                 handicapStrokeBasis: series.handicapConfig.strokeBasis,
                 selectedHandicapScoreIDsByMemberID: selectedHandicapScoreIDsByMemberID,
                 roundHandicapInputs: seriesRound.handicapInputs,
+                playerTeeBoxIDs: seriesRound.playerTeeBoxIDs,
                 roundScoringStrokeBasis: seriesRound.roundConfig.handicapStrokeBasis,
                 hostPlayerID: player.id,
                 presenceStatusByMemberID: presenceStatusByMemberID,

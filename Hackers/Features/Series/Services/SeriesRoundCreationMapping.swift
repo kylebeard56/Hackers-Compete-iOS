@@ -80,10 +80,11 @@ enum SeriesCourseHandicapResolver {
         entryFormat: HandicapEntryFormat,
         handicapStrokeBasis: SeriesHandicapStrokeBasis?,
         maximumHandicap: Int?,
-        roundInput: SeriesRoundHandicapInput? = nil
+        roundInput: SeriesRoundHandicapInput? = nil,
+        playerTeeBoxID: String? = nil
     ) -> SeriesCourseHandicapResolution {
         var member = member
-        if let teeBoxID = roundInput?.teeBoxID { member.defaultTeeBoxID = teeBoxID }
+        if let teeBoxID = playerTeeBoxID ?? roundInput?.teeBoxID { member.defaultTeeBoxID = teeBoxID }
         let requestedTeeID = SeriesRoundCreationMapping.resolvedTeeBoxID(
             for: member,
             courseSegment: courseSegment
@@ -1011,6 +1012,7 @@ enum SeriesRoundCreationMapping {
         handicapStrokeBasis: SeriesHandicapStrokeBasis? = nil,
         selectedHandicapScoreIDsByMemberID: [String: Set<String>] = [:],
         roundHandicapInputs: [String: SeriesRoundHandicapInput] = [:],
+        playerTeeBoxIDs: [String: String] = [:],
         roundScoringStrokeBasis: SeriesHandicapStrokeBasis? = nil,
         hostPlayerID: String?,
         presenceStatusByMemberID: [String: RoundParticipantPresenceStatus] = [:],
@@ -1042,7 +1044,7 @@ enum SeriesRoundCreationMapping {
                 : member.teamID
             let teamMapping = representedTeamID.flatMap { teamMappings[$0] }
             let roundInput = roundHandicapInputs[member.id]
-            let teeBoxID = roundInput?.teeBoxID ?? resolvedTeeBoxID(for: member, courseSegment: courseSegment)
+            let teeBoxID = playerTeeBoxIDs[member.id] ?? roundInput?.teeBoxID ?? resolvedTeeBoxID(for: member, courseSegment: courseSegment)
             var resolution = SeriesCourseHandicapResolver.resolve(
                 effectiveIndex: effectiveIndex,
                 member: member,
@@ -1050,7 +1052,8 @@ enum SeriesRoundCreationMapping {
                 entryFormat: handicapEntryFormat,
                 handicapStrokeBasis: resolvedHandicapStrokeBasis,
                 maximumHandicap: maximumHandicap,
-                roundInput: roundInput
+                roundInput: roundInput,
+                playerTeeBoxID: playerTeeBoxIDs[member.id]
             )
             if !roundHandicapInputs.isEmpty, roundInput == nil, handicapEntryFormat == .strokes {
                 resolution = SeriesCourseHandicapResolver.onPlayedHoleBasis(resolution,
@@ -2053,6 +2056,7 @@ enum SeriesRoundHandicapSetup {
               current.lastUpdatedAt == candidate.lastUpdatedAt,
               candidate.handicapInputs.values.allSatisfy(\.isValid) else { throw DraftError.roundUnavailable }
         var updated = current
+        updated.playerTeeBoxIDs = candidate.playerTeeBoxIDs
         updated.handicapInputs = candidate.handicapInputs
         updated.courseOverride = candidate.courseOverride
         updated.roundConfig.scoreBasisOverride = candidate.roundConfig.scoreBasisOverride
@@ -2061,8 +2065,10 @@ enum SeriesRoundHandicapSetup {
     }
 
     static func applying(drafts: [String: SeriesRoundHandicapDraft], to round: SeriesRound) throws -> SeriesRound {
+        guard round.status == .planned, round.roundID == nil else { throw DraftError.roundUnavailable }
         var result = round
         for (memberID, draft) in drafts {
+            result.playerTeeBoxIDs[memberID] = draft.teeBoxID.isEmpty ? nil : draft.teeBoxID
             if draft.method == .series { result.handicapInputs[memberID] = nil }
             else if let input = draft.input { result.handicapInputs[memberID] = input }
             else if !draft.text.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty || round.handicapInputs[memberID] != nil {
@@ -2097,7 +2103,8 @@ enum SeriesRoundHandicapSetup {
             entryFormat: round.roundConfig.handicapEntryFormat,
             handicapStrokeBasis: series.handicapConfig.strokeBasis,
             maximumHandicap: series.handicapConfig.isEnabled ? series.handicapConfig.config.maximumHandicap : nil,
-            roundInput: round.handicapInputs[member.id]
+            roundInput: round.handicapInputs[member.id],
+            playerTeeBoxID: round.playerTeeBoxIDs[member.id]
         )
         if !round.handicapInputs.isEmpty, round.handicapInputs[member.id] == nil,
            round.roundConfig.handicapEntryFormat == .strokes {
@@ -2178,6 +2185,7 @@ extension SeriesRoundHandicapSetup {
         var invalidMemberIDs = Set<String>()
         for member in members {
             guard let draft = drafts[member.id] else { continue }
+            candidate.playerTeeBoxIDs[member.id] = draft.teeBoxID.isEmpty ? nil : draft.teeBoxID
             if draft.method == .series { candidate.handicapInputs[member.id] = nil }
             else if let input = draft.input { candidate.handicapInputs[member.id] = input }
             else {
@@ -2211,7 +2219,7 @@ extension SeriesRoundHandicapSetup {
             switch candidate.handicapInputs[member.id]?.method {
             case .personalIndex: source = "Personal Index"
             case .strokes: source = "Manual Strokes"
-            case nil: source = "Series"
+            case nil: source = handicaps[member.id]?.isOverridden == true ? "Commissioner override" : "Series calculated"
             }
             let strokes = resolved.effectiveStrokes.map {
                 ScoringEngine.handicapStrokesForPlayedHoles(handicap: $0,

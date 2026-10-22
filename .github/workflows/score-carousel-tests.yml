@@ -50,5 +50,11 @@ jobs:
           -only-testing:HackersUnitTests/RoundHandicapRegressionTests
           -only-testing:HackersUnitTests/CourseHandicapCalculationRegressionTests
           -only-testing:HackersUnitTests/HandicapKeyboardDismissalTests
+          -only-testing:HackersUnitTests/SeriesRoundStartAuditTests
+          -only-testing:HackersUnitTests/SeriesRoundCreationMappingTests
+          -only-testing:HackersUnitTests/SeriesRoundSyncServiceTests
+          -only-testing:HackersUnitTests/SeriesRoundCodableTests
+          -only-testing:HackersUnitTests/SeriesHandicapIndexLimitTests
+          -only-testing:HackersUnitTests/RoundParticipantHandicapOverrideTests
           -only-testing:HackersUnitTests/ScoringEngineTests
           CODE_SIGNING_ALLOWED=NO
