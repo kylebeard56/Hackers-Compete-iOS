@@ -24,3 +24,8 @@ Both apps are available to their existing internal Beta groups on build **2026.1
 | Hackers Compete (Production) | 6757131203 | 2026.10.21.2 | VALID / IN_BETA_TESTING |
 
 Fresh API receipts are stored in `both-testflight-builds.json`, `apple-build-status.json`, and `apple-production-build-status.json`. No code was pushed or merged, no public App Store release was submitted, and no backend or production user records were modified.
+
+
+### Hosted simulator CI setup
+
+The first GitHub run failed the 14 hosted handicap keyboard/accessibility tests on an uninitialized simulator. The same 14 tests passed with zero failures on a fresh local simulator after enabling AccessibilityEnabled and ApplicationAccessibilityEnabled. CI now boots a dedicated simulator, enables those preferences, and disables parallel simulator cloning so the hosted views use that prepared device. All existing test selections remain enabled. This workflow-only change does not change either archived application.

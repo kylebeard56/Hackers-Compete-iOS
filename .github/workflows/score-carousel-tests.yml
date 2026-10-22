@@ -27,13 +27,24 @@ jobs:
       - name: Select Xcode 26.2
         run: sudo xcode-select -s /Applications/Xcode_26.2.app/Contents/Developer
 
+      - name: Prepare simulator accessibility for hosted view tests
+        run: |
+          simulator_id=$(xcrun simctl create "Hackers CI" com.apple.CoreSimulator.SimDeviceType.iPhone-17-Pro com.apple.CoreSimulator.SimRuntime.iOS-26-2)
+          xcrun simctl boot "$simulator_id"
+          xcrun simctl bootstatus "$simulator_id" -b
+          xcrun simctl spawn "$simulator_id" defaults write com.apple.Accessibility AccessibilityEnabled -bool YES
+          xcrun simctl spawn "$simulator_id" defaults write com.apple.Accessibility ApplicationAccessibilityEnabled -bool YES
+          echo "HACKERS_TEST_SIMULATOR_ID=$simulator_id" >> "$GITHUB_ENV"
+
       - name: Run score carousel tests
         run: >-
           xcodebuild test
           -project Hackers.xcodeproj
           -scheme Sandbox
           -configuration Sandbox
-          -destination 'platform=iOS Simulator,name=iPhone 17 Pro,OS=26.2'
+          -destination "platform=iOS Simulator,id=${HACKERS_TEST_SIMULATOR_ID}"
+          -parallel-testing-enabled NO
+          -collect-test-diagnostics never
           -only-testing:HackersUnitTests/ScoreCarouselSelectionTests
           -only-testing:HackersUnitTests/RoundSessionLifecycleTests
           -only-testing:HackersUnitTests/RoundSessionReloadTests
