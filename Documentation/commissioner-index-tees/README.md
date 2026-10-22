@@ -69,8 +69,18 @@ An intermediate affected-suite run reported **292 passed, 0 failed, 0 skipped**,
 
 ## Acceptance limits
 
-Persistence in the regression fixtures is injected or serialized locally. No customer/production records were written, no backend was deployed, and no TestFlight build was uploaded. Physical-device keyboard presentation and authenticated Firebase save/reload/listener/concurrent-commissioner acceptance still require testing. The Firestore transaction compiles against the installed SDK; its live backend behavior is not claimed as tested. The workflow fixture validates production payload creation and net scoring, rather than creating a live customer round.
+Persistence in the regression fixtures is injected or serialized locally. No customer/production records were written and no backend was deployed. The user subsequently authorized pushing PR #19 and an internal Sandbox TestFlight deployment; the release receipt below records that separate action. Physical-device keyboard presentation and authenticated Firebase save/reload/listener/concurrent-commissioner acceptance still require testing. The Firestore transaction compiles against the installed SDK; its live backend behavior is not claimed as tested. The workflow fixture validates production payload creation and net scoring, rather than creating a live customer round.
 
 ## PR-ready summary
 
 Commissioners can save league Index overrides with the keyboard open and open the same editor directly from Handicap Details. Every Start Round player has a tee selector regardless of handicap source. Tee choices persist independently through planned drafts and participant creation, while the lobby recalculates tee-dependent Course HCP without changing the Index or manual round strokes. Existing round locks, basis/source rules, and scoring logic are retained.
+
+## Authorized TestFlight deployment
+
+The user subsequently authorized committing/pushing, creating PR #19, and deploying Hackers Compete Test. [PR #19](https://github.com/kylebeard56/Hackers-Compete-iOS/pull/19) is open.
+
+**Hackers Compete Test 1.0.0 (2026.10.21.3) is available to internal Beta testers.** Apple confirms **VALID / IN_BETA_TESTING**, audience **INTERNAL_ONLY**, build ID `9d719fa8-c736-46da-9a77-ebe31c9d98a3`. The existing internal Beta group has access to all builds. External build state is NOT_APPLICABLE.
+
+The archive contains application source commit `bc76855bdfe49d860b1b36ca39d4a0b2e8db7da3`. Sandbox app and Live Activity bundle IDs, versions, signatures, and matching application dSYMs were verified. The exported IPA uses the existing Apple Distribution certificate and cached Xcode-managed App Store profiles, with internal-only TestFlight export enabled. `altool` reported no upload errors; the App Store Connect API independently confirmed availability. The Mac was locked, so the successful upload used the existing API key after an offline cached-profile export. No new signing certificate or provisioning profile was created.
+
+Archive, IPA, and original logs are preserved in `/Users/Kirsten/Developer/Hackers-Combined/build-artifacts/commissioner-ux-2026-10-21/`. Release hashes and receipt: [testflight-release.json](testflight-release.json). Fresh Apple state: [testflight-apple-status.json](testflight-apple-status.json). Live Firebase/device acceptance remains manual; this deployment does not certify those workflows.

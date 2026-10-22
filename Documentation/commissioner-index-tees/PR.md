@@ -17,6 +17,6 @@ Validation:
 - Simulator compilation and `git diff --check` passed. Ten new regressions cover keyboard/save/failure/cancel/reopen, mixed tees across eight players, override sources, registered/offline members, full/front/back segments, manual strokes, stale writes, planned persistence, started locks, and the production creation/net-scoring workflow.
 - The inherited legacy `HackersTests` scheme reference is unavailable; its explicit run attempt is documented. All available tests ran without disabling tests.
 
-Physical-device and authenticated Firebase save/reload/concurrency acceptance remain manual. Fixture persistence is injected/serialized; no production/customer data, backend deployment, or TestFlight upload is included.
+Physical-device and authenticated Firebase save/reload/concurrency acceptance remain manual. Fixture persistence is injected/serialized. The separately authorized internal TestFlight deployment of Sandbox build **1.0.0 (2026.10.21.3)** is **available to internal Beta testers**. Apple confirms **VALID / IN_BETA_TESTING** and **INTERNAL_ONLY** (build ID `9d719fa8-c736-46da-9a77-ebe31c9d98a3`). No backend deployment or production/customer data updates are included.
 
-Root causes, changed files, commands, result metadata, and screenshots: [implementation report](Documentation/commissioner-index-tees/README.md).
+Root causes, changed files, commands, result metadata, and screenshots: [implementation report](https://github.com/kylebeard56/Hackers-Compete-iOS/blob/codex/commissioner-index-tees/Documentation/commissioner-index-tees/README.md).
