@@ -1,0 +1,405 @@
+{
+  "read_at": "2026-10-19",
+  "environment": "hackers-compete-sandbox",
+  "test_hcp_series_id": "V6Egarw4RtsnnUNKSeM1oTubHFUH",
+  "test_hcp_default_course": null,
+  "canonical_27322_document_exists": false,
+  "records": [
+    {
+      "document_id": "24833",
+      "provider_reference": 24833,
+      "origin": "golfCourseAPI",
+      "blue_tees": [
+        {
+          "ratingFull": 72.2,
+          "name": "Blue",
+          "id": "blue_male",
+          "holes": [
+            {
+              "yardage": 329,
+              "par": 4,
+              "number": 1,
+              "handicap": 15
+            },
+            {
+              "par": 3,
+              "yardage": 143,
+              "number": 2,
+              "handicap": 17
+            },
+            {
+              "par": 4,
+              "yardage": 425,
+              "number": 3,
+              "handicap": 1
+            },
+            {
+              "number": 4,
+              "handicap": 3,
+              "yardage": 406,
+              "par": 4
+            },
+            {
+              "handicap": 9,
+              "yardage": 500,
+              "par": 5,
+              "number": 5
+            },
+            {
+              "par": 3,
+              "handicap": 11,
+              "yardage": 204,
+              "number": 6
+            },
+            {
+              "number": 7,
+              "par": 4,
+              "yardage": 418,
+              "handicap": 5
+            },
+            {
+              "yardage": 418,
+              "par": 4,
+              "number": 8,
+              "handicap": 7
+            },
+            {
+              "yardage": 482,
+              "number": 9,
+              "par": 5,
+              "handicap": 13
+            },
+            {
+              "handicap": 4,
+              "number": 10,
+              "par": 4,
+              "yardage": 428
+            },
+            {
+              "yardage": 180,
+              "handicap": 10,
+              "number": 11,
+              "par": 3
+            },
+            {
+              "par": 4,
+              "number": 12,
+              "handicap": 14,
+              "yardage": 345
+            },
+            {
+              "number": 13,
+              "yardage": 411,
+              "handicap": 2,
+              "par": 4
+            },
+            {
+              "par": 5,
+              "number": 14,
+              "yardage": 510,
+              "handicap": 8
+            },
+            {
+              "handicap": 18,
+              "par": 3,
+              "yardage": 147,
+              "number": 15
+            },
+            {
+              "par": 4,
+              "number": 16,
+              "yardage": 309,
+              "handicap": 16
+            },
+            {
+              "par": 4,
+              "handicap": 6,
+              "number": 17,
+              "yardage": 375
+            },
+            {
+              "yardage": 489,
+              "number": 18,
+              "par": 5,
+              "handicap": 12
+            }
+          ],
+          "totalHoles": 18,
+          "slopeFull": 137,
+          "gender": "male"
+        }
+      ]
+    },
+    {
+      "document_id": "MJSz56yWUkQ4Q4U8bWem9UVqBSVU",
+      "provider_reference": 27322,
+      "origin": "hackers",
+      "blue_tees": [
+        {
+          "id": "EJjC3800YYR0fO2HRTriqiGCJ5xC",
+          "slopeFull": 137,
+          "gender": "male",
+          "slopeBack": 143,
+          "name": "Blue",
+          "ratingFull": 72.2,
+          "holes": [
+            {
+              "number": 1,
+              "yardage": 329,
+              "par": 4,
+              "handicap": 15
+            },
+            {
+              "par": 3,
+              "handicap": 17,
+              "number": 2,
+              "yardage": 143
+            },
+            {
+              "handicap": 1,
+              "yardage": 425,
+              "number": 3,
+              "par": 4
+            },
+            {
+              "yardage": 406,
+              "number": 4,
+              "handicap": 3,
+              "par": 4
+            },
+            {
+              "handicap": 9,
+              "number": 5,
+              "par": 5,
+              "yardage": 500
+            },
+            {
+              "yardage": 204,
+              "handicap": 11,
+              "number": 6,
+              "par": 3
+            },
+            {
+              "number": 7,
+              "handicap": 5,
+              "par": 4,
+              "yardage": 418
+            },
+            {
+              "handicap": 7,
+              "number": 8,
+              "par": 4,
+              "yardage": 418
+            },
+            {
+              "number": 9,
+              "par": 5,
+              "yardage": 482,
+              "handicap": 13
+            },
+            {
+              "number": 10,
+              "par": 4,
+              "yardage": 428,
+              "handicap": 4
+            },
+            {
+              "yardage": 180,
+              "par": 3,
+              "number": 11,
+              "handicap": 10
+            },
+            {
+              "yardage": 345,
+              "handicap": 14,
+              "number": 12,
+              "par": 4
+            },
+            {
+              "handicap": 2,
+              "yardage": 411,
+              "number": 13,
+              "par": 4
+            },
+            {
+              "number": 14,
+              "par": 5,
+              "handicap": 8,
+              "yardage": 510
+            },
+            {
+              "handicap": 18,
+              "par": 3,
+              "number": 15,
+              "yardage": 147
+            },
+            {
+              "par": 4,
+              "handicap": 16,
+              "yardage": 309,
+              "number": 16
+            },
+            {
+              "yardage": 375,
+              "handicap": 6,
+              "number": 17,
+              "par": 4
+            },
+            {
+              "par": 5,
+              "handicap": 12,
+              "yardage": 489,
+              "number": 18
+            }
+          ],
+          "totalHoles": 18,
+          "ratingFront": 36.4,
+          "slopeFront": 130,
+          "ratingBack": 35.8
+        }
+      ]
+    },
+    {
+      "document_id": "2petFWO6L40zc95XvacraA8N8wKp",
+      "provider_reference": 27322,
+      "origin": "hackers",
+      "blue_tees": [
+        {
+          "ratingFull": 72.2,
+          "id": "tIoFlOmIGfJ8HaRSyKl6zX1wG9EV",
+          "ratingFront": 36.4,
+          "slopeFront": 130,
+          "slopeFull": 137,
+          "gender": "male",
+          "slopeBack": 143,
+          "name": "Blue",
+          "ratingBack": 35.8,
+          "totalHoles": 18,
+          "holes": [
+            {
+              "handicap": 15,
+              "par": 4,
+              "yardage": 329,
+              "number": 1
+            },
+            {
+              "par": 3,
+              "handicap": 17,
+              "number": 2,
+              "yardage": 143
+            },
+            {
+              "number": 3,
+              "par": 4,
+              "yardage": 425,
+              "handicap": 1
+            },
+            {
+              "number": 4,
+              "handicap": 3,
+              "yardage": 406,
+              "par": 4
+            },
+            {
+              "handicap": 9,
+              "par": 5,
+              "number": 5,
+              "yardage": 500
+            },
+            {
+              "par": 3,
+              "handicap": 11,
+              "yardage": 204,
+              "number": 6
+            },
+            {
+              "number": 7,
+              "handicap": 5,
+              "yardage": 418,
+              "par": 4
+            },
+            {
+              "par": 4,
+              "number": 8,
+              "yardage": 418,
+              "handicap": 7
+            },
+            {
+              "number": 9,
+              "par": 5,
+              "yardage": 482,
+              "handicap": 13
+            },
+            {
+              "yardage": 428,
+              "par": 4,
+              "number": 10,
+              "handicap": 4
+            },
+            {
+              "number": 11,
+              "par": 3,
+              "handicap": 10,
+              "yardage": 180
+            },
+            {
+              "par": 4,
+              "yardage": 345,
+              "handicap": 14,
+              "number": 12
+            },
+            {
+              "yardage": 411,
+              "par": 4,
+              "handicap": 2,
+              "number": 13
+            },
+            {
+              "yardage": 510,
+              "handicap": 8,
+              "number": 14,
+              "par": 5
+            },
+            {
+              "number": 15,
+              "yardage": 147,
+              "par": 3,
+              "handicap": 18
+            },
+            {
+              "handicap": 16,
+              "yardage": 309,
+              "par": 4,
+              "number": 16
+            },
+            {
+              "par": 4,
+              "number": 17,
+              "yardage": 375,
+              "handicap": 6
+            },
+            {
+              "number": 18,
+              "par": 5,
+              "handicap": 12,
+              "yardage": 489
+            }
+          ]
+        }
+      ]
+    }
+  ],
+  "read_only_runtime_selection": {
+    "course_id": "2petFWO6L40zc95XvacraA8N8wKp",
+    "provider_reference": 27322,
+    "tee_id": "tIoFlOmIGfJ8HaRSyKl6zX1wG9EV",
+    "tee_name": "Blue",
+    "gender": "male",
+    "segment": "full18",
+    "status": "ready",
+    "rating": 72.2,
+    "slope": 137,
+    "par": 72,
+    "method": "LLDB frame variables and signed-in Simulator UI; no round submission"
+  }
+}

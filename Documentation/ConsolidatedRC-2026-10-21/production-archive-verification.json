@@ -1,0 +1,29 @@
+{
+  "bundles": [
+    {
+      "bundle": "com.tigermindlabs.hackers.compete",
+      "version": "1.0.0",
+      "build": "2026.10.21.2",
+      "symbols_match": true,
+      "binary_sha256": "c649adc8c8c240299a5af354e27951ccb89be9627ac68d2eb07bbd69c144863c"
+    },
+    {
+      "bundle": "com.tigermindlabs.hackers.compete.liveactivity",
+      "version": "1.0.0",
+      "build": "2026.10.21.2",
+      "symbols_match": true,
+      "binary_sha256": "a15c27a38a4e033844b698158f58aa0ac0b72c0946dbcffdcf1cbe3eddac35d2"
+    },
+    {
+      "bundle": "com.tigermindlabs.hackers.compete.watchkitapp",
+      "version": "1.0.0",
+      "build": "2026.10.21.2",
+      "symbols_match": true,
+      "binary_sha256": "769e9a39bac8db1c35dddc5f9893cf6a6735e6ed221951bf4f62fb7907d782f9"
+    }
+  ],
+  "firebase_project": "hackers-compete",
+  "production_compiler_flags_verified": true,
+  "source_hashes_match": true,
+  "recursive_signature_verified": true
+}

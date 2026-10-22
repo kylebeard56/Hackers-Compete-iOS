@@ -14,6 +14,7 @@ enum RoundActivationError: String, CaseIterable {
     case scoringGroupsInvalidReferences
     case matchupsIncomplete
     case matchupInvalidReferences
+    case handicapUnresolved
     case courseSegmentMismatch
     case vegasConfigurationInvalid
     case unknown
@@ -49,6 +50,11 @@ extension RoundSession {
         var errors: Set<RoundActivationError> = .init()
         
         for participant in snapshot.participants {
+            if snapshot.configuration.useHandicaps, participant.isPresenceActive,
+               !HandicapCalculator.isReady(participant, format: snapshot.configuration.handicapEntryFormat,
+                                           courseSegment: snapshot.courseSegment, indexBasis: snapshot.handicapIndexBasis) {
+                errors.insert(.handicapUnresolved)
+            }
             // 1. Append error if any player is not assigned to a tee group
             if participant.groupID.doesNotExist {
                 errors.insert(.playerMissingFromTeeGroup)

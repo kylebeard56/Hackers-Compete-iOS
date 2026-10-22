@@ -19,6 +19,7 @@ struct SeriesRosterView: View {
     let palette: DesignPalette
     var onAddPlayers: (() -> Void)?
 
+    @State private var showHandicapSettings = false
     @State private var showAddOfflinePlayer = false
     @State private var podEditorTeam: SeriesTeam?
     @State private var podEditorSheetDetent: PresentationDetent = .fraction(0.56)
@@ -47,8 +48,18 @@ struct SeriesRosterView: View {
 
     var body: some View {
         VStack(spacing: 16) {
+            if viewModel.isCommissioner {
+                Button { showHandicapSettings = true } label: {
+                    Label("Handicap Settings · \(viewModel.series.handicapConfig.mode.displayName)", systemImage: "figure.golf")
+                        .frame(maxWidth: .infinity, minHeight: 44)
+                }
+                .accessibilityIdentifier("series.roster.handicapSettings")
+            }
             rosterSection
             teamsSection
+        }
+        .sheet(isPresented: $showHandicapSettings) {
+            SeriesHandicapSettingsView(viewModel: viewModel)
         }
         .sheet(isPresented: $showAddOfflinePlayer) {
             NewOfflinePlayerView { name in

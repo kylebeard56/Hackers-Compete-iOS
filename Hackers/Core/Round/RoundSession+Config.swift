@@ -200,23 +200,50 @@ extension RoundSession {
     func setHandicapEntryFormat(_ format: HandicapEntryFormat, maximumHandicap: Int? = nil) async {
         addBreadcrumb()
         let previous = snapshot.configuration.handicapEntryFormat
-        let resolvedFormat: HandicapEntryFormat = format == .courseHandicap
-            && !HandicapCalculator.hasCourseHandicapData(courseSegment: snapshot.courseSegment)
-            ? .strokes
-            : format
+        guard snapshot.round.status.allowsCourseHandicapSetupEdits, snapshot.configuration.leagueHandicapMaximum == nil,
+              !snapshot.participants.contains(where: { $0.seriesMemberID != nil || $0.handicapSnapshot != nil }) else { return }
+        let resolvedFormat = format
 
         do {
-            if snapshot.round.configuration.handicapEntryFormat != resolvedFormat {
-                snapshot.round.configuration.handicapEntryFormat = resolvedFormat
-                _ = try await snapshot.round.put().get()
-            }
+            snapshot.round.configuration = HandicapCalculator.personalConfiguration(snapshot.configuration,
+                playedHoleCount: snapshot.holeSegment.holeCount)
+            snapshot.round.configuration.handicapEntryFormat = resolvedFormat
+            _ = try await snapshot.round.put().get()
 
+            var participants = snapshot.participants
+            if previous != format, format == .courseHandicap {
+                let ids = participants.filter { $0.handicapIndex == nil }.compactMap(\.playerID).filter(\.isPopulated)
+                if !ids.isEmpty {
+                    switch await FirebaseService.shared.getPlayersByIDs(ids) {
+                    case .success(let players):
+                        var refreshedPlayers = players
+                        for index in refreshedPlayers.indices {
+                            do {
+                                if let refreshed = try await FirebaseService.shared.fetchPersonalHandicapHistory(playerID: refreshedPlayers[index].id).player {
+                                    refreshedPlayers[index] = refreshed
+                                }
+                            } catch {
+                                addBreadcrumb(level: .error, message: "Could not refresh personal Index; retaining the saved source", error: error)
+                            }
+                        }
+                        guard snapshot.round.status.allowsCourseHandicapSetupEdits, snapshot.configuration.handicapEntryFormat == format else { return }
+                        participants = snapshot.participants.map { participant in
+                            guard let player = refreshedPlayers.first(where: { $0.id == participant.playerID }) else { return participant }
+                            return PersonalHandicapRoundPrefill.participant(participant, player: player,
+                                configuration: snapshot.configuration, isLeagueRound: false, selectingEntryFormat: true)
+                        }
+                    case .failure(let error):
+                        addBreadcrumb(level: .error, message: "Could not prefill personal Index; manual entry remains available", error: error)
+                    }
+                }
+            }
             let recomputed = HandicapCalculator.recomputedParticipants(
-                snapshot.participants,
+                participants,
                 format: resolvedFormat,
                 courseSegment: snapshot.courseSegment,
                 maximumHandicap: maximumHandicap,
-                handicapStrokeBasis: snapshot.handicapStrokeBasis
+                handicapStrokeBasis: snapshot.handicapIndexBasis,
+                changingEntryFormat: previous != format
             )
             for participant in recomputed where snapshot.participants.first(where: { $0.id == participant.id }) != participant {
                 try await update(participant: participant)
@@ -237,24 +264,19 @@ extension RoundSession {
 
     func setHandicapStrokeBasis(_ basis: SeriesHandicapStrokeBasis?, maximumHandicap: Int? = nil) async {
         addBreadcrumb()
-        let previous = snapshot.configuration.handicapStrokeBasis
+        guard snapshot.round.status.allowsCourseHandicapSetupEdits, snapshot.configuration.leagueHandicapMaximum == nil,
+              !snapshot.participants.contains(where: { $0.seriesMemberID != nil || $0.handicapSnapshot != nil }) else { return }
+        let isIndex = snapshot.configuration.handicapEntryFormat == .courseHandicap
+        let previous = isIndex ? snapshot.handicapIndexBasis : snapshot.configuration.handicapStrokeBasis
 
         do {
-            if snapshot.round.configuration.handicapStrokeBasis != basis {
-                snapshot.round.configuration.handicapStrokeBasis = basis
-                _ = try await snapshot.round.put().get()
-            }
-
-            if snapshot.configuration.handicapEntryFormat == .courseHandicap {
-                let resolvedBasis = basis ?? SeriesHandicapStrokeBasis.defaultBasis(
-                    holeCount: snapshot.holeRange?.count ?? snapshot.holeSegment.holeCount
-                )
+            snapshot.round.configuration = HandicapCalculator.configuration(snapshot.configuration,
+                settingHandicapBasis: basis, playedHoleCount: snapshot.holeSegment.holeCount)
+            _ = try await snapshot.round.put().get()
+            if isIndex {
                 let recomputed = HandicapCalculator.recomputedParticipants(
-                    snapshot.participants,
-                    format: .courseHandicap,
-                    courseSegment: snapshot.courseSegment,
-                    maximumHandicap: maximumHandicap,
-                    handicapStrokeBasis: resolvedBasis
+                    snapshot.participants, format: .courseHandicap, courseSegment: snapshot.courseSegment,
+                    maximumHandicap: maximumHandicap, handicapStrokeBasis: snapshot.handicapIndexBasis
                 )
                 for participant in recomputed where snapshot.participants.first(where: { $0.id == participant.id }) != participant {
                     try await update(participant: participant)

@@ -8,6 +8,8 @@
 import SwiftUI
 
 enum ScorecardStrokeDotPolicy {
+    // Allocations exist before a score does. Net scores already include them;
+    // zero and given-back strokes do not render received-stroke dots.
     static func visibleCount(strokesReceived: Int, basis: ScoreBasis) -> Int {
         basis == .gross ? max(0, strokesReceived) : 0
     }

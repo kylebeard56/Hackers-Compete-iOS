@@ -47,7 +47,10 @@ struct NewSeriesRoundSheet: View {
     var onCreated: () -> Void
 
     @State private var draft: SeriesRoundDraft
-    @State private var courseHandicapAvailable = false
+    @StateObject private var courseValidationStore = SeriesCourseHandicapValidationStore()
+
+    private var courseValidation: SeriesCourseHandicapValidation { courseValidationStore.current(for: planningCourseSelection) }
+    private var courseHandicapAvailable: Bool { courseValidation.permitsConfiguration }
     @State private var profileEditorSeed: SeriesScoringProfileEditorSeed?
     @State private var showCoursePicker = false
     @State private var showMatchupAutoFillDialog = false
@@ -283,6 +286,8 @@ struct NewSeriesRoundSheet: View {
             },
             onScroll: { _ in }
         )
+        .disabled(isCreating)
+        .interactiveDismissDisabled(isCreating)
         .background(palette.backgroundColor.ignoresSafeArea())
         .sheet(isPresented: $showCoursePicker) {
             SeriesRoundCoursePickerSheet(initialSelection: selectedCourse) { selection in
@@ -294,9 +299,11 @@ struct NewSeriesRoundSheet: View {
         .task {
             await viewModel.createBuiltInScoringProfilesIfNeeded()
             normalizeSelectedTemplate()
-            await refreshCourseHandicapAvailability()
             refreshPlanningStructure(forceRegenerate: true)
             normalizeSelectedProfilesForCompetition()
+        }
+        .task(id: planningCourseSelection) {
+            await refreshCourseHandicapAvailability()
         }
         .onChange(of: competitionScope) { _, newValue in
             if newValue != .matchup {
@@ -319,7 +326,6 @@ struct NewSeriesRoundSheet: View {
         .onChange(of: matchupPlans) { _, _ in refreshPlanningStructure() }
         .onChange(of: selectedCourse) { _, _ in
             refreshPlanningStructure()
-            Task { await refreshCourseHandicapAvailability() }
         }
         .onChange(of: scheduledDate) { _, _ in if hasDate { refreshPlanningStructure() } }
         .onChange(of: hasDate) { _, _ in refreshPlanningStructure(forceRegenerate: false) }
@@ -752,6 +758,11 @@ struct NewSeriesRoundSheet: View {
             SeriesSheetRow(palette: palette) {
                 handicapOptionsRow
             }
+            if handicapEntryFormat == .courseHandicap {
+                SeriesCourseHandicapValidationView(validation: courseValidation,
+                    retry: { Task { await refreshCourseHandicapAvailability() } },
+                    selectTee: { showCoursePicker = true })
+            }
         }
     }
 
@@ -782,9 +793,7 @@ struct NewSeriesRoundSheet: View {
             competitionScope: competitionScope,
             resolvedAutoBasis: nil,
             palette: palette,
-            courseHandicapSubtitle: courseHandicapAvailable
-                ? "Use member index and this round's selected tee to seed playing strokes"
-                : "Select a course and tee with rating/slope to use course handicap"
+            courseHandicapSubtitle: courseValidation.message
         )
     }
 
@@ -1057,31 +1066,39 @@ struct NewSeriesRoundSheet: View {
 
     private func createRound() {
         guard !isCreating else { return }
+        let originalDraft = draft
         var persistedDraft = draft
         persistedDraft.matchupPlans = normalizedMatchupPlans()
         let plannedStructure = persistedPlanningStructure()
         persistedDraft.plannedMatchups = plannedStructure.matchups
         persistedDraft.plannedTeeGroups = plannedStructure.teeGroups
         persistedDraft.partnershipPlans = normalizedPartnershipPlans()
-        do {
-            _ = try persistedDraft.persistedValues(
-                usesTeams: viewModel.usesTeams,
-                courseHandicapAvailable: courseHandicapAvailable,
-                fallbackTitle: "Round \(viewModel.rounds.count + 1)"
-            )
-        } catch {
-            errorMessage = error.localizedDescription
-            return
-        }
-
         isCreating = true
+        let selection = planningCourseSelection
         Task {
+            defer { isCreating = false }
+            let checked = handicapEntryFormat == .courseHandicap
+                ? await courseValidationStore.revalidate(selection) : courseValidation
+            guard selection == planningCourseSelection, draft == originalDraft else { return }
+            if handicapEntryFormat == .courseHandicap, !checked.permitsConfiguration {
+                errorMessage = checked.message
+                return
+            }
+            do {
+                _ = try persistedDraft.persistedValues(
+                    usesTeams: viewModel.usesTeams,
+                    courseValidation: checked,
+                    fallbackTitle: "Round \(viewModel.rounds.count + 1)"
+                )
+            } catch {
+                errorMessage = error.localizedDescription
+                return
+            }
             let created = await viewModel.addRound(
                 draft: persistedDraft,
-                courseHandicapAvailable: courseHandicapAvailable,
+                courseValidation: checked,
                 fallbackTitle: "Round \(viewModel.rounds.count + 1)"
             )
-            isCreating = false
             guard created != nil else {
                 errorMessage = "The round could not be saved. Your selections are still here so you can try again."
                 return
@@ -1106,8 +1123,7 @@ struct NewSeriesRoundSheet: View {
 
     @MainActor
     private func refreshCourseHandicapAvailability() async {
-        let available = await SeriesRoundCourseHandicapAvailability.isAvailable(for: planningCourseSelection)
-        courseHandicapAvailable = available
+        await courseValidationStore.refresh(planningCourseSelection)
     }
 
     private func sectionTitle(_ title: String) -> some View {
@@ -2599,6 +2615,7 @@ struct NewSeriesRoundSheet: View {
 
     private var courseSectionStatus: SeriesRoundSheetSectionStatus {
         if selectedCourse == nil { return .review }
+        if handicapEntryFormat == .courseHandicap, courseValidation.status != .ready { return .review }
         if let def = viewModel.series.settings.defaultCourse,
            selectedCourse?.courseID == def.courseID {
             return .leagueDefault
@@ -3748,49 +3765,6 @@ struct SeriesRoundTeeSheetPlanningCard: View {
     }
 }
 
-enum SeriesRoundCourseHandicapAvailability {
-    static func isAvailable(for selection: SeriesCourseSelection?) async -> Bool {
-        guard let selection, selection.courseID.isPopulated else { return false }
-        guard let course = await loadCourse(for: selection) else { return false }
-        let totalHoles = course.tees.map(\.totalHoles).max() ?? selection.holeSegment.holeCount
-        let holeRange = selection.holeSegment.toHoleRange(totalHoles: totalHoles) ?? selection.holeSegment.holeRange
-        let defaultTee = resolvedDefaultTeeID(persistedID: selection.defaultTeeBoxID, course: course)
-        let segment = CourseSegment(
-            courseInfo: CourseInfo(course: course, for: selection.holeSegment),
-            holeRange: holeRange,
-            defaultTee: defaultTee
-        )
-        return HandicapCalculator.hasCourseHandicapData(courseSegment: segment)
-    }
-
-    private static func loadCourse(for selection: SeriesCourseSelection) async -> Course? {
-        if let apiID = GolfCourseID(selection.courseID) {
-            do {
-                return try await GolfCourseRepository.shared.course(by: apiID)
-            } catch {
-                switch await FirebaseService.shared.getCourseByID(selection.courseID) {
-                case .success(let fetched):
-                    return fetched
-                case .failure:
-                    return nil
-                }
-            }
-        }
-
-        switch await FirebaseService.shared.getCourseByID(selection.courseID) {
-        case .success(let fetched):
-            return fetched
-        case .failure:
-            return nil
-        }
-    }
-
-    private static func resolvedDefaultTeeID(persistedID: String, course: Course) -> String? {
-        guard persistedID.isPopulated else { return course.tees.first?.id }
-        return course.tees.contains(where: { $0.id == persistedID }) ? persistedID : course.tees.first?.id
-    }
-}
-
 private enum SeriesRoundSheetSectionStatus {
     case required
     case review
@@ -3809,6 +3783,7 @@ struct SeriesRoundHandicapParticipationCard: View {
     @Binding var excludedHandicapMemberIDs: [String]
 
     @State private var showCustomizationSheet = false
+    @State private var showHandicapSettings = false
 
     private var palette: DesignPalette { .init(theme: .primary, scheme: colorScheme) }
     private var members: [SeriesMember] { viewModel.handicapParticipationMembers(for: seriesRound) }
@@ -3827,21 +3802,19 @@ struct SeriesRoundHandicapParticipationCard: View {
 
     var body: some View {
         SeriesSheetCard(palette: palette) {
-            HStack(spacing: 8) {
-                Text("SERIES HANDICAPS")
-                    .fontStyle(kFontName, size: 14, weight: .semibold)
-                    .foregroundStyle(palette.foregroundColor)
-
-                Spacer(minLength: 0)
-
-                Chip(
-                    text: handicapMode.isEnabled ? "ON" : "OFF",
-                    size: .xSmall,
-                    foreground: handicapMode.isEnabled ? Color.accentGreen : Color.neutral,
-                    background: handicapMode.isEnabled
-                        ? Color.accentGreen.opacity(palette.scheme.translucent)
-                        : palette.cardEmbeddedRowBackground
-                )
+            if viewModel.isCommissioner {
+                Button {
+                    showHandicapSettings = true
+                } label: {
+                    handicapHeader
+                        .frame(minHeight: 44)
+                        .contentShape(Rectangle())
+                }
+                .buttonStyle(.plain)
+                .accessibilityLabel("Handicap Settings · \(handicapMode.displayName)")
+                .accessibilityIdentifier("series.round.handicapSettings")
+            } else {
+                handicapHeader
             }
 
             if handicapMode == .dynamic {
@@ -3919,6 +3892,10 @@ struct SeriesRoundHandicapParticipationCard: View {
                     .fixedSize(horizontal: false, vertical: true)
             }
         }
+        .sheet(isPresented: $showHandicapSettings) {
+            SeriesHandicapSettingsView(viewModel: viewModel)
+                .presentationDragIndicator(.visible)
+        }
         .onAppear(perform: enforceFormatEligibility)
         .onChange(of: selectedTemplateID) { _, _ in
             enforceFormatEligibility()
@@ -3931,6 +3908,30 @@ struct SeriesRoundHandicapParticipationCard: View {
             )
             .presentationDetents([.medium, .large])
             .presentationDragIndicator(.visible)
+        }
+    }
+
+    private var handicapHeader: some View {
+        HStack(spacing: 8) {
+            Text("SERIES HANDICAPS")
+                .fontStyle(kFontName, size: 14, weight: .semibold)
+                .foregroundStyle(palette.foregroundColor)
+
+            Spacer(minLength: 0)
+
+            Chip(
+                text: handicapMode.isEnabled ? "ON" : "OFF",
+                size: .xSmall,
+                foreground: handicapMode.isEnabled ? Color.accentGreen : Color.neutral,
+                background: handicapMode.isEnabled
+                    ? Color.accentGreen.opacity(palette.scheme.translucent)
+                    : palette.cardEmbeddedRowBackground
+            )
+            if viewModel.isCommissioner {
+                Image(systemName: "chevron.right")
+                    .font(.caption.weight(.semibold))
+                    .foregroundStyle(Color.neutral)
+            }
         }
     }
 
@@ -4198,5 +4199,25 @@ private struct SeriesRoundHandicapCustomizationSheet: View {
         } else {
             draftExcludedMemberIDs = Array(excludedMemberIDSet.union([memberID])).sorted()
         }
+    }
+}
+
+struct SeriesCourseHandicapValidationView: View {
+    let validation: SeriesCourseHandicapValidation
+    var retry: () -> Void
+    var selectTee: () -> Void
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 6) {
+            if validation.status == .checking { ProgressView("Checking course data…") }
+            else { Text(validation.message) }
+            if let detail = validation.detail { Text(detail) }
+            if [.loadFailed, .missingData].contains(validation.status) { Button("Retry", action: retry) }
+            if [.teeUnavailable, .missingData, .estimated, .noCourse].contains(validation.status) {
+                Button("Select course or tee", action: selectTee)
+            }
+        }
+        .font(.footnote)
+        .accessibilityIdentifier("series.course.validation")
     }
 }

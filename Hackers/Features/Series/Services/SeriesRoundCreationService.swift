@@ -11,6 +11,7 @@ import Foundation
 enum SeriesRoundCreationFailure: Error {
     case missingSession
     case missingCourse
+    case invalidCourseData(String)
     case invalidCourseHandicaps([SeriesCourseHandicapValidationIssue])
     case writeFailed(String)
 
@@ -20,6 +21,8 @@ enum SeriesRoundCreationFailure: Error {
             return "Your player session could not be loaded. Reopen the series and try again."
         case .missingCourse:
             return "Select a course and tee before starting this round."
+        case .invalidCourseData(let message):
+            return message
         case .invalidCourseHandicaps(let issues):
             let details = issues.prefix(8).map(\.message).joined(separator: "\n")
             let remaining = max(0, issues.count - 8)
@@ -49,20 +52,20 @@ struct SeriesRoundCreationService: Loggable {
             return .failure(.missingSession)
         }
 
-        guard let courseSegment = await resolveCourseSegment(
-            override: overrideCourseSegment,
-            selection: seriesRound.resolvedCourse(using: series)
-        ) else {
-            addBreadcrumb(level: .error, message: "Series round creation aborted because no course was resolved")
-            addEvent(
-                "series.round_creation_failed",
-                eventProps: [
-                    "series_id": series.id,
-                    "series_round_id": seriesRound.id,
-                    "reason": "no_course"
-                ]
-            )
-            return .failure(.missingCourse)
+        let courseSegment: CourseSegment
+        if let overrideCourseSegment {
+            courseSegment = overrideCourseSegment
+        } else {
+            let validation = await SeriesRoundCourseHandicapAvailability.check(seriesRound.resolvedCourse(using: series))
+            guard let resolved = validation.courseSegment else {
+                addBreadcrumb(level: .error, message: "Series round course validation failed: \(validation.message)")
+                addEvent("series.round_creation_failed", eventProps: [
+                    "series_id": series.id, "series_round_id": seriesRound.id,
+                    "reason": "course_validation"
+                ])
+                return .failure(.invalidCourseData(validation.message))
+            }
+            courseSegment = resolved
         }
 
         let effectiveMembers = SeriesRoundParticipationPolicy.effectiveMembers(
@@ -70,34 +73,11 @@ struct SeriesRoundCreationService: Loggable {
             plannedTeeGroups: seriesRound.plannedTeeGroups
         )
 
-        if seriesRound.roundConfig.handicapEntryFormat == .courseHandicap {
-            let resolvedHandicapStrokeBasis = seriesRound.roundConfig.handicapStrokeBasis
-                ?? SeriesHandicapStrokeBasis.defaultBasis(
-                    holeCount: courseSegment.holeSegment.holeCount
-                )
-            let issues = SeriesCourseHandicapResolver.validationIssues(
-                members: effectiveMembers,
-                handicaps: handicaps,
-                courseSegment: courseSegment,
-                entryFormat: .courseHandicap,
-                handicapStrokeBasis: resolvedHandicapStrokeBasis,
-                maximumHandicap: series.handicapConfig.isEnabled
-                    ? series.handicapConfig.config.maximumHandicap
-                    : nil
-            )
-            guard issues.isEmpty else {
-                addBreadcrumb(
-                    level: .warning,
-                    message: "Series round creation blocked by participant Course HCP preflight",
-                    parameters: [
-                        "Series ID": series.id,
-                        "Series Round ID": seriesRound.id,
-                        "Issue Count": "\(issues.count)"
-                    ]
-                )
-                return .failure(.invalidCourseHandicaps(issues))
-            }
-        }
+        let issues = SeriesRoundHandicapSetup.issues(
+            series: series, round: seriesRound, members: effectiveMembers,
+            handicaps: handicaps, course: courseSegment
+        )
+        guard issues.isEmpty else { return .failure(.invalidCourseHandicaps(issues)) }
 
         let shareCode = await FirebaseService.shared.getUniqueShareCode()
         let roundID = HackersID.string()
@@ -185,8 +165,10 @@ struct SeriesRoundCreationService: Loggable {
                 maximumHandicap: series.handicapConfig.isEnabled ? series.handicapConfig.config.maximumHandicap : nil,
                 courseSegment: courseSegment,
                 handicapEntryFormat: seriesRound.roundConfig.handicapEntryFormat,
-                handicapStrokeBasis: seriesRound.roundConfig.handicapStrokeBasis,
+                handicapStrokeBasis: series.handicapConfig.strokeBasis,
                 selectedHandicapScoreIDsByMemberID: selectedHandicapScoreIDsByMemberID,
+                roundHandicapInputs: seriesRound.handicapInputs,
+                roundScoringStrokeBasis: seriesRound.roundConfig.handicapStrokeBasis,
                 hostPlayerID: player.id,
                 presenceStatusByMemberID: presenceStatusByMemberID,
                 plannedSeatsByMemberID: plannedSeatsByMemberID
@@ -310,49 +292,6 @@ struct SeriesRoundCreationService: Loggable {
     }
 
     // MARK: - Course Resolution
-
-    /// Resolves a persisted tee box id against loaded `Course` tees. API-sourced courses now use stable tee ids; older
-    /// Firestore values may reference one-off UUIDs from a previous fetch—fall back to the first tee when unmatched.
-    private func resolvedDefaultTeeID(persistedID: String, course: Course) -> String? {
-        guard persistedID.isPopulated else { return nil }
-        if course.tees.contains(where: { $0.id == persistedID }) { return persistedID }
-        return course.tees.first?.id
-    }
-
-    private func resolveCourseSegment(
-        override: CourseSegment?,
-        selection: SeriesCourseSelection?
-    ) async -> CourseSegment? {
-        if let override { return override }
-        guard let selection, selection.courseID.isPopulated else { return nil }
-
-        let course: Course?
-        if let apiID = GolfCourseID(selection.courseID) {
-            do {
-                course = try await GolfCourseRepository.shared.course(by: apiID)
-            } catch {
-                switch await FirebaseService.shared.getCourseByID(selection.courseID) {
-                case .success(let fetched): course = fetched
-                case .failure: course = nil
-                }
-            }
-        } else {
-            switch await FirebaseService.shared.getCourseByID(selection.courseID) {
-            case .success(let fetched): course = fetched
-            case .failure: course = nil
-            }
-        }
-
-        guard let course else { return nil }
-        let totalHoles = course.tees.map(\.totalHoles).max() ?? selection.holeSegment.holeCount
-        let holeRange = selection.holeSegment.toHoleRange(totalHoles: totalHoles) ?? selection.holeSegment.holeRange
-        let defaultTee = resolvedDefaultTeeID(persistedID: selection.defaultTeeBoxID, course: course)
-        return CourseSegment(
-            courseInfo: CourseInfo(course: course, for: selection.holeSegment),
-            holeRange: holeRange,
-            defaultTee: defaultTee
-        )
-    }
 
     // MARK: - Team + Matchup Construction
 

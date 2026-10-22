@@ -1253,12 +1253,9 @@ enum SeriesRoundOutcomeNarrativeBuilder {
     ) -> String {
         if snapshot.configuration.handicapEntryFormat == .courseHandicap {
             let nextCourseHandicap = nextHandicap.flatMap {
-                HandicapCalculator.courseHandicap(
-                    index: $0,
-                    participant: participant,
-                    courseSegment: snapshot.courseSegment,
-                    handicapStrokeBasis: snapshot.handicapStrokeBasis
-                )
+                HandicapCalculator.calculation(index: $0, participant: participant, courseSegment: snapshot.courseSegment,
+                    indexBasis: snapshot.handicapIndexBasis ?? participant.handicapSnapshot?.handicapStrokeBasis)
+                    .allowedStrokes(maximum: snapshot.configuration.leagueHandicapMaximum)
             }
             return "Course HCP: \(currentCourseHandicap) -> \(courseHandicapLabel(nextCourseHandicap)) next week"
         }
@@ -1641,6 +1638,17 @@ final class SeriesViewModel: ObservableObject, Loggable {
     @Published var isSaving = false
     @Published var creatingRoundID: String?
     @Published var roundCreationErrorMessage: String?
+    @Published var roundSetupCourses: [String: CourseSegment] = [:]
+    @Published var roundSetupScoreBases: [String: ScoreBasis] = [:]
+    @Published var personalIndexesByMemberID: [String: Double] = [:]
+    @Published var roundHandicapDrafts: [String: [String: SeriesRoundHandicapDraft]] = [:]
+    @Published var handicapSetupErrorMessage: String?
+    @Published var handicapSettingsErrorMessage: String?
+    @Published private(set) var isSavingHandicapSettings = false
+    @Published private(set) var isSavingRoundHandicaps = false
+    private let handicapDraftDefaults: UserDefaults
+    private let persistHandicapSettings: (Series) async -> Result<Series, Error>
+    private let persistRoundHandicaps: (SeriesRound) async -> Result<SeriesRound, Error>
     @Published var correctingRoundID: String?
     @Published var scoreCorrectionErrorMessage: String?
     @Published var exportingRoundID: String?
@@ -1690,15 +1698,22 @@ final class SeriesViewModel: ObservableObject, Loggable {
 
     init(
         snapshotRepository: SeriesRoundSnapshotRepository? = nil,
-        standingsPublicationService: SeriesStandingsPublicationService? = nil
+        standingsPublicationService: SeriesStandingsPublicationService? = nil,
+        persistHandicapSettings: ((Series) async -> Result<Series, Error>)? = nil,
+        persistRoundHandicaps: ((SeriesRound) async -> Result<SeriesRound, Error>)? = nil,
+        handicapDraftDefaults: UserDefaults = .standard
     ) {
+        self.handicapDraftDefaults = handicapDraftDefaults
+        self.persistHandicapSettings = persistHandicapSettings ?? { await FirebaseService.shared.updateSeries($0) }
+        self.persistRoundHandicaps = persistRoundHandicaps ?? { await FirebaseService.shared.savePlannedSeriesRoundHandicaps($0) }
         self.snapshotRepository = snapshotRepository ?? SeriesRoundSnapshotRepository()
         self.standingsPublicationService = standingsPublicationService ?? SeriesStandingsPublicationService()
     }
 
     var isCommissioner: Bool {
-        guard let userID = currentUserID else { return false }
+        guard let userID = currentUserID, userID.isPopulated else { return false }
         if series.commissionerUserID == userID { return true }
+        if activeMembers.contains(where: { $0.userID == userID && $0.role == .commissioner }) { return true }
         guard let playerID = currentPlayerID else { return false }
         return activeMembers.first { $0.playerID == playerID }?.role == .commissioner
     }
@@ -2573,6 +2588,7 @@ final class SeriesViewModel: ObservableObject, Loggable {
         await loadAttendanceForRSVPEligibleRounds()
         recomputeAllHandicaps()
         await backfillOfflineMemberUserIDs()
+        await loadPersonalRoundHandicapDefaults()
         await createBuiltInScoringProfilesIfNeeded()
         SeriesPerformanceRecorder.shared.record(
             .fullLoad,
@@ -3507,15 +3523,34 @@ final class SeriesViewModel: ObservableObject, Loggable {
         addEvent("series.league_rules_confirmed", eventProps: seriesTelemetryProps())
     }
 
-    func saveHandicapSettings(_ handicapConfig: SeriesHandicapConfig) async {
-        let previousSettings = series.settings
-        series.handicapConfig = handicapConfig
-        invalidateLeagueRulesConfirmationIfNeeded(previousSettings: previousSettings, newSettings: series.settings)
-        series.lastUpdatedAt = .init()
-        _ = await FirebaseService.shared.updateSeries(series)
+    @discardableResult
+    func saveHandicapSettings(_ handicapConfig: SeriesHandicapConfig) async -> Bool {
+        handicapSettingsErrorMessage = nil
+        guard isCommissioner else {
+            handicapSettingsErrorMessage = "Only a commissioner can change handicap settings."
+            return false
+        }
+        guard !isSavingHandicapSettings else { return false }
+        isSavingHandicapSettings = true
+        defer { isSavingHandicapSettings = false }
+        var candidate = series
+        candidate.handicapConfig = handicapConfig
+        if materialLeagueRulesSignature(for: candidate.settings) != materialLeagueRulesSignature(for: series.settings) {
+            candidate.leagueRulesConfirmedAt = nil
+            candidate.leagueRulesConfirmedByUserID = nil
+            candidate.leagueRulesSignature = nil
+        }
+        candidate.lastUpdatedAt = .init()
+        switch await persistHandicapSettings(candidate) {
+        case .success(let saved):
+            series = saved
+        case .failure(let error):
+            handicapSettingsErrorMessage = "Handicap settings were not saved. Your selection is still here. Try again."
+            addBreadcrumb(level: .error, message: "Failed to save series handicap settings", error: error)
+            return false
+        }
         await hydrateRoundHandicapScoreMetadataIfNeeded()
         recomputeAllHandicaps()
-        await refreshSeriesCachesIfNeeded()
         addEvent(
             "series.handicap_settings_saved",
             eventProps: seriesTelemetryProps([
@@ -3523,6 +3558,7 @@ final class SeriesViewModel: ObservableObject, Loggable {
                 "handicap_mode": handicapConfig.mode.rawValue
             ])
         )
+        return true
     }
 
     private func sanitizedLeagueSettings(_ settings: SeriesSettings) -> SeriesSettings {
@@ -4153,14 +4189,17 @@ final class SeriesViewModel: ObservableObject, Loggable {
 
     func addRound(
         draft: SeriesRoundDraft,
-        courseHandicapAvailable: Bool,
+        courseValidation: SeriesCourseHandicapValidation,
         fallbackTitle: String
     ) async -> SeriesRound? {
+        guard isCommissioner, !isSavingSeriesRoundDraft else { return nil }
+        isSavingSeriesRoundDraft = true
+        defer { isSavingSeriesRoundDraft = false }
         let values: SeriesRoundDraftPersistenceValues
         do {
             values = try draft.persistedValues(
                 usesTeams: usesTeams,
-                courseHandicapAvailable: courseHandicapAvailable,
+                courseValidation: courseValidation,
                 fallbackTitle: fallbackTitle
             )
         } catch {
@@ -4321,14 +4360,17 @@ final class SeriesViewModel: ObservableObject, Loggable {
     func updateSeriesRound(
         _ round: SeriesRound,
         draft: SeriesRoundDraft,
-        courseHandicapAvailable: Bool,
+        courseValidation: SeriesCourseHandicapValidation,
         syncLinkedLobby: Bool = true
     ) async -> Bool {
+        guard isCommissioner, !isSavingSeriesRoundDraft else { return false }
+        isSavingSeriesRoundDraft = true
+        defer { isSavingSeriesRoundDraft = false }
         let values: SeriesRoundDraftPersistenceValues
         do {
             values = try draft.persistedValues(
                 usesTeams: usesTeams,
-                courseHandicapAvailable: courseHandicapAvailable,
+                courseValidation: courseValidation,
                 fallbackTitle: round.title.isPopulated ? round.title : "Round \(round.index + 1)"
             )
         } catch {
@@ -5344,10 +5386,124 @@ final class SeriesViewModel: ObservableObject, Loggable {
         )
     }
 
+    private var isSavingSeriesRoundDraft = false
+
     // MARK: - Round Creation
 
+    private func loadPersonalRoundHandicapDefaults() async {
+        let ids = eligibleMembers.compactMap(\.playerID).filter(\.isPopulated)
+        guard !ids.isEmpty else { return }
+        if case .success(let players) = await FirebaseService.shared.getPlayersByIDs(ids) {
+            applyPersonalRoundHandicapDefaults(from: players)
+        }
+        // A failed/offline read leaves the manual round-entry path available.
+    }
+
+    func applyPersonalRoundHandicapDefaults(from players: [Player]) {
+        let byID = Dictionary(players.map { ($0.id, $0) }, uniquingKeysWith: { first, _ in first })
+        personalIndexesByMemberID = eligibleMembers.reduce(into: [:]) { values, member in
+            guard let id = member.playerID, let player = byID[id],
+                  member.userID == player.userID,
+                  let index = player.personalHandicap?.effectiveIndex, index.isFinite else { return }
+            values[member.id] = index
+        }
+    }
+
+    func handicapSetupMembers(for round: SeriesRound) -> [SeriesMember] {
+        SeriesRoundCreationMapping.participatingMembersAndPresenceStatuses(
+            series: series, eligibleMembers: eligibleMembers,
+            attendance: attendanceByRound[round.id] ?? [], plannedTeeGroups: round.plannedTeeGroups
+        ).members
+    }
+
+    func handicapDraft(for member: SeriesMember, round: SeriesRound, course: CourseSegment) -> SeriesRoundHandicapDraft {
+        roundHandicapDrafts[round.id]?[member.id] ?? cachedHandicapDrafts(roundID: round.id)[member.id] ?? SeriesRoundHandicapDraft(
+            input: round.handicapInputs[member.id], seriesIndex: memberHandicaps[member.id]?.effectiveIndex,
+            personalIndex: personalIndexesByMemberID[member.id],
+            teeBoxID: SeriesRoundCreationMapping.resolvedTeeBoxID(for: member, courseSegment: course)
+        )
+    }
+
+    func handicapReadiness(for round: SeriesRound, course: CourseSegment) -> SeriesRoundHandicapReadiness {
+        let attendance = SeriesRoundCreationMapping.participatingMembersAndPresenceStatuses(
+            series: series, eligibleMembers: eligibleMembers,
+            attendance: attendanceByRound[round.id] ?? [], plannedTeeGroups: round.plannedTeeGroups)
+        return SeriesRoundHandicapSetup.readiness(series: series, round: round, members: attendance.members,
+            handicaps: memberHandicaps, course: course,
+            drafts: Dictionary(uniqueKeysWithValues: attendance.members.map {
+                ($0.id, handicapDraft(for: $0, round: round, course: course))
+            }), presenceStatusByMemberID: attendance.presenceStatusByMemberID)
+    }
+
+    private func handicapDraftKey(roundID: String) -> String? {
+        guard let currentUserID, currentUserID.isPopulated else { return nil }
+        return "series.round-handicap-draft.\(currentUserID).\(seriesID).\(roundID)"
+    }
+
+    private func cachedHandicapDrafts(roundID: String) -> [String: SeriesRoundHandicapDraft] {
+        guard let key = handicapDraftKey(roundID: roundID), let data = handicapDraftDefaults.data(forKey: key) else { return [:] }
+        return (try? JSONDecoder().decode([String: SeriesRoundHandicapDraft].self, from: data)) ?? [:]
+    }
+
+    func setHandicapDraft(_ draft: SeriesRoundHandicapDraft, memberID: String, roundID: String) {
+        guard isCommissioner, eligibleMembers.contains(where: { $0.id == memberID }) else { return }
+        var drafts = cachedHandicapDrafts(roundID: roundID)
+        drafts.merge(roundHandicapDrafts[roundID] ?? [:]) { _, current in current }
+        drafts[memberID] = draft
+        roundHandicapDrafts[roundID] = drafts
+        if let key = handicapDraftKey(roundID: roundID), let data = try? JSONEncoder().encode(drafts) {
+            handicapDraftDefaults.set(data, forKey: key)
+        }
+    }
+
+    /// Saves only setup for an unlinked planned round. Invalid/cancelled text stays local;
+    /// successful values live on the SeriesRound and survive reopening/reloading the series.
+    func saveRoundHandicapSetup(_ candidate: SeriesRound) async -> Bool {
+        handicapSetupErrorMessage = nil
+        guard isCommissioner else {
+            handicapSetupErrorMessage = "Only a commissioner can enter round handicaps."
+            return false
+        }
+        guard let current = rounds.first(where: { $0.id == candidate.id }),
+              current.roundID == nil, current.status == .planned,
+              candidate.parentID == seriesID,
+              candidate.lastUpdatedAt == current.lastUpdatedAt,
+              creatingRoundID == nil, !isSavingRoundHandicaps else {
+            handicapSetupErrorMessage = "This round has already started or is no longer available."
+            return false
+        }
+        guard candidate.handicapInputs.values.allSatisfy(\.isValid) else {
+            handicapSetupErrorMessage = "Enter a valid 18-hole Handicap Index or whole number of strokes."
+            return false
+        }
+        isSavingRoundHandicaps = true
+        defer { isSavingRoundHandicaps = false }
+        var update = current
+        update.handicapInputs = candidate.handicapInputs
+        update.courseOverride = candidate.courseOverride
+        update.roundConfig.scoreBasisOverride = candidate.roundConfig.scoreBasisOverride
+        switch await persistRoundHandicaps(update) {
+        case .success(let saved):
+            if let index = rounds.firstIndex(where: { $0.id == saved.id }) { rounds[index] = saved }
+            roundHandicapDrafts[candidate.id] = nil
+            roundSetupScoreBases[candidate.id] = nil
+            if let key = handicapDraftKey(roundID: candidate.id) { handicapDraftDefaults.removeObject(forKey: key) }
+            return true
+        case .failure(let error):
+            handicapSetupErrorMessage = "Round handicaps were not saved. Your entries are still here. Try again."
+            addBreadcrumb(level: .error, message: "Failed to save round-only handicaps", error: error)
+            return false
+        }
+    }
+
     func createLiveRound(from seriesRound: SeriesRound, courseSegment: CourseSegment? = nil) async -> String? {
-        guard var workingRound = rounds.first(where: { $0.id == seriesRound.id }) else { return nil }
+        guard isCommissioner else {
+            roundCreationErrorMessage = "Only a commissioner can start a series round."
+            return nil
+        }
+        guard creatingRoundID == nil, !isSavingRoundHandicaps,
+              var workingRound = rounds.first(where: { $0.id == seriesRound.id }),
+              workingRound.roundID == nil, workingRound.status == .planned else { return nil }
         roundCreationErrorMessage = nil
         creatingRoundID = seriesRound.id
         defer { creatingRoundID = nil }
@@ -5355,7 +5511,7 @@ final class SeriesViewModel: ObservableObject, Loggable {
         if let courseSegment {
             let defaultTee = courseSegment.defaultTee.flatMap { courseSegment.tee(from: $0) }
             workingRound.courseOverride = SeriesCourseSelection(
-                courseID: courseSegment.courseInfo.golfCourseApiID.map(String.init) ?? courseSegment.courseInfo.id,
+                courseID: courseSegment.courseInfo.seriesCourseSelectionID,
                 cachedName: courseSegment.courseInfo.name,
                 defaultTeeBoxID: courseSegment.defaultTee ?? "",
                 defaultTeeName: defaultTee?.name,

@@ -384,7 +384,7 @@ struct IndividualScorecardView: View {
         return scorecardValueRow(label: "HCP", values: values, total: nil)
     }
 
-    private func scorecardScoreRow(holes: [Int]) -> some View {
+    func scorecardScoreRow(holes: [Int]) -> some View {
         let values = holes.map { holeNum -> String in
             guard let gross = viewModel.grossStrokes(for: participant.id, holeNumber: holeNum) else {
                 return "—"
@@ -404,7 +404,7 @@ struct IndividualScorecardView: View {
         )
     }
 
-    private func scorecardNetRow(holes: [Int]) -> some View {
+    func scorecardNetRow(holes: [Int]) -> some View {
         let values = holes.map { holeNum -> String in
             guard let net = viewModel.netStrokesOnHole(participant: participant, holeNumber: holeNum) else {
                 return "—"
@@ -550,18 +550,17 @@ struct IndividualScorecardView: View {
 
     private var courseHandicapDetailText: String? {
         guard viewModel.snapshot.configuration.handicapEntryFormat == .courseHandicap else { return nil }
-        let index = participant.handicapIndex ?? Double(participant.originalHandicap)
         guard let label = CourseHandicapRosterDisplay.label(
-            index: index,
             participant: participant,
             courseSegment: viewModel.snapshot.courseSegment,
-            handicapStrokeBasis: viewModel.snapshot.handicapStrokeBasis,
+            handicapStrokeBasis: viewModel.snapshot.handicapIndexBasis,
             defaultTee: viewModel.snapshot.defaultTee,
             tees: viewModel.snapshot.tees,
             maximumHandicap: viewModel.snapshot.configuration.leagueHandicapMaximum
         ) else {
             return nil
         }
+        guard let index = participant.handicapSnapshot?.handicapIndex ?? participant.handicapIndex else { return label }
         return "Index \(SeriesMemberHandicap.formatHandicapIndexForDisplay(index)) \(kDot) \(label)"
     }
 

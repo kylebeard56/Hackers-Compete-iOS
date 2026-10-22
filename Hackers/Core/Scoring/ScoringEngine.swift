@@ -1926,13 +1926,13 @@ struct ScoringEngine {
         if let relativeToPar = entry.relativeToPar {
             return relativeToPar
         }
-        guard let strokes = entry.strokes else { return nil }
+        guard let strokes = entry.strokes, strokes > 0 else { return nil }
         return strokes - par
     }
 
     static func resolvedGrossStrokes(entry: ScoreEntry, par: Int) -> Int? {
         if let strokes = entry.strokes {
-            return strokes
+            return strokes > 0 ? strokes : nil
         }
         guard let relativeToPar = entry.relativeToPar else { return nil }
         return max(1, par + relativeToPar)
@@ -1944,13 +1944,14 @@ struct ScoringEngine {
         useHandicaps: Bool
     ) -> Int {
         guard useHandicaps else { return 0 }
-        let hcp = max(0, handicap)
-        guard hcp > 0, let holeHandicap, holeHandicap > 0 else { return 0 }
-
-        let fullRounds = hcp / 18
-        let remainder = hcp % 18
-        let bonusStroke = holeHandicap <= remainder ? 1 : 0
-        return fullRounds + bonusStroke
+        guard handicap != 0, let holeHandicap, holeHandicap > 0 else { return 0 }
+        let fullRounds = handicap / 18
+        let remainder = handicap % 18
+        if handicap < 0 {
+            guard holeHandicap <= 18 else { return 0 }
+            return fullRounds - (holeHandicap > 18 + remainder ? 1 : 0)
+        }
+        return fullRounds + (holeHandicap <= remainder ? 1 : 0)
     }
 
     static func strokesReceived(
@@ -1981,8 +1982,7 @@ struct ScoringEngine {
         handicapStrokeBasis: SeriesHandicapStrokeBasis = .eighteenHole
     ) -> Int {
         guard useHandicaps else { return 0 }
-        let hcp = max(0, handicap)
-        guard hcp > 0 else { return 0 }
+        guard handicap != 0 else { return 0 }
 
         let rankedHoleNumbers = playedHoleNumbers
             .compactMap { holeNumber -> (number: Int, handicap: Int)? in
@@ -2004,20 +2004,22 @@ struct ScoringEngine {
             allocationOrder = playedHoleNumbers.filter { holeMap[$0] != nil || $0 == holeNumber }
         }
 
-        guard let holeIndex = allocationOrder.firstIndex(of: holeNumber) else { return 0 }
+        // Plus players give strokes back from the highest stroke index first.
+        let signedOrder = handicap < 0 ? Array(allocationOrder.reversed()) : allocationOrder
+        guard let holeIndex = signedOrder.firstIndex(of: holeNumber) else { return 0 }
 
         let holesInPlay = allocationOrder.count
         guard holesInPlay > 0 else { return 0 }
         let strokesForMatch = handicapStrokesForPlayedHoles(
-            handicap: hcp,
+            handicap: handicap,
             basis: handicapStrokeBasis,
             holesInPlay: holesInPlay
         )
-        guard strokesForMatch > 0 else { return 0 }
+        guard strokesForMatch != 0 else { return 0 }
 
         let full = strokesForMatch / holesInPlay
-        let rem = strokesForMatch % holesInPlay
-        let extra = holeIndex < rem ? 1 : 0
+        let rem = abs(strokesForMatch % holesInPlay)
+        let extra = holeIndex < rem ? (strokesForMatch < 0 ? -1 : 1) : 0
         return full + extra
     }
 
@@ -2026,10 +2028,9 @@ struct ScoringEngine {
         basis: SeriesHandicapStrokeBasis,
         holesInPlay: Int
     ) -> Int {
-        let hcp = max(0, handicap)
-        guard hcp > 0, holesInPlay > 0 else { return 0 }
-        guard holesInPlay != basis.holeCount else { return hcp }
-        let scaled = Double(hcp) * Double(holesInPlay) / Double(basis.holeCount)
+        guard handicap != 0, holesInPlay > 0 else { return 0 }
+        guard holesInPlay != basis.holeCount else { return handicap }
+        let scaled = Double(handicap) * Double(holesInPlay) / Double(basis.holeCount)
         return Int(scaled.rounded(.toNearestOrAwayFromZero))
     }
 

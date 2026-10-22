@@ -956,6 +956,7 @@ final class SeriesRoundSyncServiceTests: XCTestCase {
             ],
             courseSegment: testCourseSegment(),
             handicapEntryFormat: .courseHandicap,
+            handicapStrokeBasis: .eighteenHole,
             hostPlayerID: nil,
             preserveManualHandicapEdits: false
         )

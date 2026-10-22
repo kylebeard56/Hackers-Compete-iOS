@@ -282,10 +282,39 @@ final class SeriesRoundCreationMappingTests: XCTestCase {
 
         XCTAssertEqual(roundConfig.handicapEntryFormat, .courseHandicap)
         XCTAssertEqual(roundConfig.handicapNormalizationMode, .matchup)
-        XCTAssertEqual(roundConfig.handicapStrokeBasis, .nineHole)
+        XCTAssertEqual(roundConfig.handicapStrokeBasis, .eighteenHole)
+        XCTAssertEqual(roundConfig.handicapIndexBasis, .nineHole)
         XCTAssertEqual(roundConfig.leagueHandicapMaximum, 21)
         XCTAssertEqual(roundConfig.handicapsEnabled, true)
         XCTAssertTrue(roundConfig.useHandicaps)
+    }
+
+    func testSeriesIndexBasisComesFromLeagueAndScoringBasisComesFromPlayedSegment() {
+        var series = makeSeries(handicapsEnabled: true)
+        series.settings.handicapConfig.strokeBasis = .eighteenHole
+        var roundConfig = SeriesRoundConfiguration()
+        roundConfig.handicapEntryFormat = .courseHandicap
+        roundConfig.handicapStrokeBasis = .nineHole
+        let full = makeCourseSegment()
+        let nine = CourseSegment(courseInfo: full.courseInfo, holeRange: HoleRange(startHole: 10, endHole: 18), defaultTee: full.defaultTee)
+        let resolved = SeriesRoundCreationMapping.roundConfiguration(series: series,
+            seriesRound: SeriesRound(id: "round", roundConfig: roundConfig, parentID: series.id),
+            courseSegment: nine, competitionScope: .field)
+        XCTAssertEqual(resolved.handicapIndexBasis, .eighteenHole)
+        XCTAssertEqual(resolved.handicapStrokeBasis, .nineHole)
+    }
+
+    func testUnknownSourceBasisIsNotInferredFromRoundLength() {
+        let member = makeMember(id: "member", name: "Player")
+        let payload = SeriesRoundCreationMapping.buildParticipantPayloads(members: [member], roundID: "round",
+            teamMappings: [:], memberAssignments: [:],
+            handicaps: [member.id: SeriesMemberHandicap(id: member.id, memberID: member.id, computedIndex: 23)],
+            courseSegment: makeCourseSegment(), handicapEntryFormat: .courseHandicap, hostPlayerID: nil).first
+        XCTAssertEqual(payload?.handicapIndex, 23)
+        XCTAssertNil(payload?.handicapSnapshot)
+        XCTAssertNil(payload?.leagueHandicapStrokesAtCreation)
+        XCTAssertEqual(payload?.handicapResolution?.calculation?.status, .unavailable)
+        XCTAssertNil(payload?.handicapResolution?.effectiveStrokes)
     }
 
     func testRoundConfigurationCarriesSeriesHandicapMaximumWhenEnabled() {
@@ -1303,7 +1332,8 @@ final class SeriesRoundCreationMappingTests: XCTestCase {
         XCTAssertFalse(payloads[1].isHost)
         XCTAssertEqual(payloads[1].adjustedHandicap, 12)
         XCTAssertEqual(payloads[1].leagueHandicapStrokesAtCreation, 12)
-        XCTAssertEqual(payloads[0].leagueHandicapStrokesAtCreation, 0)
+        XCTAssertNil(payloads[0].leagueHandicapStrokesAtCreation, "Missing input must not become a frozen scratch allowance")
+        XCTAssertNil(payloads[0].handicapResolution?.effectiveStrokes)
     }
 
     func testBuildParticipantPayloads_capsSeriesHandicapForRoundStrokes() {
@@ -2433,6 +2463,7 @@ final class SeriesRoundCreationMappingTests: XCTestCase {
             maximumHandicap: nil,
             courseSegment: segment,
             handicapEntryFormat: .courseHandicap,
+            handicapStrokeBasis: .eighteenHole,
             selectedHandicapScoreIDsByMemberID: ["m1": ["score-b", "score-a"]],
             hostPlayerID: nil
         )
@@ -2501,10 +2532,12 @@ final class SeriesRoundCreationMappingTests: XCTestCase {
             maximumHandicap: nil
         )
 
-        XCTAssertEqual(resolution.effectiveStrokes, 14)
+        XCTAssertNil(resolution.effectiveStrokes)
+        XCTAssertEqual(resolution.calculation.status, .estimated)
+        XCTAssertEqual(resolution.calculation.courseHandicap, 14)
         XCTAssertEqual(resolution.courseRating, 35.0)
         XCTAssertEqual(resolution.courseSlope, 120)
-        XCTAssertNil(resolution.validationIssue)
+        XCTAssertNotNil(resolution.validationIssue)
     }
 
     func testRoundParticipantHandicapSnapshotRoundTripsAndLegacyParticipantDecodesWithoutIt() throws {
@@ -2599,6 +2632,7 @@ final class SeriesRoundCreationMappingTests: XCTestCase {
             maximumHandicap: 18,
             courseSegment: segment,
             handicapEntryFormat: .courseHandicap,
+            handicapStrokeBasis: .eighteenHole,
             hostPlayerID: nil
         )
 

@@ -18,6 +18,7 @@ struct DashboardView: View, Loggable {
     @StateObject private var homeViewModel = DashboardHomeViewModel()
     @State private var pageCoordinator = PageCoordinator()
     @State private var scrollPageID: Int? = 0
+    @State private var hasLoadedCompanionRounds = false
      
     @State private var showNewRound = false
     @State private var showNewSeries = false
@@ -55,7 +56,7 @@ struct DashboardView: View, Loggable {
     }
 
     private var companionEligibilityKey: String {
-        ([viewModel.currentPlayerID ?? ""] + activeRounds.map(\.id).sorted())
+        ([String(hasLoadedCompanionRounds), viewModel.currentPlayerID ?? ""] + activeRounds.map(\.id).sorted())
             .joined(separator: "|")
     }
     
@@ -79,12 +80,14 @@ struct DashboardView: View, Loggable {
             async let roundsLoad: Void = appSession.loadRounds()
             async let seriesLoad: Void = appSession.loadSeries()
             _ = await (roundsLoad, seriesLoad)
+            hasLoadedCompanionRounds = true
             viewModel.checkForStalledCompletions(in: sortedRounds)
         }
         .task(id: viewModel.currentPlayerID) {
             await homeViewModel.load(primaryPlayerID: viewModel.currentPlayerID)
         }
         .task(id: companionEligibilityKey) {
+            guard hasLoadedCompanionRounds else { return }
             liveRoundCompanion.reconcileEligibleRounds(
                 activeRounds,
                 currentPlayerID: viewModel.currentPlayerID

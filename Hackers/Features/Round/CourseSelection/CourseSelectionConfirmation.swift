@@ -316,7 +316,7 @@ struct CourseSelectionConfirmation: View, Loggable {
                             callback(apiID, name, teeID, teeName)
                         } else if viewModel.isSetSeriesDefaultCourseMode, let callback = viewModel.onSetSeriesDefaultCourse {
                             let course = viewModel.selectedCourse
-                            let courseID = course.golfCourseApiID != nil ? String(course.golfCourseApiID!) : course.id
+                            let courseID = viewModel.buildCourseSegment().courseInfo.seriesCourseSelectionID
                             let cachedName = course.prettyCourseName
                             let teeID = viewModel.selectedTee?.id
                             callback(courseID, cachedName, teeID, viewModel.holeSegment)

@@ -48,7 +48,10 @@ struct EditSeriesRoundSheet: View {
     var onSaved: () -> Void
 
     @State private var draft: SeriesRoundDraft
-    @State private var courseHandicapAvailable = false
+    @StateObject private var courseValidationStore = SeriesCourseHandicapValidationStore()
+
+    private var courseValidation: SeriesCourseHandicapValidation { courseValidationStore.current(for: planningCourseSelection) }
+    private var courseHandicapAvailable: Bool { courseValidation.permitsConfiguration }
     @State private var profileEditorSeed: SeriesScoringProfileEditorSeed?
     @State private var showCoursePicker = false
     @State private var showMatchupAutoFillDialog = false
@@ -285,6 +288,8 @@ struct EditSeriesRoundSheet: View {
             },
             onScroll: { _ in }
         )
+        .disabled(isSaving)
+        .interactiveDismissDisabled(isSaving)
         .background(palette.backgroundColor.ignoresSafeArea())
         .sheet(isPresented: $showCoursePicker) {
             SeriesRoundCoursePickerSheet(initialSelection: selectedCourse) { selection in
@@ -296,9 +301,11 @@ struct EditSeriesRoundSheet: View {
         .task {
             await viewModel.createBuiltInScoringProfilesIfNeeded()
             normalizeSelectedTemplate()
-            await refreshCourseHandicapAvailability()
             refreshPlanningStructure(forceRegenerate: !seriesRound.plannedTeeGroups.isPopulated)
             normalizeSelectedProfilesForCompetition()
+        }
+        .task(id: planningCourseSelection) {
+            await refreshCourseHandicapAvailability()
         }
         .onChange(of: competitionScope) { _, newValue in
             if newValue == .matchup, matchupPlans.isEmpty {
@@ -324,7 +331,6 @@ struct EditSeriesRoundSheet: View {
         .onChange(of: matchupPlans) { _, _ in refreshPlanningStructure() }
         .onChange(of: selectedCourse) { _, _ in
             refreshPlanningStructure()
-            Task { await refreshCourseHandicapAvailability() }
         }
         .onChange(of: scheduledDate) { _, _ in if hasDate { refreshPlanningStructure() } }
         .onChange(of: hasDate) { _, _ in refreshPlanningStructure(forceRegenerate: false) }
@@ -750,6 +756,11 @@ struct EditSeriesRoundSheet: View {
             SeriesSheetRow(palette: palette) {
                 handicapOptionsRow
             }
+            if handicapEntryFormat == .courseHandicap {
+                SeriesCourseHandicapValidationView(validation: courseValidation,
+                    retry: { Task { await refreshCourseHandicapAvailability() } },
+                    selectTee: { showCoursePicker = true })
+            }
         }
     }
 
@@ -780,9 +791,7 @@ struct EditSeriesRoundSheet: View {
             competitionScope: competitionScope,
             resolvedAutoBasis: nil,
             palette: palette,
-            courseHandicapSubtitle: courseHandicapAvailable
-                ? "Use member index and this round's selected tee to seed playing strokes"
-                : "Select a course and tee with rating/slope to use course handicap"
+            courseHandicapSubtitle: courseValidation.message
         )
     }
 
@@ -1055,31 +1064,39 @@ struct EditSeriesRoundSheet: View {
 
     private func save() {
         guard !isSaving else { return }
+        let originalDraft = draft
         var persistedDraft = draft
         persistedDraft.matchupPlans = normalizedMatchupPlans()
         let plannedStructure = persistedPlanningStructure()
         persistedDraft.plannedMatchups = plannedStructure.matchups
         persistedDraft.plannedTeeGroups = plannedStructure.teeGroups
         persistedDraft.partnershipPlans = normalizedPartnershipPlans()
-        do {
-            _ = try persistedDraft.persistedValues(
-                usesTeams: viewModel.usesTeams,
-                courseHandicapAvailable: courseHandicapAvailable,
-                fallbackTitle: seriesRound.title.isPopulated ? seriesRound.title : "Round \(seriesRound.index + 1)"
-            )
-        } catch {
-            errorMessage = error.localizedDescription
-            return
-        }
-
         isSaving = true
+        let selection = planningCourseSelection
         Task {
+            defer { isSaving = false }
+            let checked = handicapEntryFormat == .courseHandicap
+                ? await courseValidationStore.revalidate(selection) : courseValidation
+            guard selection == planningCourseSelection, draft == originalDraft else { return }
+            if handicapEntryFormat == .courseHandicap, !checked.permitsConfiguration {
+                errorMessage = checked.message
+                return
+            }
+            do {
+                _ = try persistedDraft.persistedValues(
+                    usesTeams: viewModel.usesTeams,
+                    courseValidation: checked,
+                    fallbackTitle: seriesRound.title.isPopulated ? seriesRound.title : "Round \(seriesRound.index + 1)"
+                )
+            } catch {
+                errorMessage = error.localizedDescription
+                return
+            }
             let saved = await viewModel.updateSeriesRound(
                 seriesRound,
                 draft: persistedDraft,
-                courseHandicapAvailable: courseHandicapAvailable
+                courseValidation: checked
             )
-            isSaving = false
             guard saved else {
                 errorMessage = "The round could not be saved. Your selections are still here so you can try again."
                 return
@@ -1104,8 +1121,7 @@ struct EditSeriesRoundSheet: View {
 
     @MainActor
     private func refreshCourseHandicapAvailability() async {
-        let available = await SeriesRoundCourseHandicapAvailability.isAvailable(for: planningCourseSelection)
-        courseHandicapAvailable = available
+        await courseValidationStore.refresh(planningCourseSelection)
     }
 
     private func sectionTitle(_ title: String) -> some View {
@@ -2582,6 +2598,7 @@ struct EditSeriesRoundSheet: View {
 
     private var courseSectionStatus: SeriesRoundSheetSectionStatus {
         if selectedCourse == nil { return .review }
+        if handicapEntryFormat == .courseHandicap, courseValidation.status != .ready { return .review }
         if let def = viewModel.series.settings.defaultCourse,
            selectedCourse?.courseID == def.courseID {
             return .leagueDefault
@@ -2690,7 +2707,7 @@ struct SeriesRoundCoursePickerSheet: View {
             courseViewModel.onSetSeriesRoundCourse = { segment in
                 let defaultTee = segment.defaultTee.flatMap { segment.tee(from: $0) }
                 let selection = SeriesCourseSelection(
-                    courseID: segment.courseInfo.golfCourseApiID.map(String.init) ?? segment.courseInfo.id,
+                    courseID: segment.courseInfo.seriesCourseSelectionID,
                     cachedName: segment.courseInfo.name,
                     defaultTeeBoxID: segment.defaultTee ?? "",
                     defaultTeeName: defaultTee?.name,
@@ -2708,31 +2725,39 @@ struct SeriesRoundCoursePickerSheet: View {
 
     private func prefillSelection() async {
         guard let initialSelection, initialSelection.courseID.isPopulated else { return }
+        _ = await Self.prefillSelection(initialSelection, model: courseViewModel)
+    }
 
-        let course: Course?
-        if let apiID = GolfCourseID(initialSelection.courseID) {
-            do {
-                course = try await GolfCourseRepository.shared.course(by: apiID)
-            } catch {
-                course = nil
-            }
-        } else {
-            switch await FirebaseService.shared.getCourseByID(initialSelection.courseID) {
-            case .success(let loadedCourse):
-                course = loadedCourse
-            case .failure:
-                course = nil
-            }
+    @MainActor
+    static func prefillSelection(
+        _ selection: SeriesCourseSelection,
+        model: CourseSelectionViewModel,
+        load: SeriesRoundCourseHandicapAvailability.Loader = SeriesRoundCourseHandicapAvailability.loadCourse
+    ) async -> SeriesCourseHandicapValidation? {
+        // A fresh Course() already has a UUID; isEmpty is not a selection flag.
+        // Compare the actual selection checkpoint instead of testing its emptiness.
+        let initialCourseID = model.selectedCourse.id
+        let initialTeeID = model.selectedTee?.id
+        let initialSegment = model.holeSegment
+        func isCurrent() -> Bool {
+            !Task.isCancelled && model.selectedCourse.id == initialCourseID
+                && model.selectedTee?.id == initialTeeID && model.holeSegment == initialSegment
         }
-
-        guard let course else { return }
-        await MainActor.run {
-            courseViewModel.select(course: course, source: .seriesRoundDefault, trackEvent: false)
-            courseViewModel.holeSegment = initialSelection.holeSegment
-            if initialSelection.defaultTeeBoxID.isPopulated,
-               let tee = course.tees.first(where: { $0.id == initialSelection.defaultTeeBoxID }) {
-                courseViewModel.selectedTee = tee
-            }
+        do {
+            let course = try await load(selection)
+            guard isCurrent() else { return nil }
+            let validation = SeriesRoundCourseHandicapAvailability.evaluate(selection, course: course)
+            model.select(course: course, source: .seriesRoundDefault, trackEvent: false)
+            model.holeSegment = selection.holeSegment
+            model.selectedTee = validation.status == .teeUnavailable ? nil
+                : course.tees.first(where: { $0.id == selection.defaultTeeBoxID })
+            return validation
+        } catch {
+            guard isCurrent() else { return nil }
+            let validation = SeriesCourseHandicapValidation(selection: selection, status: .loadFailed)
+            model.courseFetchErrorMessage = validation.message
+            model.showCourseFetchError = true
+            return validation
         }
     }
 }

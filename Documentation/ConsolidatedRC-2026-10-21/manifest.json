@@ -1,0 +1,188 @@
+{
+  "branch": "codex/consolidated-rc-2026-10-21",
+  "base": "be248b513b35fd7caba05aa3674a20218f8ce27d",
+  "build": "2026.10.21.2",
+  "pr_heads": {
+    "14": "140f22ce7cba212baa7f830d822d58a10168a2cb",
+    "15": "e9782443accdeb31844f26cde5f71fddcc071133",
+    "16": "5c5d9c03fb635ed733a9320462eeb4a412703486",
+    "17": "165b76e35e1cab9a52eb8327e77b2f1567dc534d"
+  },
+  "main": "731f5619be98d7aab45a572844b1acf6efa396fc",
+  "integration": {
+    "base": "be248b513b35fd7caba05aa3674a20218f8ce27d",
+    "copied": [
+      "Hackers/Features/Round/CourseSelection/CourseSelectionConfirmation.swift",
+      "Hackers/Features/Series/Services/SeriesRoundConfigurationReconciler.swift",
+      "Hackers/Features/Series/Services/SeriesRoundCreationMapping.swift",
+      "Hackers/Features/Series/Services/SeriesRoundCreationService.swift",
+      "Hackers/Features/Series/Services/SeriesRoundDraft.swift",
+      "Hackers/Features/Series/Sheets/CourseSelectionForSeriesRoundSheet.swift",
+      "Hackers/Features/Series/Sheets/EditSeriesRoundSheet.swift",
+      "Hackers/Features/Series/Sheets/NewSeriesRoundSheet.swift",
+      "Hackers/Features/Series/ViewModels/SeriesViewModel.swift",
+      "Hackers/Shared/Models/Round/Round+Course.swift",
+      "HackersUnitTests/SeriesRoundStartAuditTests.swift",
+      "HackersUnitTests/SeriesCourseHandicapValidationTests.swift"
+    ],
+    "retained": [
+      "Hackers/Features/Round/LiveRound/Accessory/Components/ScorecardHoleCell.swift",
+      "Hackers/Features/Round/LiveRound/Accessory/Sheets/FullScorecardView.swift (combined upstream + same local scorecard hunks retained)",
+      "Hackers/Features/Round/RoundOutcome/IndividualScorecardView.swift (combined upstream + same local scorecard hunks retained)"
+    ]
+  },
+  "validation_status": "passed",
+  "archive_directory": "/Users/Kirsten/Developer/Hackers-Combined/build-artifacts/consolidated-rc-2026-10-21",
+  "test_simulator": "23DF6611-8329-4397-955A-E373C878C9E4",
+  "source_commit": "743a54c3",
+  "validation": {
+    "result": "Passed",
+    "passedTests": 1175,
+    "failedTests": 0,
+    "skippedTests": 5,
+    "totalTestCount": 1180,
+    "evidence": [
+      "legacy-test-result.json (action succeeded, testsCount 1180, skipped 5)",
+      "final-tests.log (1059 XCTest cases passed; 116 Swift Testing cases passed)"
+    ],
+    "report_note": "Optional simulator diagnostics collection was stopped after tests completed. Modern test-results summary returns unknown; legacy action metrics and command exit 0 confirm completion."
+  },
+  "sandbox_archive": "/Users/Kirsten/Developer/Hackers-Combined/build-artifacts/consolidated-rc-2026-10-21/Hackers-Sandbox.xcarchive",
+  "sandbox_archive_signature_verified": true,
+  "testflight_upload": "Complete: VALID / IN_BETA_TESTING",
+  "new_distribution_certificate": "0E65D26AA342065FB5AD04B19A2B9E189F039EBD",
+  "production_archive": {
+    "status": "succeeded",
+    "path": "/Users/Kirsten/Developer/Hackers-Combined/build-artifacts/consolidated-rc-2026-10-21/Hackers-Production.xcarchive",
+    "verification": {
+      "bundles": [
+        {
+          "bundle": "com.tigermindlabs.hackers.compete",
+          "version": "1.0.0",
+          "build": "2026.10.21.2",
+          "symbols_match": true,
+          "binary_sha256": "c649adc8c8c240299a5af354e27951ccb89be9627ac68d2eb07bbd69c144863c"
+        },
+        {
+          "bundle": "com.tigermindlabs.hackers.compete.liveactivity",
+          "version": "1.0.0",
+          "build": "2026.10.21.2",
+          "symbols_match": true,
+          "binary_sha256": "a15c27a38a4e033844b698158f58aa0ac0b72c0946dbcffdcf1cbe3eddac35d2"
+        },
+        {
+          "bundle": "com.tigermindlabs.hackers.compete.watchkitapp",
+          "version": "1.0.0",
+          "build": "2026.10.21.2",
+          "symbols_match": true,
+          "binary_sha256": "769e9a39bac8db1c35dddc5f9893cf6a6735e6ed221951bf4f62fb7907d782f9"
+        }
+      ],
+      "firebase_project": "hackers-compete",
+      "production_compiler_flags_verified": true,
+      "source_hashes_match": true,
+      "recursive_signature_verified": true
+    }
+  },
+  "push_performed": false,
+  "merge_performed": false,
+  "upload_warnings": {
+    "type": "missing vendor framework dSYMs",
+    "frameworks": [
+      "FirebaseAnalytics",
+      "FirebaseFirestoreInternal",
+      "GoogleAdsOnDeviceConversion",
+      "GoogleAppMeasurement",
+      "GoogleAppMeasurementIdentitySupport",
+      "Sentry",
+      "absl",
+      "grpc",
+      "grpcpp",
+      "openssl_grpc"
+    ],
+    "application_symbols_verified": true
+  },
+  "internal_beta_group": {
+    "name": "Beta",
+    "hasAccessToAllBuilds": true
+  },
+  "upload_receipt": {
+    "app": "6757443901",
+    "bundleId": "com.tigermindlabs.hackers.compete.sandbox",
+    "version": "1.0.0",
+    "build": "2026.10.21.2",
+    "status": "UPLOAD SUCCEEDED with no errors",
+    "completedAt": "2026-10-21T11:35:20.515Z",
+    "bytesSent": 81877251,
+    "organizerWarnings": "vendor dSYM upload failures (10)",
+    "receiptBuildIDs": [
+      "61f460c3-8775-41f0-82d8-f6e47b06fc58",
+      "9bf63160-522b-4102-84ef-4a2319925d42"
+    ]
+  },
+  "testflight_build_id": "61f460c3-8775-41f0-82d8-f6e47b06fc58",
+  "testflight_processing_state": "VALID",
+  "testflight_internal_state": "IN_BETA_TESTING",
+  "app_name": "Hackers Compete Test",
+  "production_testflight_upload": "Complete: VALID / IN_BETA_TESTING",
+  "production_app_id": "6757131203",
+  "production_upload_receipt": {
+    "app": "6757131203",
+    "bundleId": "com.tigermindlabs.hackers.compete",
+    "version": "1.0.0",
+    "build": "2026.10.21.2",
+    "status": "UPLOAD SUCCEEDED with no errors",
+    "organizerWarnings": "vendor dSYM upload failures (10)",
+    "receiptBuildIDs": [
+      "08086e19-e50e-48af-8976-c0c90b7ec900",
+      "3b0c2f0e-cbdf-4f22-8a7c-fda1b43282f6"
+    ]
+  },
+  "production_upload_warnings": {
+    "type": "missing vendor framework dSYMs",
+    "frameworks": [
+      "FirebaseAnalytics",
+      "FirebaseFirestoreInternal",
+      "GoogleAdsOnDeviceConversion",
+      "GoogleAppMeasurement",
+      "GoogleAppMeasurementIdentitySupport",
+      "Sentry",
+      "absl",
+      "grpc",
+      "grpcpp",
+      "openssl_grpc"
+    ],
+    "application_symbols_verified": true
+  },
+  "production_internal_beta_group": {
+    "name": "Beta",
+    "hasAccessToAllBuilds": true
+  },
+  "production_testflight_build_id": "3b0c2f0e-cbdf-4f22-8a7c-fda1b43282f6",
+  "production_app_name": "Hackers Compete",
+  "both_testflight_builds": [
+    {
+      "app": "Hackers Compete Test",
+      "appID": "6757443901",
+      "bundle": "com.tigermindlabs.hackers.compete.sandbox",
+      "build": "2026.10.21.2",
+      "buildID": "61f460c3-8775-41f0-82d8-f6e47b06fc58",
+      "processingState": "VALID",
+      "internalBuildState": "IN_BETA_TESTING"
+    },
+    {
+      "app": "Hackers Compete",
+      "appID": "6757131203",
+      "bundle": "com.tigermindlabs.hackers.compete",
+      "build": "2026.10.21.2",
+      "buildID": "3b0c2f0e-cbdf-4f22-8a7c-fda1b43282f6",
+      "processingState": "VALID",
+      "internalBuildState": "IN_BETA_TESTING"
+    }
+  ],
+  "uploads_performed": [
+    "Sandbox",
+    "Production"
+  ],
+  "backend_deploy_performed": false
+}

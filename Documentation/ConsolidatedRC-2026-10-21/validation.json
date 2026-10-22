@@ -1,0 +1,12 @@
+{
+  "result": "Passed",
+  "passedTests": 1175,
+  "failedTests": 0,
+  "skippedTests": 5,
+  "totalTestCount": 1180,
+  "evidence": [
+    "legacy-test-result.json (action succeeded, testsCount 1180, skipped 5)",
+    "final-tests.log (1059 XCTest cases passed; 116 Swift Testing cases passed)"
+  ],
+  "report_note": "Optional simulator diagnostics collection was stopped after tests completed. Modern test-results summary returns unknown; legacy action metrics and command exit 0 confirm completion."
+}

@@ -138,7 +138,19 @@ extension FirebaseService {
         guard shouldCompleteRound, round.status != .complete else { return }
         round.status = .complete
         round.lastUpdatedAt = .init()
-        _ = await round.put()
+        if case .success = await round.put() {
+            // Best-effort cache refresh cannot fail or change completed scoring.
+            // Profile reads and future regular creation always refresh again.
+            Task {
+                let userID = await AppData.shared.user?.id
+                if case .success(let players) = await self.getPlayersByIDs(Array(participantPlayerIDs)) {
+                    for player in players where player.canEditPersonalHandicap(as: userID) {
+                        do { _ = try await self.fetchPersonalHandicapHistory(playerID: player.id) }
+                        catch { self.addBreadcrumb(level: .error, message: "Personal handicap refresh deferred until next load", error: error) }
+                    }
+                }
+            }
+        }
     }
 }
 
