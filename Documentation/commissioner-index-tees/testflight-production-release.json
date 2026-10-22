@@ -34,17 +34,24 @@
   "audience": "APP_STORE_ELIGIBLE",
   "autoNotifyEnabled": true,
   "internalBuildState": "IN_BETA_TESTING",
-  "externalBuildState": "READY_FOR_BETA_SUBMISSION",
+  "externalBuildState": "IN_BETA_TESTING",
   "testingNotes": "Commissioner updates: Save handicap overrides with the keyboard open; hide the keyboard and cancel edits safely; edit a player index directly from Series Handicap Details; select independent tees for each player; verify Course HCP recalculates in the lobby while started and completed matches retain their snapshots.",
   "testingNotesVerified": true,
   "uploadTool": "Fastlane 2.230.0",
   "archive": "/Users/Kirsten/Developer/Hackers-Combined/build-artifacts/production-commissioner-2026-10-22/Hackers-Production.xcarchive",
   "ipa": "/Users/Kirsten/Developer/Hackers-Combined/build-artifacts/production-commissioner-2026-10-22/Hackers-Production.ipa",
-  "externalDistribution": "Blocked: existing API key cannot submit beta app review; signed-in App Store Connect session required.",
+  "externalDistribution": "Available to external Beta Testers; submission completed in signed-in App Store Connect after Fastlane upload.",
   "internalGroup": {
     "name": "Beta",
     "hasAccessToAllBuilds": true
   },
   "requestedExternalGroup": "Beta Testers",
-  "checkedAt": "2026-10-22T11:14:13.977Z"
+  "checkedAt": "2026-10-22T11:22:51.254Z",
+  "betaReviewState": "APPROVED",
+  "externalGroup": {
+    "name": "Beta Testers",
+    "testers": 45,
+    "assignmentVerifiedInAppStoreConnect": true
+  },
+  "confirmationScreenshot": "testflight-groups-confirmed.png"
 }

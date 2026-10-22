@@ -91,7 +91,7 @@ The user authorized Production distribution to both internal and external beta t
 
 **Testing notes are updated and independently verified in Apple’s en-US beta build localization.** [Device testing checklist](TESTFLIGHT-CHECKLIST.md).
 
-External distribution to **Beta Testers** is not complete: Apple returns `READY_FOR_BETA_SUBMISSION`; the current API key is forbidden from submitting beta app review. Fastlane successfully uploaded the binary and notes before that failure. A fresh-token retry confirmed the review-submission permission error. An App Store Connect login with external beta review permission is required to finish. External availability is not claimed.
+External distribution to **Beta Testers** is complete. After the user signed in, the build was assigned to that external group and submitted through App Store Connect with **Automatically notify testers** enabled. Apple confirms **APPROVED**, internal **IN_BETA_TESTING**, and external **IN_BETA_TESTING**. The page shows the internal Beta group (2 testers) and external Beta Testers group (45 testers). [Distribution confirmation](testflight-groups-confirmed.png). The API key permission failure was resolved by the authorized signed-in browser submission; the binary upload and testing notes were completed with Fastlane.
 
 The archive includes iPhone app, Watch app, and Live Activity with Production bundle IDs, build 2026.10.22.1, verified signatures, and matching dSYMs. Source commit: `774b6ad1f3df601bebf970d2bb61a954e6e9b2aa`. The newer release-base commit changes only CI/documentation. No application code changed for this deployment. Physical-device and authenticated Firebase acceptance remain manual.
 
