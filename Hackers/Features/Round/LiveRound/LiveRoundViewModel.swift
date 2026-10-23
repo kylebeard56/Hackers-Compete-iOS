@@ -1673,7 +1673,7 @@ final class LiveRoundViewModel: ObservableObject, Loggable {
     
     func strokesReceivedOnHole(participant: RoundParticipant, holeNumber: Int) -> Int {
         ScoringEngine.strokesReceived(
-            handicap: participant.lockedHandicapAllowance,
+            handicap: ScoringEngine.playingHandicapAllowance(for: participant, in: snapshot),
             holeNumber: holeNumber,
             holes: defaultTee?.holes ?? [],
             playedHoleNumbers: snapshot.holeRange?.holeNumbers ?? Array(1...18),
@@ -1738,12 +1738,13 @@ final class LiveRoundViewModel: ObservableObject, Loggable {
     }
 
     private func scoringUnitParticipants(scoringUnitID: String) -> [RoundParticipant] {
-        let participantByID = Dictionary(uniqueKeysWithValues: snapshot.participants.map { ($0.id, $0) })
+        let participantByID = Dictionary(uniqueKeysWithValues:
+            ScoringEngine.scoringParticipants(in: snapshot, basis: .net).map { ($0.id, $0) })
         if let scoringUnit = resolvedScoringUnit(for: scoringUnitID) {
             let participants = scoringParticipantIDs(for: scoringUnit).compactMap { participantByID[$0] }
             if participants.isPopulated { return participants }
         }
-        return sharedScoringSubject(matching: scoringUnitID)?.participants ?? []
+        return sharedScoringSubject(matching: scoringUnitID)?.participants.compactMap { participantByID[$0.id] } ?? []
     }
 
     private func sharedScoringHandicapConfig(for scoringUnit: ScoringUnit) -> HandicapConfiguration? {
@@ -1761,7 +1762,8 @@ final class LiveRoundViewModel: ObservableObject, Loggable {
         return ScoringEngine.scoringUnitHandicapStrokes(
             for: scoringUnit,
             participants: scoringUnitParticipants(scoringUnitID: scoringUnitID),
-            sharedScoreHandicapConfig: sharedScoringHandicapConfig(for: scoringUnit)
+            sharedScoreHandicapConfig: sharedScoringHandicapConfig(for: scoringUnit),
+            handicapNormalizationMode: snapshot.configuration.handicapNormalizationMode
         )
     }
     
@@ -1868,7 +1870,8 @@ final class LiveRoundViewModel: ObservableObject, Loggable {
         let handicap = ScoringEngine.scoringUnitHandicap(
             for: scoringUnit,
             participants: scoringUnitParticipants(scoringUnitID: scoringUnitID),
-            sharedScoreHandicapConfig: sharedScoringHandicapConfig(for: scoringUnit)
+            sharedScoreHandicapConfig: sharedScoringHandicapConfig(for: scoringUnit),
+            handicapNormalizationMode: snapshot.configuration.handicapNormalizationMode
         )
         return ScoringEngine.strokesReceived(
             handicap: handicap,
@@ -3771,9 +3774,7 @@ final class LiveRoundViewModel: ObservableObject, Loggable {
             substitutesScore: snapshot.configuration.substitutesScore,
             attendanceConfirmationEnabled: snapshot.configuration.attendanceConfirmationEnabled == true
         )
-        let scoringParticipants = handicapNormalizationMode == .field
-            ? HandicapCalculator.normalizedParticipantsForField(eligibleParticipants)
-            : eligibleParticipants
+        let scoringParticipants = ScoringEngine.scoringParticipants(in: snapshot, basis: basis)
 
         let result = ScoringEngine.computeWithPipeline(
             scores: snapshot.scoring,
@@ -4245,7 +4246,7 @@ final class LiveRoundViewModel: ObservableObject, Loggable {
     ) -> Int {
         guard basis == .net else { return gross }
         let received = ScoringEngine.strokesReceived(
-            handicap: participant.adjustedHandicap,
+            handicap: ScoringEngine.playingHandicapAllowance(for: participant, in: snapshot),
             holeNumber: holeNumber,
             holes: defaultTee?.holes ?? [],
             playedHoleNumbers: snapshot.holeRange?.holeNumbers ?? Array(1...18),
@@ -5303,6 +5304,7 @@ final class LiveRoundViewModel: ObservableObject, Loggable {
                     $0.id,
                     $0.teeBoxID,
                     String($0.lockedHandicapAllowance),
+                    String(ScoringEngine.playingHandicapAllowance(for: $0, in: snapshot)),
                     $0.resolvedPresenceStatus.rawValue,
                     $0.isSubstitute ? "1" : "0"
                 ].joined(separator: ":")
@@ -5942,7 +5944,7 @@ final class LiveRoundViewModel: ObservableObject, Loggable {
                 })
 
             let strokesReceived = ScoringEngine.strokesReceived(
-                handicap: participant.lockedHandicapAllowance,
+                handicap: ScoringEngine.playingHandicapAllowance(for: participant, in: snapshot),
                 holeNumber: holeNumber,
                 holes: tee.holes,
                 playedHoleNumbers: playedHoleNumbers,

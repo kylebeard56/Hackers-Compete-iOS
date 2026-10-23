@@ -49,6 +49,7 @@ jobs:
           -only-testing:HackersUnitTests/RoundHandicapEntryTests
           -only-testing:HackersUnitTests/RoundHandicapRegressionTests
           -only-testing:HackersUnitTests/CourseHandicapCalculationRegressionTests
+          -only-testing:HackersUnitTests/HandicapNormalizationRegressionTests
           -only-testing:HackersUnitTests/HandicapKeyboardDismissalTests
           -only-testing:HackersUnitTests/SeriesRoundStartAuditTests
           -only-testing:HackersUnitTests/SeriesRoundCreationMappingTests

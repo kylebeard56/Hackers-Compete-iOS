@@ -1,0 +1,94 @@
+{
+  "baseCommit": "31020e9442fd6c003e3e704e0c5651ae418470ab",
+  "changes": [
+    "Share scoring eligibility and field normalization with scorecard dots/net cells, Stableford summaries, lobby preview, and player projections.",
+    "Invalidate projections when another player changes the normalization baseline.",
+    "Recompute shared-score playing allowances from normalized eligible members while preserving saved allowances."
+  ],
+  "tests": {
+    "configuration": "Production, -O, whole-module optimization, arm64 simulator",
+    "result": "Passed",
+    "passed": 1197,
+    "failed": 0,
+    "skipped": 5,
+    "total": 1202,
+    "newNormalizationTests": 9,
+    "simulator": {
+      "architecture": "arm64",
+      "deviceId": "A868F0E8-B3F2-4B0D-9AAC-D3283A1B5806",
+      "deviceName": "Hackers iPhone 17 Pro",
+      "modelName": "iPhone 17 Pro",
+      "osBuildNumber": "23D8133",
+      "osVersion": "26.3.1",
+      "platform": "iOS Simulator"
+    },
+    "xcresult": "/Users/Kirsten/Developer/Hackers-Combined/build-artifacts/handicap-normalization-2026-10-23/HackersNormalizationFull.xcresult",
+    "log": "/Users/Kirsten/Developer/Hackers-Combined/build-artifacts/handicap-normalization-2026-10-23/full-suite.log"
+  },
+  "regressionReproduction": {
+    "individualAndProjectionTestsBeforeFix": {
+      "failed": 5,
+      "passed": 0,
+      "xcresult": "/private/tmp/HackersPR19NormalizationBaseline.xcresult"
+    },
+    "sharedScoreTestBeforeFix": {
+      "failed": 1,
+      "passed": 0,
+      "xcresult": "/private/tmp/HackersPR19SharedNormalizationBaseline.xcresult"
+    },
+    "initialFixtureCorrection": "A new assertion expected a Double instead of the projection trend integer; corrected before recording the failing baseline."
+  },
+  "coverage": [
+    "Subtract the best handicap from all four players: 4, 12, 14, 18 \u2192 0, 8, 10, 14",
+    "18 holes, front nine, back nine",
+    "Plus handicaps and legacy 18-hole stroke scaling",
+    "Normalization on/off, gross and net",
+    "Excluded substitutes and no-shows",
+    "Separate matchup baselines",
+    "Manual overrides and saved handicap preservation",
+    "Normalized player projections and baseline cache invalidation",
+    "Shared scramble labels/dots with and without recorded scores"
+  ],
+  "sourceSHA256": {
+    "Hackers/Core/Scoring/ScoringEngine.swift": "230eb01b5d958865c602ef3846c9823ec76a52ce90c62645ccec875d55e13084",
+    "Hackers/Features/Round/GameLobby/GameLobby+Players.swift": "e3c2f628239ee54cc78a60f28b60a3b7e3d75585f01fb3d87cb4d290261a34db",
+    "Hackers/Features/Round/LiveRound/LiveRoundViewModel.swift": "681e9068083c4a04a93dd7424602b8c24d4252a172296bededf0247bb52c5418",
+    "HackersUnitTests/HandicapNormalizationRegressionTests.swift": "ee8a91ed3e906b88333aa7e94e0e733f3693f36276506803550456dba4768415"
+  },
+  "deployment": "No new upload. Sandbox 2026.10.22.3 was built from 22f589b5 and does not include this normalization follow-up. Production remains held.",
+  "fullSuiteSourceSHA256": {
+    "Hackers/Core/Scoring/ScoringEngine.swift": "230eb01b5d958865c602ef3846c9823ec76a52ce90c62645ccec875d55e13084",
+    "Hackers/Features/Round/GameLobby/GameLobby+Players.swift": "e3c2f628239ee54cc78a60f28b60a3b7e3d75585f01fb3d87cb4d290261a34db",
+    "Hackers/Features/Round/LiveRound/LiveRoundViewModel.swift": "681e9068083c4a04a93dd7424602b8c24d4252a172296bededf0247bb52c5418",
+    "HackersUnitTests/HandicapNormalizationRegressionTests.swift": "adb178d553edacd13a60da56f70fca0bfba71b3c3d11d292fd016e066981479b"
+  },
+  "finalFocusedTests": {
+    "configuration": "Production, -O, whole-module optimization, arm64 simulator",
+    "result": "Passed",
+    "passed": 10,
+    "failed": 0,
+    "skipped": 0,
+    "total": 10,
+    "example": {
+      "savedAllowances": [
+        4,
+        12,
+        14,
+        18
+      ],
+      "playingAllowances": [
+        0,
+        8,
+        10,
+        14
+      ],
+      "layouts": [
+        "18 holes",
+        "front nine",
+        "back nine"
+      ]
+    },
+    "xcresult": "/Users/Kirsten/Developer/Hackers-Combined/build-artifacts/handicap-normalization-2026-10-23/HackersNormalizationAllPlayers.xcresult",
+    "log": "/Users/Kirsten/Developer/Hackers-Combined/build-artifacts/handicap-normalization-2026-10-23/focused-suite.log"
+  }
+}
