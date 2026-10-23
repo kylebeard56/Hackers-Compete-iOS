@@ -24,4 +24,6 @@ Initial SDK-test attempts failed in the new test fixture before testing request 
 
 ## Release status
 
+PR review follow-up: the two lobby tee regressions are fixed. Gross players without a handicap snapshot can select a valid tee without creating an allowance; manual-strokes tee changes preserve the stored Index state and do not create an Index calculation. All **197 focused Production tests passed, 0 failed, 0 skipped**, including both new regressions across 18-hole/front-nine/back-nine layouts and persistence. See [review regression validation](../commissioner-index-tees/review-regression-fixes.json). The existing 2026.10.22.2 archive and the full-suite/cold-launch evidence above predate these follow-up fixes; no replacement archive or upload was performed.
+
 Build **2026.10.22.2 was not uploaded**. The user requested holding deployment and updating PR #19 for review. Testing notes in what-to-test.txt are prepared locally and are not posted to App Store Connect. The crashing build 2026.10.22.1 remains expired. The signed archive, IPA, dSYMs, successful .xcresult, and logs are preserved under the original checkout’s build-artifacts/production-startup-fix-2026-10-22 directory.

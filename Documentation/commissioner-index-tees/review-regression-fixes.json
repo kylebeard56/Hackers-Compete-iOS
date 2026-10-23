@@ -1,0 +1,37 @@
+{
+  "reviewedBaseCommit": "8b49a81b47fa5a0dc1041ee9c15b87c2ec6a2ac0",
+  "changes": [
+    "Allow valid lobby tee changes without a handicap snapshot while preserving unresolved handicap fields.",
+    "Preserve the stored Index state for manual strokes and omit a calculated Index resolution."
+  ],
+  "testConfiguration": "Production \u00b7 Built with macOS 15.7.9",
+  "simulator": {
+    "architecture": "arm64",
+    "deviceId": "A868F0E8-B3F2-4B0D-9AAC-D3283A1B5806",
+    "deviceName": "Hackers iPhone 17 Pro",
+    "modelName": "iPhone 17 Pro",
+    "osBuildNumber": "23D8133",
+    "osVersion": "26.3.1",
+    "platform": "iOS Simulator"
+  },
+  "suites": [
+    "SeriesRoundStartAuditTests",
+    "RoundParticipantHandicapOverrideTests",
+    "SeriesRoundCreationMappingTests",
+    "SeriesRoundSyncServiceTests"
+  ],
+  "newRegressionTests": [
+    "testGrossLeaguePlayerWithoutHandicapCanChangeTeeWithoutCreatingAnAllowance",
+    "testManualStrokesTeeChangesDoNotInventAnIndexOrCalculation"
+  ],
+  "result": "Passed",
+  "passed": 197,
+  "failed": 0,
+  "skipped": 0,
+  "xcresult": "/private/tmp/HackersPR19TeeRegressionFix.xcresult",
+  "deployment": "No upload or new archive. The held 2026.10.22.2 archive predates these regression fixes.",
+  "outstanding": [
+    "Affected physical iPhone startup/restoration acceptance.",
+    "Physical iPhone/Watch synchronization acceptance."
+  ]
+}

@@ -994,6 +994,69 @@ final class SeriesRoundStartAuditTests: XCTestCase {
         }
     }
 
+    func testGrossLeaguePlayerWithoutHandicapCanChangeTeeWithoutCreatingAnAllowance() throws {
+        let vm = model(.fixed)
+        let member = vm.members[0]
+        let encoder = JSONEncoder()
+        encoder.outputFormatting = .sortedKeys
+        for segment in [HoleSegment.full18, .front9, .back9] {
+            var round = plannedRound()
+            round.roundConfig.scoreBasisOverride = .gross
+            XCTAssertTrue(SeriesRoundHandicapSetup.issues(series: vm.series, round: round,
+                members: [member], handicaps: [:], course: course(segment)).isEmpty)
+            let participant = try XCTUnwrap(SeriesRoundCreationMapping.buildParticipantPayloads(
+                members: [member], roundID: "gross-round", teamMappings: [:], memberAssignments: [:],
+                handicaps: [:], maximumHandicap: 36, courseSegment: course(segment),
+                handicapEntryFormat: .courseHandicap, handicapStrokeBasis: .eighteenHole,
+                hostPlayerID: nil).first)
+            XCTAssertNil(participant.handicapSnapshot)
+            XCTAssertNil(participant.handicapResolution?.effectiveStrokes)
+            let changed = try XCTUnwrap(participant.selectingSeriesTee("blue", course: course(segment), status: .lobby))
+            var expected = participant
+            expected.teeBoxID = "blue"
+            // Firebase model equality only compares IDs; compare stored fields.
+            XCTAssertEqual(try encoder.encode(changed), try encoder.encode(expected),
+                "A gross player's tee change must preserve unresolved handicap inputs")
+            let restored = try JSONDecoder().decode(RoundParticipant.self, from: encoder.encode(changed))
+            XCTAssertEqual(try encoder.encode(restored), try encoder.encode(expected))
+            XCTAssertNil(participant.selectingSeriesTee("stale", course: course(segment), status: .lobby))
+            for status in [RoundStatus.live, .complete] {
+                let locked = try XCTUnwrap(participant.selectingSeriesTee("blue", course: course(segment), status: status))
+                XCTAssertEqual(try encoder.encode(locked), try encoder.encode(participant))
+            }
+        }
+    }
+
+    func testManualStrokesTeeChangesDoNotInventAnIndexOrCalculation() throws {
+        let vm = model(.fixed)
+        let member = vm.members[0]
+        for segment in [HoleSegment.full18, .front9, .back9] {
+            let participant = try XCTUnwrap(SeriesRoundCreationMapping.buildParticipantPayloads(
+                members: [member], roundID: "manual-round", teamMappings: [:], memberAssignments: [:],
+                handicaps: [:], maximumHandicap: 36, courseSegment: course(segment),
+                handicapEntryFormat: .courseHandicap, handicapStrokeBasis: .eighteenHole,
+                roundHandicapInputs: [member.id: .init(method: .strokes, value: 12, teeBoxID: "white")],
+                hostPlayerID: nil).first)
+            XCTAssertNil(participant.handicapIndex)
+            XCTAssertNil(participant.handicapSnapshot?.handicapIndex)
+            var changed = participant
+            for teeID in ["blue", "white", "blue"] {
+                changed = try XCTUnwrap(changed.selectingSeriesTee(teeID, course: course(segment), status: .lobby))
+                changed = try JSONDecoder().decode(RoundParticipant.self, from: JSONEncoder().encode(changed))
+                XCTAssertEqual(changed.teeBoxID, teeID)
+                XCTAssertEqual(changed.lockedHandicapAllowance, 12)
+                XCTAssertEqual(changed.leagueHandicapComputedBaseline, 12)
+                XCTAssertNil(changed.handicapIndex)
+                XCTAssertNil(changed.handicapSnapshot?.handicapIndex)
+                XCTAssertNil(changed.handicapSnapshot?.calculation)
+                XCTAssertNil(changed.handicapResolution?.calculation)
+                XCTAssertEqual(changed.handicapResolution?.manualStrokeInput, 12)
+                XCTAssertEqual(changed.handicapSnapshot?.source, .roundSetup)
+                XCTAssertEqual(PlayerInsightsHeaderContext.handicapSummary(for: changed), "Course HCP 12")
+            }
+        }
+    }
+
     func testCommissionerTeesStayIndependentFromPersonalInputsAndManualStrokes() throws {
         let vm = model(.fixed)
         let member = vm.members[0]
