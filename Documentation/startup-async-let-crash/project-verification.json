@@ -1,0 +1,60 @@
+[
+  {
+    "id": "B495B6682CBC6F1B00A777CC",
+    "type": "XCRemoteSwiftPackageReference",
+    "name": "https://github.com/firebase/firebase-ios-sdk",
+    "field": "requirement",
+    "before": {
+      "kind": "upToNextMajorVersion",
+      "minimumVersion": "11.3.0"
+    },
+    "after": {
+      "kind": "upToNextMajorVersion",
+      "minimumVersion": "12.19.2"
+    }
+  },
+  {
+    "id": "B4336BAD2905E7E900063677",
+    "type": "XCRemoteSwiftPackageReference",
+    "name": "https://github.com/google/GoogleSignIn-iOS",
+    "field": "requirement",
+    "before": {
+      "kind": "upToNextMajorVersion",
+      "minimumVersion": "7.0.0"
+    },
+    "after": {
+      "kind": "upToNextMajorVersion",
+      "minimumVersion": "9.2.0"
+    }
+  },
+  {
+    "id": "B4336BA32905E11100063677",
+    "type": "XCBuildConfiguration",
+    "name": "Sandbox",
+    "field": "buildSettings",
+    "changes": {
+      "OTHER_LDFLAGS": [
+        "",
+        [
+          "",
+          "-ObjC"
+        ]
+      ]
+    }
+  },
+  {
+    "id": "B4336BA42905E11100063677",
+    "type": "XCBuildConfiguration",
+    "name": "Production",
+    "field": "buildSettings",
+    "changes": {
+      "OTHER_LDFLAGS": [
+        null,
+        [
+          "$(inherited)",
+          "-ObjC"
+        ]
+      ]
+    }
+  }
+]

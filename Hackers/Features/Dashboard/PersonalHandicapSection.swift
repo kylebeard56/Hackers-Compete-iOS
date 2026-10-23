@@ -319,9 +319,12 @@ struct PersonalHandicapSection: View {
         viewerUserID = await AppData.shared.user?.id
         historyError = nil
         leagueError = nil
-        async let historyResult: Void = loadHistory()
-        async let leagueResult: Void = loadLeagues()
-        _ = await (historyResult, leagueResult)
+        // This section can load with the dashboard; avoid the same optimized
+        // async-let teardown path as the initial round/Series requests.
+        await withTaskGroup(of: Void.self) { group in
+            _ = group.addTaskUnlessCancelled { await loadHistory() }
+            _ = group.addTaskUnlessCancelled { await loadLeagues() }
+        }
     }
 
     @MainActor private func loadHistory() async {

@@ -1,0 +1,11 @@
+Startup reliability and commissioner updates.
+
+Please test:
+• Install this update, force quit, and reopen several times. Confirm the app stays open beyond the first 15 seconds, especially with an existing signed-in session.
+• Sign in, sign out, and relaunch. Try slow or unavailable networking, then reconnect; verify rounds, Series, and personal handicap information load.
+• Commissioner: save handicap overrides with the keyboard open; dismiss the keyboard and cancel edits; edit a player index from Series Handicap Details; choose different tees for each player.
+• Verify Course HCP recalculates in the lobby while started/completed matches retain their saved snapshots.
+• Start a new round, return to the dashboard, and resume it. Verify scoring and round completion.
+• Apple Watch: open the companion, start/resume a round, record scores, and confirm iPhone/Watch synchronization and Live Activity updates.
+
+If a crash occurs, include the iOS version, build number, whether you were signed in, and what you did just before it happened in TestFlight feedback.
