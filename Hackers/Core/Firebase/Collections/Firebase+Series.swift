@@ -495,9 +495,32 @@ extension FirebaseService {
 
 extension FirebaseService {
 
-    func upsertHandicapOverride(_ override: SeriesHandicapOverride) async -> Result<SeriesHandicapOverride, Error> {
-        addBreadcrumb(message: "\(#function), seriesID: \(`override`.parentID), memberID: \(`override`.memberID)")
-        return await override.put()
+    func upsertHandicapOverride(_ override: SeriesHandicapOverride, expected: SeriesHandicapOverride?) async -> Result<SeriesHandicapOverride, Error> {
+        let db = Firestore.firestore()
+        let reference = db.collection(SeriesHandicapOverride.parentCollection).document(override.parentID)
+            .collection(SeriesHandicapOverride.subcollectionName).document(override.id)
+        do {
+            // A listener may not have delivered another commissioner's edit yet.
+            // Check the loaded version atomically with the write, including first creation.
+            _ = try await db.runTransaction { transaction, errorPointer -> Any? in
+                do {
+                    let document = try transaction.getDocument(reference)
+                    let current = document.exists ? try document.data(as: SeriesHandicapOverride.self) : nil
+                    guard SeriesHandicapOverride.matchesSavedVersion(current, expected) else {
+                        throw NSError(domain: "SeriesHandicapOverride", code: 1,
+                            userInfo: [NSLocalizedDescriptionKey: "The Index changed. Reopen the editor to load the latest value."])
+                    }
+                    transaction.setData(try override.toDictionary(), forDocument: reference)
+                    return true
+                } catch {
+                    errorPointer?.pointee = error as NSError
+                    return nil
+                }
+            }
+            return .success(override)
+        } catch {
+            return .failure(error)
+        }
     }
 
     func fetchHandicapOverrides(seriesID: String) async -> [SeriesHandicapOverride] {

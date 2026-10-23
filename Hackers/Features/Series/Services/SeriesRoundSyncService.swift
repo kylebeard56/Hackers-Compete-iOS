@@ -294,6 +294,7 @@ struct SeriesRoundSyncService: Loggable {
                         handicapEntryFormat: workingRound.configuration.handicapEntryFormat,
                         handicapStrokeBasis: series.handicapConfig.strokeBasis,
                         roundHandicapInputs: seriesRound.handicapInputs,
+                        playerTeeBoxIDs: seriesRound.playerTeeBoxIDs,
                         roundScoringStrokeBasis: seriesRound.roundConfig.handicapStrokeBasis,
                         hostPlayerID: hostPlayerID,
                         plannedSeatsByMemberID: plannedSeatsByMemberID
@@ -462,6 +463,7 @@ struct SeriesRoundSyncService: Loggable {
                 handicapEntryFormat: workingRound.configuration.handicapEntryFormat,
                 handicapStrokeBasis: series.handicapConfig.strokeBasis,
                 roundHandicapInputs: seriesRound.handicapInputs,
+                playerTeeBoxIDs: seriesRound.playerTeeBoxIDs,
                 roundScoringStrokeBasis: seriesRound.roundConfig.handicapStrokeBasis,
                 preserveFrozenRoundSetup: roundStatus != .lobby,
                 hostPlayerID: hostPlayerID,

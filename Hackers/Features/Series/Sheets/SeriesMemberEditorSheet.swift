@@ -11,6 +11,7 @@ struct SeriesMemberEditorSheet: View {
 
     @ObservedObject var viewModel: SeriesViewModel
     let memberID: String
+    var editIndexOnly = false
 
     @State private var editedName = ""
     @State private var showTeeSelection = false
@@ -19,6 +20,8 @@ struct SeriesMemberEditorSheet: View {
     @State private var overrideText = ""
     @State private var isSavingName = false
     @State private var isSavingHandicap = false
+    @State private var originalOverride: SeriesHandicapOverride?
+    @State private var handicapSaveMessage: String?
     @State private var pendingSelfRoleDemotion: SeriesMemberRole?
 
     @FocusState private var nameFocused: Bool
@@ -120,7 +123,7 @@ struct SeriesMemberEditorSheet: View {
                 palette: palette,
                 title: "Member",
                 subtitle: "This player is no longer on the roster.",
-                onClose: { dismiss() }
+                onClose: { if !isSavingHandicap { dismiss() } }
             )
             Spacer()
         }
@@ -132,27 +135,30 @@ struct SeriesMemberEditorSheet: View {
             header: {
                 SeriesSheetHeader(
                     palette: palette,
-                    title: "Edit member",
-                    subtitle: member.isOffline
+                    title: editIndexOnly ? "Edit Index" : "Edit member",
+                    subtitle: editIndexOnly ? "Commissioner override for this league only. Your personal Index is unchanged." : member.isOffline
                         ? "Offline roster name is stored only for this league."
                         : "League display name on the series roster (not your global profile).",
-                    onClose: { dismiss() }
+                    onClose: { if !isSavingHandicap { dismiss() } }
                 )
             },
             content: {
                 VStack(spacing: 16) {
-                    nameSection(member: member)
-                    if defaultCourse?.isConfigured == true {
-                        teeSection()
-                    }
-                    roleSection(member: member)
-                    if viewModel.hasTeams {
-                        teamSection(member: member)
-                    }
-                    if shouldShowPartnerSection(for: member) {
-                        pairSection(member: member)
+                    if !editIndexOnly {
+                        nameSection(member: member)
+                        if defaultCourse?.isConfigured == true {
+                            teeSection()
+                        }
+                        roleSection(member: member)
+                        if viewModel.hasTeams {
+                            teamSection(member: member)
+                        }
+                        if shouldShowPartnerSection(for: member) {
+                            pairSection(member: member)
+                        }
                     }
                     handicapSection(member: member)
+                        .disabled(isSavingHandicap)
                     Spacer(minLength: 24)
                 }
                 .padding(.horizontal, 16)
@@ -164,18 +170,14 @@ struct SeriesMemberEditorSheet: View {
             theme: palette.theme,
             onScroll: { _ in }
         )
+        .interactiveDismissDisabled(isSavingHandicap)
         .onAppear {
             editedName = member.name.trimmedFullName
             syncOverrideState()
+            if editIndexOnly && viewModel.isCommissioner { overrideEnabled = true }
         }
         .onChange(of: member.name.trimmedFullName) { _, new in
             if !nameFocused { editedName = new }
-        }
-        .onChange(of: viewModel.memberHandicaps[memberID]?.isOverridden) { _, _ in
-            syncOverrideState()
-        }
-        .onChange(of: viewModel.memberHandicaps[memberID]?.overrideIndex) { _, _ in
-            syncOverrideState()
         }
     }
 
@@ -485,61 +487,32 @@ struct SeriesMemberEditorSheet: View {
                     }
                     .buttonStyle(.plain)
 
+                    Text("League Index basis: \(viewModel.series.handicapConfig.strokeBasis == .eighteenHole ? "18 holes" : "9 holes"). Overrides replace the calculated league Index.")
+                        .font(.footnote).foregroundStyle(Color.neutral)
+
                     HStack {
                         Text("Commissioner override")
                             .fontStyle(kFontName, size: 14, weight: .semibold)
                             .foregroundStyle(palette.foregroundColor)
                         Spacer(minLength: 0)
-                        Toggle("", isOn: $overrideEnabled)
+                        Toggle("", isOn: Binding(get: { overrideEnabled }, set: { overrideEnabled = $0; handicapSaveMessage = nil }))
                             .labelsHidden()
                             .tint(.orange)
-                            .onChange(of: overrideEnabled) { _, on in
-                                if !on {
-                                    Task {
-                                        await viewModel.setHandicapOverride(
-                                            memberID: member.id,
-                                            value: nil,
-                                            isOverridden: false
-                                        )
-                                    }
-                                }
-                            }
                     }
 
                     if overrideEnabled {
-                        TextField("Index", text: $overrideText)
+                        TextField("Index", text: Binding(get: { overrideText }, set: { overrideText = $0; handicapSaveMessage = nil }))
                             .fontStyle(kFontName, size: 15, weight: .semibold)
                             .foregroundStyle(Color.orange)
                             .keyboardType(.decimalPad)
                             .focused($overrideFocused)
+                            .accessibilityIdentifier("series.member.indexInput")
                             .borderedContentStyle(
                                 isActive: overrideFocused,
                                 theme: palette.theme,
                                 fill: palette.cardEmbeddedRowBackground
                             )
 
-                        Button {
-                            Task {
-                                isSavingHandicap = true
-                                let value = Double(overrideText.trimmingCharacters(in: .whitespaces))
-                                await viewModel.setHandicapOverride(
-                                    memberID: member.id,
-                                    value: value,
-                                    isOverridden: value != nil
-                                )
-                                isSavingHandicap = false
-                            }
-                        } label: {
-                            Text(isSavingHandicap ? "Saving…" : "Save override")
-                                .fontStyle(kFontName, size: 15, weight: .semibold)
-                                .foregroundStyle(.white)
-                                .frame(maxWidth: .infinity)
-                                .padding(.vertical, 12)
-                                .background(overrideSaveEnabled ? Color.accentGreen : Color.neutral3)
-                                .clipShape(Capsule())
-                        }
-                        .buttonStyle(.plain)
-                        .disabled(!overrideSaveEnabled || isSavingHandicap)
                     }
                 }
             }
@@ -547,7 +520,30 @@ struct SeriesMemberEditorSheet: View {
     }
 
     private var overrideSaveEnabled: Bool {
-        Double(overrideText.trimmingCharacters(in: .whitespaces)) != nil
+        !overrideEnabled || parsedOverride.map { $0.isFinite && (-10...54).contains($0) } == true
+    }
+
+    private var parsedOverride: Double? {
+        Double(overrideText.trimmingCharacters(in: .whitespacesAndNewlines).replacingOccurrences(of: ",", with: "."))
+    }
+
+    private func saveOverride() {
+        guard overrideSaveEnabled, !isSavingHandicap else { return }
+        isSavingHandicap = true
+        handicapSaveMessage = nil
+        Task {
+            let saved = await viewModel.setHandicapOverride(memberID: memberID,
+                value: overrideEnabled ? parsedOverride : nil, isOverridden: overrideEnabled,
+                expectedOverride: originalOverride, rejectStaleEdits: true)
+            isSavingHandicap = false
+            if saved {
+                overrideFocused = false
+                syncOverrideState()
+                handicapSaveMessage = "Index saved."
+            } else {
+                handicapSaveMessage = "Index was not saved. Your entry is still here. Try again, or reopen to reload newer changes."
+            }
+        }
     }
 
     @ViewBuilder
@@ -555,7 +551,29 @@ struct SeriesMemberEditorSheet: View {
         VStack(spacing: 0) {
             Line()
             VStack(spacing: 12) {
-                if viewModel.isCommissioner, canSaveName {
+                if nameFocused || overrideFocused {
+                    Button("Hide keyboard") { nameFocused = false; overrideFocused = false }
+                        .frame(minHeight: 44)
+                        .accessibilityIdentifier("series.member.hideKeyboard")
+                }
+                if viewModel.isCommissioner, viewModel.series.handicapConfig.isEnabled {
+                    if let handicapSaveMessage {
+                        Text(handicapSaveMessage).font(.footnote)
+                            .accessibilityIdentifier("series.member.saveMessage")
+                    }
+                    Button(action: saveOverride) {
+                        Text(isSavingHandicap ? "Saving…" : "Save override")
+                            .fontStyle(kFontName, size: 16, weight: .semibold)
+                            .foregroundStyle(.white)
+                            .frame(maxWidth: .infinity, minHeight: 48)
+                            .background(overrideSaveEnabled ? Color.accentGreen : Color.neutral3)
+                            .clipShape(Capsule())
+                    }
+                        .buttonStyle(.plain)
+                        .disabled(!overrideSaveEnabled || isSavingHandicap)
+                        .accessibilityIdentifier("series.member.saveOverride")
+                }
+                if !editIndexOnly, viewModel.isCommissioner, canSaveName {
                     Button {
                         isSavingName = true
                         Task {
@@ -584,15 +602,16 @@ struct SeriesMemberEditorSheet: View {
                 Button {
                     dismiss()
                 } label: {
-                    Text("Done")
+                    Text("Close without saving")
                         .fontStyle(kFontName, size: 16, weight: .semibold)
-                        .foregroundStyle(palette.backgroundColor)
+                        .foregroundStyle(palette.foregroundColor)
                         .frame(maxWidth: .infinity)
-                        .padding(.vertical, 14)
-                        .background(palette.foregroundColor)
+                        .padding(.vertical, 12)
+                        .background(palette.cardEmbeddedRowBackground)
                         .clipShape(Capsule())
                 }
                 .buttonStyle(.plain)
+                .disabled(isSavingHandicap)
             }
             .padding(.horizontal, 16)
             .padding(.vertical, 12)
@@ -601,6 +620,7 @@ struct SeriesMemberEditorSheet: View {
     }
 
     private func syncOverrideState() {
+        originalOverride = viewModel.handicapOverrides.first { $0.memberID == memberID }
         let hc = viewModel.memberHandicaps[memberID]
         overrideEnabled = hc?.isOverridden == true
         if let o = hc?.overrideIndex {

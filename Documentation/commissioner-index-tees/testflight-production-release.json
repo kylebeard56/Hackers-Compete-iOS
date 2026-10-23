@@ -1,0 +1,57 @@
+{
+  "pullRequest": "https://github.com/kylebeard56/Hackers-Compete-iOS/pull/19",
+  "appName": "Hackers Compete",
+  "appStoreConnectID": "6757131203",
+  "sourceCommit": "774b6ad1f3df601bebf970d2bb61a954e6e9b2aa",
+  "appID": "6757131203",
+  "build": "2026.10.22.1",
+  "verification": [
+    {
+      "bundleID": "com.tigermindlabs.hackers.compete",
+      "version": "1.0.0",
+      "build": "2026.10.22.1",
+      "signatureVerified": true,
+      "symbolsMatch": true
+    },
+    {
+      "bundleID": "com.tigermindlabs.hackers.compete.liveactivity",
+      "version": "1.0.0",
+      "build": "2026.10.22.1",
+      "signatureVerified": true,
+      "symbolsMatch": true
+    },
+    {
+      "bundleID": "com.tigermindlabs.hackers.compete.watchkitapp",
+      "version": "1.0.0",
+      "build": "2026.10.22.1",
+      "signatureVerified": true,
+      "symbolsMatch": true
+    }
+  ],
+  "ipaSHA256": "0a266928c5601edc5da78c0f711690058de83c86850cb64c0502811d40272a9f",
+  "buildID": "d006390d-0e6d-4c96-ae41-16600d562309",
+  "appleProcessingState": "VALID",
+  "audience": "APP_STORE_ELIGIBLE",
+  "autoNotifyEnabled": true,
+  "internalBuildState": "IN_BETA_TESTING",
+  "externalBuildState": "IN_BETA_TESTING",
+  "testingNotes": "Commissioner updates: Save handicap overrides with the keyboard open; hide the keyboard and cancel edits safely; edit a player index directly from Series Handicap Details; select independent tees for each player; verify Course HCP recalculates in the lobby while started and completed matches retain their snapshots.",
+  "testingNotesVerified": true,
+  "uploadTool": "Fastlane 2.230.0",
+  "archive": "/Users/Kirsten/Developer/Hackers-Combined/build-artifacts/production-commissioner-2026-10-22/Hackers-Production.xcarchive",
+  "ipa": "/Users/Kirsten/Developer/Hackers-Combined/build-artifacts/production-commissioner-2026-10-22/Hackers-Production.ipa",
+  "externalDistribution": "Available to external Beta Testers; submission completed in signed-in App Store Connect after Fastlane upload.",
+  "internalGroup": {
+    "name": "Beta",
+    "hasAccessToAllBuilds": true
+  },
+  "requestedExternalGroup": "Beta Testers",
+  "checkedAt": "2026-10-22T11:22:51.254Z",
+  "betaReviewState": "APPROVED",
+  "externalGroup": {
+    "name": "Beta Testers",
+    "testers": 45,
+    "assignmentVerifiedInAppStoreConnect": true
+  },
+  "confirmationScreenshot": "testflight-groups-confirmed.png"
+}

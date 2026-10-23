@@ -1344,7 +1344,7 @@ extension GameLobby {
             }
             return "HCP \(participant.adjustedHandicap)"
         }
-        let normalized = HandicapCalculator.normalizedParticipantsForField(snapshot.participants)
+        let normalized = ScoringEngine.scoringParticipants(in: snapshot, basis: .net)
             .first { $0.id == participant.id }?.adjustedHandicap ?? participant.adjustedHandicap
         let input = mode == .strokes ? "Strokes" : "HCP"
         return "\(input) \(participant.adjustedHandicap) -> Playing \(normalized)"

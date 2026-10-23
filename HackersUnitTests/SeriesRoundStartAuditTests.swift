@@ -558,7 +558,7 @@ final class SeriesRoundStartAuditTests: XCTestCase {
         _ = try await screen.waitForButton("Handicap Settings")
         screen.scrollToBottom()
         try await Task.sleep(for: .milliseconds(300))
-        XCTAssertTrue(screen.labels.contains("18 strokes · Series"))
+        XCTAssertTrue(screen.labels.contains("18 strokes · Commissioner override"))
         XCTAssertFalse(screen.labels.contains { $0.contains("Index 17.7") })
     }
 
@@ -604,13 +604,17 @@ final class SeriesRoundStartAuditTests: XCTestCase {
         XCTAssertTrue(screen.labels.contains("Handicap Setup Needed"))
         XCTAssertTrue(screen.labels.contains("1 of 2 players need attention"))
         XCTAssertFalse(screen.hasIdentifier("series.handicap.m1.method"))
+        screen.scrollToBottom()
+        try await Task.sleep(for: .milliseconds(250))
         let field = try screen.field("series.handicap.m7.value")
         field.text = "0.0"
         field.sendActions(for: .editingChanged)
         try await Task.sleep(for: .milliseconds(250))
         XCTAssertTrue(vm.handicapReadiness(for: round, course: course()).isReady)
-        XCTAssertTrue(screen.labels.contains("Ready to Start"))
         XCTAssertTrue(screen.labels.contains("Index 0.0 → 0 strokes"))
+        screen.scrollToTop()
+        try await Task.sleep(for: .milliseconds(250))
+        XCTAssertTrue(screen.labels.contains("Ready to Start"))
         XCTAssertEqual(vm.rounds[0].handicapInputs.count, 1, "Typing is round-local draft state")
         screen.attach(to: self, name: "Streamlined-Missing-Player-Resolved-Inline")
     }
@@ -707,7 +711,7 @@ final class SeriesRoundStartAuditTests: XCTestCase {
         round.roundConfig.handicapEntryFormat = .strokes
         round.roundConfig.handicapStrokeBasis = .eighteenHole
         let ready = vm.handicapReadiness(for: round, course: course(.front9))
-        XCTAssertEqual(ready.players[0].summary, "9 strokes · Series")
+        XCTAssertEqual(ready.players[0].summary, "9 strokes · Series calculated")
         XCTAssertNil(ready.players[0].maximumSummary)
     }
 
@@ -873,6 +877,384 @@ final class SeriesRoundStartAuditTests: XCTestCase {
         XCTAssertNil(saved.roundConfig.scoreBasisOverride, "An untouched inherited basis must remain inherited")
     }
 
+    func testCommissionerMixedSeriesTeesPersistAcrossEightPlayersAndAllSegments() throws {
+        for segment in [HoleSegment.full18, .front9, .back9] {
+            for overridden in [false, true] {
+                let vm = model(.fixed)
+                vm.members.append(SeriesMember(id: "m8", name: Name("Offline Eight"), parentID: vm.seriesID))
+                vm.memberHandicaps = Dictionary(uniqueKeysWithValues: vm.members.map {
+                    ($0.id, SeriesMemberHandicap(memberID: $0.id, computedIndex: overridden ? nil : 4.9,
+                        overrideIndex: overridden ? 4.9 : nil, isOverridden: overridden))
+                })
+                let drafts = Dictionary(uniqueKeysWithValues: vm.members.enumerated().map { i, member in
+                    (member.id, SeriesRoundHandicapDraft(seriesIndex: 4.9, teeBoxID: i < 5 ? "blue" : "white"))
+                })
+                let candidate = try SeriesRoundHandicapSetup.applying(drafts: drafts, to: plannedRound())
+                XCTAssertTrue(candidate.handicapInputs.isEmpty, "Tee edits must not create Index overrides")
+                let restored = try JSONDecoder().decode(SeriesRound.self, from: JSONEncoder().encode(candidate))
+                XCTAssertEqual(restored.playerTeeBoxIDs, candidate.playerTeeBoxIDs)
+                let ready = SeriesRoundHandicapSetup.readiness(series: vm.series, round: restored,
+                    members: vm.members, handicaps: vm.memberHandicaps, course: course(segment))
+                XCTAssertTrue(ready.isReady)
+                XCTAssertEqual(ready.players.filter { $0.resolution.tee?.id == "blue" }.count, 5)
+                XCTAssertTrue(ready.players.allSatisfy { $0.resolution.handicapIndex == 4.9 })
+                XCTAssertTrue(ready.players.allSatisfy { $0.source == (overridden ? "Commissioner override" : "Series calculated") })
+                let payloads = SeriesRoundCreationMapping.buildParticipantPayloads(members: vm.members,
+                    roundID: "live", teamMappings: [:], memberAssignments: [:], handicaps: vm.memberHandicaps,
+                    courseSegment: course(segment), handicapEntryFormat: .courseHandicap,
+                    handicapStrokeBasis: .eighteenHole, playerTeeBoxIDs: restored.playerTeeBoxIDs, hostPlayerID: nil)
+                XCTAssertEqual(payloads.filter { $0.teeBoxID == "blue" }.count, 5)
+                XCTAssertEqual(payloads.filter { $0.teeBoxID == "white" }.count, 3)
+                for participant in payloads {
+                    let preview = try XCTUnwrap(ready.players.first { $0.id == participant.seriesMemberID })
+                    XCTAssertEqual(participant.adjustedHandicap, preview.strokes)
+                    XCTAssertEqual(participant.handicapSnapshot?.source, .league)
+                    XCTAssertEqual(participant.handicapIndex, 4.9)
+                    let allocated = segment.holeRange.holeNumbers.map { number in
+                        ScoringEngine.strokesReceived(handicap: participant.adjustedHandicap, holeNumber: number,
+                            holes: course(segment).courseInfo.tees[0].holes, playedHoleNumbers: segment.holeRange.holeNumbers,
+                            useHandicaps: true, handicapStrokeBasis: .defaultBasis(holeCount: segment.holeCount))
+                    }.reduce(0, +)
+                    XCTAssertEqual(allocated, participant.adjustedHandicap)
+                }
+                XCTAssertNotEqual(payloads[0].adjustedHandicap, payloads[7].adjustedHandicap)
+            }
+        }
+    }
+
+    func testCommissionerTeeSaveReopenFailureAndPermissionLocks() async throws {
+        var saved: SeriesRound?
+        let vm = model(.fixed, saveRound: { saved = $0; return .success($0) })
+        let round = plannedRound()
+        vm.rounds = [round]
+        var draft = SeriesRoundHandicapDraft(seriesIndex: 4.9, teeBoxID: "blue")
+        vm.setHandicapDraft(draft, memberID: "m1", roundID: round.id)
+        let candidate = try SeriesRoundHandicapSetup.applying(drafts: ["m1": draft], to: round)
+        let outcome52528 = await vm.saveRoundHandicapSetup(candidate)
+        XCTAssertTrue(outcome52528)
+        let reopened = try XCTUnwrap(saved)
+        XCTAssertEqual(vm.handicapDraft(for: vm.members[0], round: reopened, course: course()).teeBoxID, "blue")
+        XCTAssertNil(reopened.handicapInputs["m1"])
+        let failing = model(.fixed, saveRound: { _ in .failure(NSError(domain: "test", code: 1)) })
+        failing.rounds = [round]
+        failing.setHandicapDraft(draft, memberID: "m1", roundID: round.id)
+        let outcome53011 = await failing.saveRoundHandicapSetup(candidate)
+        XCTAssertFalse(outcome53011)
+        XCTAssertNotNil(failing.handicapSetupErrorMessage)
+        XCTAssertEqual(failing.handicapDraft(for: failing.members[0], round: round, course: course()).teeBoxID, "blue")
+        for status in [SeriesRoundStatus.live, .complete] {
+            var locked = round
+            locked.status = status
+            locked.roundID = "existing-live"
+            XCTAssertThrowsError(try SeriesRoundHandicapSetup.applying(drafts: ["m1": draft], to: locked))
+            XCTAssertThrowsError(try SeriesRoundHandicapSetup.updating(locked, from: candidate))
+            vm.rounds = [locked]
+            let outcome53671 = await vm.saveRoundHandicapSetup(candidate)
+            XCTAssertFalse(outcome53671)
+        }
+        vm.currentUserID = "ordinary-player"
+        vm.rounds = [round]
+        let outcome53825 = await vm.saveRoundHandicapSetup(candidate)
+        XCTAssertFalse(outcome53825)
+        draft.teeBoxID = "white"
+        vm.setHandicapDraft(draft, memberID: "m1", roundID: round.id)
+        XCTAssertNil(vm.roundHandicapDrafts[round.id])
+    }
+
+    func testCommissionerLobbyTeeRecalculatesIndexPreservesManualStrokesAndLocksStartedSnapshots() throws {
+        let vm = model(.fixed)
+        for segment in [HoleSegment.full18, .front9, .back9] {
+            let source = SeriesCourseHandicapResolver.resolve(effectiveIndex: 4.9, member: vm.members[0],
+                courseSegment: course(segment), entryFormat: .courseHandicap,
+                handicapStrokeBasis: .eighteenHole, maximumHandicap: 36)
+            let snapshot = try XCTUnwrap(source.snapshot())
+            let participant = RoundParticipant(id: "p", name: vm.members[0].name, teeBoxID: "white",
+                adjustedHandicap: snapshot.effectiveStrokes, handicapIndex: 4.9,
+                leagueHandicapStrokesAtCreation: snapshot.effectiveStrokes,
+                handicapSnapshot: snapshot, seriesMemberID: "m1")
+            let changed = try XCTUnwrap(participant.selectingSeriesTee("blue", course: course(segment), status: .lobby))
+            XCTAssertEqual(changed.teeBoxID, "blue")
+            XCTAssertEqual(changed.handicapIndex, 4.9)
+            XCTAssertEqual(changed.handicapSnapshot?.handicapIndex, 4.9)
+            XCTAssertNotEqual(changed.adjustedHandicap, participant.adjustedHandicap)
+            XCTAssertEqual(changed.lockedHandicapAllowance, changed.adjustedHandicap)
+            XCTAssertEqual(changed.handicapSnapshot?.source, .league)
+            let manual = participant.applyingLeagueHandicapOverride(12, maximum: nil)
+            let manualChanged = try XCTUnwrap(manual.selectingSeriesTee("blue", course: course(segment), status: .lobby))
+            XCTAssertEqual(manualChanged.adjustedHandicap, 12)
+            XCTAssertEqual(manualChanged.handicapIndex, 4.9)
+            XCTAssertEqual(manualChanged.restoringLeagueHandicapComputedBaseline()?.adjustedHandicap, changed.adjustedHandicap)
+            for status in [RoundStatus.live, .complete] {
+                let locked = try XCTUnwrap(participant.selectingSeriesTee("blue", course: course(segment), status: status))
+                XCTAssertEqual(locked.teeBoxID, "white")
+                XCTAssertEqual(locked.handicapSnapshot, snapshot)
+                XCTAssertEqual(locked.adjustedHandicap, participant.adjustedHandicap)
+            }
+            XCTAssertNil(participant.selectingSeriesTee("stale", course: course(segment), status: .lobby))
+        }
+    }
+
+    func testGrossLeaguePlayerWithoutHandicapCanChangeTeeWithoutCreatingAnAllowance() throws {
+        let vm = model(.fixed)
+        let member = vm.members[0]
+        let encoder = JSONEncoder()
+        encoder.outputFormatting = .sortedKeys
+        for segment in [HoleSegment.full18, .front9, .back9] {
+            var round = plannedRound()
+            round.roundConfig.scoreBasisOverride = .gross
+            XCTAssertTrue(SeriesRoundHandicapSetup.issues(series: vm.series, round: round,
+                members: [member], handicaps: [:], course: course(segment)).isEmpty)
+            let participant = try XCTUnwrap(SeriesRoundCreationMapping.buildParticipantPayloads(
+                members: [member], roundID: "gross-round", teamMappings: [:], memberAssignments: [:],
+                handicaps: [:], maximumHandicap: 36, courseSegment: course(segment),
+                handicapEntryFormat: .courseHandicap, handicapStrokeBasis: .eighteenHole,
+                hostPlayerID: nil).first)
+            XCTAssertNil(participant.handicapSnapshot)
+            XCTAssertNil(participant.handicapResolution?.effectiveStrokes)
+            let changed = try XCTUnwrap(participant.selectingSeriesTee("blue", course: course(segment), status: .lobby))
+            var expected = participant
+            expected.teeBoxID = "blue"
+            // Firebase model equality only compares IDs; compare stored fields.
+            XCTAssertEqual(try encoder.encode(changed), try encoder.encode(expected),
+                "A gross player's tee change must preserve unresolved handicap inputs")
+            let restored = try JSONDecoder().decode(RoundParticipant.self, from: encoder.encode(changed))
+            XCTAssertEqual(try encoder.encode(restored), try encoder.encode(expected))
+            XCTAssertNil(participant.selectingSeriesTee("stale", course: course(segment), status: .lobby))
+            for status in [RoundStatus.live, .complete] {
+                let locked = try XCTUnwrap(participant.selectingSeriesTee("blue", course: course(segment), status: status))
+                XCTAssertEqual(try encoder.encode(locked), try encoder.encode(participant))
+            }
+        }
+    }
+
+    func testManualStrokesTeeChangesDoNotInventAnIndexOrCalculation() throws {
+        let vm = model(.fixed)
+        let member = vm.members[0]
+        for segment in [HoleSegment.full18, .front9, .back9] {
+            let participant = try XCTUnwrap(SeriesRoundCreationMapping.buildParticipantPayloads(
+                members: [member], roundID: "manual-round", teamMappings: [:], memberAssignments: [:],
+                handicaps: [:], maximumHandicap: 36, courseSegment: course(segment),
+                handicapEntryFormat: .courseHandicap, handicapStrokeBasis: .eighteenHole,
+                roundHandicapInputs: [member.id: .init(method: .strokes, value: 12, teeBoxID: "white")],
+                hostPlayerID: nil).first)
+            XCTAssertNil(participant.handicapIndex)
+            XCTAssertNil(participant.handicapSnapshot?.handicapIndex)
+            var changed = participant
+            for teeID in ["blue", "white", "blue"] {
+                changed = try XCTUnwrap(changed.selectingSeriesTee(teeID, course: course(segment), status: .lobby))
+                changed = try JSONDecoder().decode(RoundParticipant.self, from: JSONEncoder().encode(changed))
+                XCTAssertEqual(changed.teeBoxID, teeID)
+                XCTAssertEqual(changed.lockedHandicapAllowance, 12)
+                XCTAssertEqual(changed.leagueHandicapComputedBaseline, 12)
+                XCTAssertNil(changed.handicapIndex)
+                XCTAssertNil(changed.handicapSnapshot?.handicapIndex)
+                XCTAssertNil(changed.handicapSnapshot?.calculation)
+                XCTAssertNil(changed.handicapResolution?.calculation)
+                XCTAssertEqual(changed.handicapResolution?.manualStrokeInput, 12)
+                XCTAssertEqual(changed.handicapSnapshot?.source, .roundSetup)
+                XCTAssertEqual(PlayerInsightsHeaderContext.handicapSummary(for: changed), "Course HCP 12")
+            }
+        }
+    }
+
+    func testCommissionerTeesStayIndependentFromPersonalInputsAndManualStrokes() throws {
+        let vm = model(.fixed)
+        let member = vm.members[0]
+        for segment in [HoleSegment.full18, .front9, .back9] {
+            for method in [SeriesRoundHandicapDraft.Method.personalIndex, .strokes] {
+                var draft = SeriesRoundHandicapDraft(teeBoxID: "blue")
+                draft.method = method
+                draft.text = method == .strokes ? "12" : "4.9"
+                let round = try SeriesRoundHandicapSetup.applying(drafts: [member.id: draft], to: plannedRound())
+                let resolution = SeriesRoundHandicapSetup.resolution(series: vm.series, round: round,
+                    member: member, handicaps: [:], course: course(segment))
+                XCTAssertEqual(resolution.tee?.id, "blue")
+                if method == .strokes {
+                    XCTAssertEqual(resolution.effectiveStrokes, 12)
+                    XCTAssertNil(resolution.handicapIndex)
+                } else { XCTAssertEqual(resolution.handicapIndex, 4.9) }
+                var invalid = round
+                invalid.playerTeeBoxIDs[member.id] = "previous-course-tee"
+                XCTAssertNotNil(SeriesRoundHandicapSetup.resolution(series: vm.series, round: invalid,
+                    member: member, handicaps: [:], course: course(segment)).validationIssue)
+            }
+        }
+    }
+
+    func testCommissionerSeriesPickerVisibleBeforeExpandingOverriddenPlayer() async throws {
+        let vm = model(.fixed)
+        vm.members = [vm.members[0]]
+        vm.memberHandicaps["m1"] = .init(memberID: "m1", overrideIndex: 4.9, isOverridden: true)
+        let screen = try SeriesAuditHostedScreen(SeriesRoundHandicapReviewView(viewModel: vm,
+            seriesRound: plannedRound(), course: course(), onRoundCreated: { _ in XCTFail() }))
+        defer { screen.close() }
+        _ = try await screen.waitForButton("Edit Handicaps")
+        try await Task.sleep(for: .milliseconds(300))
+        XCTAssertTrue(screen.labels.contains { $0.contains("Player tees") }, screen.labels.joined(separator: " | "))
+        XCTAssertFalse(screen.hasIdentifier("series.handicap.m1.value"))
+        screen.attach(to: self, name: "Commissioner-Override-Tee-Picker")
+    }
+
+    func testCommissionerIndexDetailsOffersEditForMissingAndOverriddenIndexOnlyWhenAuthorized() async throws {
+        for commissioner in [true, false] {
+            for overridden in [true, false] {
+                let vm = model(.fixed)
+                if !commissioner { vm.currentUserID = "ordinary-player" }
+                if overridden { vm.memberHandicaps["m1"] = .init(memberID: "m1", overrideIndex: 4.9, isOverridden: true) }
+                let screen = try SeriesAuditHostedScreen(SeriesMemberHandicapBreakdownView(viewModel: vm, member: vm.members[0]))
+                if commissioner { _ = try await screen.waitForButton("Edit Index") }
+                else { _ = try await screen.waitForButton("Done") }
+                try await Task.sleep(for: .milliseconds(200))
+                XCTAssertEqual(screen.labels.contains("Edit Index"), commissioner, screen.labels.joined(separator: " | "))
+                screen.close()
+            }
+        }
+    }
+
+    func testCommissionerIndexSaveWithKeyboardFailureRetryCancellationAndReopen() async throws {
+        var writes: [SeriesHandicapOverride] = []
+        var fail = true
+        let vm = model(.fixed, saveOverride: { override in
+            writes.append(override)
+            return fail ? .failure(NSError(domain: "test", code: 1)) : .success(override)
+        })
+        vm.members = [vm.members[0]]
+        let screen = try SeriesAuditHostedScreen(SeriesMemberEditorSheet(viewModel: vm, memberID: "m1", editIndexOnly: true))
+        _ = try await screen.waitForButton("Save override")
+        let field = try screen.field("series.member.indexInput")
+        XCTAssertTrue(field.becomeFirstResponder())
+        field.text = "4.9"
+        field.sendActions(for: .editingChanged)
+        try await Task.sleep(for: .milliseconds(350))
+        let hide = try screen.button("Hide keyboard")
+        XCTAssertTrue(hide.accessibilityActivate())
+        try await Task.sleep(for: .milliseconds(200))
+        XCTAssertFalse(field.isFirstResponder)
+        XCTAssertTrue(writes.isEmpty, "Keyboard dismissal must not persist")
+        XCTAssertEqual(field.text, "4.9")
+        XCTAssertTrue(field.becomeFirstResponder())
+        try await Task.sleep(for: .milliseconds(250))
+        let save = try screen.button("Save override")
+        let frame = save.accessibilityFrame
+        XCTAssertFalse(frame.isEmpty)
+        let localSaveFrame = screen.window.convert(frame, from: nil)
+        XCTAssertTrue(screen.window.bounds.contains(localSaveFrame))
+        XCTAssertGreaterThan(screen.keyboardFrame.height, 0, "This regression must open the software keyboard")
+        XCTAssertLessThanOrEqual(localSaveFrame.maxY, screen.keyboardFrame.minY, "Save must be above the keyboard")
+        screen.attach(to: self, name: "Commissioner-Index-Save-Keyboard-Open")
+        XCTAssertTrue(field.isFirstResponder)
+        XCTAssertTrue(save.accessibilityActivate())
+        try await Task.sleep(for: .milliseconds(350))
+        XCTAssertEqual(writes.count, 1)
+        XCTAssertNil(vm.memberHandicaps["m1"]?.effectiveIndex)
+        XCTAssertEqual(field.text, "4.9")
+        XCTAssertTrue(screen.labels.contains { $0.contains("Index was not saved") })
+        fail = false
+        XCTAssertTrue(try screen.button("Save override").accessibilityActivate())
+        try await Task.sleep(for: .milliseconds(350))
+        XCTAssertEqual(vm.memberHandicaps["m1"]?.effectiveIndex, 4.9)
+        XCTAssertFalse(field.isFirstResponder)
+        screen.attach(to: self, name: "Commissioner-Index-Saved")
+        screen.close()
+        let reopened = try SeriesAuditHostedScreen(SeriesMemberEditorSheet(viewModel: vm, memberID: "m1", editIndexOnly: true))
+        defer { reopened.close() }
+        _ = try await reopened.waitForButton("Save override")
+        let reopenedField = try reopened.field("series.member.indexInput")
+        XCTAssertEqual(reopenedField.text, "4.9")
+        reopenedField.text = "9.1"
+        reopenedField.sendActions(for: .editingChanged)
+        XCTAssertTrue(try reopened.button("Close without saving").accessibilityActivate())
+        try await Task.sleep(for: .milliseconds(200))
+        XCTAssertEqual(writes.count, 2)
+        XCTAssertEqual(vm.memberHandicaps["m1"]?.effectiveIndex, 4.9)
+    }
+
+    func testCommissionerStaleOverrideDraftDoesNotOverwriteNewerListenerValue() async throws {
+        var writes = 0
+        let vm = model(.fixed, saveOverride: { writes += 1; return .success($0) })
+        let initial = SeriesHandicapOverride(id: "m1", memberID: "m1", overrideIndex: 4.9,
+            isEnabled: true, parentID: vm.seriesID)
+        vm.handicapOverrides = [initial]
+        var newer = initial
+        newer.overrideIndex = 7.2
+        vm.handicapOverrides = [newer]
+        XCTAssertTrue(SeriesHandicapOverride.matchesSavedVersion(initial, initial))
+        XCTAssertTrue(SeriesHandicapOverride.matchesSavedVersion(nil, nil))
+        XCTAssertFalse(SeriesHandicapOverride.matchesSavedVersion(newer, initial))
+        XCTAssertFalse(SeriesHandicapOverride.matchesSavedVersion(initial, nil))
+        XCTAssertFalse(SeriesHandicapOverride.matchesSavedVersion(nil, initial))
+        let saved = await vm.setHandicapOverride(memberID: "m1", value: 9.1, isOverridden: true,
+            expectedOverride: initial, rejectStaleEdits: true)
+        XCTAssertFalse(saved)
+        XCTAssertEqual(writes, 0)
+        XCTAssertEqual(vm.handicapOverrides.first?.overrideIndex, 7.2)
+    }
+
+    func testCommissionerOverrideRemovalPreservesTeesAndRejectsUnauthorizedWrites() async throws {
+        var writes = 0
+        let vm = model(.fixed, saveOverride: { writes += 1; return .success($0) })
+        var round = plannedRound()
+        round.playerTeeBoxIDs["m1"] = "blue"
+        vm.rounds = [round]
+        for member in vm.members {
+            let outcome59877 = await vm.setHandicapOverride(memberID: member.id, value: 4.9, isOverridden: true)
+            XCTAssertTrue(outcome59877)
+            XCTAssertEqual(vm.memberHandicaps[member.id]?.effectiveIndex, 4.9)
+        }
+        let outcome60075 = await vm.setHandicapOverride(memberID: "m1", value: nil, isOverridden: false)
+        XCTAssertTrue(outcome60075)
+        XCTAssertEqual(vm.rounds[0].playerTeeBoxIDs["m1"], "blue")
+        XCTAssertNil(vm.memberHandicaps["m1"]?.effectiveIndex)
+        vm.currentUserID = "ordinary-player"
+        let outcome60351 = await vm.setHandicapOverride(memberID: "m1", value: 4.9, isOverridden: true)
+        XCTAssertFalse(outcome60351)
+        XCTAssertEqual(writes, vm.members.count + 1)
+    }
+
+    func testCommissionerWorkflowSavesIndexThenTeesAndCreatesNetScoringPayload() async throws {
+        for segment in [HoleSegment.full18, .front9, .back9] {
+            var storedRound: SeriesRound?
+            let vm = model(.fixed, saveRound: {
+                storedRound = try! JSONDecoder().decode(SeriesRound.self, from: JSONEncoder().encode($0))
+                return .success(storedRound!)
+            }, saveOverride: { .success($0) })
+            vm.members = [vm.members.last!]
+            let member = vm.members[0]
+            XCTAssertTrue(member.isOffline)
+            XCTAssertTrue(vm.handicapScores.isEmpty)
+            let indexSaved = await vm.setHandicapOverride(memberID: member.id, value: 4.9, isOverridden: true)
+            XCTAssertTrue(indexSaved)
+            let planned = plannedRound()
+            vm.rounds = [planned]
+            var draft = vm.handicapDraft(for: member, round: planned, course: course(segment))
+            XCTAssertEqual(draft.method, .series)
+            draft.teeBoxID = "blue"
+            vm.setHandicapDraft(draft, memberID: member.id, roundID: planned.id)
+            let candidate = try SeriesRoundHandicapSetup.applying(drafts: [member.id: draft], to: planned)
+            let roundSaved = await vm.saveRoundHandicapSetup(candidate)
+            XCTAssertTrue(roundSaved)
+            let restored = try XCTUnwrap(storedRound)
+            let payloads = SeriesRoundCreationMapping.buildParticipantPayloads(members: [member], roundID: "created-round",
+                teamMappings: [:], memberAssignments: [:], handicaps: vm.memberHandicaps,
+                courseSegment: course(segment), handicapEntryFormat: .courseHandicap, handicapStrokeBasis: .eighteenHole,
+                playerTeeBoxIDs: restored.playerTeeBoxIDs, hostPlayerID: nil)
+            let participant = try XCTUnwrap(payloads.first)
+            XCTAssertEqual(participant.handicapIndex, 4.9)
+            XCTAssertEqual(participant.teeBoxID, "blue")
+            let scoringSegment = RoundSegment(id: "scoring", roundID: "created-round", holeRange: segment.holeRange)
+            let scores = segment.holeRange.holeNumbers.map { number in
+                ScoreEntry(id: "score-\(number)", holeNumber: number, segmentID: "scoring", scoringUnitID: participant.id,
+                    participantIDs: [participant.id], strokes: 4, pickedUp: false, entryID: participant.id, parentID: "created-round")
+            }
+            let net = ScoringEngine.computeStrokePlay(scores: scores, participants: payloads, segment: scoringSegment,
+                holes: course(segment).courseInfo.tees[1].holes, basis: .net, template: FormatTemplateRegistry.strokePlayGross,
+                handicapStrokeBasis: .defaultBasis(holeCount: segment.holeCount))
+            XCTAssertEqual(net.rows.first?.total, -Double(participant.adjustedHandicap))
+            XCTAssertEqual(vm.handicapOverrides.first?.overrideIndex, 4.9)
+            XCTAssertTrue(vm.handicapScores.isEmpty)
+        }
+    }
+
     private func plannedRound() -> SeriesRound {
         SeriesRound(id: "audit-round", roundConfig: .init(scoreBasisOverride: .net,
             handicapEntryFormat: .courseHandicap), parentID: "audit-trip")
@@ -895,10 +1277,11 @@ final class SeriesRoundStartAuditTests: XCTestCase {
 
     private func model(_ mode: SeriesHandicapMode,
                        saveSeries: ((Series) async -> Result<Series, Error>)? = nil,
-                       saveRound: ((SeriesRound) async -> Result<SeriesRound, Error>)? = nil) -> SeriesViewModel {
+                       saveRound: ((SeriesRound) async -> Result<SeriesRound, Error>)? = nil,
+                       saveOverride: ((SeriesHandicapOverride) async -> Result<SeriesHandicapOverride, Error>)? = nil) -> SeriesViewModel {
         let defaults = UserDefaults(suiteName: "SeriesStartAudit." + UUID().uuidString)!
         let vm = SeriesViewModel(persistHandicapSettings: saveSeries, persistRoundHandicaps: saveRound,
-                                 handicapDraftDefaults: defaults)
+                                 persistHandicapOverride: saveOverride, handicapDraftDefaults: defaults)
         var settings = SeriesSettings(experiencePreset: .trip, useTeams: false)
         settings.handicapConfig = .init(mode: mode, strokeBasis: .eighteenHole, entryFormat: .courseHandicap)
         vm.series = Series(id: "audit-trip", name: "Andrew's golf trip — local fixture", commissionerUserID: "owner", settings: settings)
@@ -948,6 +1331,7 @@ private final class SeriesAuditHostedScreen {
         window.frame = scene.coordinateSpace.bounds
         host = UIHostingController(rootView: AnyView(view))
         window.rootViewController = host
+        _ = host.view.keyboardLayoutGuide
         window.makeKeyAndVisible()
         window.rootViewController?.view.frame = window.bounds
         window.rootViewController?.view.layoutIfNeeded()
@@ -970,6 +1354,7 @@ private final class SeriesAuditHostedScreen {
         }
         return visit(window)
     }
+    var keyboardFrame: CGRect { host.view.convert(host.view.keyboardLayoutGuide.layoutFrame, to: window) }
     var labels: [String] { nodes().compactMap(\.accessibilityLabel) }
     func hasIdentifier(_ id: String) -> Bool { nodes().contains { ($0 as? UIAccessibilityIdentification)?.accessibilityIdentifier == id } }
     func field(_ id: String) throws -> UITextField {
@@ -985,6 +1370,15 @@ private final class SeriesAuditHostedScreen {
     }
     func button(_ label: String) throws -> NSObject {
         try XCTUnwrap(nodes().first { $0.accessibilityLabel == label && $0.accessibilityTraits.contains(.button) }, "Missing button \(label). Labels: \(labels.joined(separator: " | "))")
+    }
+    func scrollToTop() {
+        func scrolls(_ view: UIView) -> [UIScrollView] {
+            (view as? UIScrollView).map { [$0] } ?? view.subviews.flatMap(scrolls)
+        }
+        for scroll in scrolls(window) {
+            scroll.setContentOffset(CGPoint(x: 0, y: -scroll.adjustedContentInset.top), animated: false)
+        }
+        window.layoutIfNeeded()
     }
     func scrollToBottom() {
         func scrolls(_ view: UIView) -> [UIScrollView] {

@@ -1,0 +1,54 @@
+{
+  "pullRequest": "https://github.com/kylebeard56/Hackers-Compete-iOS/pull/19",
+  "sourceCommit": "22f589b546e88092e801109a8bb9417fc3307b04",
+  "appName": "Hackers Compete Test",
+  "appStoreConnectID": "6757443901",
+  "bundleID": "com.tigermindlabs.hackers.compete.sandbox",
+  "version": "1.0.0",
+  "build": "2026.10.22.3",
+  "buildID": "e41e55eb-9a8f-4e4c-9ccc-829d24d704d9",
+  "audience": "internal-only",
+  "appleProcessingState": "VALID",
+  "internalBuildState": "IN_BETA_TESTING",
+  "externalBuildState": "NOT_APPLICABLE",
+  "internalGroups": [
+    {
+      "id": "aba65b43-f4b9-40f5-a828-5fa2c279674b",
+      "name": "Beta",
+      "internal": true,
+      "allBuilds": true,
+      "hasRequestedBuild": true
+    }
+  ],
+  "ipaSHA256": "8a23af55fe083af8fccb4adfd39e20e6a370855775a70d0a6baaa3dc69ffaf1b",
+  "archive": "/Users/Kirsten/Developer/Hackers-Combined/build-artifacts/sandbox-pr19-2026-10-22/Hackers-Sandbox.xcarchive",
+  "ipa": "/Users/Kirsten/Developer/Hackers-Combined/build-artifacts/sandbox-pr19-2026-10-22/Hackers-Sandbox.ipa",
+  "bundles": [
+    {
+      "bundleID": "com.tigermindlabs.hackers.compete.sandbox",
+      "version": "1.0.0",
+      "build": "2026.10.22.3",
+      "validSignature": true,
+      "symbolsMatch": true,
+      "uuids": [
+        "BFED40C3-C117-356F-8AC3-D0E99A159ED2"
+      ]
+    },
+    {
+      "bundleID": "com.tigermindlabs.hackers.compete.sandbox.liveactivity",
+      "version": "1.0.0",
+      "build": "2026.10.22.3",
+      "validSignature": true,
+      "symbolsMatch": true,
+      "uuids": [
+        "4A54FA35-DE53-3A7D-96A8-26813818EB8F"
+      ]
+    }
+  ],
+  "firebaseProject": "hackers-compete-sandbox",
+  "watchApp": "Excluded by the existing Sandbox configuration",
+  "symbols": "Generated from the retained archive debug maps and original object files; UUIDs verified",
+  "testingNotesVerified": true,
+  "production": "No Production upload or replacement archive; 2026.10.22.2 remains held.",
+  "uploadPostprocessing": "Binary upload, Apple processing, internal availability, and testing notes succeeded. An optional external notification preference write returned 403; no external distribution was attempted."
+}

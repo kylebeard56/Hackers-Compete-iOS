@@ -167,6 +167,27 @@ struct ScoringEngine {
         }
     }
 
+    /// Shared field view of the saved allowances. Matchup normalization stays
+    /// local to each matchup; this never changes the stored participants.
+    static func scoringParticipants(in snapshot: RoundSnapshot, basis: ScoreBasis) -> [RoundParticipant] {
+        let eligible = scoringEligibleParticipants(
+            snapshot.participants,
+            substitutesScore: snapshot.configuration.substitutesScore,
+            attendanceConfirmationEnabled: snapshot.configuration.attendanceConfirmationEnabled == true
+        )
+        return basis == .net && snapshot.configuration.handicapNormalizationMode == .field
+            ? HandicapCalculator.normalizedParticipantsForField(eligible)
+            : eligible
+    }
+
+    static func playingHandicapAllowance(for participant: RoundParticipant, in snapshot: RoundSnapshot) -> Int {
+        guard snapshot.configuration.handicapNormalizationMode == .field else {
+            return participant.lockedHandicapAllowance
+        }
+        return scoringParticipants(in: snapshot, basis: .net)
+            .first { $0.id == participant.id }?.adjustedHandicap ?? participant.lockedHandicapAllowance
+    }
+
     // MARK: - Snapshot Routing
 
     static func computeSnapshotResult(
@@ -184,9 +205,7 @@ struct ScoringEngine {
             substitutesScore: snapshot.configuration.substitutesScore,
             attendanceConfirmationEnabled: snapshot.configuration.attendanceConfirmationEnabled == true
         )
-        let scoringParticipants = handicapNormalizationMode == .field
-            ? HandicapCalculator.normalizedParticipantsForField(eligibleParticipants)
-            : eligibleParticipants
+        let scoringParticipants = Self.scoringParticipants(in: snapshot, basis: basis)
 
         if snapshot.isVegasFormat {
             return computeVegas(
@@ -2522,28 +2541,32 @@ struct ScoringEngine {
     static func scoringUnitHandicap(
         for scoringUnit: ScoringUnit,
         participants: [RoundParticipant],
-        sharedScoreHandicapConfig: HandicapConfiguration? = nil
+        sharedScoreHandicapConfig: HandicapConfiguration? = nil,
+        handicapNormalizationMode: HandicapNormalizationMode = .off
     ) -> Int {
         Int(scoringUnitHandicapStrokes(
             for: scoringUnit,
             participants: participants,
-            sharedScoreHandicapConfig: sharedScoreHandicapConfig
+            sharedScoreHandicapConfig: sharedScoreHandicapConfig,
+            handicapNormalizationMode: handicapNormalizationMode
         ).rounded())
     }
 
     static func scoringUnitHandicapStrokes(
         for scoringUnit: ScoringUnit,
         participants: [RoundParticipant],
-        sharedScoreHandicapConfig: HandicapConfiguration? = nil
+        sharedScoreHandicapConfig: HandicapConfiguration? = nil,
+        handicapNormalizationMode: HandicapNormalizationMode = .off
     ) -> Double {
         switch scoringUnit.owner {
         case .participant:
             return Double(participants.first?.adjustedHandicap ?? 0)
         case .team, .scoreOwner:
-            if let allowance = scoringUnit.handicapAllowance {
+            if handicapNormalizationMode == .off, let allowance = scoringUnit.handicapAllowance {
                 return allowance.unitStrokes
             }
-            if let handicapAdjustments = scoringUnit.handicapAdjustments, handicapAdjustments.isPopulated {
+            if handicapNormalizationMode == .off,
+               let handicapAdjustments = scoringUnit.handicapAdjustments, handicapAdjustments.isPopulated {
                 return handicapAdjustments.values.reduce(0.0, +)
             }
             if let sharedScoreHandicapConfig,

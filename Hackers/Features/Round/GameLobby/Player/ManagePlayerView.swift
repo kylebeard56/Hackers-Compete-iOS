@@ -78,7 +78,7 @@ struct ManagePlayerView: View, Loggable {
         snapshot.round.status.allowsCourseHandicapSetupEdits || (seriesHandicapLockActive && isSeriesCommissioner)
     }
     private var canSave: Bool {
-        name.isPopulated && tee.exists && (!mayEditHandicapInput || strokesHandicapReadOnly || HandicapCalculator.isValidDraft(handicapString, format: effectiveHandicapEntryFormat))
+        (!seriesHandicapLockActive || seriesTeePreview != nil) && name.isPopulated && tee.exists && (!mayEditHandicapInput || strokesHandicapReadOnly || HandicapCalculator.isValidDraft(handicapString, format: effectiveHandicapEntryFormat))
     }
 
     private var strokesHandicapReadOnly: Bool {
@@ -221,6 +221,10 @@ extension ManagePlayerView {
         VStack(spacing: 16) {
             nameSection
             teeBoxSection.disabled(!snapshot.round.status.allowsCourseHandicapSetupEdits)
+            if seriesHandicapLockActive, seriesTeePreview == nil {
+                Text("This tee cannot be used with the saved league handicap. Select a tee with complete course data, or reopen round setup to review the handicap.")
+                    .font(.footnote).foregroundStyle(.red)
+            }
             teeGroupSection
             if snapshot.requiresTeams {
                 teamSection
@@ -665,9 +669,14 @@ extension ManagePlayerView {
     private func finish() {
         var p = participant ?? .init()
         p.name = Name(name)
-        if snapshot.round.status.allowsCourseHandicapSetupEdits { p.teeBoxID = tee?.id ?? "" }
+        if seriesHandicapLockActive, let preview = seriesTeePreview {
+            p = preview
+            p.name = Name(name)
+        } else if snapshot.round.status.allowsCourseHandicapSetupEdits {
+            p.teeBoxID = tee?.id ?? ""
+        }
         if seriesHandicapLockActive && isSeriesCommissioner {
-            if Int(handicapValue.rounded()) != p.lockedHandicapAllowance {
+            if Int(handicapValue.rounded()) != participant?.lockedHandicapAllowance {
                 p = p.applyingLeagueHandicapOverride(
                     Int(handicapValue.rounded()), maximum: maximumStrokeAllowance
                 )
@@ -689,8 +698,15 @@ extension ManagePlayerView {
         return segment
     }
 
+    private var seriesTeePreview: RoundParticipant? {
+        guard let participant else { return nil }
+        guard let course = snapshot.courseSegment, let tee else { return participant }
+        return participant.selectingSeriesTee(tee.id, course: course, status: snapshot.round.status)
+    }
+
     private var computedHandicapValue: Int {
-        HandicapCalculator.strokes(
+        if seriesHandicapLockActive { return seriesTeePreview?.adjustedHandicap ?? participant?.adjustedHandicap ?? 0 }
+        return HandicapCalculator.strokes(
             for: handicapValue,
             format: effectiveHandicapEntryFormat,
             participant: handicapComputationParticipant,

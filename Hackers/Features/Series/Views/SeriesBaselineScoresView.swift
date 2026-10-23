@@ -534,6 +534,7 @@ struct SeriesMemberHandicapBreakdownView: View {
     @ObservedObject var viewModel: SeriesViewModel
     let member: SeriesMember
 
+    @State private var showIndexEditor = false
     @State private var showAddScoreSheet = false
     @State private var editingScore: SeriesHandicapScore?
     @State private var correctionRound: SeriesRound?
@@ -662,6 +663,12 @@ struct SeriesMemberHandicapBreakdownView: View {
             content: {
                 VStack(spacing: 16) {
                     currentHandicapCard
+                    if viewModel.isCommissioner, viewModel.series.handicapConfig.isEnabled {
+                        Button("Edit Index") { showIndexEditor = true }
+                            .buttonStyle(.borderedProminent)
+                            .tint(.accentGreen)
+                            .accessibilityIdentifier("series.handicap.editIndex")
+                    }
                     handicapTrendCard
                     scoresListSection
                     Spacer().frame(height: 32)
@@ -733,6 +740,11 @@ struct SeriesMemberHandicapBreakdownView: View {
             onScroll: { _ in }
         )
         .background(palette.backgroundColor.ignoresSafeArea())
+        .sheet(isPresented: $showIndexEditor) {
+            SeriesMemberEditorSheet(viewModel: viewModel, memberID: member.id, editIndexOnly: true)
+                .presentationDetents([.large])
+                .presentationDragIndicator(.visible)
+        }
         .sheet(isPresented: $showAddScoreSheet) {
             SeriesBaselineScoresView(viewModel: viewModel, member: member)
                 .presentationDetents([.medium, .large])

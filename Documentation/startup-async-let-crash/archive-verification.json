@@ -1,0 +1,61 @@
+{
+  "archive": "/Users/Kirsten/Developer/Hackers-Combined/build-artifacts/production-startup-fix-2026-10-22/Hackers-Production.xcarchive",
+  "bundles": [
+    {
+      "bundle": "Products/Applications/Hackers.app",
+      "bundleId": "com.tigermindlabs.hackers.compete",
+      "version": "1.0.0",
+      "build": "2026.10.22.2",
+      "platforms": [
+        "iPhoneOS"
+      ],
+      "signature": "valid",
+      "architectures": "arm64",
+      "uuid": "UUID: 387C4731-81E0-3592-8B8B-CB236B202DE1 (arm64) /private/tmp/HackersStartupCrashRelease/Hackers-Production.xcarchive/Products/Applications/Hackers.app/Hackers"
+    },
+    {
+      "bundle": "Products/Applications/Hackers.app/Watch/Hackers Watch App.app",
+      "bundleId": "com.tigermindlabs.hackers.compete.watchkitapp",
+      "version": "1.0.0",
+      "build": "2026.10.22.2",
+      "platforms": [
+        "WatchOS"
+      ],
+      "signature": "valid",
+      "architectures": "arm64_32 arm64",
+      "uuid": "UUID: 9339DB3E-23A6-398B-8282-AAB30CABF0C1 (arm64_32) /private/tmp/HackersStartupCrashRelease/Hackers-Production.xcarchive/Products/Applications/Hackers.app/Watch/Hackers Watch App.app/Hackers Watch App\nUUID: 62C6714F-D933-39C0-BB98-E1FCC5018D64 (arm64) /private/tmp/HackersStartupCrashRelease/Hackers-Production.xcarchive/Products/Applications/Hackers.app/Watch/Hackers Watch App.app/Hackers Watch App"
+    },
+    {
+      "bundle": "Products/Applications/Hackers.app/PlugIns/HackersLiveActivity.appex",
+      "bundleId": "com.tigermindlabs.hackers.compete.liveactivity",
+      "version": "1.0.0",
+      "build": "2026.10.22.2",
+      "platforms": [
+        "iPhoneOS"
+      ],
+      "signature": "valid",
+      "architectures": "arm64",
+      "uuid": "UUID: 9FED7773-98A6-34E5-A6EB-56FDFEFB717E (arm64) /private/tmp/HackersStartupCrashRelease/Hackers-Production.xcarchive/Products/Applications/Hackers.app/PlugIns/HackersLiveActivity.appex/HackersLiveActivity"
+    }
+  ],
+  "dsymCount": 3,
+  "ipa": "/Users/Kirsten/Developer/Hackers-Combined/build-artifacts/production-startup-fix-2026-10-22/Hackers-Production.ipa",
+  "ipaSHA256": "fa4119fb2193502b93adf0bd498491115acbd306f4e5132446c705ed628b93ad",
+  "exportedBundles": [
+    {
+      "bundleId": "com.tigermindlabs.hackers.compete.liveactivity",
+      "version": "1.0.0",
+      "build": "2026.10.22.2"
+    },
+    {
+      "bundleId": "com.tigermindlabs.hackers.compete.watchkitapp",
+      "version": "1.0.0",
+      "build": "2026.10.22.2"
+    },
+    {
+      "bundleId": "com.tigermindlabs.hackers.compete",
+      "version": "1.0.0",
+      "build": "2026.10.22.2"
+    }
+  ]
+}

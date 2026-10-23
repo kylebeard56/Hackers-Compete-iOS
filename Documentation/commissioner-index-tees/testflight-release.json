@@ -1,0 +1,45 @@
+{
+  "pullRequest": "https://github.com/kylebeard56/Hackers-Compete-iOS/pull/19",
+  "sourceCommit": "bc76855bdfe49d860b1b36ca39d4a0b2e8db7da3",
+  "appName": "Hackers Compete Test",
+  "appStoreConnectID": "6757443901",
+  "bundleID": "com.tigermindlabs.hackers.compete.sandbox",
+  "version": "1.0.0",
+  "build": "2026.10.21.3",
+  "audience": "internal-only",
+  "ipaSHA256": "9b4f4661b74dd0af3e3d4c11a8c906568b5eed32209ff165670e05d930e62d4a",
+  "archive": "/Users/Kirsten/Developer/Hackers-Combined/build-artifacts/commissioner-ux-2026-10-21/Hackers-Sandbox.xcarchive",
+  "ipa": "/Users/Kirsten/Developer/Hackers-Combined/build-artifacts/commissioner-ux-2026-10-21/export/Hackers.ipa",
+  "archiveVerification": [
+    {
+      "bundle": "com.tigermindlabs.hackers.compete.sandbox",
+      "version": "1.0.0",
+      "build": "2026.10.21.3",
+      "symbolsMatch": true
+    },
+    {
+      "bundle": "com.tigermindlabs.hackers.compete.sandbox.liveactivity",
+      "version": "1.0.0",
+      "build": "2026.10.21.3",
+      "symbolsMatch": true
+    }
+  ],
+  "uploadResult": {
+    "success-message": "No errors uploading archive at '/private/tmp/HackersCommissionerRelease/export/Hackers.ipa'.",
+    "details": {
+      "delivery-uuid": "9d719fa8-c736-46da-9a77-ebe31c9d98a3",
+      "transferred": "81946172 bytes in 3.058 seconds (26.8MB/s, 214.387Mbps)"
+    }
+  },
+  "buildID": "9d719fa8-c736-46da-9a77-ebe31c9d98a3",
+  "appleProcessingState": "VALID",
+  "internalBuildState": "IN_BETA_TESTING",
+  "externalBuildState": "NOT_APPLICABLE",
+  "internalGroups": [
+    {
+      "id": "aba65b43-f4b9-40f5-a828-5fa2c279674b",
+      "name": "Beta",
+      "hasAccessToAllBuilds": true
+    }
+  ]
+}

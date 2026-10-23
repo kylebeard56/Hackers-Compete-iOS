@@ -1,0 +1,92 @@
+{
+  "simulator": "A868F0E8-B3F2-4B0D-9AAC-D3283A1B5806",
+  "os": "iOS 26.3.1",
+  "configuration": "Production -O whole-module-optimization",
+  "cycles": [
+    {
+      "cycle": 1,
+      "pid": 1966,
+      "aliveAfterSeconds": 15,
+      "result": "passed",
+      "signedIn": false
+    },
+    {
+      "cycle": 2,
+      "pid": 1986,
+      "aliveAfterSeconds": 15,
+      "result": "passed",
+      "signedIn": false
+    },
+    {
+      "cycle": 3,
+      "pid": 2302,
+      "aliveAfterSeconds": 15,
+      "result": "passed",
+      "signedIn": false
+    },
+    {
+      "cycle": 4,
+      "pid": 2328,
+      "aliveAfterSeconds": 15,
+      "result": "passed",
+      "signedIn": false
+    },
+    {
+      "cycle": 5,
+      "pid": 2350,
+      "aliveAfterSeconds": 15,
+      "result": "passed",
+      "signedIn": false
+    },
+    {
+      "cycle": 6,
+      "pid": 2654,
+      "aliveAfterSeconds": 15,
+      "result": "passed",
+      "signedIn": false
+    },
+    {
+      "cycle": 7,
+      "pid": 2688,
+      "aliveAfterSeconds": 15,
+      "result": "passed",
+      "signedIn": false
+    },
+    {
+      "cycle": 8,
+      "pid": 2706,
+      "aliveAfterSeconds": 15,
+      "result": "passed",
+      "signedIn": false
+    },
+    {
+      "cycle": 9,
+      "pid": 2724,
+      "aliveAfterSeconds": 15,
+      "result": "passed",
+      "signedIn": false
+    },
+    {
+      "cycle": 10,
+      "pid": 2745,
+      "aliveAfterSeconds": 15,
+      "result": "passed",
+      "signedIn": false
+    },
+    {
+      "cycle": 11,
+      "pid": 2763,
+      "aliveAfterSeconds": 15,
+      "result": "passed",
+      "signedIn": false
+    },
+    {
+      "cycle": 12,
+      "pid": 2781,
+      "aliveAfterSeconds": 15,
+      "result": "passed",
+      "signedIn": false
+    }
+  ],
+  "scope": "Signed-out cold launches; authenticated restoration and affected physical iOS 26.6/26.6.2 remain tester follow-up."
+}

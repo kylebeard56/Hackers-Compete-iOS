@@ -1,0 +1,65 @@
+{
+  "baseCommit": "94b36f2c1630919d874fbd12e4fda3d00f6c7886",
+  "testConfiguration": "Production, -O, whole-module optimization, arm64 simulator, ad-hoc signed, ENABLE_TESTABILITY=YES",
+  "tests": {
+    "result": "Passed",
+    "passed": 1186,
+    "failed": 0,
+    "skipped": 5,
+    "total": 1191,
+    "existingOptInSkips": [
+      "Official course cover resolves to a real scorecard",
+      "Bundled scorecard preserves its Blue tee",
+      "renderStates()",
+      "Live chat search returns Verdae without AI",
+      "Live search and detail agree on opaque IDs and load a playable scorecard"
+    ],
+    "simulator": "Hackers iPhone 17 Pro / iOS 26.3.1",
+    "xcresult": "/Users/Kirsten/Developer/Hackers-Combined/build-artifacts/production-startup-fix-2026-10-22/HackersStartupCrashPassing.xcresult",
+    "log": "/Users/Kirsten/Developer/Hackers-Combined/build-artifacts/production-startup-fix-2026-10-22/HackersStartupCrashPassing.log",
+    "commandFile": "/private/tmp/HackersStartupCrashValidation/run-passing-tests.sh",
+    "simulatorOnlyWatchExclusion": "Inherited device Watch embedding is excluded only for the iPhone simulator test command; the actual Production archive includes Watch."
+  },
+  "startupStress": {
+    "optimizedCoordinatorCycles": 10000,
+    "preCancelledLoad": "Passed",
+    "baselineOldPatternAlsoPassed": true,
+    "simulatorColdLaunches": 12,
+    "aliveAfterSecondsPerLaunch": 15,
+    "signedIn": false,
+    "result": "Passed",
+    "details": "cold-launches.json"
+  },
+  "firebaseRegression": {
+    "authNetworkFailures": 20,
+    "callableNetworkFailures": 20,
+    "result": "Passed",
+    "fixture": "Separate Firebase apps, valid-format fake key, closed loopback port; no production account/backend."
+  },
+  "productionArchive": {
+    "result": "Passed",
+    "build": "1.0.0 (2026.10.22.2)",
+    "method": "Fastlane build-only / Production / generic iOS device",
+    "targets": [
+      "iPhone",
+      "Apple Watch",
+      "Live Activity"
+    ],
+    "signatures": "Valid",
+    "matchingDSYMs": 3,
+    "details": "archive-verification.json",
+    "log": "/Users/Kirsten/Developer/Hackers-Combined/build-artifacts/production-startup-fix-2026-10-22/archive.log"
+  },
+  "deployment": {
+    "status": "Not uploaded; awaiting PR review at user request",
+    "preparedBuild": "2026.10.22.2",
+    "previousCrashingBuild": "2026.10.22.1 remains expired",
+    "testingNotes": "what-to-test.txt (prepared locally; not posted to App Store Connect)"
+  },
+  "outstanding": [
+    "No affected physical iPhone is available. Confirm signed-in restoration, round start, and repeated launch on iOS 26.6/26.6.2.",
+    "Physical iPhone/Watch synchronization acceptance remains manual.",
+    "PR review and subsequent deployment authorization; no upload performed."
+  ],
+  "originalCrashReproduction": "Not established on the available simulator; original app continuation is compiler-deduplicated. This change removes matching startup async-let patterns and includes Firebase Auth/Functions upstream workaround."
+}

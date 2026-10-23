@@ -77,9 +77,10 @@ struct DashboardView: View, Loggable {
             TelemetryService.shared.clearContext()
         }
         .task {
-            async let roundsLoad: Void = appSession.loadRounds()
-            async let seriesLoad: Void = appSession.loadSeries()
-            _ = await (roundsLoad, seriesLoad)
+            guard await DashboardStartupLoader.load(
+                rounds: appSession.loadRounds,
+                series: appSession.loadSeries
+            ) else { return }
             hasLoadedCompanionRounds = true
             viewModel.checkForStalledCompletions(in: sortedRounds)
         }
@@ -368,6 +369,23 @@ extension RoundStatus {
         case .complete: return "Complete"
         case .archived: return "Archived"
         }
+    }
+}
+
+/// Keep startup loads structured without the optimized `async let` cleanup path
+/// seen in the Production launch crashes. Cancellation must not publish readiness.
+@MainActor
+enum DashboardStartupLoader {
+    static func load(
+        rounds: @escaping @MainActor @Sendable () async -> Void,
+        series: @escaping @MainActor @Sendable () async -> Void
+    ) async -> Bool {
+        guard !Task.isCancelled else { return false }
+        await withTaskGroup(of: Void.self) { group in
+            _ = group.addTaskUnlessCancelled { await rounds() }
+            _ = group.addTaskUnlessCancelled { await series() }
+        }
+        return !Task.isCancelled
     }
 }
 

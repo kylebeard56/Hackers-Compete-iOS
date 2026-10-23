@@ -2392,6 +2392,8 @@ struct SeriesRound: FirebaseSubcollectable, IndexIterable {
     var plannedMatchups: [SeriesRoundPlannedMatchup]
     var plannedTeeGroups: [SeriesRoundPlannedTeeGroup]
     var partnershipPlans: [SeriesRoundPartnershipPlan]
+    /// Tee choices apply to this round independently of the player's handicap source.
+    var playerTeeBoxIDs: [String: String] = [:]
     /// Commissioner inputs scoped to this round; never personal profiles or the series handicap pool.
     var handicapInputs: [String: SeriesRoundHandicapInput]
     var notes: String?
@@ -2487,6 +2489,7 @@ struct SeriesRound: FirebaseSubcollectable, IndexIterable {
         case plannedMatchups = "planned_matchups"
         case plannedTeeGroups = "planned_tee_groups"
         case partnershipPlans = "partnership_plans"
+        case playerTeeBoxIDs = "player_tee_box_ids"
         case handicapInputs = "handicap_inputs"
         case awardsStatus = "awards_status"
         case awardsFinalizedAt = "awards_finalized_at"
@@ -2519,6 +2522,7 @@ struct SeriesRound: FirebaseSubcollectable, IndexIterable {
         plannedMatchups = try c.decodeIfPresent([SeriesRoundPlannedMatchup].self, forKey: .plannedMatchups) ?? []
         plannedTeeGroups = try c.decodeIfPresent([SeriesRoundPlannedTeeGroup].self, forKey: .plannedTeeGroups) ?? []
         partnershipPlans = try c.decodeIfPresent([SeriesRoundPartnershipPlan].self, forKey: .partnershipPlans) ?? []
+        playerTeeBoxIDs = try c.decodeIfPresent([String: String].self, forKey: .playerTeeBoxIDs) ?? [:]
         handicapInputs = try c.decodeIfPresent([String: SeriesRoundHandicapInput].self, forKey: .handicapInputs) ?? [:]
         notes = try c.decodeIfPresent(String.self, forKey: .notes)
         awardsStatus = try c.decodeIfPresent(SeriesAwardsStatus.self, forKey: .awardsStatus) ?? .pending
@@ -2552,6 +2556,7 @@ struct SeriesRound: FirebaseSubcollectable, IndexIterable {
         try c.encode(plannedMatchups, forKey: .plannedMatchups)
         try c.encode(plannedTeeGroups, forKey: .plannedTeeGroups)
         try c.encode(partnershipPlans, forKey: .partnershipPlans)
+        if !playerTeeBoxIDs.isEmpty { try c.encode(playerTeeBoxIDs, forKey: .playerTeeBoxIDs) }
         if !handicapInputs.isEmpty { try c.encode(handicapInputs, forKey: .handicapInputs) }
         try c.encodeIfPresent(notes, forKey: .notes)
         try c.encode(awardsStatus, forKey: .awardsStatus)
@@ -4026,6 +4031,13 @@ struct SeriesHandicapScore: FirebaseSubcollectable {
 }
 
 struct SeriesHandicapOverride: FirebaseSubcollectable {
+    /// Compare the version the editor loaded before replacing its persisted value.
+    static func matchesSavedVersion(_ current: Self?, _ expected: Self?) -> Bool {
+        current?.lastUpdatedAt == expected?.lastUpdatedAt
+            && current?.overrideIndex == expected?.overrideIndex
+            && current?.isEnabled == expected?.isEnabled
+    }
+
     var id: String
     var memberID: String
     var overrideIndex: Double?
